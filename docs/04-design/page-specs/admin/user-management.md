@@ -1,0 +1,22 @@
+---
+title: "User Management"
+module: "04-design/page-specs"
+status: draft
+---
+
+# User Management
+
+## 1. Purpose
+Admin page spec for user listing and actions.
+
+## 2. Status
+Draft
+
+## 3. Scope
+Describe screen-level requirements for User Management.
+
+## 4. Acceptance Criteria
+- [ ] Define success criteria for User Management.
+
+## 5. Related Pages
+- Refer to use cases and flows for this page spec.
