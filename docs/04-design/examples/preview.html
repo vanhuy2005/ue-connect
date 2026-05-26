@@ -1,0 +1,68 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>UEConnect Examples Preview</title>
+  <style>
+    :root {
+      color-scheme: light;
+      font-family: Inter, system-ui, sans-serif;
+      --bg: #f8fafc;
+      --surface: #ffffff;
+      --text: #0f172a;
+      --muted: #475569;
+      --border: #e2e8f0;
+      --brand: #124874;
+    }
+    body {
+      margin: 0;
+      min-height: 100vh;
+      display: grid;
+      place-items: center;
+      background: linear-gradient(135deg, #eef7ff 0%, #f8fafc 58%, #d9ecff 100%);
+      color: var(--text);
+    }
+    main {
+      width: min(720px, calc(100vw - 32px));
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 24px;
+      padding: 32px;
+      box-shadow: 0 16px 40px rgba(15, 23, 42, 0.08);
+    }
+    h1 {
+      margin: 0 0 12px;
+      color: var(--brand);
+      font-size: 32px;
+      line-height: 1.1;
+    }
+    p {
+      margin: 0 0 12px;
+      color: var(--muted);
+      line-height: 1.6;
+    }
+    a {
+      color: var(--brand);
+      text-decoration-thickness: 2px;
+      text-underline-offset: 2px;
+    }
+    .note {
+      margin-top: 20px;
+      padding: 16px;
+      border-radius: 16px;
+      background: var(--bg);
+      border: 1px solid var(--border);
+    }
+  </style>
+</head>
+<body>
+  <main>
+    <h1>UEConnect Examples Preview</h1>
+    <p>This folder holds wireframe notes and component showcase examples. The live preview remains at the top-level <a href="../preview.html">preview.html</a>.</p>
+    <div class="note">
+      Keep this file as a lightweight example entry point, not as a source-of-truth specification.
+    </div>
+  </main>
+</body>
+</html>
