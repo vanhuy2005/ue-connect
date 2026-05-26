@@ -2,7 +2,9 @@
   <img src="docs\04-design\primary-logo.png" alt="UEConnect Logo" width="760">
 </p>
 
-<h1 align="center">Verified campus social platform for HCMUE students, mentors, alumni, advisors, clubs and communities.t</h1>
+<p align="center">
+  <strong>Verified campus social platform for HCMUE students, mentors, alumni, advisors, clubs and communities.</strong><br>
+</p>
 
 <p align="center">
   <img src="https://img.shields.io/badge/Laravel-13.x-FF2D20?style=for-the-badge&logo=laravel&logoColor=white" alt="Laravel 13">
