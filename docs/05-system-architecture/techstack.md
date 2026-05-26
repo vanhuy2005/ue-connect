@@ -1,4 +1,3 @@
-# Source Of Truth for tech stack which is really used in our projects
 ---
 title: "Technology Stack"
 module: "05-system-architecture"
