@@ -1,0 +1,1919 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>UEConnect · Enterprise UX Design Preview</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+/* ============================================================
+   UECONNECT · ENTERPRISE UX DESIGN PREVIEW
+   Neutral-first social platform · restrained HCMUE identity
+   ============================================================ */
+
+:root {
+  /* Brand */
+  --brand: #124874;
+  --brand-hover: #0E3A60;
+  --brand-active: #0A2B49;
+  --brand-soft: #EEF7FF;
+  --brand-border: rgba(18, 72, 116, .16);
+  --heritage-red: #CF373D;
+
+  /* Neutral */
+  --white: #FFFFFF;
+  --bg: #FAFAFA;
+  --surface: #FFFFFF;
+  --surface-subtle: #F8FAFC;
+  --surface-hover: #F1F5F9;
+  --border: #E4E6EB;
+  --border-strong: #CBD5E1;
+  --text: #0F172A;
+  --text-secondary: #475569;
+  --text-muted: #64748B;
+  --text-disabled: #94A3B8;
+
+  /* Semantic */
+  --success: #20C997;
+  --success-text: #0F7B5C;
+  --success-bg: rgba(32,201,151,.12);
+  --warning: #F59E0B;
+  --warning-text: #92400E;
+  --warning-bg: rgba(245,158,11,.12);
+  --danger: #C62828;
+  --danger-text: #991B1B;
+  --danger-bg: rgba(198,40,40,.10);
+  --mentor: #7C5CFF;
+  --mentor-text: #5B3FD6;
+  --mentor-bg: rgba(124,92,255,.10);
+
+  /* Rare brand moment only */
+  --brand-moment-gradient: linear-gradient(135deg, #0B3558 0%, #124874 38%, #2178D4 72%, #38BDF8 100%);
+  --subtle-tint-gradient: linear-gradient(135deg, rgba(18,72,116,.06) 0%, rgba(56,189,248,.08) 100%);
+
+  /* Typography */
+  --font: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Be Vietnam Pro", sans-serif;
+  --font-vn: "Be Vietnam Pro", system-ui, sans-serif;
+  --font-data: "Inter", system-ui, sans-serif;
+
+  /* Sizing */
+  --left-nav: 240px;
+  --feed: 600px;
+  --right-panel: 300px;
+  --gutter: 24px;
+  --shell: 1200px;
+
+  /* Radius */
+  --r-xs: 4px;
+  --r-sm: 6px;
+  --r-md: 8px;
+  --r-lg: 12px;
+  --r-xl: 16px;
+  --r-2xl: 20px;
+  --r-full: 999px;
+
+  /* Shadow */
+  --shadow-xs: 0 1px 2px rgba(0,0,0,.04);
+  --shadow-sm: 0 1px 3px rgba(15,23,42,.08);
+  --shadow-md: 0 4px 12px rgba(15,23,42,.10);
+  --shadow-lg: 0 12px 32px rgba(15,23,42,.14);
+
+  --focus: 0 0 0 3px rgba(18,72,116,.16);
+}
+
+*,
+*::before,
+*::after { box-sizing: border-box; }
+
+html { scroll-behavior: smooth; }
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--font);
+  font-size: 15px;
+  line-height: 1.45;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+button,
+input,
+textarea {
+  font: inherit;
+}
+
+a { color: inherit; text-decoration: none; }
+
+img { max-width: 100%; display: block; }
+
+svg { width: 20px; height: 20px; stroke-width: 2; }
+
+.skip-link {
+  position: absolute;
+  left: 16px;
+  top: -60px;
+  z-index: 1000;
+  padding: 10px 14px;
+  border-radius: var(--r-md);
+  background: var(--brand);
+  color: var(--white);
+  transition: top .15s ease;
+}
+
+.skip-link:focus { top: 16px; }
+
+/* ============================================================
+   TOP DOCUMENT NAV
+   ============================================================ */
+
+.doc-topbar {
+  position: sticky;
+  top: 0;
+  z-index: 50;
+  border-bottom: 1px solid var(--border);
+  background: rgba(255,255,255,.88);
+  backdrop-filter: blur(16px);
+}
+
+.doc-topbar__inner {
+  max-width: 1280px;
+  height: 64px;
+  margin: 0 auto;
+  padding: 0 24px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 24px;
+}
+
+.brand-lockup {
+  display: inline-flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+}
+
+.brand-mark {
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  display: grid;
+  place-items: center;
+  background: var(--brand);
+  color: var(--white);
+  font-weight: 700;
+  letter-spacing: -.04em;
+}
+
+.brand-copy { min-width: 0; }
+
+.brand-name {
+  display: block;
+  font-weight: 700;
+  letter-spacing: -.02em;
+  color: var(--text);
+}
+
+.brand-sub {
+  display: block;
+  font-size: 12px;
+  color: var(--text-muted);
+  white-space: nowrap;
+}
+
+.doc-links {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.doc-links a {
+  min-height: 40px;
+  display: inline-flex;
+  align-items: center;
+  padding: 0 12px;
+  border-radius: var(--r-full);
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-secondary);
+}
+
+.doc-links a:hover {
+  background: var(--surface-hover);
+  color: var(--text);
+}
+
+.doc-links a.active {
+  color: var(--brand);
+  background: var(--brand-soft);
+}
+
+/* ============================================================
+   DOCUMENT LAYOUT
+   ============================================================ */
+
+.page {
+  max-width: 1280px;
+  margin: 0 auto;
+  padding: 32px 24px 96px;
+}
+
+.section {
+  margin-top: 72px;
+  scroll-margin-top: 88px;
+}
+
+.section--compact { margin-top: 48px; }
+
+.section-kicker {
+  margin: 0 0 8px;
+  color: var(--brand);
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+}
+
+.section-title {
+  margin: 0;
+  font-size: clamp(24px, 2.8vw, 36px);
+  line-height: 1.16;
+  letter-spacing: -.035em;
+}
+
+.section-desc {
+  max-width: 760px;
+  margin: 12px 0 0;
+  color: var(--text-secondary);
+  font-size: 16px;
+  line-height: 1.7;
+}
+
+.header-row {
+  display: flex;
+  align-items: end;
+  justify-content: space-between;
+  gap: 24px;
+  margin-bottom: 24px;
+}
+
+.header-row .section-desc { margin-top: 8px; }
+
+.chip-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.chip {
+  min-height: 30px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 0 10px;
+  border: 1px solid var(--border);
+  border-radius: var(--r-full);
+  background: var(--surface);
+  color: var(--text-secondary);
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.chip--brand {
+  color: var(--brand);
+  background: var(--brand-soft);
+  border-color: var(--brand-border);
+}
+
+/* ============================================================
+   HERO
+   ============================================================ */
+
+.hero {
+  display: grid;
+  grid-template-columns: minmax(0, .86fr) minmax(520px, 1fr);
+  gap: 32px;
+  align-items: center;
+  min-height: calc(100dvh - 128px);
+}
+
+.hero-card {
+  position: relative;
+  overflow: hidden;
+  border: 1px solid var(--border);
+  border-radius: 28px;
+  background:
+    radial-gradient(circle at 92% 12%, rgba(18,72,116,.08), transparent 28%),
+    var(--surface);
+  box-shadow: var(--shadow-xs);
+  padding: clamp(28px, 4vw, 52px);
+}
+
+.hero-card::after {
+  content: "";
+  position: absolute;
+  inset: auto -120px -160px auto;
+  width: 360px;
+  height: 360px;
+  background: var(--subtle-tint-gradient);
+  border-radius: 50%;
+  filter: blur(20px);
+  pointer-events: none;
+}
+
+.hero-eyebrow {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 32px;
+  padding: 0 12px;
+  border-radius: var(--r-full);
+  background: var(--brand-soft);
+  border: 1px solid var(--brand-border);
+  color: var(--brand);
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.hero h1 {
+  position: relative;
+  z-index: 1;
+  margin: 22px 0 0;
+  font-size: clamp(38px, 6vw, 66px);
+  line-height: .98;
+  letter-spacing: -.065em;
+}
+
+.hero h1 span { color: var(--brand); }
+
+.hero p {
+  position: relative;
+  z-index: 1;
+  max-width: 620px;
+  margin: 20px 0 0;
+  color: var(--text-secondary);
+  font-size: 17px;
+  line-height: 1.75;
+}
+
+.hero-actions {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-top: 28px;
+}
+
+.hero-metrics {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px;
+  margin-top: 32px;
+}
+
+.metric {
+  padding: 14px;
+  border: 1px solid var(--border);
+  border-radius: var(--r-lg);
+  background: rgba(255,255,255,.72);
+}
+
+.metric strong {
+  display: block;
+  font-size: 22px;
+  letter-spacing: -.03em;
+}
+
+.metric span {
+  display: block;
+  margin-top: 2px;
+  color: var(--text-muted);
+  font-size: 12px;
+}
+
+/* ============================================================
+   BUTTONS
+   ============================================================ */
+
+.btn {
+  min-height: 40px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 0 16px;
+  border-radius: var(--r-md);
+  border: 1px solid transparent;
+  background: transparent;
+  color: var(--text);
+  font-size: 15px;
+  font-weight: 650;
+  cursor: pointer;
+  transition: background .15s ease, border-color .15s ease, color .15s ease, transform .15s ease, box-shadow .15s ease;
+}
+
+.btn:hover { transform: translateY(-1px); }
+
+.btn:active { transform: translateY(0) scale(.98); }
+
+.btn:focus-visible {
+  outline: none;
+  box-shadow: var(--focus);
+}
+
+.btn-primary {
+  background: var(--brand);
+  border-color: var(--brand);
+  color: var(--white);
+}
+
+.btn-primary:hover {
+  background: var(--brand-hover);
+  border-color: var(--brand-hover);
+}
+
+.btn-secondary {
+  background: var(--surface);
+  border-color: var(--border);
+  color: var(--text);
+}
+
+.btn-secondary:hover {
+  background: var(--surface-subtle);
+  border-color: var(--border-strong);
+}
+
+.btn-ghost:hover { background: var(--surface-hover); }
+
+.icon-btn {
+  width: 40px;
+  height: 40px;
+  padding: 0;
+  border-radius: var(--r-full);
+}
+
+.btn-lg {
+  min-height: 48px;
+  padding: 0 22px;
+  font-size: 16px;
+}
+
+.btn-loading {
+  position: relative;
+  color: transparent !important;
+}
+
+.btn-loading::after {
+  content: "";
+  width: 16px;
+  height: 16px;
+  position: absolute;
+  border-radius: 50%;
+  border: 2px solid rgba(255,255,255,.55);
+  border-top-color: #fff;
+  animation: spin .8s linear infinite;
+}
+
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* ============================================================
+   SOCIAL APP PREVIEW
+   ============================================================ */
+
+.app-preview {
+  border: 1px solid var(--border);
+  border-radius: 28px;
+  overflow: hidden;
+  background: var(--surface);
+  box-shadow: var(--shadow-lg);
+}
+
+.app-frame {
+  display: grid;
+  grid-template-columns: 218px minmax(0, 1fr) 268px;
+  min-height: 720px;
+  background: var(--bg);
+}
+
+.left-nav {
+  background: var(--surface);
+  border-right: 1px solid var(--border);
+  padding: 18px 12px;
+}
+
+.left-nav__brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 0 10px 18px;
+}
+
+.left-nav__brand .brand-mark {
+  width: 34px;
+  height: 34px;
+  font-size: 14px;
+}
+
+.left-nav__brand strong {
+  display: block;
+  font-size: 16px;
+  letter-spacing: -.02em;
+}
+
+.left-nav__brand span {
+  display: block;
+  color: var(--text-muted);
+  font-size: 12px;
+}
+
+.nav-list {
+  display: grid;
+  gap: 4px;
+}
+
+.nav-item {
+  height: 48px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 0 12px;
+  border-radius: var(--r-full);
+  color: var(--text-secondary);
+  font-weight: 600;
+}
+
+.nav-item:hover { background: var(--surface-hover); color: var(--text); }
+
+.nav-item[aria-current="page"] {
+  background: var(--brand-soft);
+  color: var(--brand);
+  font-weight: 700;
+}
+
+.left-nav__footer {
+  margin-top: 24px;
+  padding: 14px;
+  border-radius: var(--r-xl);
+  background: var(--surface-subtle);
+  border: 1px solid var(--border);
+}
+
+.left-nav__footer strong {
+  display: block;
+  font-size: 13px;
+}
+
+.left-nav__footer p {
+  margin: 4px 0 12px;
+  color: var(--text-muted);
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+.feed {
+  background: var(--surface);
+  border-right: 1px solid var(--border);
+}
+
+.feed-header {
+  position: sticky;
+  top: 65px;
+  z-index: 2;
+  min-height: 64px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 18px;
+  border-bottom: 1px solid var(--border);
+  background: rgba(255,255,255,.92);
+  backdrop-filter: blur(12px);
+}
+
+.feed-header h2 {
+  margin: 0;
+  font-size: 20px;
+  letter-spacing: -.025em;
+}
+
+.feed-tabs {
+  display: flex;
+  gap: 4px;
+  padding: 8px;
+  border-bottom: 1px solid var(--border);
+}
+
+.feed-tab {
+  flex: 1;
+  min-height: 36px;
+  display: grid;
+  place-items: center;
+  border-radius: var(--r-md);
+  color: var(--text-muted);
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.feed-tab[aria-selected="true"] {
+  background: var(--surface-hover);
+  color: var(--text);
+}
+
+.composer {
+  display: grid;
+  grid-template-columns: 44px minmax(0, 1fr);
+  gap: 12px;
+  padding: 16px;
+  border-bottom: 1px solid var(--border);
+}
+
+.avatar {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  flex: none;
+  background: #D9ECFF;
+  color: var(--brand);
+  font-weight: 700;
+  overflow: hidden;
+}
+
+.avatar--image {
+  background:
+    linear-gradient(135deg, rgba(18,72,116,.12), rgba(32,201,151,.12)),
+    #E4E6EB;
+}
+
+.avatar-sm { width: 32px; height: 32px; font-size: 12px; }
+
+.avatar-lg { width: 52px; height: 52px; font-size: 18px; }
+
+.composer textarea {
+  width: 100%;
+  min-height: 64px;
+  padding: 0;
+  border: 0;
+  resize: none;
+  outline: none;
+  color: var(--text);
+  font-size: 15px;
+  line-height: 1.5;
+  background: transparent;
+}
+
+.composer textarea::placeholder { color: var(--text-disabled); }
+
+.composer-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-top: 12px;
+}
+
+.composer-tools {
+  display: flex;
+  gap: 4px;
+  color: var(--text-muted);
+}
+
+.post {
+  display: grid;
+  grid-template-columns: 44px minmax(0, 1fr);
+  gap: 12px;
+  padding: 16px;
+  border-bottom: 1px solid var(--border);
+  background: var(--surface);
+  transition: background .15s ease;
+}
+
+.post:hover { background: #FCFCFD; }
+
+.post-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: start;
+  gap: 12px;
+}
+
+.author {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.author strong {
+  font-size: 15px;
+  line-height: 21px;
+}
+
+.meta {
+  color: var(--text-muted);
+  font-size: 13px;
+}
+
+.verified {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 7px;
+  border-radius: var(--r-full);
+  background: rgba(18,72,116,.08);
+  border: 1px solid rgba(18,72,116,.14);
+  color: var(--brand);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.post-body {
+  margin: 6px 0 0;
+  font-size: 15px;
+  line-height: 1.55;
+}
+
+.post-media {
+  margin-top: 12px;
+  overflow: hidden;
+  border: 1px solid var(--border);
+  border-radius: var(--r-lg);
+  background: var(--surface-subtle);
+}
+
+.media-placeholder {
+  min-height: 186px;
+  display: grid;
+  place-items: center;
+  background:
+    linear-gradient(135deg, rgba(18,72,116,.08), rgba(32,201,151,.09)),
+    var(--surface-subtle);
+  color: var(--text-muted);
+  text-align: center;
+  padding: 24px;
+}
+
+.media-placeholder strong {
+  display: block;
+  color: var(--text);
+  margin-bottom: 4px;
+}
+
+.post-actions {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin-top: 10px;
+  color: var(--text-muted);
+}
+
+.post-action {
+  min-width: 44px;
+  min-height: 36px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 0 10px;
+  border-radius: var(--r-full);
+  color: var(--text-muted);
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.post-action:hover {
+  background: var(--surface-hover);
+  color: var(--text);
+}
+
+.post-action.is-liked { color: var(--brand); }
+
+.reply-preview {
+  margin-top: 10px;
+  padding: 10px 12px;
+  border-left: 2px solid var(--border);
+  color: var(--text-secondary);
+  font-size: 13px;
+  line-height: 1.45;
+}
+
+.right-panel {
+  padding: 16px;
+  background: var(--bg);
+}
+
+.search {
+  position: relative;
+  margin-bottom: 14px;
+}
+
+.search svg {
+  position: absolute;
+  left: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--text-muted);
+}
+
+.search input {
+  width: 100%;
+  height: 42px;
+  padding: 0 14px 0 40px;
+  border: 1px solid var(--border);
+  border-radius: var(--r-full);
+  background: var(--surface);
+  color: var(--text);
+  outline: none;
+}
+
+.search input:focus {
+  border-color: var(--brand);
+  box-shadow: var(--focus);
+}
+
+.panel-card {
+  padding: 14px;
+  border: 1px solid var(--border);
+  border-radius: var(--r-xl);
+  background: var(--surface);
+  box-shadow: var(--shadow-xs);
+}
+
+.panel-card + .panel-card { margin-top: 12px; }
+
+.panel-title {
+  margin: 0 0 12px;
+  font-size: 15px;
+  letter-spacing: -.02em;
+}
+
+.suggest-list {
+  display: grid;
+  gap: 12px;
+}
+
+.suggest {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.suggest-info { min-width: 0; flex: 1; }
+
+.suggest-info strong {
+  display: block;
+  font-size: 14px;
+  line-height: 1.2;
+}
+
+.suggest-info span {
+  display: block;
+  margin-top: 2px;
+  color: var(--text-muted);
+  font-size: 12px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.mini-btn {
+  height: 32px;
+  padding: 0 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--r-full);
+  background: var(--surface);
+  color: var(--text);
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.mini-btn:hover {
+  background: var(--surface-hover);
+}
+
+.event-card {
+  display: grid;
+  gap: 10px;
+}
+
+.event-row {
+  display: flex;
+  gap: 10px;
+}
+
+.date-badge {
+  width: 44px;
+  height: 44px;
+  display: grid;
+  place-items: center;
+  border-radius: var(--r-md);
+  background: var(--brand-soft);
+  color: var(--brand);
+  font-size: 12px;
+  font-weight: 800;
+  line-height: 1.1;
+  text-align: center;
+  flex: none;
+}
+
+.event-row strong {
+  display: block;
+  font-size: 13px;
+}
+
+.event-row span {
+  color: var(--text-muted);
+  font-size: 12px;
+}
+
+.mobile-bottom-nav {
+  display: none;
+}
+
+/* ============================================================
+   FOUNDATION CARDS
+   ============================================================ */
+
+.grid-4 {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.grid-3 {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.grid-2 {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.token-card {
+  border: 1px solid var(--border);
+  border-radius: var(--r-xl);
+  background: var(--surface);
+  overflow: hidden;
+  box-shadow: var(--shadow-xs);
+}
+
+.swatch {
+  height: 78px;
+  border-bottom: 1px solid var(--border);
+}
+
+.token-info {
+  padding: 14px;
+}
+
+.token-info strong {
+  display: block;
+  font-size: 14px;
+}
+
+.token-info code {
+  display: block;
+  margin-top: 4px;
+  color: var(--text-muted);
+  font-family: var(--font-data);
+  font-size: 12px;
+}
+
+.token-info p {
+  margin: 8px 0 0;
+  color: var(--text-secondary);
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+.annotation {
+  padding: 16px;
+  border-radius: var(--r-xl);
+  border: 1px solid var(--brand-border);
+  background: var(--brand-soft);
+  color: var(--brand);
+}
+
+.annotation strong {
+  display: block;
+  margin-bottom: 6px;
+}
+
+.annotation p {
+  margin: 0;
+  color: var(--brand-hover);
+  line-height: 1.6;
+}
+
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 24px;
+  padding: 0 8px;
+  border-radius: var(--r-full);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.badge-brand { background: rgba(18,72,116,.08); color: var(--brand); border: 1px solid rgba(18,72,116,.14); }
+.badge-mentor { background: var(--mentor-bg); color: var(--mentor-text); }
+.badge-success { background: var(--success-bg); color: var(--success-text); }
+.badge-warning { background: var(--warning-bg); color: var(--warning-text); }
+.badge-danger { background: var(--danger-bg); color: var(--danger-text); }
+
+.component-lab {
+  border: 1px solid var(--border);
+  border-radius: 24px;
+  background: var(--surface);
+  overflow: hidden;
+  box-shadow: var(--shadow-xs);
+}
+
+.lab-header {
+  padding: 18px 20px;
+  border-bottom: 1px solid var(--border);
+}
+
+.lab-header h3 {
+  margin: 0;
+  font-size: 18px;
+  letter-spacing: -.025em;
+}
+
+.lab-header p {
+  margin: 6px 0 0;
+  color: var(--text-secondary);
+}
+
+.lab-body {
+  padding: 20px;
+  display: grid;
+  gap: 20px;
+}
+
+.lab-row {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.input {
+  height: 44px;
+  min-width: 240px;
+  padding: 0 14px;
+  border-radius: var(--r-md);
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--text);
+  outline: none;
+}
+
+.input:hover { border-color: var(--border-strong); }
+
+.input:focus {
+  border-color: var(--brand);
+  box-shadow: var(--focus);
+}
+
+.textarea {
+  width: 100%;
+  min-height: 96px;
+  padding: 12px 14px;
+  border-radius: var(--r-md);
+  border: 1px solid var(--border);
+  resize: vertical;
+  outline: none;
+}
+
+.form-field {
+  display: grid;
+  gap: 6px;
+  max-width: 360px;
+}
+
+.form-field label {
+  font-weight: 700;
+  font-size: 13px;
+}
+
+.help {
+  color: var(--text-muted);
+  font-size: 12px;
+}
+
+.error-text {
+  color: var(--danger-text);
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.input[aria-invalid="true"] {
+  border-color: var(--danger);
+  box-shadow: 0 0 0 3px rgba(198,40,40,.10);
+}
+
+.profile-card {
+  max-width: 320px;
+  border: 1px solid var(--border);
+  border-radius: var(--r-2xl);
+  background: var(--surface);
+  overflow: hidden;
+  box-shadow: var(--shadow-xs);
+}
+
+.profile-cover {
+  height: 104px;
+  background: var(--subtle-tint-gradient);
+  border-bottom: 1px solid var(--border);
+}
+
+.profile-body {
+  padding: 0 16px 16px;
+}
+
+.profile-body .avatar-lg {
+  margin-top: -26px;
+  border: 3px solid #fff;
+}
+
+.profile-body h3 {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 10px 0 4px;
+  font-size: 18px;
+}
+
+.profile-body p {
+  margin: 0 0 14px;
+  color: var(--text-secondary);
+  font-size: 14px;
+  line-height: 1.55;
+}
+
+.profile-stats {
+  display: flex;
+  gap: 18px;
+  padding: 12px 0;
+  border-top: 1px solid var(--border);
+  border-bottom: 1px solid var(--border);
+  margin-bottom: 14px;
+}
+
+.profile-stats strong {
+  display: block;
+  font-size: 15px;
+}
+
+.profile-stats span {
+  color: var(--text-muted);
+  font-size: 12px;
+}
+
+.status-table {
+  width: 100%;
+  border-collapse: collapse;
+  border: 1px solid var(--border);
+  border-radius: var(--r-xl);
+  overflow: hidden;
+  background: var(--surface);
+}
+
+.status-table th,
+.status-table td {
+  padding: 12px 14px;
+  border-bottom: 1px solid var(--border);
+  text-align: left;
+  vertical-align: top;
+  font-size: 14px;
+}
+
+.status-table th {
+  color: var(--text-secondary);
+  background: var(--surface-subtle);
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: .05em;
+}
+
+.status-table tr:last-child td { border-bottom: 0; }
+
+.checklist {
+  display: grid;
+  gap: 10px;
+}
+
+.check-item {
+  display: flex;
+  gap: 10px;
+  padding: 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--r-lg);
+  background: var(--surface);
+}
+
+.check-icon {
+  width: 24px;
+  height: 24px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  background: var(--brand-soft);
+  color: var(--brand);
+  flex: none;
+}
+
+.check-item strong {
+  display: block;
+  font-size: 14px;
+}
+
+.check-item span {
+  display: block;
+  color: var(--text-secondary);
+  margin-top: 2px;
+  font-size: 13px;
+  line-height: 1.45;
+}
+
+.dos {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+}
+
+.do-card {
+  border: 1px solid var(--border);
+  border-radius: var(--r-xl);
+  background: var(--surface);
+  padding: 18px;
+}
+
+.do-card h3 {
+  margin: 0 0 12px;
+  font-size: 16px;
+}
+
+.do-card ul {
+  margin: 0;
+  padding-left: 18px;
+  color: var(--text-secondary);
+  display: grid;
+  gap: 8px;
+}
+
+.do-card li::marker {
+  color: var(--brand);
+}
+
+/* ============================================================
+   RESPONSIVE
+   ============================================================ */
+
+@media (max-width: 1180px) {
+  .hero {
+    grid-template-columns: 1fr;
+    min-height: auto;
+  }
+
+  .app-frame {
+    grid-template-columns: 84px minmax(0, 1fr) 268px;
+  }
+
+  .left-nav__brand strong,
+  .left-nav__brand span,
+  .nav-item span,
+  .left-nav__footer {
+    display: none;
+  }
+
+  .left-nav {
+    padding: 18px 10px;
+  }
+
+  .left-nav__brand {
+    justify-content: center;
+    padding: 0 0 18px;
+  }
+
+  .nav-item {
+    justify-content: center;
+    padding: 0;
+  }
+}
+
+@media (max-width: 920px) {
+  .doc-links { display: none; }
+  .app-frame { grid-template-columns: 1fr; }
+  .left-nav, .right-panel { display: none; }
+  .app-preview { border-radius: 22px; }
+  .feed { border-right: 0; }
+  .mobile-bottom-nav {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    height: 64px;
+    border-top: 1px solid var(--border);
+    background: var(--surface);
+  }
+  .mobile-bottom-nav a {
+    display: grid;
+    place-items: center;
+    color: var(--text-muted);
+  }
+  .mobile-bottom-nav a[aria-current="page"] { color: var(--brand); }
+  .grid-4, .grid-3, .grid-2, .dos { grid-template-columns: 1fr; }
+  .header-row { display: block; }
+  .chip-row { margin-top: 16px; }
+}
+
+@media (max-width: 640px) {
+  .page { padding: 20px 14px 72px; }
+  .doc-topbar__inner { padding: 0 14px; }
+  .brand-sub { display: none; }
+  .hero-card { padding: 24px; border-radius: 22px; }
+  .hero-metrics { grid-template-columns: 1fr; }
+  .feed-header { top: 65px; }
+  .post, .composer { padding: 14px; }
+  .post-media .media-placeholder { min-height: 140px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: .01ms !important;
+    transition-duration: .01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+</style>
+</head>
+<body>
+<a class="skip-link" href="#main">Bỏ qua điều hướng</a>
+
+<header class="doc-topbar">
+  <div class="doc-topbar__inner">
+    <a class="brand-lockup" href="#top" aria-label="UEConnect preview home">
+      <span class="brand-mark">UE</span>
+      <span class="brand-copy">
+        <span class="brand-name">UEConnect</span>
+        <span class="brand-sub">Enterprise UX Design Preview</span>
+      </span>
+    </a>
+    <nav class="doc-links" aria-label="Design preview sections">
+      <a href="#product" class="active">Product</a>
+      <a href="#tokens">Tokens</a>
+      <a href="#components">Components</a>
+      <a href="#flows">Flows</a>
+      <a href="#qa">QA</a>
+    </nav>
+  </div>
+</header>
+
+<main class="page" id="main">
+  <section class="hero" id="top">
+    <div class="hero-card">
+      <span class="hero-eyebrow">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M12 3l7 4v5c0 5-3.5 8-7 9-3.5-1-7-4-7-9V7l7-4z"/><path d="M9 12l2 2 4-4"/></svg>
+        HCMUE verified social platform
+      </span>
+      <h1>Preview UI chuẩn <span>enterprise</span>, không còn mùi AI.</h1>
+      <p>
+        Bản này mô phỏng sản phẩm UEConnect thật: layout social platform, neutral-first,
+        brand color dùng có kiểm soát, feed đọc tốt, icon rõ, component có state và có checklist review như người lớn.
+      </p>
+      <div class="hero-actions">
+        <a class="btn btn-primary btn-lg" href="#product">
+          Xem product preview
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M5 12h14"/><path d="M13 5l7 7-7 7"/></svg>
+        </a>
+        <a class="btn btn-secondary btn-lg" href="#qa">Xem UX checklist</a>
+      </div>
+      <div class="hero-metrics" aria-label="Design principles">
+        <div class="metric"><strong>80–90%</strong><span>Neutral surface</span></div>
+        <div class="metric"><strong>5–10%</strong><span>Brand blue usage</span></div>
+        <div class="metric"><strong>44px+</strong><span>Touch target</span></div>
+      </div>
+    </div>
+
+    <div class="app-preview" aria-label="UEConnect social app preview">
+      <div class="app-frame">
+        <aside class="left-nav" aria-label="UEConnect navigation">
+          <div class="left-nav__brand">
+            <span class="brand-mark">UE</span>
+            <span>
+              <strong>UEConnect</strong>
+              <span>HCMUE social</span>
+            </span>
+          </div>
+
+          <nav class="nav-list">
+            <a class="nav-item" href="#" aria-current="page">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M3 11l9-8 9 8"/><path d="M5 10v10h14V10"/><path d="M9 20v-6h6v6"/></svg>
+              <span>Trang chủ</span>
+            </a>
+            <a class="nav-item" href="#">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg>
+              <span>Khám phá</span>
+            </a>
+            <a class="nav-item" href="#">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M12 5v14"/><path d="M5 12h14"/></svg>
+              <span>Tạo bài</span>
+            </a>
+            <a class="nav-item" href="#">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M21 15a4 4 0 0 1-4 4H8l-5 3V7a4 4 0 0 1 4-4h10a4 4 0 0 1 4 4z"/></svg>
+              <span>Tin nhắn</span>
+            </a>
+            <a class="nav-item" href="#">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 7h18s-3 0-3-7"/><path d="M13.7 21a2 2 0 0 1-3.4 0"/></svg>
+              <span>Thông báo</span>
+            </a>
+            <a class="nav-item" href="#">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/></svg>
+              <span>Hồ sơ</span>
+            </a>
+          </nav>
+
+          <div class="left-nav__footer">
+            <strong>Xác thực UEer</strong>
+            <p>Tăng độ tin cậy bằng email sinh viên HCMUE.</p>
+            <button class="btn btn-primary">Xác thực</button>
+          </div>
+        </aside>
+
+        <section class="feed" aria-label="Main feed">
+          <header class="feed-header">
+            <h2>Trang chủ</h2>
+            <button class="btn icon-btn" aria-label="Tùy chỉnh feed">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M4 21v-7"/><path d="M4 10V3"/><path d="M12 21v-9"/><path d="M12 8V3"/><path d="M20 21v-5"/><path d="M20 12V3"/><path d="M2 14h4"/><path d="M10 8h4"/><path d="M18 16h4"/></svg>
+            </button>
+          </header>
+
+          <div class="feed-tabs" role="tablist" aria-label="Feed tabs">
+            <button class="feed-tab" aria-selected="true">Dành cho bạn</button>
+            <button class="feed-tab">Đang theo dõi</button>
+            <button class="feed-tab">Mentor</button>
+          </div>
+
+          <div class="composer">
+            <div class="avatar avatar--image">HQ</div>
+            <div>
+              <textarea placeholder="Bạn muốn chia sẻ gì với UEers?"></textarea>
+              <div class="composer-actions">
+                <div class="composer-tools">
+                  <button class="btn icon-btn" aria-label="Thêm ảnh"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="9" cy="9" r="2"/><path d="M21 15l-5-5L5 21"/></svg></button>
+                  <button class="btn icon-btn" aria-label="Thêm lịch"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4"/><path d="M8 2v4"/><path d="M3 10h18"/></svg></button>
+                  <button class="btn icon-btn" aria-label="Thêm khảo sát"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M4 19V5"/><path d="M8 17V9"/><path d="M12 19V5"/><path d="M16 15v-4"/><path d="M20 19V7"/></svg></button>
+                </div>
+                <button class="btn btn-primary">Đăng</button>
+              </div>
+            </div>
+          </div>
+
+          <article class="post">
+            <div class="avatar">MA</div>
+            <div>
+              <div class="post-head">
+                <div>
+                  <div class="author">
+                    <strong>Minh Anh</strong>
+                    <span class="verified"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" style="width:13px;height:13px"><path d="M12 3l7 4v5c0 5-3.5 8-7 9-3.5-1-7-4-7-9V7l7-4z"/><path d="M9 12l2 2 4-4"/></svg>UEer</span>
+                    <span class="meta">· K49 CNTT · 12 phút</span>
+                  </div>
+                </div>
+                <button class="btn icon-btn" aria-label="More options"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/><circle cx="5" cy="12" r="1"/></svg></button>
+              </div>
+              <p class="post-body">
+                Có ai đang học phân tích thiết kế hệ thống không? Mình đang tổng hợp use case cho app sinh viên, cần người review flow đăng ký mentor.
+              </p>
+              <div class="post-media">
+                <div class="media-placeholder">
+                  <div>
+                    <strong>System analysis study group</strong>
+                    <span>Neutral card, subtle border, no loud gradient. Trông đã bớt “AI thở ra màu” rồi.</span>
+                  </div>
+                </div>
+              </div>
+              <div class="post-actions">
+                <a class="post-action is-liked" href="#"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.6l-1-1a5.5 5.5 0 0 0-7.8 7.8l1 1L12 21l7.8-7.6 1-1a5.5 5.5 0 0 0 0-7.8z"/></svg>42</a>
+                <a class="post-action" href="#"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M21 15a4 4 0 0 1-4 4H8l-5 3V7a4 4 0 0 1 4-4h10a4 4 0 0 1 4 4z"/></svg>12</a>
+                <a class="post-action" href="#"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M17 1l4 4-4 4"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/><path d="M7 23l-4-4 4-4"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/></svg>6</a>
+                <a class="post-action" href="#"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M22 2L11 13"/><path d="M22 2l-7 20-4-9-9-4 20-7z"/></svg></a>
+              </div>
+              <div class="reply-preview"><strong>Quang Huy:</strong> Mình có template activity diagram, gửi bạn tham khảo.</div>
+            </div>
+          </article>
+
+          <article class="post">
+            <div class="avatar" style="background:#F1F5F9;color:#475569">TN</div>
+            <div>
+              <div class="post-head">
+                <div class="author">
+                  <strong>Thầy Nam</strong>
+                  <span class="badge badge-mentor">Mentor</span>
+                  <span class="meta">· Alumni · 1 giờ</span>
+                </div>
+                <button class="btn icon-btn" aria-label="More options"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/><circle cx="5" cy="12" r="1"/></svg></button>
+              </div>
+              <p class="post-body">
+                Tối nay mình mở một buổi review CV và portfolio frontend cho sinh viên năm 3. Ưu tiên các bạn đã có project GitHub.
+              </p>
+              <div class="post-actions">
+                <a class="post-action" href="#"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.6l-1-1a5.5 5.5 0 0 0-7.8 7.8l1 1L12 21l7.8-7.6 1-1a5.5 5.5 0 0 0 0-7.8z"/></svg>89</a>
+                <a class="post-action" href="#"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M21 15a4 4 0 0 1-4 4H8l-5 3V7a4 4 0 0 1 4-4h10a4 4 0 0 1 4 4z"/></svg>24</a>
+                <a class="post-action" href="#"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg>Lưu</a>
+              </div>
+            </div>
+          </article>
+        </section>
+
+        <aside class="right-panel" aria-label="Suggestions and context">
+          <div class="search">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg>
+            <input type="search" placeholder="Tìm UEers, mentor, CLB" />
+          </div>
+
+          <section class="panel-card">
+            <h3 class="panel-title">Gợi ý kết nối</h3>
+            <div class="suggest-list">
+              <div class="suggest">
+                <div class="avatar avatar-sm">PH</div>
+                <div class="suggest-info">
+                  <strong>Phúc Hưng</strong>
+                  <span>K49 CNTT · cùng môn Linux</span>
+                </div>
+                <button class="mini-btn">Theo dõi</button>
+              </div>
+              <div class="suggest">
+                <div class="avatar avatar-sm" style="background:#F3EFFF;color:#5B3FD6">NL</div>
+                <div class="suggest-info">
+                  <strong>Ngọc Lan</strong>
+                  <span>Mentor UI/UX · Alumni</span>
+                </div>
+                <button class="mini-btn">Xem</button>
+              </div>
+              <div class="suggest">
+                <div class="avatar avatar-sm" style="background:#ECFDF5;color:#0F7B5C">CL</div>
+                <div class="suggest-info">
+                  <strong>CLB Web</strong>
+                  <span>Frontend workshop tuần này</span>
+                </div>
+                <button class="mini-btn">Tham gia</button>
+              </div>
+            </div>
+          </section>
+
+          <section class="panel-card event-card">
+            <h3 class="panel-title">Sự kiện sắp tới</h3>
+            <div class="event-row">
+              <div class="date-badge">26<br>05</div>
+              <div>
+                <strong>Peer review đồ án OOAD</strong>
+                <span>Phòng tự học · 19:30</span>
+              </div>
+            </div>
+            <div class="event-row">
+              <div class="date-badge">28<br>05</div>
+              <div>
+                <strong>Linux web server lab</strong>
+                <span>Online · 20:00</span>
+              </div>
+            </div>
+          </section>
+
+          <section class="panel-card">
+            <h3 class="panel-title">Design note</h3>
+            <p style="margin:0;color:var(--text-secondary);font-size:13px;line-height:1.55">
+              Brand blue chỉ dùng cho trạng thái quan trọng. Feed và post ưu tiên neutral để content của sinh viên không bị màu thương hiệu bóp cổ.
+            </p>
+          </section>
+        </aside>
+
+        <nav class="mobile-bottom-nav" aria-label="Mobile navigation">
+          <a href="#" aria-current="page" aria-label="Trang chủ"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M3 11l9-8 9 8"/><path d="M5 10v10h14V10"/></svg></a>
+          <a href="#" aria-label="Khám phá"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg></a>
+          <a href="#" aria-label="Tạo bài"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M12 5v14"/><path d="M5 12h14"/></svg></a>
+          <a href="#" aria-label="Tin nhắn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M21 15a4 4 0 0 1-4 4H8l-5 3V7a4 4 0 0 1 4-4h10a4 4 0 0 1 4 4z"/></svg></a>
+          <a href="#" aria-label="Hồ sơ"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/></svg></a>
+        </nav>
+      </div>
+    </div>
+  </section>
+
+  <section class="section" id="product">
+    <div class="header-row">
+      <div>
+        <p class="section-kicker">01 · Product direction</p>
+        <h2 class="section-title">Không thiết kế “màu thương hiệu phủ toàn trang”. Thiết kế như một social product thật.</h2>
+        <p class="section-desc">
+          UEConnect dùng cấu trúc giống social platform hiện đại: content ở giữa, điều hướng icon rõ,
+          panel phụ gọn, action nhẹ. Màu HCMUE là tín hiệu, không phải cái loa phóng thanh.
+        </p>
+      </div>
+      <div class="chip-row" aria-label="Design principles">
+        <span class="chip chip--brand">Neutral-first</span>
+        <span class="chip">Content-first</span>
+        <span class="chip">Icon-driven</span>
+        <span class="chip">Accessible</span>
+      </div>
+    </div>
+
+    <div class="grid-3">
+      <div class="annotation">
+        <strong>Brand restraint</strong>
+        <p>Dùng #124874 cho logo, active state, CTA chính, focus, verified badge. Không dùng cho mọi icon hay mọi card.</p>
+      </div>
+      <div class="annotation">
+        <strong>Feed readability</strong>
+        <p>Feed rộng khoảng 560–640px, post dùng border/divider nhẹ, typography 15px/21px để đọc lâu không mỏi.</p>
+      </div>
+      <div class="annotation">
+        <strong>Enterprise state coverage</strong>
+        <p>Mọi component có hover, focus, active, disabled, loading, error. Thứ “nhìn đẹp nhưng thiếu state” là nợ kỹ thuật đội tóc giả.</p>
+      </div>
+    </div>
+  </section>
+
+  <section class="section" id="tokens">
+    <div class="header-row">
+      <div>
+        <p class="section-kicker">02 · Foundations</p>
+        <h2 class="section-title">Design tokens đã được tiết chế lại.</h2>
+        <p class="section-desc">
+          Palette chính là neutral, brand blue là accent. Gradient chỉ dùng cho rare brand moment như onboarding hoặc marketing hero.
+        </p>
+      </div>
+    </div>
+
+    <div class="grid-4">
+      <div class="token-card">
+        <div class="swatch" style="background:#124874"></div>
+        <div class="token-info"><strong>HCMUE Brand</strong><code>#124874</code><p>Logo, active nav, CTA, focus, verified.</p></div>
+      </div>
+      <div class="token-card">
+        <div class="swatch" style="background:#FAFAFA"></div>
+        <div class="token-info"><strong>App Background</strong><code>#FAFAFA</code><p>Default shell, page background, right panel.</p></div>
+      </div>
+      <div class="token-card">
+        <div class="swatch" style="background:#FFFFFF"></div>
+        <div class="token-info"><strong>Surface</strong><code>#FFFFFF</code><p>Feed, posts, cards, modals, nav.</p></div>
+      </div>
+      <div class="token-card">
+        <div class="swatch" style="background:#E4E6EB"></div>
+        <div class="token-info"><strong>Border</strong><code>#E4E6EB</code><p>Divider, post boundary, input border.</p></div>
+      </div>
+      <div class="token-card">
+        <div class="swatch" style="background:#0F172A"></div>
+        <div class="token-info"><strong>Text Primary</strong><code>#0F172A</code><p>Body, headings, nav labels.</p></div>
+      </div>
+      <div class="token-card">
+        <div class="swatch" style="background:#64748B"></div>
+        <div class="token-info"><strong>Text Muted</strong><code>#64748B</code><p>Metadata, timestamps, helper copy.</p></div>
+      </div>
+      <div class="token-card">
+        <div class="swatch" style="background:var(--subtle-tint-gradient)"></div>
+        <div class="token-info"><strong>Subtle Tint</strong><code>rgba blue tint</code><p>Empty state, small verified panel only.</p></div>
+      </div>
+      <div class="token-card">
+        <div class="swatch" style="background:var(--brand-moment-gradient)"></div>
+        <div class="token-info"><strong>Brand Moment</strong><code>rare gradient</code><p>Splash/onboarding only. Không dùng trong feed.</p></div>
+      </div>
+    </div>
+  </section>
+
+  <section class="section" id="components">
+    <div class="header-row">
+      <div>
+        <p class="section-kicker">03 · Component lab</p>
+        <h2 class="section-title">Component có state thật, không chỉ là mấy khối đẹp để chụp hình.</h2>
+        <p class="section-desc">
+          Preview này cho thấy button, input, badge, profile card, post action, loading và error state.
+          Đúng, component cũng cần trưởng thành, không phải chỉ cần bo góc rồi gọi là design system.
+        </p>
+      </div>
+    </div>
+
+    <div class="grid-2">
+      <div class="component-lab">
+        <div class="lab-header">
+          <h3>Buttons & icon actions</h3>
+          <p>Solid primary mặc định. Gradient không xuất hiện trong feed.</p>
+        </div>
+        <div class="lab-body">
+          <div class="lab-row">
+            <button class="btn btn-primary">Gửi lời chào</button>
+            <button class="btn btn-secondary">Hủy</button>
+            <button class="btn btn-ghost">Bỏ qua</button>
+            <button class="btn btn-primary btn-loading">Đang gửi</button>
+          </div>
+          <div class="lab-row">
+            <button class="btn icon-btn" aria-label="Like"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.6l-1-1a5.5 5.5 0 0 0-7.8 7.8l1 1L12 21l7.8-7.6 1-1a5.5 5.5 0 0 0 0-7.8z"/></svg></button>
+            <button class="btn icon-btn" aria-label="Comment"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M21 15a4 4 0 0 1-4 4H8l-5 3V7a4 4 0 0 1 4-4h10a4 4 0 0 1 4 4z"/></svg></button>
+            <button class="btn icon-btn" aria-label="Save"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg></button>
+          </div>
+        </div>
+      </div>
+
+      <div class="component-lab">
+        <div class="lab-header">
+          <h3>Forms & validation</h3>
+          <p>Placeholder không thay label. Error không chỉ đổi màu.</p>
+        </div>
+        <div class="lab-body">
+          <div class="form-field">
+            <label for="faculty">Khoa / Ngành</label>
+            <input id="faculty" class="input" value="Công nghệ thông tin" />
+            <span class="help">Hiển thị trên hồ sơ để UEers nhận diện bạn.</span>
+          </div>
+          <div class="form-field">
+            <label for="student-id">Mã sinh viên</label>
+            <input id="student-id" class="input" aria-invalid="true" value="49.01" />
+            <span class="error-text">Mã sinh viên chưa đúng định dạng.</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="component-lab">
+        <div class="lab-header">
+          <h3>Badges & trust signals</h3>
+          <p>Badge dùng nền nhạt + text đậm, không tô màu như hội chợ.</p>
+        </div>
+        <div class="lab-body">
+          <div class="lab-row">
+            <span class="badge badge-brand">Verified UEer</span>
+            <span class="badge badge-mentor">Mentor</span>
+            <span class="badge badge-success">Online</span>
+            <span class="badge badge-warning">Pending</span>
+            <span class="badge badge-danger">Report</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="component-lab">
+        <div class="lab-header">
+          <h3>Profile card</h3>
+          <p>Social identity page, không phải thẻ hẹn hò trá hình.</p>
+        </div>
+        <div class="lab-body">
+          <div class="profile-card">
+            <div class="profile-cover"></div>
+            <div class="profile-body">
+              <div class="avatar avatar-lg">HN</div>
+              <h3>Hà Nhi <span class="verified">UEer</span></h3>
+              <p>K50 Tâm lý học · thích research, workshop kỹ năng học tập và tìm mentor học thuật.</p>
+              <div class="profile-stats">
+                <div><strong>128</strong><span>Kết nối</span></div>
+                <div><strong>14</strong><span>Bài viết</span></div>
+                <div><strong>3</strong><span>CLB</span></div>
+              </div>
+              <button class="btn btn-primary" style="width:100%">Gửi lời chào</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="section" id="flows">
+    <div class="header-row">
+      <div>
+        <p class="section-kicker">04 · UX flows</p>
+        <h2 class="section-title">Các flow chính được mô tả như designer thật review sản phẩm.</h2>
+        <p class="section-desc">
+          Preview không chỉ là màu và component. Nó phải cho thấy cách người dùng đi qua hệ thống: tạo post,
+          khám phá UEers, xác thực, nhắn tin và xử lý lỗi.
+        </p>
+      </div>
+    </div>
+
+    <table class="status-table">
+      <thead>
+        <tr>
+          <th>Flow</th>
+          <th>Primary screen</th>
+          <th>UX notes</th>
+          <th>Risk cần tránh</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><strong>Onboarding</strong></td>
+          <td>Splash → Verify HCMUE → Profile setup</td>
+          <td>Dùng brand moment gradient một lần, sau đó về neutral UI.</td>
+          <td>Biến onboarding thành landing page tràn hiệu ứng.</td>
+        </tr>
+        <tr>
+          <td><strong>Feed</strong></td>
+          <td>Home feed + Composer + Post actions</td>
+          <td>Ưu tiên readability, post body 15px/21px, action icon neutral.</td>
+          <td>CTA lớn trong từng post làm feed rối.</td>
+        </tr>
+        <tr>
+          <td><strong>Discovery</strong></td>
+          <td>UEer profile cards + filters</td>
+          <td>Gợi ý dựa trên khoa, khóa, môn học, mentor needs.</td>
+          <td>Ngôn ngữ dating clone: match, crush, hot profile.</td>
+        </tr>
+        <tr>
+          <td><strong>Messaging</strong></td>
+          <td>Inbox list + Chat panel</td>
+          <td>Own bubble dùng brand blue, other bubble dùng neutral.</td>
+          <td>Dùng gradient trong message bubble, nhìn như app demo.</td>
+        </tr>
+        <tr>
+          <td><strong>Safety</strong></td>
+          <td>Report, block, privacy settings</td>
+          <td>Icon rõ, aria-label đầy đủ, confirmation không gây hoảng.</td>
+          <td>Ẩn report/block quá sâu vì sợ xấu UI.</td>
+        </tr>
+      </tbody>
+    </table>
+  </section>
+
+  <section class="section" id="qa">
+    <div class="header-row">
+      <div>
+        <p class="section-kicker">05 · Professional UX QA</p>
+        <h2 class="section-title">Checklist chống lỗi UI/UX chết người.</h2>
+        <p class="section-desc">
+          Dùng checklist này trước khi chốt screen. Nó giúp UI bớt “AI generated” và giống sản phẩm có đội design chịu trách nhiệm.
+        </p>
+      </div>
+    </div>
+
+    <div class="grid-2">
+      <div class="checklist">
+        <div class="check-item">
+          <span class="check-icon">✓</span>
+          <div><strong>Brand weight dưới 10%</strong><span>Mỗi screen không được phủ brand blue khắp nơi. Active nav, CTA, badge là đủ.</span></div>
+        </div>
+        <div class="check-item">
+          <span class="check-icon">✓</span>
+          <div><strong>Focus state nhìn rõ</strong><span>Mọi button, link, input, icon button có focus-visible, không xóa outline rồi bỏ mặc nhân loại.</span></div>
+        </div>
+        <div class="check-item">
+          <span class="check-icon">✓</span>
+          <div><strong>Touch target 44px+</strong><span>Nav item, icon button, post action, bottom nav đều phải đủ kích thước bấm.</span></div>
+        </div>
+        <div class="check-item">
+          <span class="check-icon">✓</span>
+          <div><strong>Post content đọc được</strong><span>Body 15px/21px, line length hợp lý, không dùng text xám quá nhạt.</span></div>
+        </div>
+      </div>
+
+      <div class="dos">
+        <div class="do-card">
+          <h3>Nên làm</h3>
+          <ul>
+            <li>Dùng border trước shadow.</li>
+            <li>Dùng icon line neutral, active mới chuyển blue.</li>
+            <li>Dùng gradient như rare brand moment.</li>
+            <li>Dùng badge nhạt, có text rõ.</li>
+            <li>Giữ feed sạch, content-first.</li>
+          </ul>
+        </div>
+        <div class="do-card">
+          <h3>Không nên</h3>
+          <ul>
+            <li>Không dùng gradient trong feed.</li>
+            <li>Không tô mọi icon bằng brand blue.</li>
+            <li>Không bo 24px cho mọi thứ.</li>
+            <li>Không dùng red để tạo “năng lượng”.</li>
+            <li>Không biến discovery thành dating clone.</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </section>
+</main>
+
+<script>
+const links = [...document.querySelectorAll('.doc-links a')];
+const sections = ['product','tokens','components','flows','qa'].map(id => document.getElementById(id)).filter(Boolean);
+
+const setActive = () => {
+  let current = 'product';
+  for (const section of sections) {
+    if (window.scrollY >= section.offsetTop - 110) current = section.id;
+  }
+  links.forEach(link => link.classList.toggle('active', link.getAttribute('href') === '#' + current));
+};
+
+window.addEventListener('scroll', setActive, { passive: true });
+setActive();
+</script>
+</body>
+</html>
