@@ -55,7 +55,7 @@ real email cá nhân
 real evidence image
 real report content nhạy cảm
 real private message
-2.2. Deterministic Core Seeds
+### 2.2. Deterministic Core Seeds
 
 Core seed phải ổn định giữa các máy.
 
@@ -74,7 +74,7 @@ Các seed này nên idempotent.
 
 Nghĩa là chạy nhiều lần không nhân bản dữ liệu như gremlin gặp nước.
 
-2.3. Demo Seeds Are Optional
+### 2.3. Demo Seeds Are Optional
 
 Demo seeds có thể bật/tắt theo environment.
 
@@ -82,7 +82,7 @@ local: yes
 testing: minimal
 staging: controlled
 production: only reference seeds
-2.4. Production Seeds Are Strict
+### 2.4. Production Seeds Are Strict
 
 Production chỉ seed:
 
@@ -100,7 +100,7 @@ demo posts
 demo messages
 demo reports
 demo evidence
-2.5. Use Factories for Fake Data
+### 2.5. Use Factories for Fake Data
 
 Dùng Laravel factories cho:
 
@@ -115,7 +115,7 @@ reports
 
 Không hardcode 200 user bằng tay. Con người đã đau đủ rồi.
 
-3. Seeder Structure
+## 3. Seeder Structure
 
 Recommended structure:
 
@@ -144,8 +144,8 @@ database/
 │   │   └── DemoNotificationSeeder.php
 │   └── Testing/
 │       └── MinimalTestingSeeder.php
-4. DatabaseSeeder Strategy
-4.1. Recommended DatabaseSeeder
+## 4. DatabaseSeeder Strategy
+### 4.1. Recommended DatabaseSeeder
 <?php
 
 namespace Database\Seeders;
@@ -183,7 +183,7 @@ class DatabaseSeeder extends Seeder
         }
     }
 }
-4.2. Production Rule
+### 4.2. Production Rule
 
 Production deployment should run only reference seeders.
 
@@ -196,8 +196,8 @@ Or use a production-safe seeder group.
 
 Do not run demo seeders in production unless you enjoy explaining why “Nguyễn Văn Demo” is posting memes in the official platform.
 
-5. Reference Seeds
-5.1. Roles
+## 5. Reference Seeds
+### 5.1. Roles
 
 Seed roles:
 
@@ -231,7 +231,7 @@ foreach ($roles as $role) {
         ['guard_name' => 'web']
     );
 }
-5.2. Permissions
+### 5.2. Permissions
 
 Global permissions:
 
@@ -254,25 +254,26 @@ manage_community_posts
 manage_community_resources
 manage_community_settings
 moderate_community_chat
-5.3. Permission Mapping
+### 5.3. Permission Mapping
 
 Suggested mapping:
 
-Role	Permissions
-student	basic app usage
-alumni	basic app usage, mentor request eligibility
-advisor	basic app usage, mentor request eligibility
-mentor	mentor profile/request handling
-club_manager	scoped community permissions only
-moderator	moderate content, manage reports
-admin	verification, users, reports, communities, mentors
-super_admin	all permissions
+| Role | Permissions |
+| --- | --- |
+| student | basic app usage |
+| alumni | basic app usage, mentor request eligibility |
+| advisor | basic app usage, mentor request eligibility |
+| mentor | mentor profile/request handling |
+| club_manager | scoped community permissions only |
+| moderator | moderate content, manage reports |
+| admin | verification, users, reports, communities, mentors |
+| super_admin | all permissions |
 
 Important:
 
 club_manager should not be global by default. Use permission_grants scoped by community_id.
 
-5.4. Faculties
+### 5.4. Faculties
 
 Seed HCMUE faculties/departments as reference data.
 
@@ -286,7 +287,7 @@ Minimum seed format:
 
 Because faculty/program data may change, keep this seed easy to update.
 
-5.5. Academic Programs
+### 5.5. Academic Programs
 
 Each program belongs to a faculty.
 
@@ -302,7 +303,7 @@ Example shape:
 
 Do not pretend HCMUE is only IT. Bạn đã bắt lỗi này rồi, và đúng. Trường có nhiều khoa, database cũng phải cư xử tử tế với tất cả.
 
-5.6. Mentor Topics
+### 5.6. Mentor Topics
 
 Seed topics:
 
@@ -320,7 +321,7 @@ chinese_learning
 soft_skills
 scholarship
 graduation_project
-5.7. Report Reasons
+### 5.7. Report Reasons
 
 Seed report reasons:
 
@@ -346,7 +347,7 @@ Example:
     'status' => 'active',
     'sort_order' => 10,
 ]
-5.8. Moderation Action Types
+### 5.8. Moderation Action Types
 
 Seed actions:
 
@@ -359,7 +360,7 @@ suspend
 ban
 escalate
 resolve
-5.9. System Settings
+### 5.9. System Settings
 
 Seed default settings:
 
@@ -380,8 +381,8 @@ SystemSetting::updateOrCreate(
         'description' => 'Normal notification retention in days.',
     ]
 );
-6. Demo Users
-6.1. Demo User Types
+## 6. Demo Users
+### 6.1. Demo User Types
 
 Create demo users for each important state:
 
@@ -398,7 +399,7 @@ moderator
 admin
 suspended user
 banned user
-6.2. Demo Email Pattern
+### 6.2. Demo Email Pattern
 
 Use fake HCMUE-like domain only for local:
 
@@ -410,7 +411,7 @@ admin.demo01@hcmue.edu.vn
 
 Do not use real accounts.
 
-6.3. Demo Password
+### 6.3. Demo Password
 
 For local only:
 
@@ -418,14 +419,14 @@ password
 
 Never production.
 
-6.4. Demo User Seeder Pattern
+### 6.4. Demo User Seeder Pattern
 User::factory()->create([
     'email' => 'student.demo01@hcmue.edu.vn',
     'password' => Hash::make('password'),
     'email_verified_at' => now(),
     'account_status' => 'active',
 ]);
-7. Demo Verification Seeds
+## 7. Demo Verification Seeds
 
 Create verification examples:
 
@@ -453,14 +454,14 @@ demo/evidence/student-card-placeholder.pdf
 
 Better: fake media metadata without actual private document.
 
-7.1. Required Demo Cases
+### 7.1. Required Demo Cases
 student pending with 2 evidence files
 student need more information with admin instruction
 student rejected with reason
 student approved
 student conflict with duplicate MSSV scenario
 suspicious evidence case
-8. Demo Profile Seeds
+## 8. Demo Profile Seeds
 
 Create profiles for:
 
@@ -477,7 +478,7 @@ bio
 faculty/program
 privacy settings
 skills/interests
-8.1. Profile States
+### 8.1. Profile States
 
 Seed:
 
@@ -488,7 +489,7 @@ hidden
 
 This helps test account gate and UI state.
 
-9. Demo Feed Seeds
+## 9. Demo Feed Seeds
 
 Create:
 
@@ -500,7 +501,7 @@ hidden by moderation post
 removed post placeholder
 post with comments
 post with nested replies
-9.1. Feed Rules
+### 9.1. Feed Rules
 
 Demo posts should include:
 
@@ -511,7 +512,7 @@ no real student data
 
 Do not create dating-flavored posts. UEConnect không cần seed “ai đó tìm một nửa”. Không, cảm ơn.
 
-10. Demo Connection Seeds
+## 10. Demo Connection Seeds
 
 Create:
 
@@ -528,7 +529,7 @@ Each accepted greeting should have:
 connection
 conversation
 notification
-11. Demo Messaging Seeds
+## 11. Demo Messaging Seeds
 
 Create:
 
@@ -546,7 +547,7 @@ Use safe message content.
 
 Do not seed sensitive private messages. Demo privacy violations are still privacy violations, chỉ là mặc áo “demo”.
 
-12. Demo Notification Seeds
+## 12. Demo Notification Seeds
 
 Create notification examples:
 
@@ -565,7 +566,7 @@ Create read/unread/expired states.
 
 Notification previews must be privacy-safe.
 
-13. Demo Mentor Seeds
+## 13. Demo Mentor Seeds
 
 Create:
 
@@ -581,7 +582,7 @@ mentor full pending requests
 
 Mentor topics must be seeded first.
 
-14. Demo Community Seeds
+## 14. Demo Community Seeds
 
 Create:
 
@@ -601,7 +602,7 @@ join requests
 channels
 resources
 posts
-14.1. Community Roles
+### 14.1. Community Roles
 
 Seed scoped permission grants for:
 
@@ -611,7 +612,7 @@ resource manager in one community
 
 Do not make every club manager global admin. That would be “phân quyền” theo kiểu phát chìa khóa tổng cho người trông xe.
 
-15. Demo Safety / Moderation Seeds
+## 15. Demo Safety / Moderation Seeds
 
 Create reports for targets:
 
@@ -651,7 +652,7 @@ ban
 
 Every moderation action must have reason.
 
-16. Demo Admin / Audit Seeds
+## 16. Demo Admin / Audit Seeds
 
 Create audit logs for:
 
@@ -666,8 +667,8 @@ system announcement published
 
 Do not make audit logs editable in seed logic.
 
-17. Factory Strategy
-17.1. Required Factories
+## 17. Factory Strategy
+### 17.1. Required Factories
 
 Create factories for:
 
@@ -694,7 +695,7 @@ ReportFactory
 ModerationCaseFactory
 AuditLogFactory
 AnalyticsEventFactory
-17.2. Factory States
+### 17.2. Factory States
 
 Example user factory states:
 
@@ -731,7 +732,7 @@ public function approved(): static
         'reviewed_at' => now(),
     ]);
 }
-18. Idempotent Seeder Pattern
+## 18. Idempotent Seeder Pattern
 
 Use updateOrCreate for reference data.
 
@@ -758,8 +759,8 @@ php artisan migrate:fresh --seed
 
 Production should never rely on migrate:fresh. Nếu production cần fresh database, vấn đề không còn là kỹ thuật nữa, đó là nghi lễ chia tay.
 
-19. Environment Rules
-19.1. Local
+## 19. Environment Rules
+### 19.1. Local
 
 Allowed:
 
@@ -770,7 +771,7 @@ demo messages
 demo communities
 demo reports
 demo admin
-19.2. Testing
+### 19.2. Testing
 
 Allowed:
 
@@ -780,14 +781,14 @@ small deterministic test permissions
 
 Avoid heavy demo seeds in automated tests.
 
-19.3. Staging
+### 19.3. Staging
 
 Allowed:
 
 reference seeds
 controlled demo data
 fake accounts only
-19.4. Production
+### 19.4. Production
 
 Allowed:
 
@@ -808,7 +809,7 @@ demo messages
 demo reports
 demo evidence
 fake moderation cases
-20. Initial Super Admin
+## 20. Initial Super Admin
 
 Production may need initial super admin.
 
@@ -840,7 +841,7 @@ Seeder reads env and creates admin once.
 
 Do not commit real admin credentials. Một câu rất hiển nhiên, nhưng GitHub vẫn là nghĩa trang API key vì con người thích thử vận may.
 
-21. Seed QA Checklist
+## 21. Seed QA Checklist
 
 Before approving seed data:
 
@@ -866,7 +867,7 @@ Before approving seed data:
 [ ] Demo notifications cover read/unread/expired states.
 [ ] Seeders can run after migrate:fresh.
 [ ] Seeders do not leak secrets.
-22. Recommended Artisan Commands
+## 22. Recommended Artisan Commands
 Local reset
 php artisan migrate:fresh --seed
 Seed reference only
@@ -878,7 +879,7 @@ php artisan db:seed --class=Database\\Seeders\\Demo\\DemoUserSeeder
 Testing
 php artisan migrate:fresh --env=testing
 php artisan db:seed --class=Database\\Seeders\\Testing\\MinimalTestingSeeder --env=testing
-23. Final Rule
+## 23. Final Rule
 
 Seed data phải giúp dev kiểm thử nghiệp vụ thật:
 
