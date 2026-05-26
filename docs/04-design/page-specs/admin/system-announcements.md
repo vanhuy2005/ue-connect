@@ -1,0 +1,22 @@
+---
+title: "System Announcements"
+module: "04-design/page-specs"
+status: draft
+---
+
+# System Announcements
+
+## 1. Purpose
+Admin page spec for platform announcements.
+
+## 2. Status
+Draft
+
+## 3. Scope
+Describe screen-level requirements for System Announcements.
+
+## 4. Acceptance Criteria
+- [ ] Define success criteria for System Announcements.
+
+## 5. Related Pages
+- Refer to use cases and flows for this page spec.
