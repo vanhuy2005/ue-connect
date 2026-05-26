@@ -1,0 +1,1308 @@
+erDiagram
+
+%% =========================================================
+%% UEConnect Database ERD
+%% Module: 06-database
+%% Source: schema.md
+%% Version: 1.0
+%% =========================================================
+
+%% =========================================================
+%% 1. IDENTITY & ACCOUNT
+%% =========================================================
+
+USERS {
+  bigint id PK
+  string email UK
+  string password
+  string remember_token
+  datetime email_verified_at
+  string account_status
+  text account_status_reason
+  datetime account_restricted_until
+  datetime last_login_at
+  datetime created_at
+  datetime updated_at
+  datetime deleted_at
+}
+
+ACCOUNT_STATUS_HISTORIES {
+  bigint id PK
+  bigint user_id FK
+  string old_status
+  string new_status
+  text reason
+  bigint changed_by FK
+  datetime starts_at
+  datetime ends_at
+  datetime created_at
+}
+
+PASSWORD_RESET_TOKENS {
+  string email PK
+  string token
+  datetime created_at
+}
+
+SESSIONS {
+  string id PK
+  bigint user_id FK
+  string ip_address
+  text user_agent
+  text payload
+  int last_activity
+}
+
+USERS ||--o{ ACCOUNT_STATUS_HISTORIES : "has status history"
+USERS ||--o{ ACCOUNT_STATUS_HISTORIES : "changes as admin"
+USERS ||--o{ SESSIONS : "has sessions"
+
+
+%% =========================================================
+%% 2. SYSTEM REFERENCE DATA
+%% =========================================================
+
+FACULTIES {
+  bigint id PK
+  string name
+  string slug UK
+  text description
+  string status
+  datetime created_at
+  datetime updated_at
+}
+
+ACADEMIC_PROGRAMS {
+  bigint id PK
+  bigint faculty_id FK
+  string name
+  string slug
+  string degree_level
+  text description
+  string status
+  datetime created_at
+  datetime updated_at
+}
+
+REPORT_REASONS {
+  bigint id PK
+  string key UK
+  string label
+  text description
+  string status
+  int sort_order
+  datetime created_at
+  datetime updated_at
+}
+
+MODERATION_ACTION_TYPES {
+  bigint id PK
+  string key UK
+  string label
+  text description
+  string status
+  int sort_order
+  datetime created_at
+  datetime updated_at
+}
+
+SYSTEM_SETTINGS {
+  bigint id PK
+  string key UK
+  json value_json
+  text description
+  bigint updated_by FK
+  datetime created_at
+  datetime updated_at
+}
+
+FACULTIES ||--o{ ACADEMIC_PROGRAMS : "has programs"
+USERS ||--o{ SYSTEM_SETTINGS : "updates"
+
+
+%% =========================================================
+%% 3. MEDIA
+%% =========================================================
+
+MEDIA_FILES {
+  bigint id PK
+  bigint owner_id FK
+  string disk
+  string path
+  string original_name
+  string mime_type
+  string extension
+  bigint size_bytes
+  string visibility
+  string file_category
+  string checksum
+  json metadata_json
+  datetime created_at
+  datetime updated_at
+  datetime deleted_at
+}
+
+USERS ||--o{ MEDIA_FILES : "owns files"
+
+
+%% =========================================================
+%% 4. VERIFICATION
+%% =========================================================
+
+VERIFICATION_REQUESTS {
+  bigint id PK
+  bigint user_id FK
+  string role_requested
+  string status
+  string submitted_name
+  string submitted_student_code
+  bigint submitted_faculty_id FK
+  bigint submitted_academic_program_id FK
+  string submitted_cohort
+  string submitted_email
+  text submitted_note
+  bigint assigned_admin_id FK
+  datetime submitted_at
+  datetime reviewed_at
+  datetime expires_at
+  datetime created_at
+  datetime updated_at
+  datetime deleted_at
+}
+
+VERIFICATION_EVIDENCES {
+  bigint id PK
+  bigint verification_request_id FK
+  bigint media_file_id FK
+  string evidence_type
+  string evidence_link
+  text user_note
+  string status
+  text review_note
+  datetime created_at
+  datetime updated_at
+  datetime deleted_at
+}
+
+VERIFICATION_REVIEW_ACTIONS {
+  bigint id PK
+  bigint verification_request_id FK
+  bigint admin_id FK
+  string action
+  text reason
+  text instruction
+  json before_snapshot_json
+  json after_snapshot_json
+  datetime created_at
+}
+
+VERIFICATION_CONFLICTS {
+  bigint id PK
+  bigint verification_request_id FK
+  string conflict_type
+  bigint conflicting_user_id FK
+  bigint conflicting_verification_request_id FK
+  text description
+  string status
+  bigint resolved_by FK
+  datetime resolved_at
+  datetime created_at
+  datetime updated_at
+}
+
+USERS ||--o{ VERIFICATION_REQUESTS : "submits"
+USERS ||--o{ VERIFICATION_REQUESTS : "assigned as admin"
+FACULTIES ||--o{ VERIFICATION_REQUESTS : "submitted faculty"
+ACADEMIC_PROGRAMS ||--o{ VERIFICATION_REQUESTS : "submitted program"
+VERIFICATION_REQUESTS ||--o{ VERIFICATION_EVIDENCES : "has evidences"
+MEDIA_FILES ||--o{ VERIFICATION_EVIDENCES : "stores evidence file"
+VERIFICATION_REQUESTS ||--o{ VERIFICATION_REVIEW_ACTIONS : "has review actions"
+USERS ||--o{ VERIFICATION_REVIEW_ACTIONS : "admin reviews"
+VERIFICATION_REQUESTS ||--o{ VERIFICATION_CONFLICTS : "has conflicts"
+USERS ||--o{ VERIFICATION_CONFLICTS : "conflicting user"
+VERIFICATION_REQUESTS ||--o{ VERIFICATION_CONFLICTS : "conflicting request"
+USERS ||--o{ VERIFICATION_CONFLICTS : "resolves"
+
+
+%% =========================================================
+%% 5. PROFILE & PRIVACY
+%% =========================================================
+
+PROFILES {
+  bigint id PK
+  bigint user_id FK
+  string display_name
+  bigint avatar_media_file_id FK
+  text bio
+  string role_type
+  string profile_status
+  string visibility
+  boolean discoverable
+  datetime profile_completed_at
+  datetime created_at
+  datetime updated_at
+  datetime deleted_at
+}
+
+STUDENT_PROFILES {
+  bigint id PK
+  bigint profile_id FK
+  string student_code UK
+  bigint faculty_id FK
+  bigint academic_program_id FK
+  string cohort
+  int current_year
+  string class_name
+  text learning_goals
+  text career_orientation
+  datetime created_at
+  datetime updated_at
+}
+
+ALUMNI_PROFILES {
+  bigint id PK
+  bigint profile_id FK
+  bigint faculty_id FK
+  bigint academic_program_id FK
+  string cohort
+  int graduation_year
+  string current_position
+  string current_organization
+  string industry
+  text career_summary
+  boolean willing_to_mentor
+  datetime created_at
+  datetime updated_at
+}
+
+ADVISOR_PROFILES {
+  bigint id PK
+  bigint profile_id FK
+  bigint faculty_id FK
+  string department
+  string title
+  string office_location
+  text advising_areas
+  datetime created_at
+  datetime updated_at
+}
+
+PROFILE_PRIVACY_SETTINGS {
+  bigint id PK
+  bigint profile_id FK
+  string show_faculty
+  string show_major
+  string show_cohort
+  string show_bio
+  string show_skills
+  string show_interests
+  string show_social_links
+  string show_career_info
+  string show_mentor_status
+  boolean discoverable
+  boolean allow_greetings
+  boolean allow_messages_from_connections
+  boolean show_read_receipts
+  datetime created_at
+  datetime updated_at
+}
+
+PROFILE_INTERESTS {
+  bigint id PK
+  bigint profile_id FK
+  string interest
+  datetime created_at
+}
+
+PROFILE_SKILLS {
+  bigint id PK
+  bigint profile_id FK
+  string skill
+  string level
+  datetime created_at
+}
+
+PROFILE_SOCIAL_LINKS {
+  bigint id PK
+  bigint profile_id FK
+  string platform
+  string url
+  string visibility
+  datetime created_at
+  datetime updated_at
+}
+
+SAVED_PROFILES {
+  bigint id PK
+  bigint user_id FK
+  bigint saved_user_id FK
+  text note
+  datetime created_at
+}
+
+BLOCKED_USERS {
+  bigint id PK
+  bigint blocker_id FK
+  bigint blocked_id FK
+  text reason
+  string source_type
+  bigint source_id
+  datetime created_at
+  datetime updated_at
+}
+
+USERS ||--|| PROFILES : "has profile"
+MEDIA_FILES ||--o{ PROFILES : "avatar file"
+PROFILES ||--o| STUDENT_PROFILES : "student detail"
+PROFILES ||--o| ALUMNI_PROFILES : "alumni detail"
+PROFILES ||--o| ADVISOR_PROFILES : "advisor detail"
+FACULTIES ||--o{ STUDENT_PROFILES : "student faculty"
+ACADEMIC_PROGRAMS ||--o{ STUDENT_PROFILES : "student program"
+FACULTIES ||--o{ ALUMNI_PROFILES : "alumni faculty"
+ACADEMIC_PROGRAMS ||--o{ ALUMNI_PROFILES : "alumni program"
+FACULTIES ||--o{ ADVISOR_PROFILES : "advisor faculty"
+PROFILES ||--|| PROFILE_PRIVACY_SETTINGS : "has privacy settings"
+PROFILES ||--o{ PROFILE_INTERESTS : "has interests"
+PROFILES ||--o{ PROFILE_SKILLS : "has skills"
+PROFILES ||--o{ PROFILE_SOCIAL_LINKS : "has social links"
+USERS ||--o{ SAVED_PROFILES : "saves profiles"
+USERS ||--o{ SAVED_PROFILES : "is saved"
+USERS ||--o{ BLOCKED_USERS : "blocks"
+USERS ||--o{ BLOCKED_USERS : "is blocked"
+
+
+%% =========================================================
+%% 6. FEED / POST / COMMENT
+%% =========================================================
+
+POSTS {
+  bigint id PK
+  bigint author_id FK
+  bigint community_id FK
+  string post_type
+  text body
+  string visibility
+  string status
+  string moderation_status
+  datetime published_at
+  datetime created_at
+  datetime updated_at
+  datetime deleted_at
+}
+
+POST_MEDIA {
+  bigint id PK
+  bigint post_id FK
+  bigint media_file_id FK
+  int sort_order
+  string alt_text
+  datetime created_at
+}
+
+COMMENTS {
+  bigint id PK
+  bigint post_id FK
+  bigint author_id FK
+  bigint parent_comment_id FK
+  text body
+  string status
+  string moderation_status
+  datetime created_at
+  datetime updated_at
+  datetime deleted_at
+}
+
+COMMENT_MEDIA {
+  bigint id PK
+  bigint comment_id FK
+  bigint media_file_id FK
+  int sort_order
+  string alt_text
+  datetime created_at
+}
+
+SYSTEM_ANNOUNCEMENTS {
+  bigint id PK
+  bigint created_by FK
+  string title
+  text body
+  string target_scope
+  string status
+  datetime starts_at
+  datetime ends_at
+  datetime created_at
+  datetime updated_at
+  datetime deleted_at
+}
+
+POST_REACTIONS {
+  bigint id PK
+  bigint post_id FK
+  bigint user_id FK
+  string reaction_type
+  datetime created_at
+}
+
+POST_BOOKMARKS {
+  bigint id PK
+  bigint post_id FK
+  bigint user_id FK
+  datetime created_at
+}
+
+USERS ||--o{ POSTS : "authors"
+POSTS ||--o{ POST_MEDIA : "has media"
+MEDIA_FILES ||--o{ POST_MEDIA : "used by post"
+POSTS ||--o{ COMMENTS : "has comments"
+USERS ||--o{ COMMENTS : "authors comments"
+COMMENTS ||--o{ COMMENTS : "has replies"
+COMMENTS ||--o{ COMMENT_MEDIA : "has media"
+MEDIA_FILES ||--o{ COMMENT_MEDIA : "used by comment"
+USERS ||--o{ SYSTEM_ANNOUNCEMENTS : "creates announcement"
+POSTS ||--o{ POST_REACTIONS : "has reactions"
+USERS ||--o{ POST_REACTIONS : "reacts"
+POSTS ||--o{ POST_BOOKMARKS : "bookmarked"
+USERS ||--o{ POST_BOOKMARKS : "bookmarks"
+
+
+%% =========================================================
+%% 7. DISCOVERY / GREETING / CONNECTION
+%% =========================================================
+
+GREETINGS {
+  bigint id PK
+  bigint sender_id FK
+  bigint receiver_id FK
+  text message
+  string status
+  text decline_reason
+  datetime accepted_at
+  datetime declined_at
+  datetime expires_at
+  datetime created_at
+  datetime updated_at
+  datetime deleted_at
+}
+
+CONNECTIONS {
+  bigint id PK
+  bigint user_one_id FK
+  bigint user_two_id FK
+  string status
+  bigint source_greeting_id FK
+  datetime connected_at
+  datetime disconnected_at
+  datetime created_at
+  datetime updated_at
+  datetime deleted_at
+}
+
+CONNECTION_EVENTS {
+  bigint id PK
+  bigint connection_id FK
+  bigint actor_id FK
+  string event_type
+  text reason
+  datetime created_at
+}
+
+DISCOVERY_PASSES {
+  bigint id PK
+  bigint user_id FK
+  bigint target_user_id FK
+  text reason
+  datetime created_at
+  datetime expires_at
+}
+
+USERS ||--o{ GREETINGS : "sends greeting"
+USERS ||--o{ GREETINGS : "receives greeting"
+GREETINGS ||--o| CONNECTIONS : "creates connection"
+USERS ||--o{ CONNECTIONS : "connection user one"
+USERS ||--o{ CONNECTIONS : "connection user two"
+CONNECTIONS ||--o{ CONNECTION_EVENTS : "has events"
+USERS ||--o{ CONNECTION_EVENTS : "performs event"
+USERS ||--o{ DISCOVERY_PASSES : "passes"
+USERS ||--o{ DISCOVERY_PASSES : "is passed"
+
+
+%% =========================================================
+%% 8. MESSAGING
+%% =========================================================
+
+CONVERSATIONS {
+  bigint id PK
+  string conversation_type
+  string status
+  bigint created_by FK
+  bigint last_message_id FK
+  datetime last_message_at
+  datetime created_at
+  datetime updated_at
+  datetime deleted_at
+}
+
+CONVERSATION_PARTICIPANTS {
+  bigint id PK
+  bigint conversation_id FK
+  bigint user_id FK
+  string participant_role
+  string status
+  datetime joined_at
+  datetime left_at
+  datetime last_read_at
+  datetime muted_until
+  datetime created_at
+  datetime updated_at
+}
+
+MESSAGES {
+  bigint id PK
+  bigint conversation_id FK
+  bigint sender_id FK
+  text body
+  string message_type
+  string status
+  datetime edited_at
+  datetime deleted_at
+  datetime created_at
+  datetime updated_at
+}
+
+MESSAGE_ATTACHMENTS {
+  bigint id PK
+  bigint message_id FK
+  bigint media_file_id FK
+  datetime created_at
+}
+
+MESSAGE_READ_RECEIPTS {
+  bigint id PK
+  bigint message_id FK
+  bigint user_id FK
+  datetime read_at
+  datetime created_at
+}
+
+MESSAGE_EDITS {
+  bigint id PK
+  bigint message_id FK
+  bigint edited_by FK
+  text old_body
+  text new_body
+  datetime created_at
+}
+
+MESSAGE_REQUESTS {
+  bigint id PK
+  bigint sender_id FK
+  bigint receiver_id FK
+  bigint conversation_id FK
+  string status
+  text message_preview
+  datetime created_at
+  datetime updated_at
+}
+
+USERS ||--o{ CONVERSATIONS : "creates"
+CONVERSATIONS ||--o{ CONVERSATION_PARTICIPANTS : "has participants"
+USERS ||--o{ CONVERSATION_PARTICIPANTS : "participates"
+CONVERSATIONS ||--o{ MESSAGES : "has messages"
+USERS ||--o{ MESSAGES : "sends message"
+MESSAGES ||--o{ MESSAGE_ATTACHMENTS : "has attachments"
+MEDIA_FILES ||--o{ MESSAGE_ATTACHMENTS : "message file"
+MESSAGES ||--o{ MESSAGE_READ_RECEIPTS : "has receipts"
+USERS ||--o{ MESSAGE_READ_RECEIPTS : "reads message"
+MESSAGES ||--o{ MESSAGE_EDITS : "has edit history"
+USERS ||--o{ MESSAGE_EDITS : "edits"
+USERS ||--o{ MESSAGE_REQUESTS : "sends request"
+USERS ||--o{ MESSAGE_REQUESTS : "receives request"
+CONVERSATIONS ||--o{ MESSAGE_REQUESTS : "may create conversation"
+MESSAGES ||--o| CONVERSATIONS : "last message"
+
+
+%% =========================================================
+%% 9. NOTIFICATIONS
+%% =========================================================
+
+NOTIFICATIONS {
+  bigint id PK
+  bigint user_id FK
+  string type
+  string title
+  text body
+  text preview
+  string target_type
+  bigint target_id
+  json data_json
+  datetime read_at
+  datetime expires_at
+  datetime created_at
+  datetime updated_at
+}
+
+NOTIFICATION_PREFERENCES {
+  bigint id PK
+  bigint user_id FK
+  boolean in_app_enabled
+  boolean browser_push_enabled
+  boolean message_notifications
+  boolean greeting_notifications
+  boolean mentor_notifications
+  boolean verification_notifications
+  boolean moderation_notifications
+  boolean community_notifications
+  datetime created_at
+  datetime updated_at
+}
+
+BROWSER_PUSH_SUBSCRIPTIONS {
+  bigint id PK
+  bigint user_id FK
+  text endpoint
+  text public_key
+  text auth_token
+  string content_encoding
+  text user_agent
+  datetime last_used_at
+  datetime revoked_at
+  datetime created_at
+  datetime updated_at
+}
+
+USERS ||--o{ NOTIFICATIONS : "receives"
+USERS ||--|| NOTIFICATION_PREFERENCES : "has preferences"
+USERS ||--o{ BROWSER_PUSH_SUBSCRIPTIONS : "has push subscriptions"
+
+
+%% =========================================================
+%% 10. MENTOR
+%% =========================================================
+
+MENTOR_PROFILES {
+  bigint id PK
+  bigint user_id FK
+  string status
+  string headline
+  text summary
+  text expertise_summary
+  string availability_status
+  int max_pending_requests
+  int current_pending_requests
+  bigint approved_by FK
+  datetime approved_at
+  datetime created_at
+  datetime updated_at
+  datetime deleted_at
+}
+
+MENTOR_TOPICS {
+  bigint id PK
+  string name
+  string slug UK
+  text description
+  string status
+  datetime created_at
+  datetime updated_at
+}
+
+MENTOR_PROFILE_TOPICS {
+  bigint mentor_profile_id FK
+  bigint mentor_topic_id FK
+  string level
+  datetime created_at
+}
+
+MENTOR_ACCESS_REQUESTS {
+  bigint id PK
+  bigint user_id FK
+  string status
+  text motivation
+  text experience_summary
+  bigint reviewed_by FK
+  text review_reason
+  datetime reviewed_at
+  datetime created_at
+  datetime updated_at
+}
+
+MENTOR_REQUESTS {
+  bigint id PK
+  bigint student_id FK
+  bigint mentor_id FK
+  bigint mentor_profile_id FK
+  bigint topic_id FK
+  text question
+  text goal
+  string urgency
+  string status
+  text mentor_response
+  text need_more_info_instruction
+  datetime accepted_at
+  datetime declined_at
+  bigint conversation_id FK
+  datetime created_at
+  datetime updated_at
+  datetime deleted_at
+}
+
+MENTOR_AVAILABILITY_SLOTS {
+  bigint id PK
+  bigint mentor_profile_id FK
+  string day_of_week
+  time start_time
+  time end_time
+  string status
+  datetime created_at
+  datetime updated_at
+}
+
+MENTOR_FEEDBACK {
+  bigint id PK
+  bigint mentor_request_id FK
+  bigint student_id FK
+  bigint mentor_id FK
+  int helpfulness_score
+  text feedback_text
+  boolean is_private
+  datetime created_at
+  datetime updated_at
+  datetime deleted_at
+}
+
+USERS ||--o| MENTOR_PROFILES : "may become mentor"
+USERS ||--o{ MENTOR_PROFILES : "approves mentor"
+MENTOR_PROFILES ||--o{ MENTOR_PROFILE_TOPICS : "has topics"
+MENTOR_TOPICS ||--o{ MENTOR_PROFILE_TOPICS : "assigned to mentor"
+USERS ||--o{ MENTOR_ACCESS_REQUESTS : "requests mentor access"
+USERS ||--o{ MENTOR_ACCESS_REQUESTS : "reviews mentor access"
+USERS ||--o{ MENTOR_REQUESTS : "student sends"
+USERS ||--o{ MENTOR_REQUESTS : "mentor receives"
+MENTOR_PROFILES ||--o{ MENTOR_REQUESTS : "receives requests"
+MENTOR_TOPICS ||--o{ MENTOR_REQUESTS : "topic"
+CONVERSATIONS ||--o{ MENTOR_REQUESTS : "conversation after accept"
+MENTOR_PROFILES ||--o{ MENTOR_AVAILABILITY_SLOTS : "has slots"
+MENTOR_REQUESTS ||--o{ MENTOR_FEEDBACK : "has feedback"
+USERS ||--o{ MENTOR_FEEDBACK : "student feedback"
+USERS ||--o{ MENTOR_FEEDBACK : "mentor feedback target"
+
+
+%% =========================================================
+%% 11. CAREER PATHWAY
+%% =========================================================
+
+CAREER_PATHWAYS {
+  bigint id PK
+  bigint faculty_id FK
+  bigint academic_program_id FK
+  string title
+  string slug UK
+  text summary
+  string source_type
+  string status
+  bigint created_by FK
+  datetime published_at
+  datetime created_at
+  datetime updated_at
+  datetime deleted_at
+}
+
+CAREER_PATHWAY_STEPS {
+  bigint id PK
+  bigint career_pathway_id FK
+  string title
+  text description
+  string year_stage
+  int sort_order
+  datetime created_at
+  datetime updated_at
+}
+
+CAREER_PATHWAY_RESOURCES {
+  bigint id PK
+  bigint career_pathway_id FK
+  string title
+  string url
+  bigint media_file_id FK
+  string resource_type
+  int sort_order
+  datetime created_at
+  datetime updated_at
+}
+
+CAREER_PATHWAY_TOPICS {
+  bigint id PK
+  bigint career_pathway_id FK
+  string topic
+  datetime created_at
+}
+
+SAVED_CAREER_PATHWAYS {
+  bigint id PK
+  bigint user_id FK
+  bigint career_pathway_id FK
+  datetime created_at
+}
+
+FACULTIES ||--o{ CAREER_PATHWAYS : "faculty pathway"
+ACADEMIC_PROGRAMS ||--o{ CAREER_PATHWAYS : "program pathway"
+USERS ||--o{ CAREER_PATHWAYS : "creates pathway"
+CAREER_PATHWAYS ||--o{ CAREER_PATHWAY_STEPS : "has steps"
+CAREER_PATHWAYS ||--o{ CAREER_PATHWAY_RESOURCES : "has resources"
+MEDIA_FILES ||--o{ CAREER_PATHWAY_RESOURCES : "resource file"
+CAREER_PATHWAYS ||--o{ CAREER_PATHWAY_TOPICS : "has topics"
+USERS ||--o{ SAVED_CAREER_PATHWAYS : "saves pathway"
+CAREER_PATHWAYS ||--o{ SAVED_CAREER_PATHWAYS : "is saved"
+
+
+%% =========================================================
+%% 12. COMMUNITY / CLUB
+%% =========================================================
+
+COMMUNITIES {
+  bigint id PK
+  string name
+  string slug UK
+  text description
+  string community_type
+  string visibility
+  string join_policy
+  string status
+  bigint owner_id FK
+  bigint cover_media_file_id FK
+  datetime created_at
+  datetime updated_at
+  datetime deleted_at
+}
+
+COMMUNITY_MEMBERS {
+  bigint id PK
+  bigint community_id FK
+  bigint user_id FK
+  string member_role
+  string status
+  datetime joined_at
+  datetime left_at
+  datetime created_at
+  datetime updated_at
+}
+
+COMMUNITY_JOIN_REQUESTS {
+  bigint id PK
+  bigint community_id FK
+  bigint user_id FK
+  string status
+  text message
+  bigint reviewed_by FK
+  text review_reason
+  datetime reviewed_at
+  datetime created_at
+  datetime updated_at
+}
+
+COMMUNITY_ROLES {
+  bigint id PK
+  bigint community_id FK
+  string key
+  string label
+  json permissions_json
+  datetime created_at
+  datetime updated_at
+}
+
+COMMUNITY_CHANNELS {
+  bigint id PK
+  bigint community_id FK
+  string name
+  string slug
+  text description
+  string channel_type
+  string visibility
+  string status
+  int sort_order
+  datetime created_at
+  datetime updated_at
+  datetime deleted_at
+}
+
+COMMUNITY_POSTS {
+  bigint id PK
+  bigint community_id FK
+  bigint post_id FK
+  datetime pinned_at
+  bigint approved_by FK
+  datetime created_at
+}
+
+COMMUNITY_MESSAGES {
+  bigint id PK
+  bigint community_id FK
+  bigint channel_id FK
+  bigint sender_id FK
+  text body
+  string status
+  datetime created_at
+  datetime updated_at
+  datetime deleted_at
+}
+
+COMMUNITY_RESOURCES {
+  bigint id PK
+  bigint community_id FK
+  bigint submitted_by FK
+  string title
+  text description
+  string resource_type
+  string url
+  bigint media_file_id FK
+  string status
+  boolean copyright_attested
+  bigint reviewed_by FK
+  datetime reviewed_at
+  datetime created_at
+  datetime updated_at
+  datetime deleted_at
+}
+
+COMMUNITY_RESOURCE_REVIEWS {
+  bigint id PK
+  bigint community_resource_id FK
+  bigint reviewer_id FK
+  string action
+  text reason
+  datetime created_at
+}
+
+COMMUNITY_EVENTS {
+  bigint id PK
+  bigint community_id FK
+  bigint created_by FK
+  string title
+  text description
+  datetime starts_at
+  datetime ends_at
+  string location
+  string status
+  datetime created_at
+  datetime updated_at
+  datetime deleted_at
+}
+
+USERS ||--o{ COMMUNITIES : "owns"
+MEDIA_FILES ||--o{ COMMUNITIES : "cover image"
+COMMUNITIES ||--o{ COMMUNITY_MEMBERS : "has members"
+USERS ||--o{ COMMUNITY_MEMBERS : "member"
+COMMUNITIES ||--o{ COMMUNITY_JOIN_REQUESTS : "has join requests"
+USERS ||--o{ COMMUNITY_JOIN_REQUESTS : "requests join"
+USERS ||--o{ COMMUNITY_JOIN_REQUESTS : "reviews join"
+COMMUNITIES ||--o{ COMMUNITY_ROLES : "has roles"
+COMMUNITIES ||--o{ COMMUNITY_CHANNELS : "has channels"
+COMMUNITIES ||--o{ COMMUNITY_POSTS : "has community posts"
+POSTS ||--o{ COMMUNITY_POSTS : "linked post"
+USERS ||--o{ COMMUNITY_POSTS : "approves post"
+COMMUNITIES ||--o{ COMMUNITY_MESSAGES : "has messages"
+COMMUNITY_CHANNELS ||--o{ COMMUNITY_MESSAGES : "channel messages"
+USERS ||--o{ COMMUNITY_MESSAGES : "sends community message"
+COMMUNITIES ||--o{ COMMUNITY_RESOURCES : "has resources"
+USERS ||--o{ COMMUNITY_RESOURCES : "submits resource"
+MEDIA_FILES ||--o{ COMMUNITY_RESOURCES : "resource file"
+USERS ||--o{ COMMUNITY_RESOURCES : "reviews resource"
+COMMUNITY_RESOURCES ||--o{ COMMUNITY_RESOURCE_REVIEWS : "review actions"
+USERS ||--o{ COMMUNITY_RESOURCE_REVIEWS : "reviews"
+COMMUNITIES ||--o{ COMMUNITY_EVENTS : "has events"
+USERS ||--o{ COMMUNITY_EVENTS : "creates event"
+COMMUNITIES ||--o{ POSTS : "has posts"
+
+
+%% =========================================================
+%% 13. SAFETY REPORTING
+%% =========================================================
+
+REPORTS {
+  bigint id PK
+  bigint reporter_id FK
+  string target_type
+  bigint target_id
+  string reason
+  text description
+  string status
+  string priority
+  boolean auto_blocked
+  bigint moderation_case_id FK
+  datetime created_at
+  datetime updated_at
+  datetime deleted_at
+}
+
+REPORT_STATUS_HISTORIES {
+  bigint id PK
+  bigint report_id FK
+  string old_status
+  string new_status
+  bigint changed_by FK
+  text reason
+  datetime created_at
+}
+
+REPORT_ATTACHMENTS {
+  bigint id PK
+  bigint report_id FK
+  bigint media_file_id FK
+  datetime created_at
+}
+
+USERS ||--o{ REPORTS : "submits report"
+REPORTS ||--o{ REPORT_STATUS_HISTORIES : "has status history"
+USERS ||--o{ REPORT_STATUS_HISTORIES : "changes report status"
+REPORTS ||--o{ REPORT_ATTACHMENTS : "has attachments"
+MEDIA_FILES ||--o{ REPORT_ATTACHMENTS : "report file"
+
+
+%% =========================================================
+%% 14. MODERATION
+%% =========================================================
+
+MODERATION_CASES {
+  bigint id PK
+  string source_type
+  bigint source_id
+  string target_type
+  bigint target_id
+  string status
+  string priority
+  bigint assigned_to FK
+  text summary
+  datetime created_at
+  datetime updated_at
+  datetime closed_at
+  datetime deleted_at
+}
+
+MODERATION_ACTIONS {
+  bigint id PK
+  bigint moderation_case_id FK
+  bigint moderator_id FK
+  string action
+  text reason
+  string target_type
+  bigint target_id
+  string before_status
+  string after_status
+  json metadata_json
+  datetime created_at
+}
+
+MODERATION_CASE_ASSIGNMENTS {
+  bigint id PK
+  bigint moderation_case_id FK
+  bigint assigned_to FK
+  bigint assigned_by FK
+  datetime assigned_at
+  datetime unassigned_at
+  datetime created_at
+}
+
+MODERATION_APPEALS {
+  bigint id PK
+  bigint moderation_case_id FK
+  bigint submitted_by FK
+  text reason
+  string status
+  bigint reviewed_by FK
+  text review_note
+  datetime reviewed_at
+  datetime created_at
+  datetime updated_at
+}
+
+CONTENT_VISIBILITY_STATES {
+  bigint id PK
+  string target_type
+  bigint target_id
+  string visibility_state
+  text reason
+  bigint changed_by FK
+  datetime created_at
+}
+
+REPORTS ||--o| MODERATION_CASES : "creates case"
+USERS ||--o{ MODERATION_CASES : "assigned moderator"
+MODERATION_CASES ||--o{ MODERATION_ACTIONS : "has actions"
+USERS ||--o{ MODERATION_ACTIONS : "moderates"
+MODERATION_CASES ||--o{ MODERATION_CASE_ASSIGNMENTS : "assignment history"
+USERS ||--o{ MODERATION_CASE_ASSIGNMENTS : "assigned to"
+USERS ||--o{ MODERATION_CASE_ASSIGNMENTS : "assigned by"
+MODERATION_CASES ||--o{ MODERATION_APPEALS : "has appeals"
+USERS ||--o{ MODERATION_APPEALS : "submits appeal"
+USERS ||--o{ MODERATION_APPEALS : "reviews appeal"
+USERS ||--o{ CONTENT_VISIBILITY_STATES : "changes visibility"
+
+
+%% =========================================================
+%% 15. ADMIN / PERMISSION / AUDIT
+%% =========================================================
+
+ROLES {
+  bigint id PK
+  string name UK
+  string guard_name
+  datetime created_at
+  datetime updated_at
+}
+
+PERMISSIONS {
+  bigint id PK
+  string name UK
+  string guard_name
+  datetime created_at
+  datetime updated_at
+}
+
+MODEL_HAS_ROLES {
+  bigint role_id FK
+  string model_type
+  bigint model_id
+}
+
+MODEL_HAS_PERMISSIONS {
+  bigint permission_id FK
+  string model_type
+  bigint model_id
+}
+
+ROLE_HAS_PERMISSIONS {
+  bigint permission_id FK
+  bigint role_id FK
+}
+
+PERMISSION_GRANTS {
+  bigint id PK
+  bigint user_id FK
+  string permission_key
+  string scope_type
+  bigint scope_id
+  string status
+  bigint granted_by FK
+  text reason
+  datetime starts_at
+  datetime expires_at
+  datetime revoked_at
+  bigint revoked_by FK
+  text revoke_reason
+  datetime created_at
+  datetime updated_at
+}
+
+AUDIT_LOGS {
+  bigint id PK
+  bigint actor_id FK
+  string actor_type
+  string action
+  string target_type
+  bigint target_id
+  string context_type
+  bigint context_id
+  json before_snapshot_json
+  json after_snapshot_json
+  text reason
+  json metadata_json
+  string ip_address
+  text user_agent
+  datetime created_at
+}
+
+ADMIN_ACTIONS {
+  bigint id PK
+  bigint admin_id FK
+  string action
+  string target_type
+  bigint target_id
+  string status
+  text reason
+  datetime created_at
+  datetime updated_at
+}
+
+ROLES ||--o{ MODEL_HAS_ROLES : "assigned"
+PERMISSIONS ||--o{ MODEL_HAS_PERMISSIONS : "assigned"
+ROLES ||--o{ ROLE_HAS_PERMISSIONS : "role permissions"
+PERMISSIONS ||--o{ ROLE_HAS_PERMISSIONS : "permission roles"
+USERS ||--o{ PERMISSION_GRANTS : "receives grant"
+USERS ||--o{ PERMISSION_GRANTS : "grants permission"
+USERS ||--o{ PERMISSION_GRANTS : "revokes permission"
+USERS ||--o{ AUDIT_LOGS : "actor"
+USERS ||--o{ ADMIN_ACTIONS : "admin performs"
+
+
+%% =========================================================
+%% 16. ANALYTICS
+%% =========================================================
+
+ANALYTICS_EVENTS {
+  bigint id PK
+  string event_name
+  bigint actor_id FK
+  string target_type
+  bigint target_id
+  string context_type
+  bigint context_id
+  json properties_json
+  datetime occurred_at
+  datetime created_at
+}
+
+USERS ||--o{ ANALYTICS_EVENTS : "produces analytics event"
+
+
+%% =========================================================
+%% 17. AI-ASSISTED EVIDENCE INTELLIGENCE
+%% =========================================================
+
+EVIDENCE_ANALYSIS_JOBS {
+  bigint id PK
+  bigint verification_evidence_id FK
+  string provider
+  string status
+  datetime started_at
+  datetime completed_at
+  text error_message
+  datetime created_at
+  datetime updated_at
+}
+
+EVIDENCE_ANALYSIS_RESULTS {
+  bigint id PK
+  bigint verification_evidence_id FK
+  string document_type_guess
+  string detected_name
+  string detected_student_id
+  json detected_school_keywords_json
+  boolean matched_submitted_mssv
+  boolean matched_submitted_name
+  decimal readability_score
+  decimal tamper_risk_score
+  decimal confidence_score
+  string raw_result_path
+  datetime created_at
+  datetime updated_at
+}
+
+VERIFICATION_EVIDENCES ||--o{ EVIDENCE_ANALYSIS_JOBS : "analysis jobs"
+VERIFICATION_EVIDENCES ||--o{ EVIDENCE_ANALYSIS_RESULTS : "analysis results"
+
+
+%% =========================================================
+%% 18. CROSS-MODULE RELATION NOTES
+%% =========================================================
+%% Polymorphic tables:
+%% - REPORTS.target_type + target_id
+%% - MODERATION_CASES.target_type + target_id
+%% - MODERATION_ACTIONS.target_type + target_id
+%% - CONTENT_VISIBILITY_STATES.target_type + target_id
+%% - NOTIFICATIONS.target_type + target_id
+%% - AUDIT_LOGS.target_type + target_id
+%% - ANALYTICS_EVENTS.target_type + target_id
+%%
+%% These are intentionally not connected to every possible table
+%% because Mermaid ERD would become unreadable, because apparently
+%% diagrams also have a will to live.
