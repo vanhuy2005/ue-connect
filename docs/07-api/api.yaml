@@ -1,0 +1,3518 @@
+openapi: 3.1.0
+info:
+  title: UEConnect API
+  version: 1.0.0
+  summary: Enterprise OpenAPI / Swagger contract for UEConnect
+  description: |
+    UEConnect is a verified HCMUE-only campus social platform.
+
+    This API contract covers the full UEConnect product surface:
+    authentication, account gate, identity verification, evidence upload, profile,
+    privacy, home feed, posts, comments, discovery, greeting, connection, messaging,
+    notification, browser push, mentor matching, career pathway, community/club,
+    resources, safety reporting, moderation, admin operations, audit log, analytics,
+    media, and realtime recovery.
+
+    Core rules:
+    - Database is the source of truth.
+    - Realtime events are delivery signals only.
+    - All state-changing same-origin requests require CSRF.
+    - All private data must be redacted by viewer context.
+    - Admin mutations require permission, reason, state validation, and audit log.
+    - API field names use snake_case to match Laravel and database conventions.
+  contact:
+    name: UEConnect Backend Team
+    email: nguyen.van.quang.huy.2105@gmail.com
+  license:
+    name: Internal Educational Project
+
+servers:
+  - url: https://ueconnect.hcmue.edu.vn/api/v1
+    description: Production
+  - url: https://staging.ueconnect.hcmue.edu.vn/api/v1
+    description: Staging
+  - url: http://localhost:8000/api/v1
+    description: Local development
+
+tags:
+  - name: System
+    description: Health check and reference data.
+  - name: Authentication
+    description: Login, logout, password reset, account gate.
+  - name: Current User
+    description: Current user, own profile, privacy and settings.
+  - name: Verification
+    description: HCMUE identity verification and evidence review.
+  - name: Media
+    description: Avatar, post images, private evidence, message attachments and protected preview.
+  - name: Feed
+    description: Home feed and posts.
+  - name: Comments
+    description: Post comments and replies.
+  - name: Discovery
+    description: Profile discovery and recommendation pass.
+  - name: Greeting
+    description: Greeting request lifecycle.
+  - name: Connection
+    description: Accepted user connections.
+  - name: Messaging
+    description: Conversations, messages, read receipts, edit/delete, attachments.
+  - name: Notifications
+    description: In-app notification and browser push subscription.
+  - name: Mentor
+    description: Mentor profile, mentor access and mentor request lifecycle.
+  - name: Career Pathway
+    description: Faculties, programs, pathways, steps and resources.
+  - name: Community
+    description: Communities, clubs, members, join requests, channels and resources.
+  - name: Safety
+    description: Reports and blocking.
+  - name: Admin
+    description: Admin dashboard, verification review, moderation, users, permissions and audit.
+  - name: Analytics
+    description: Safe internal event tracking.
+  - name: Realtime
+    description: HTTP recovery endpoints and WebSocket event contracts.
+
+security:
+  - cookieAuth: []
+  - bearerAuth: []
+
+paths:
+  /health:
+    get:
+      tags: [System]
+      summary: Health check
+      operationId: getHealth
+      security: []
+      responses:
+        "200":
+          description: API is healthy.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/SuccessEnvelope"
+                  - type: object
+                    properties:
+                      data:
+                        type: object
+                        properties:
+                          status: { type: string, example: ok }
+                          service: { type: string, example: ueconnect-api }
+
+  /reference/faculties:
+    get:
+      tags: [System]
+      summary: List faculties
+      operationId: listFaculties
+      parameters:
+        - $ref: "#/components/parameters/StatusFilter"
+      responses:
+        "200":
+          description: Faculty list.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/SuccessEnvelope"
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items: { $ref: "#/components/schemas/Faculty" }
+
+  /reference/academic-programs:
+    get:
+      tags: [System]
+      summary: List academic programs
+      operationId: listAcademicPrograms
+      parameters:
+        - name: faculty_id
+          in: query
+          schema: { type: integer, format: int64 }
+        - $ref: "#/components/parameters/StatusFilter"
+      responses:
+        "200":
+          description: Program list.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/SuccessEnvelope"
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items: { $ref: "#/components/schemas/AcademicProgram" }
+
+  /auth/login:
+    post:
+      tags: [Authentication]
+      summary: Login with HCMUE email and password
+      operationId: login
+      security:
+        - csrfToken: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/LoginRequest" }
+      responses:
+        "200":
+          description: Login successful.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/SuccessEnvelope"
+                  - type: object
+                    properties:
+                      data: { $ref: "#/components/schemas/AuthSession" }
+        "401": { $ref: "#/components/responses/InvalidCredentialsError" }
+        "422": { $ref: "#/components/responses/ValidationError" }
+
+  /auth/logout:
+    post:
+      tags: [Authentication]
+      summary: Logout current session
+      operationId: logout
+      security:
+        - cookieAuth: []
+        - csrfToken: []
+      responses:
+        "200": { $ref: "#/components/responses/GenericSuccess" }
+        "401": { $ref: "#/components/responses/UnauthenticatedError" }
+
+  /auth/account-status:
+    get:
+      tags: [Authentication]
+      summary: Get current account gate status
+      operationId: getAccountStatus
+      responses:
+        "200":
+          description: Account gate decision.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/SuccessEnvelope"
+                  - type: object
+                    properties:
+                      data: { $ref: "#/components/schemas/AccountGate" }
+
+  /auth/forgot-password:
+    post:
+      tags: [Authentication]
+      summary: Request password reset link
+      operationId: forgotPassword
+      security:
+        - csrfToken: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email]
+              properties:
+                email:
+                  type: string
+                  format: email
+                  pattern: "^[^@]+@hcmue\\.edu\\.vn$"
+      responses:
+        "200": { $ref: "#/components/responses/GenericSuccess" }
+        "422": { $ref: "#/components/responses/ValidationError" }
+
+  /auth/reset-password:
+    post:
+      tags: [Authentication]
+      summary: Reset password
+      operationId: resetPassword
+      security:
+        - csrfToken: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email, token, password, password_confirmation]
+              properties:
+                email: { type: string, format: email }
+                token: { type: string }
+                password: { type: string, minLength: 8 }
+                password_confirmation: { type: string, minLength: 8 }
+      responses:
+        "200": { $ref: "#/components/responses/GenericSuccess" }
+        "422": { $ref: "#/components/responses/ValidationError" }
+
+  /me:
+    get:
+      tags: [Current User]
+      summary: Get current authenticated user
+      operationId: getMe
+      responses:
+        "200":
+          description: Current user.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/SuccessEnvelope"
+                  - type: object
+                    properties:
+                      data: { $ref: "#/components/schemas/Me" }
+        "401": { $ref: "#/components/responses/UnauthenticatedError" }
+
+  /me/profile:
+    get:
+      tags: [Current User]
+      summary: Get current user's own profile
+      operationId: getMyProfile
+      responses:
+        "200":
+          description: Own profile.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/SuccessEnvelope"
+                  - type: object
+                    properties:
+                      data: { $ref: "#/components/schemas/ProfileDetail" }
+    patch:
+      tags: [Current User]
+      summary: Update current user's profile
+      operationId: updateMyProfile
+      security:
+        - cookieAuth: []
+        - csrfToken: []
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/ProfileUpdateRequest" }
+      responses:
+        "200":
+          description: Profile updated.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/SuccessEnvelope"
+                  - type: object
+                    properties:
+                      data: { $ref: "#/components/schemas/ProfileDetail" }
+        "403": { $ref: "#/components/responses/AccountGateError" }
+        "422": { $ref: "#/components/responses/ValidationError" }
+
+  /me/privacy:
+    get:
+      tags: [Current User]
+      summary: Get privacy settings
+      operationId: getMyPrivacySettings
+      responses:
+        "200":
+          description: Privacy settings.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/SuccessEnvelope"
+                  - type: object
+                    properties:
+                      data: { $ref: "#/components/schemas/ProfilePrivacySettings" }
+    patch:
+      tags: [Current User]
+      summary: Update privacy settings
+      operationId: updateMyPrivacySettings
+      security:
+        - cookieAuth: []
+        - csrfToken: []
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/ProfilePrivacySettings" }
+      responses:
+        "200":
+          description: Privacy settings updated.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/SuccessEnvelope"
+                  - type: object
+                    properties:
+                      data: { $ref: "#/components/schemas/ProfilePrivacySettings" }
+
+  /users/{user_id}:
+    get:
+      tags: [Current User]
+      summary: Get public profile by user id
+      operationId: getUserProfile
+      parameters:
+        - $ref: "#/components/parameters/UserId"
+      responses:
+        "200":
+          description: Viewer-context redacted profile.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/SuccessEnvelope"
+                  - type: object
+                    properties:
+                      data: { $ref: "#/components/schemas/ProfileDetail" }
+        "404": { $ref: "#/components/responses/NotFoundError" }
+
+  /media/avatar:
+    post:
+      tags: [Media]
+      summary: Upload current user's avatar
+      operationId: uploadAvatar
+      security:
+        - cookieAuth: []
+        - csrfToken: []
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [file]
+              properties:
+                file: { type: string, format: binary }
+      responses:
+        "201":
+          description: Avatar uploaded.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/SuccessEnvelope"
+                  - type: object
+                    properties:
+                      data: { $ref: "#/components/schemas/MediaFile" }
+        "422": { $ref: "#/components/responses/ValidationError" }
+
+  /media/{media_file_id}/preview:
+    get:
+      tags: [Media]
+      summary: Get protected preview metadata
+      operationId: previewMediaFile
+      parameters:
+        - $ref: "#/components/parameters/MediaFileId"
+      responses:
+        "200":
+          description: Preview metadata.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/SuccessEnvelope"
+                  - type: object
+                    properties:
+                      data: { $ref: "#/components/schemas/MediaPreview" }
+        "403": { $ref: "#/components/responses/PermissionDeniedError" }
+        "404": { $ref: "#/components/responses/NotFoundError" }
+
+  /verification/current:
+    get:
+      tags: [Verification]
+      summary: Get current user's latest verification request
+      operationId: getCurrentVerification
+      responses:
+        "200":
+          description: Current verification request.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/SuccessEnvelope"
+                  - type: object
+                    properties:
+                      data: { $ref: "#/components/schemas/VerificationRequest" }
+        "404": { $ref: "#/components/responses/NotFoundError" }
+
+  /verification/requests:
+    post:
+      tags: [Verification]
+      summary: Create verification request draft
+      operationId: createVerificationRequest
+      security:
+        - cookieAuth: []
+        - csrfToken: []
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/VerificationRequestCreate" }
+      responses:
+        "201":
+          description: Draft created.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/SuccessEnvelope"
+                  - type: object
+                    properties:
+                      data: { $ref: "#/components/schemas/VerificationRequest" }
+        "409": { $ref: "#/components/responses/ConflictError" }
+        "422": { $ref: "#/components/responses/ValidationError" }
+
+  /verification/requests/{verification_request_id}:
+    get:
+      tags: [Verification]
+      summary: Get verification request
+      operationId: getVerificationRequest
+      parameters:
+        - $ref: "#/components/parameters/VerificationRequestId"
+      responses:
+        "200":
+          description: Verification request.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/SuccessEnvelope"
+                  - type: object
+                    properties:
+                      data: { $ref: "#/components/schemas/VerificationRequest" }
+    patch:
+      tags: [Verification]
+      summary: Update verification draft or resubmission
+      operationId: updateVerificationRequest
+      security:
+        - cookieAuth: []
+        - csrfToken: []
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/VerificationRequestId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/VerificationRequestCreate" }
+      responses:
+        "200":
+          description: Verification updated.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/SuccessEnvelope"
+                  - type: object
+                    properties:
+                      data: { $ref: "#/components/schemas/VerificationRequest" }
+
+  /verification/requests/{verification_request_id}/submit:
+    post:
+      tags: [Verification]
+      summary: Submit verification request for review
+      operationId: submitVerificationRequest
+      security:
+        - cookieAuth: []
+        - csrfToken: []
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/VerificationRequestId"
+      responses:
+        "200":
+          description: Verification submitted.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/SuccessEnvelope"
+                  - type: object
+                    properties:
+                      data: { $ref: "#/components/schemas/VerificationRequest" }
+        "409": { $ref: "#/components/responses/ConflictError" }
+
+  /verification/requests/{verification_request_id}/evidences:
+    post:
+      tags: [Verification, Media]
+      summary: Upload verification evidence
+      operationId: uploadVerificationEvidence
+      security:
+        - cookieAuth: []
+        - csrfToken: []
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/VerificationRequestId"
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema: { $ref: "#/components/schemas/VerificationEvidenceUpload" }
+      responses:
+        "201":
+          description: Evidence uploaded.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/SuccessEnvelope"
+                  - type: object
+                    properties:
+                      data: { $ref: "#/components/schemas/VerificationEvidence" }
+        "422": { $ref: "#/components/responses/ValidationError" }
+
+  /verification/evidences/{evidence_id}:
+    delete:
+      tags: [Verification, Media]
+      summary: Delete evidence from editable verification request
+      operationId: deleteVerificationEvidence
+      security:
+        - cookieAuth: []
+        - csrfToken: []
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/EvidenceId"
+      responses:
+        "200": { $ref: "#/components/responses/GenericSuccess" }
+        "403": { $ref: "#/components/responses/PermissionDeniedError" }
+
+  /feed:
+    get:
+      tags: [Feed]
+      summary: Get home feed
+      operationId: getFeed
+      parameters:
+        - $ref: "#/components/parameters/Cursor"
+        - $ref: "#/components/parameters/Limit"
+      responses:
+        "200":
+          description: Cursor-paginated feed.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/SuccessEnvelope"
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items: { $ref: "#/components/schemas/Post" }
+                      meta: { $ref: "#/components/schemas/CursorMeta" }
+        "403": { $ref: "#/components/responses/AccountGateError" }
+
+  /posts:
+    post:
+      tags: [Feed]
+      summary: Create post
+      operationId: createPost
+      security:
+        - cookieAuth: []
+        - csrfToken: []
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema: { $ref: "#/components/schemas/PostCreateRequest" }
+      responses:
+        "201":
+          description: Post created.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/SuccessEnvelope"
+                  - type: object
+                    properties:
+                      data: { $ref: "#/components/schemas/Post" }
+
+  /posts/{post_id}:
+    get:
+      tags: [Feed]
+      summary: Get post detail
+      operationId: getPost
+      parameters:
+        - $ref: "#/components/parameters/PostId"
+      responses:
+        "200":
+          description: Post detail.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/SuccessEnvelope"
+                  - type: object
+                    properties:
+                      data: { $ref: "#/components/schemas/Post" }
+        "404": { $ref: "#/components/responses/NotFoundError" }
+    patch:
+      tags: [Feed]
+      summary: Update own post
+      operationId: updatePost
+      security:
+        - cookieAuth: []
+        - csrfToken: []
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/PostId"
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                body: { type: string, maxLength: 5000 }
+                visibility: { $ref: "#/components/schemas/PostVisibility" }
+      responses:
+        "200":
+          description: Post updated.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/SuccessEnvelope"
+                  - type: object
+                    properties:
+                      data: { $ref: "#/components/schemas/Post" }
+    delete:
+      tags: [Feed]
+      summary: Delete own post
+      operationId: deletePost
+      security:
+        - cookieAuth: []
+        - csrfToken: []
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/PostId"
+      responses:
+        "200": { $ref: "#/components/responses/GenericSuccess" }
+
+  /posts/{post_id}/comments:
+    get:
+      tags: [Comments]
+      summary: List comments for post
+      operationId: listComments
+      parameters:
+        - $ref: "#/components/parameters/PostId"
+        - $ref: "#/components/parameters/Cursor"
+        - $ref: "#/components/parameters/Limit"
+      responses:
+        "200":
+          description: Comments.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/SuccessEnvelope"
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items: { $ref: "#/components/schemas/Comment" }
+                      meta: { $ref: "#/components/schemas/CursorMeta" }
+    post:
+      tags: [Comments]
+      summary: Create comment
+      operationId: createComment
+      security:
+        - cookieAuth: []
+        - csrfToken: []
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/PostId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [body]
+              properties:
+                body: { type: string, minLength: 1, maxLength: 2000 }
+                parent_comment_id: { type: integer, format: int64, nullable: true }
+      responses:
+        "201":
+          description: Comment created.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/SuccessEnvelope"
+                  - type: object
+                    properties:
+                      data: { $ref: "#/components/schemas/Comment" }
+
+  /comments/{comment_id}:
+    patch:
+      tags: [Comments]
+      summary: Update comment
+      operationId: updateComment
+      security:
+        - cookieAuth: []
+        - csrfToken: []
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/CommentId"
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [body]
+              properties:
+                body: { type: string, minLength: 1, maxLength: 2000 }
+      responses:
+        "200":
+          description: Comment updated.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/SuccessEnvelope"
+                  - type: object
+                    properties:
+                      data: { $ref: "#/components/schemas/Comment" }
+    delete:
+      tags: [Comments]
+      summary: Delete comment
+      operationId: deleteComment
+      security:
+        - cookieAuth: []
+        - csrfToken: []
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/CommentId"
+      responses:
+        "200": { $ref: "#/components/responses/GenericSuccess" }
+
+  /discovery:
+    get:
+      tags: [Discovery]
+      summary: Get discovery recommendations
+      operationId: getDiscovery
+      parameters:
+        - name: filter[faculty_id]
+          in: query
+          schema: { type: integer, format: int64 }
+        - name: filter[role_type]
+          in: query
+          schema: { $ref: "#/components/schemas/RoleType" }
+        - name: q
+          in: query
+          schema: { type: string }
+        - $ref: "#/components/parameters/Cursor"
+        - $ref: "#/components/parameters/Limit"
+      responses:
+        "200":
+          description: Discovery recommendations.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/SuccessEnvelope"
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items: { $ref: "#/components/schemas/UserSummary" }
+                      meta: { $ref: "#/components/schemas/CursorMeta" }
+
+  /discovery/{user_id}/pass:
+    post:
+      tags: [Discovery]
+      summary: Pass discovery profile
+      operationId: passDiscoveryProfile
+      security:
+        - cookieAuth: []
+        - csrfToken: []
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/UserId"
+      responses:
+        "200": { $ref: "#/components/responses/GenericSuccess" }
+
+  /greetings:
+    get:
+      tags: [Greeting]
+      summary: List greetings
+      operationId: listGreetings
+      parameters:
+        - name: filter[direction]
+          in: query
+          schema: { type: string, enum: [sent, received] }
+        - name: filter[status]
+          in: query
+          schema: { $ref: "#/components/schemas/GreetingStatus" }
+        - $ref: "#/components/parameters/Page"
+        - $ref: "#/components/parameters/PerPage"
+      responses:
+        "200":
+          description: Greetings.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/SuccessEnvelope"
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items: { $ref: "#/components/schemas/Greeting" }
+                      meta: { $ref: "#/components/schemas/PageMeta" }
+    post:
+      tags: [Greeting]
+      summary: Send greeting
+      operationId: sendGreeting
+      security:
+        - cookieAuth: []
+        - csrfToken: []
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [receiver_id, message]
+              properties:
+                receiver_id: { type: integer, format: int64 }
+                message: { type: string, minLength: 1, maxLength: 300 }
+      responses:
+        "201":
+          description: Greeting sent.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/SuccessEnvelope"
+                  - type: object
+                    properties:
+                      data: { $ref: "#/components/schemas/Greeting" }
+        "409": { $ref: "#/components/responses/ConflictError" }
+
+  /greetings/{greeting_id}/accept:
+    post:
+      tags: [Greeting, Connection, Messaging]
+      summary: Accept greeting and create connection/conversation
+      operationId: acceptGreeting
+      security:
+        - cookieAuth: []
+        - csrfToken: []
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/GreetingId"
+      responses:
+        "200":
+          description: Greeting accepted.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/SuccessEnvelope"
+                  - type: object
+                    properties:
+                      data:
+                        type: object
+                        properties:
+                          greeting: { $ref: "#/components/schemas/Greeting" }
+                          connection: { $ref: "#/components/schemas/Connection" }
+                          conversation: { $ref: "#/components/schemas/Conversation" }
+        "409": { $ref: "#/components/responses/ConflictError" }
+
+  /greetings/{greeting_id}/decline:
+    post:
+      tags: [Greeting]
+      summary: Decline greeting
+      operationId: declineGreeting
+      security:
+        - cookieAuth: []
+        - csrfToken: []
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/GreetingId"
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                reason: { type: string, maxLength: 500, nullable: true }
+      responses:
+        "200":
+          description: Greeting declined.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/SuccessEnvelope"
+                  - type: object
+                    properties:
+                      data: { $ref: "#/components/schemas/Greeting" }
+
+  /connections:
+    get:
+      tags: [Connection]
+      summary: List current user's connections
+      operationId: listConnections
+      parameters:
+        - name: q
+          in: query
+          schema: { type: string }
+        - $ref: "#/components/parameters/Page"
+        - $ref: "#/components/parameters/PerPage"
+      responses:
+        "200":
+          description: Connections.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/SuccessEnvelope"
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items: { $ref: "#/components/schemas/Connection" }
+                      meta: { $ref: "#/components/schemas/PageMeta" }
+
+  /connections/{connection_id}:
+    delete:
+      tags: [Connection]
+      summary: Remove connection
+      operationId: removeConnection
+      security:
+        - cookieAuth: []
+        - csrfToken: []
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/ConnectionId"
+      responses:
+        "200": { $ref: "#/components/responses/GenericSuccess" }
+
+  /conversations:
+    get:
+      tags: [Messaging]
+      summary: List conversations
+      operationId: listConversations
+      parameters:
+        - name: filter[type]
+          in: query
+          schema: { $ref: "#/components/schemas/ConversationType" }
+        - name: q
+          in: query
+          schema: { type: string }
+        - $ref: "#/components/parameters/Cursor"
+        - $ref: "#/components/parameters/Limit"
+      responses:
+        "200":
+          description: Conversations.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/SuccessEnvelope"
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items: { $ref: "#/components/schemas/Conversation" }
+                      meta: { $ref: "#/components/schemas/CursorMeta" }
+
+  /conversations/{conversation_id}:
+    get:
+      tags: [Messaging]
+      summary: Get conversation detail
+      operationId: getConversation
+      parameters:
+        - $ref: "#/components/parameters/ConversationId"
+      responses:
+        "200":
+          description: Conversation.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/SuccessEnvelope"
+                  - type: object
+                    properties:
+                      data: { $ref: "#/components/schemas/Conversation" }
+
+  /conversations/{conversation_id}/messages:
+    get:
+      tags: [Messaging]
+      summary: List messages in conversation
+      operationId: listMessages
+      parameters:
+        - $ref: "#/components/parameters/ConversationId"
+        - $ref: "#/components/parameters/Cursor"
+        - $ref: "#/components/parameters/Limit"
+      responses:
+        "200":
+          description: Messages.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/SuccessEnvelope"
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items: { $ref: "#/components/schemas/Message" }
+                      meta: { $ref: "#/components/schemas/CursorMeta" }
+    post:
+      tags: [Messaging]
+      summary: Send message
+      operationId: sendMessage
+      security:
+        - cookieAuth: []
+        - csrfToken: []
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/ConversationId"
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema: { $ref: "#/components/schemas/MessageCreateRequest" }
+      responses:
+        "201":
+          description: Message sent.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/SuccessEnvelope"
+                  - type: object
+                    properties:
+                      data: { $ref: "#/components/schemas/Message" }
+
+  /messages/{message_id}:
+    patch:
+      tags: [Messaging]
+      summary: Edit message
+      operationId: editMessage
+      security:
+        - cookieAuth: []
+        - csrfToken: []
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/MessageId"
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [body]
+              properties:
+                body: { type: string, maxLength: 5000 }
+      responses:
+        "200":
+          description: Message edited.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/SuccessEnvelope"
+                  - type: object
+                    properties:
+                      data: { $ref: "#/components/schemas/Message" }
+    delete:
+      tags: [Messaging]
+      summary: Delete message
+      operationId: deleteMessage
+      security:
+        - cookieAuth: []
+        - csrfToken: []
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/MessageId"
+      responses:
+        "200": { $ref: "#/components/responses/GenericSuccess" }
+
+  /messages/{message_id}/read:
+    post:
+      tags: [Messaging]
+      summary: Mark message as read
+      operationId: markMessageRead
+      security:
+        - cookieAuth: []
+        - csrfToken: []
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/MessageId"
+      responses:
+        "200": { $ref: "#/components/responses/GenericSuccess" }
+
+  /notifications:
+    get:
+      tags: [Notifications]
+      summary: List notifications
+      operationId: listNotifications
+      parameters:
+        - name: filter[read]
+          in: query
+          schema: { type: string, enum: [read, unread] }
+        - $ref: "#/components/parameters/Cursor"
+        - $ref: "#/components/parameters/Limit"
+      responses:
+        "200":
+          description: Notifications.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/SuccessEnvelope"
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items: { $ref: "#/components/schemas/Notification" }
+                      meta: { $ref: "#/components/schemas/CursorMeta" }
+
+  /notifications/{notification_id}/read:
+    post:
+      tags: [Notifications]
+      summary: Mark notification as read
+      operationId: markNotificationRead
+      security:
+        - cookieAuth: []
+        - csrfToken: []
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/NotificationId"
+      responses:
+        "200": { $ref: "#/components/responses/GenericSuccess" }
+
+  /notifications/read-all:
+    post:
+      tags: [Notifications]
+      summary: Mark all notifications as read
+      operationId: markAllNotificationsRead
+      security:
+        - cookieAuth: []
+        - csrfToken: []
+        - bearerAuth: []
+      responses:
+        "200": { $ref: "#/components/responses/GenericSuccess" }
+
+  /browser-push/subscriptions:
+    post:
+      tags: [Notifications]
+      summary: Register browser push subscription
+      operationId: registerBrowserPushSubscription
+      security:
+        - cookieAuth: []
+        - csrfToken: []
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/BrowserPushSubscriptionRequest" }
+      responses:
+        "201":
+          description: Subscription registered.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/SuccessEnvelope"
+                  - type: object
+                    properties:
+                      data: { $ref: "#/components/schemas/BrowserPushSubscription" }
+
+  /browser-push/subscriptions/{subscription_id}:
+    delete:
+      tags: [Notifications]
+      summary: Revoke browser push subscription
+      operationId: revokeBrowserPushSubscription
+      security:
+        - cookieAuth: []
+        - csrfToken: []
+        - bearerAuth: []
+      parameters:
+        - name: subscription_id
+          in: path
+          required: true
+          schema: { type: integer, format: int64 }
+      responses:
+        "200": { $ref: "#/components/responses/GenericSuccess" }
+
+  /mentors:
+    get:
+      tags: [Mentor]
+      summary: List mentors
+      operationId: listMentors
+      parameters:
+        - name: filter[topic_id]
+          in: query
+          schema: { type: integer, format: int64 }
+        - name: filter[availability_status]
+          in: query
+          schema: { $ref: "#/components/schemas/MentorAvailabilityStatus" }
+        - name: q
+          in: query
+          schema: { type: string }
+        - $ref: "#/components/parameters/Page"
+        - $ref: "#/components/parameters/PerPage"
+      responses:
+        "200":
+          description: Mentors.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/SuccessEnvelope"
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items: { $ref: "#/components/schemas/MentorProfile" }
+                      meta: { $ref: "#/components/schemas/PageMeta" }
+
+  /mentors/{mentor_id}:
+    get:
+      tags: [Mentor]
+      summary: Get mentor detail
+      operationId: getMentor
+      parameters:
+        - name: mentor_id
+          in: path
+          required: true
+          schema: { type: integer, format: int64 }
+      responses:
+        "200":
+          description: Mentor detail.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/SuccessEnvelope"
+                  - type: object
+                    properties:
+                      data: { $ref: "#/components/schemas/MentorProfile" }
+
+  /mentors/{mentor_id}/requests:
+    post:
+      tags: [Mentor]
+      summary: Create mentor request
+      operationId: createMentorRequest
+      security:
+        - cookieAuth: []
+        - csrfToken: []
+        - bearerAuth: []
+      parameters:
+        - name: mentor_id
+          in: path
+          required: true
+          schema: { type: integer, format: int64 }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/MentorRequestCreate" }
+      responses:
+        "201":
+          description: Mentor request created.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/SuccessEnvelope"
+                  - type: object
+                    properties:
+                      data: { $ref: "#/components/schemas/MentorRequest" }
+
+  /mentor-requests:
+    get:
+      tags: [Mentor]
+      summary: List mentor requests for current user
+      operationId: listMentorRequests
+      parameters:
+        - name: filter[status]
+          in: query
+          schema: { $ref: "#/components/schemas/MentorRequestStatus" }
+        - $ref: "#/components/parameters/Page"
+        - $ref: "#/components/parameters/PerPage"
+      responses:
+        "200":
+          description: Mentor requests.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/SuccessEnvelope"
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items: { $ref: "#/components/schemas/MentorRequest" }
+                      meta: { $ref: "#/components/schemas/PageMeta" }
+
+  /mentor-requests/{mentor_request_id}:
+    get:
+      tags: [Mentor]
+      summary: Get mentor request detail
+      operationId: getMentorRequest
+      parameters:
+        - $ref: "#/components/parameters/MentorRequestId"
+      responses:
+        "200":
+          description: Mentor request.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/SuccessEnvelope"
+                  - type: object
+                    properties:
+                      data: { $ref: "#/components/schemas/MentorRequest" }
+
+  /mentor-requests/{mentor_request_id}/accept:
+    post:
+      tags: [Mentor, Messaging]
+      summary: Accept mentor request and create conversation
+      operationId: acceptMentorRequest
+      security:
+        - cookieAuth: []
+        - csrfToken: []
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/MentorRequestId"
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                mentor_response: { type: string, maxLength: 2000 }
+      responses:
+        "200":
+          description: Request accepted.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/SuccessEnvelope"
+                  - type: object
+                    properties:
+                      data: { $ref: "#/components/schemas/MentorRequest" }
+
+  /mentor-requests/{mentor_request_id}/decline:
+    post:
+      tags: [Mentor]
+      summary: Decline mentor request
+      operationId: declineMentorRequest
+      security:
+        - cookieAuth: []
+        - csrfToken: []
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/MentorRequestId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [reason]
+              properties:
+                reason: { type: string, minLength: 3, maxLength: 1000 }
+      responses:
+        "200":
+          description: Request declined.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/SuccessEnvelope"
+                  - type: object
+                    properties:
+                      data: { $ref: "#/components/schemas/MentorRequest" }
+
+  /mentor-requests/{mentor_request_id}/ask-more-info:
+    post:
+      tags: [Mentor]
+      summary: Ask student for more information
+      operationId: askMoreInfoMentorRequest
+      security:
+        - cookieAuth: []
+        - csrfToken: []
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/MentorRequestId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [instruction]
+              properties:
+                instruction: { type: string, minLength: 3, maxLength: 2000 }
+      responses:
+        "200":
+          description: Request needs more information.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/SuccessEnvelope"
+                  - type: object
+                    properties:
+                      data: { $ref: "#/components/schemas/MentorRequest" }
+
+  /career-pathways:
+    get:
+      tags: [Career Pathway]
+      summary: List career pathways
+      operationId: listCareerPathways
+      parameters:
+        - name: filter[faculty_id]
+          in: query
+          schema: { type: integer, format: int64 }
+        - name: filter[academic_program_id]
+          in: query
+          schema: { type: integer, format: int64 }
+        - name: q
+          in: query
+          schema: { type: string }
+        - $ref: "#/components/parameters/Page"
+        - $ref: "#/components/parameters/PerPage"
+      responses:
+        "200":
+          description: Career pathways.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/SuccessEnvelope"
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items: { $ref: "#/components/schemas/CareerPathway" }
+                      meta: { $ref: "#/components/schemas/PageMeta" }
+
+  /career-pathways/{pathway_id}:
+    get:
+      tags: [Career Pathway]
+      summary: Get career pathway detail
+      operationId: getCareerPathway
+      parameters:
+        - name: pathway_id
+          in: path
+          required: true
+          schema: { type: integer, format: int64 }
+      responses:
+        "200":
+          description: Career pathway.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/SuccessEnvelope"
+                  - type: object
+                    properties:
+                      data: { $ref: "#/components/schemas/CareerPathway" }
+
+  /career-pathways/{pathway_id}/save:
+    post:
+      tags: [Career Pathway]
+      summary: Save pathway
+      operationId: saveCareerPathway
+      security:
+        - cookieAuth: []
+        - csrfToken: []
+        - bearerAuth: []
+      parameters:
+        - name: pathway_id
+          in: path
+          required: true
+          schema: { type: integer, format: int64 }
+      responses:
+        "200": { $ref: "#/components/responses/GenericSuccess" }
+    delete:
+      tags: [Career Pathway]
+      summary: Unsave pathway
+      operationId: unsaveCareerPathway
+      security:
+        - cookieAuth: []
+        - csrfToken: []
+        - bearerAuth: []
+      parameters:
+        - name: pathway_id
+          in: path
+          required: true
+          schema: { type: integer, format: int64 }
+      responses:
+        "200": { $ref: "#/components/responses/GenericSuccess" }
+
+  /communities:
+    get:
+      tags: [Community]
+      summary: List communities and clubs
+      operationId: listCommunities
+      parameters:
+        - name: filter[type]
+          in: query
+          schema: { $ref: "#/components/schemas/CommunityType" }
+        - name: filter[status]
+          in: query
+          schema: { $ref: "#/components/schemas/CommunityStatus" }
+        - name: q
+          in: query
+          schema: { type: string }
+        - $ref: "#/components/parameters/Page"
+        - $ref: "#/components/parameters/PerPage"
+      responses:
+        "200":
+          description: Communities.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/SuccessEnvelope"
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items: { $ref: "#/components/schemas/Community" }
+                      meta: { $ref: "#/components/schemas/PageMeta" }
+    post:
+      tags: [Community]
+      summary: Create or suggest community
+      operationId: createCommunity
+      security:
+        - cookieAuth: []
+        - csrfToken: []
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/CommunityCreateRequest" }
+      responses:
+        "201":
+          description: Community created/submitted.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/SuccessEnvelope"
+                  - type: object
+                    properties:
+                      data: { $ref: "#/components/schemas/Community" }
+
+  /communities/{community_id}:
+    get:
+      tags: [Community]
+      summary: Get community detail
+      operationId: getCommunity
+      parameters:
+        - $ref: "#/components/parameters/CommunityId"
+      responses:
+        "200":
+          description: Community.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/SuccessEnvelope"
+                  - type: object
+                    properties:
+                      data: { $ref: "#/components/schemas/Community" }
+    patch:
+      tags: [Community]
+      summary: Update community settings
+      operationId: updateCommunity
+      security:
+        - cookieAuth: []
+        - csrfToken: []
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/CommunityId"
+      requestBody:
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/CommunityUpdateRequest" }
+      responses:
+        "200":
+          description: Community updated.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/SuccessEnvelope"
+                  - type: object
+                    properties:
+                      data: { $ref: "#/components/schemas/Community" }
+
+  /communities/{community_id}/join-requests:
+    post:
+      tags: [Community]
+      summary: Request to join community
+      operationId: requestJoinCommunity
+      security:
+        - cookieAuth: []
+        - csrfToken: []
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/CommunityId"
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                message: { type: string, maxLength: 500 }
+      responses:
+        "201":
+          description: Join request created.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/SuccessEnvelope"
+                  - type: object
+                    properties:
+                      data: { $ref: "#/components/schemas/CommunityJoinRequest" }
+
+  /communities/{community_id}/members:
+    get:
+      tags: [Community]
+      summary: List community members
+      operationId: listCommunityMembers
+      parameters:
+        - $ref: "#/components/parameters/CommunityId"
+        - $ref: "#/components/parameters/Page"
+        - $ref: "#/components/parameters/PerPage"
+      responses:
+        "200":
+          description: Community members.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/SuccessEnvelope"
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items: { $ref: "#/components/schemas/CommunityMember" }
+                      meta: { $ref: "#/components/schemas/PageMeta" }
+
+  /communities/{community_id}/channels:
+    get:
+      tags: [Community]
+      summary: List community channels
+      operationId: listCommunityChannels
+      parameters:
+        - $ref: "#/components/parameters/CommunityId"
+      responses:
+        "200":
+          description: Channels.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/SuccessEnvelope"
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items: { $ref: "#/components/schemas/CommunityChannel" }
+
+  /communities/{community_id}/resources:
+    get:
+      tags: [Community]
+      summary: List community resources
+      operationId: listCommunityResources
+      parameters:
+        - $ref: "#/components/parameters/CommunityId"
+        - $ref: "#/components/parameters/Page"
+        - $ref: "#/components/parameters/PerPage"
+      responses:
+        "200":
+          description: Resources.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/SuccessEnvelope"
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items: { $ref: "#/components/schemas/CommunityResource" }
+                      meta: { $ref: "#/components/schemas/PageMeta" }
+    post:
+      tags: [Community, Media]
+      summary: Submit community resource
+      operationId: createCommunityResource
+      security:
+        - cookieAuth: []
+        - csrfToken: []
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/CommunityId"
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema: { $ref: "#/components/schemas/CommunityResourceCreateRequest" }
+      responses:
+        "201":
+          description: Resource submitted.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/SuccessEnvelope"
+                  - type: object
+                    properties:
+                      data: { $ref: "#/components/schemas/CommunityResource" }
+
+  /search:
+    get:
+      tags: [Current User]
+      summary: Global search
+      operationId: globalSearch
+      parameters:
+        - name: q
+          in: query
+          required: true
+          schema: { type: string, minLength: 1 }
+        - name: filter[type]
+          in: query
+          schema:
+            type: string
+            enum: [users, posts, communities, mentors, pathways, resources, all]
+            default: all
+        - $ref: "#/components/parameters/Page"
+        - $ref: "#/components/parameters/PerPage"
+      responses:
+        "200":
+          description: Privacy-aware search result.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/SuccessEnvelope"
+                  - type: object
+                    properties:
+                      data: { $ref: "#/components/schemas/SearchResult" }
+                      meta: { $ref: "#/components/schemas/PageMeta" }
+
+  /reports:
+    post:
+      tags: [Safety]
+      summary: Submit safety report
+      operationId: submitReport
+      security:
+        - cookieAuth: []
+        - csrfToken: []
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/ReportCreateRequest" }
+      responses:
+        "201":
+          description: Report submitted.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/SuccessEnvelope"
+                  - type: object
+                    properties:
+                      data: { $ref: "#/components/schemas/Report" }
+        "409": { $ref: "#/components/responses/ConflictError" }
+
+  /reports/{report_id}:
+    get:
+      tags: [Safety]
+      summary: Get report status
+      operationId: getReport
+      parameters:
+        - name: report_id
+          in: path
+          required: true
+          schema: { type: integer, format: int64 }
+      responses:
+        "200":
+          description: Report detail.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/SuccessEnvelope"
+                  - type: object
+                    properties:
+                      data: { $ref: "#/components/schemas/Report" }
+
+  /users/{user_id}/block:
+    post:
+      tags: [Safety]
+      summary: Block user
+      operationId: blockUser
+      security:
+        - cookieAuth: []
+        - csrfToken: []
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/UserId"
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                reason: { type: string, maxLength: 500, nullable: true }
+      responses:
+        "200": { $ref: "#/components/responses/GenericSuccess" }
+    delete:
+      tags: [Safety]
+      summary: Unblock user
+      operationId: unblockUser
+      security:
+        - cookieAuth: []
+        - csrfToken: []
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/UserId"
+      responses:
+        "200": { $ref: "#/components/responses/GenericSuccess" }
+
+  /admin/dashboard:
+    get:
+      tags: [Admin]
+      summary: Get admin dashboard metrics
+      operationId: getAdminDashboard
+      responses:
+        "200":
+          description: Admin metrics.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/SuccessEnvelope"
+                  - type: object
+                    properties:
+                      data: { $ref: "#/components/schemas/AdminDashboard" }
+        "403": { $ref: "#/components/responses/PermissionDeniedError" }
+
+  /admin/users:
+    get:
+      tags: [Admin]
+      summary: List users for admin
+      operationId: adminListUsers
+      parameters:
+        - name: filter[account_status]
+          in: query
+          schema: { $ref: "#/components/schemas/AccountStatus" }
+        - name: filter[role_type]
+          in: query
+          schema: { $ref: "#/components/schemas/RoleType" }
+        - name: q
+          in: query
+          schema: { type: string }
+        - $ref: "#/components/parameters/Page"
+        - $ref: "#/components/parameters/PerPage"
+      responses:
+        "200":
+          description: Admin user list.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/SuccessEnvelope"
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items: { $ref: "#/components/schemas/AdminUser" }
+                      meta: { $ref: "#/components/schemas/PageMeta" }
+
+  /admin/users/{user_id}/account-status:
+    patch:
+      tags: [Admin]
+      summary: Update user account status
+      operationId: adminUpdateUserAccountStatus
+      security:
+        - cookieAuth: []
+        - csrfToken: []
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/UserId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [account_status, reason]
+              properties:
+                account_status: { $ref: "#/components/schemas/AccountStatus" }
+                reason: { type: string, minLength: 3 }
+                restricted_until: { type: string, format: date-time, nullable: true }
+      responses:
+        "200":
+          description: Account status updated and audited.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/AdminActionResponse" }
+
+  /admin/verification-requests:
+    get:
+      tags: [Admin, Verification]
+      summary: List verification queue
+      operationId: adminListVerificationRequests
+      parameters:
+        - name: filter[status]
+          in: query
+          schema: { $ref: "#/components/schemas/VerificationStatus" }
+        - name: filter[assigned_admin_id]
+          in: query
+          schema: { type: integer, format: int64 }
+        - $ref: "#/components/parameters/Page"
+        - $ref: "#/components/parameters/PerPage"
+      responses:
+        "200":
+          description: Verification queue.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/SuccessEnvelope"
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items: { $ref: "#/components/schemas/VerificationRequest" }
+                      meta: { $ref: "#/components/schemas/PageMeta" }
+
+  /admin/verification-requests/{verification_request_id}/approve:
+    post:
+      tags: [Admin, Verification]
+      summary: Approve verification request
+      operationId: adminApproveVerification
+      security:
+        - cookieAuth: []
+        - csrfToken: []
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/VerificationRequestId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [reason]
+              properties:
+                reason: { type: string, minLength: 3 }
+                corrected_fields:
+                  type: object
+                  additionalProperties: true
+      responses:
+        "200":
+          description: Verification approved and audited.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/AdminActionResponse" }
+        "409": { $ref: "#/components/responses/ConflictError" }
+
+  /admin/verification-requests/{verification_request_id}/reject:
+    post:
+      tags: [Admin, Verification]
+      summary: Reject verification request
+      operationId: adminRejectVerification
+      security:
+        - cookieAuth: []
+        - csrfToken: []
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/VerificationRequestId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [reason]
+              properties:
+                reason: { type: string, minLength: 3 }
+      responses:
+        "200":
+          description: Verification rejected and audited.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/AdminActionResponse" }
+
+  /admin/verification-requests/{verification_request_id}/need-more-info:
+    post:
+      tags: [Admin, Verification]
+      summary: Ask user for more verification information
+      operationId: adminNeedMoreInfoVerification
+      security:
+        - cookieAuth: []
+        - csrfToken: []
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/VerificationRequestId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [reason, instruction]
+              properties:
+                reason: { type: string, minLength: 3 }
+                instruction: { type: string, minLength: 3 }
+      responses:
+        "200":
+          description: Verification needs more information.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/AdminActionResponse" }
+
+  /admin/reports:
+    get:
+      tags: [Admin, Safety]
+      summary: List reports for admin
+      operationId: adminListReports
+      parameters:
+        - name: filter[status]
+          in: query
+          schema: { $ref: "#/components/schemas/ReportStatus" }
+        - name: filter[priority]
+          in: query
+          schema: { $ref: "#/components/schemas/Priority" }
+        - $ref: "#/components/parameters/Page"
+        - $ref: "#/components/parameters/PerPage"
+      responses:
+        "200":
+          description: Report queue.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/SuccessEnvelope"
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items: { $ref: "#/components/schemas/Report" }
+                      meta: { $ref: "#/components/schemas/PageMeta" }
+
+  /admin/moderation-cases:
+    get:
+      tags: [Admin]
+      summary: List moderation cases
+      operationId: adminListModerationCases
+      parameters:
+        - name: filter[status]
+          in: query
+          schema: { $ref: "#/components/schemas/ModerationCaseStatus" }
+        - name: filter[priority]
+          in: query
+          schema: { $ref: "#/components/schemas/Priority" }
+        - $ref: "#/components/parameters/Page"
+        - $ref: "#/components/parameters/PerPage"
+      responses:
+        "200":
+          description: Moderation cases.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/SuccessEnvelope"
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items: { $ref: "#/components/schemas/ModerationCase" }
+                      meta: { $ref: "#/components/schemas/PageMeta" }
+
+  /admin/moderation-cases/{moderation_case_id}/actions:
+    post:
+      tags: [Admin]
+      summary: Take moderation action
+      operationId: adminCreateModerationAction
+      security:
+        - cookieAuth: []
+        - csrfToken: []
+        - bearerAuth: []
+      parameters:
+        - name: moderation_case_id
+          in: path
+          required: true
+          schema: { type: integer, format: int64 }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/ModerationActionCreate" }
+      responses:
+        "201":
+          description: Moderation action created and audited.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/AdminActionResponse" }
+
+  /admin/communities/{community_id}/suspend:
+    post:
+      tags: [Admin, Community]
+      summary: Suspend community
+      operationId: adminSuspendCommunity
+      security:
+        - cookieAuth: []
+        - csrfToken: []
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/CommunityId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [reason]
+              properties:
+                reason: { type: string, minLength: 3 }
+                notify_members: { type: boolean, default: true }
+      responses:
+        "200":
+          description: Community suspended.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/AdminActionResponse" }
+
+  /admin/permission-grants:
+    post:
+      tags: [Admin]
+      summary: Grant scoped permission
+      operationId: adminGrantPermission
+      security:
+        - cookieAuth: []
+        - csrfToken: []
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/PermissionGrantCreate" }
+      responses:
+        "201":
+          description: Permission granted and audited.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/SuccessEnvelope"
+                  - type: object
+                    properties:
+                      data: { $ref: "#/components/schemas/PermissionGrant" }
+
+  /admin/permission-grants/{permission_grant_id}/revoke:
+    post:
+      tags: [Admin]
+      summary: Revoke scoped permission
+      operationId: adminRevokePermission
+      security:
+        - cookieAuth: []
+        - csrfToken: []
+        - bearerAuth: []
+      parameters:
+        - name: permission_grant_id
+          in: path
+          required: true
+          schema: { type: integer, format: int64 }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [reason]
+              properties:
+                reason: { type: string, minLength: 3 }
+      responses:
+        "200":
+          description: Permission revoked and audited.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/AdminActionResponse" }
+
+  /admin/audit-logs:
+    get:
+      tags: [Admin]
+      summary: List audit logs
+      operationId: adminListAuditLogs
+      parameters:
+        - name: filter[action_key]
+          in: query
+          schema: { type: string }
+        - name: filter[target_type]
+          in: query
+          schema: { type: string }
+        - name: filter[target_id]
+          in: query
+          schema: { type: integer, format: int64 }
+        - name: filter[actor_id]
+          in: query
+          schema: { type: integer, format: int64 }
+        - $ref: "#/components/parameters/Page"
+        - $ref: "#/components/parameters/PerPage"
+      responses:
+        "200":
+          description: Audit logs.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/SuccessEnvelope"
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items: { $ref: "#/components/schemas/AuditLog" }
+                      meta: { $ref: "#/components/schemas/PageMeta" }
+
+  /realtime/sync:
+    get:
+      tags: [Realtime]
+      summary: Recovery sync for realtime disconnect
+      operationId: realtimeSync
+      parameters:
+        - name: since
+          in: query
+          schema: { type: string, format: date-time }
+      responses:
+        "200":
+          description: Realtime recovery payload.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/SuccessEnvelope"
+                  - type: object
+                    properties:
+                      data:
+                        type: object
+                        properties:
+                          notifications:
+                            type: array
+                            items: { $ref: "#/components/schemas/Notification" }
+                          conversations:
+                            type: array
+                            items: { $ref: "#/components/schemas/Conversation" }
+
+  /analytics/events:
+    post:
+      tags: [Analytics]
+      summary: Track safe client analytics event
+      operationId: trackAnalyticsEvent
+      security:
+        - cookieAuth: []
+        - csrfToken: []
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/AnalyticsEventCreate" }
+      responses:
+        "202":
+          description: Event accepted.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/SuccessEnvelope" }
+
+components:
+  securitySchemes:
+    cookieAuth:
+      type: apiKey
+      in: cookie
+      name: ueconnect_session
+      description: Laravel session cookie for same-origin web/PWA requests.
+    csrfToken:
+      type: apiKey
+      in: header
+      name: X-CSRF-TOKEN
+      description: CSRF token required for state-changing same-origin requests.
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: Sanctum
+      description: Future token auth for mobile/native clients.
+
+  parameters:
+    Page:
+      name: page
+      in: query
+      schema: { type: integer, minimum: 1, default: 1 }
+    PerPage:
+      name: per_page
+      in: query
+      schema: { type: integer, minimum: 1, maximum: 100, default: 20 }
+    Cursor:
+      name: cursor
+      in: query
+      schema: { type: string, nullable: true }
+    Limit:
+      name: limit
+      in: query
+      schema: { type: integer, minimum: 1, maximum: 50, default: 20 }
+    StatusFilter:
+      name: filter[status]
+      in: query
+      schema: { type: string }
+    UserId:
+      name: user_id
+      in: path
+      required: true
+      schema: { type: integer, format: int64 }
+    MediaFileId:
+      name: media_file_id
+      in: path
+      required: true
+      schema: { type: integer, format: int64 }
+    VerificationRequestId:
+      name: verification_request_id
+      in: path
+      required: true
+      schema: { type: integer, format: int64 }
+    EvidenceId:
+      name: evidence_id
+      in: path
+      required: true
+      schema: { type: integer, format: int64 }
+    PostId:
+      name: post_id
+      in: path
+      required: true
+      schema: { type: integer, format: int64 }
+    CommentId:
+      name: comment_id
+      in: path
+      required: true
+      schema: { type: integer, format: int64 }
+    GreetingId:
+      name: greeting_id
+      in: path
+      required: true
+      schema: { type: integer, format: int64 }
+    ConnectionId:
+      name: connection_id
+      in: path
+      required: true
+      schema: { type: integer, format: int64 }
+    ConversationId:
+      name: conversation_id
+      in: path
+      required: true
+      schema: { type: integer, format: int64 }
+    MessageId:
+      name: message_id
+      in: path
+      required: true
+      schema: { type: integer, format: int64 }
+    NotificationId:
+      name: notification_id
+      in: path
+      required: true
+      schema: { type: integer, format: int64 }
+    MentorRequestId:
+      name: mentor_request_id
+      in: path
+      required: true
+      schema: { type: integer, format: int64 }
+    CommunityId:
+      name: community_id
+      in: path
+      required: true
+      schema: { type: integer, format: int64 }
+
+  responses:
+    GenericSuccess:
+      description: Generic successful operation.
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/SuccessEnvelope" }
+          example:
+            success: true
+            data: {}
+            message: "Thao tác thành công."
+            meta: {}
+    ValidationError:
+      description: Validation failed.
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/ErrorEnvelope" }
+          example:
+            success: false
+            error:
+              code: VALIDATION_FAILED
+              message: "Vui lòng kiểm tra lại thông tin."
+              details:
+                email: ["Email phải thuộc tên miền hcmue.edu.vn."]
+            meta: {}
+    UnauthenticatedError:
+      description: Unauthenticated.
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/ErrorEnvelope" }
+          example:
+            success: false
+            error:
+              code: AUTH_UNAUTHENTICATED
+              message: "Bạn cần đăng nhập để tiếp tục."
+              details: {}
+            meta: {}
+    InvalidCredentialsError:
+      description: Invalid credentials.
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/ErrorEnvelope" }
+          example:
+            success: false
+            error:
+              code: AUTH_INVALID_CREDENTIALS
+              message: "Email hoặc mật khẩu không đúng."
+              details: {}
+            meta: {}
+    PermissionDeniedError:
+      description: Permission denied.
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/ErrorEnvelope" }
+          example:
+            success: false
+            error:
+              code: PERMISSION_DENIED
+              message: "Bạn không có quyền thực hiện thao tác này."
+              details: {}
+            meta: {}
+    AccountGateError:
+      description: Account gate blocked.
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/ErrorEnvelope" }
+          example:
+            success: false
+            error:
+              code: ACCOUNT_NOT_VERIFIED
+              message: "Bạn cần xác thực tài khoản trước khi sử dụng tính năng này."
+              details:
+                next_route: "/app/verification"
+            meta: {}
+    NotFoundError:
+      description: Resource not found or hidden.
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/ErrorEnvelope" }
+          example:
+            success: false
+            error:
+              code: RESOURCE_NOT_FOUND
+              message: "Không tìm thấy dữ liệu."
+              details: {}
+            meta: {}
+    ConflictError:
+      description: Resource conflict.
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/ErrorEnvelope" }
+          example:
+            success: false
+            error:
+              code: STALE_RESOURCE_CONFLICT
+              message: "Dữ liệu đã thay đổi. Vui lòng tải lại trước khi xử lý."
+              details:
+                current_status: approved
+            meta: {}
+
+  schemas:
+    SuccessEnvelope:
+      type: object
+      required: [success, data, message, meta]
+      properties:
+        success: { type: boolean, const: true }
+        data: {}
+        message: { type: string, example: "Thao tác thành công." }
+        meta:
+          type: object
+          additionalProperties: true
+
+    ErrorEnvelope:
+      type: object
+      required: [success, error, meta]
+      properties:
+        success: { type: boolean, const: false }
+        error: { $ref: "#/components/schemas/ApiError" }
+        meta:
+          type: object
+          additionalProperties: true
+
+    ApiError:
+      type: object
+      required: [code, message, details]
+      properties:
+        code: { type: string, example: VALIDATION_FAILED }
+        message: { type: string }
+        details:
+          type: object
+          additionalProperties: true
+
+    PageMeta:
+      type: object
+      properties:
+        pagination:
+          type: object
+          properties:
+            page: { type: integer, example: 1 }
+            per_page: { type: integer, example: 20 }
+            total: { type: integer, example: 125 }
+            last_page: { type: integer, example: 7 }
+            has_more: { type: boolean, example: true }
+
+    CursorMeta:
+      type: object
+      properties:
+        cursor:
+          type: object
+          properties:
+            next: { type: string, nullable: true }
+            previous: { type: string, nullable: true }
+            has_more: { type: boolean }
+
+    AccountStatus:
+      type: string
+      enum: [active, restricted, suspended, banned, deleted]
+
+    VerificationStatus:
+      type: string
+      enum: [draft, submitted, pending_review, under_review, needs_more_information, approved, rejected, conflict, suspicious, expired, cancelled]
+
+    ProfileStatus:
+      type: string
+      enum: [incomplete, ready, restricted, hidden]
+
+    RoleType:
+      type: string
+      enum: [student, alumni, advisor, admin]
+
+    Visibility:
+      type: string
+      enum: [public, hcmue_only, connections_only, community_members_only, private]
+
+    PostVisibility:
+      type: string
+      enum: [public_hcmue, connections, community, private, admin_only]
+
+    PostStatus:
+      type: string
+      enum: [draft, published, hidden_by_moderation, removed_by_moderation, archived, deleted]
+
+    GreetingStatus:
+      type: string
+      enum: [pending, accepted, declined, cancelled, expired, blocked, reported]
+
+    ConnectionStatus:
+      type: string
+      enum: [active, blocked, removed, restricted]
+
+    ConversationType:
+      type: string
+      enum: [direct, mentor_request, community_chat, system]
+
+    ConversationStatus:
+      type: string
+      enum: [active, archived, blocked, restricted, deleted]
+
+    MessageStatus:
+      type: string
+      enum: [sending, sent, delivered, read, edited, deleted, failed, hidden_by_moderation, removed_by_moderation]
+
+    MentorStatus:
+      type: string
+      enum: [draft, pending_review, approved, rejected, suspended, revoked]
+
+    MentorAvailabilityStatus:
+      type: string
+      enum: [available, limited, full, paused, unavailable]
+
+    MentorRequestStatus:
+      type: string
+      enum: [draft, pending, needs_more_information, updated_by_student, accepted, declined, cancelled_by_student, expired, completed, reported, restricted]
+
+    Urgency:
+      type: string
+      enum: [low, normal, high, urgent]
+
+    CommunityType:
+      type: string
+      enum: [club, faculty, academic, career, mentor, interest, official, other]
+
+    CommunityStatus:
+      type: string
+      enum: [draft, pending_review, active, inactive, suspended, archived, hidden_by_moderation]
+
+    CommunityVisibility:
+      type: string
+      enum: [public, hcmue_only, private, hidden]
+
+    JoinPolicy:
+      type: string
+      enum: [open, approval_required, invite_only, closed]
+
+    MembershipStatus:
+      type: string
+      enum: [active, pending, removed, left, banned, muted]
+
+    ReportReason:
+      type: string
+      enum: [spam, harassment, impersonation, sexual_or_dating_content, copyright_violation, personal_information_leak, scam_fraud, hate_or_offensive_language, politically_sensitive_content, other]
+
+    ReportStatus:
+      type: string
+      enum: [submitted, queued, in_review, resolved, dismissed, duplicate, withdrawn]
+
+    ModerationCaseStatus:
+      type: string
+      enum: [queued, in_review, action_required, actioned, dismissed, escalated, appealed, resolved, closed]
+
+    ModerationActionKey:
+      type: string
+      enum: [dismiss, hide, delete, restore, warn, suspend, ban, escalate, resolve]
+
+    Priority:
+      type: string
+      enum: [low, normal, high, urgent]
+
+    Faculty:
+      type: object
+      required: [id, name, slug, status]
+      properties:
+        id: { type: integer, format: int64 }
+        name: { type: string }
+        slug: { type: string }
+        description: { type: string, nullable: true }
+        status: { type: string, enum: [active, inactive, archived] }
+
+    AcademicProgram:
+      type: object
+      required: [id, faculty_id, name, slug, degree_level, status]
+      properties:
+        id: { type: integer, format: int64 }
+        faculty_id: { type: integer, format: int64 }
+        name: { type: string }
+        slug: { type: string }
+        degree_level: { type: string, enum: [undergraduate, postgraduate, certificate, other] }
+        description: { type: string, nullable: true }
+        status: { type: string, enum: [active, inactive, archived] }
+
+    LoginRequest:
+      type: object
+      required: [email, password]
+      properties:
+        email:
+          type: string
+          format: email
+          pattern: "^[^@]+@hcmue\\.edu\\.vn$"
+        password: { type: string, minLength: 8 }
+        remember: { type: boolean, default: false }
+
+    AuthSession:
+      type: object
+      properties:
+        user: { $ref: "#/components/schemas/UserAccount" }
+        account_gate: { $ref: "#/components/schemas/AccountGate" }
+
+    UserAccount:
+      type: object
+      properties:
+        id: { type: integer, format: int64 }
+        email: { type: string, format: email }
+        account_status: { $ref: "#/components/schemas/AccountStatus" }
+        email_verified_at: { type: string, format: date-time, nullable: true }
+
+    AccountGate:
+      type: object
+      properties:
+        next_route: { type: string, example: /app/home }
+        reason:
+          type: string
+          enum: [account_restricted, account_suspended, account_banned, not_verified, profile_incomplete, verified_and_ready, admin_route_allowed]
+        message: { type: string, nullable: true }
+
+    Me:
+      type: object
+      properties:
+        user: { $ref: "#/components/schemas/UserAccount" }
+        profile: { $ref: "#/components/schemas/ProfileSummary" }
+        permissions:
+          type: array
+          items: { type: string }
+        account_gate: { $ref: "#/components/schemas/AccountGate" }
+
+    UserSummary:
+      type: object
+      properties:
+        id: { type: integer, format: int64 }
+        display_name: { type: string }
+        avatar_url: { type: string, nullable: true }
+        role_type: { $ref: "#/components/schemas/RoleType" }
+        verification_badge: { type: boolean }
+        headline: { type: string, nullable: true }
+        privacy_limited: { type: boolean, default: false }
+
+    ProfileSummary:
+      type: object
+      properties:
+        id: { type: integer, format: int64 }
+        user_id: { type: integer, format: int64 }
+        display_name: { type: string }
+        avatar_url: { type: string, nullable: true }
+        role_type: { $ref: "#/components/schemas/RoleType" }
+        profile_status: { $ref: "#/components/schemas/ProfileStatus" }
+
+    ProfileDetail:
+      type: object
+      properties:
+        id: { type: integer, format: int64 }
+        user_id: { type: integer, format: int64 }
+        display_name: { type: string }
+        avatar_url: { type: string, nullable: true }
+        bio: { type: string, nullable: true }
+        role_type: { $ref: "#/components/schemas/RoleType" }
+        profile_status: { $ref: "#/components/schemas/ProfileStatus" }
+        faculty: { $ref: "#/components/schemas/Faculty" }
+        academic_program: { $ref: "#/components/schemas/AcademicProgram" }
+        student_profile: { $ref: "#/components/schemas/StudentProfile" }
+        alumni_profile: { $ref: "#/components/schemas/AlumniProfile" }
+        advisor_profile: { $ref: "#/components/schemas/AdvisorProfile" }
+        skills:
+          type: array
+          items: { type: string }
+        interests:
+          type: array
+          items: { type: string }
+        privacy_context:
+          type: object
+          properties:
+            viewer_relationship:
+              type: string
+              enum: [self, connected, hcmue_user, community_member, public, blocked, admin]
+            limited: { type: boolean }
+            reason: { type: string, nullable: true }
+
+    StudentProfile:
+      type: object
+      nullable: true
+      properties:
+        student_code: { type: string }
+        faculty_id: { type: integer, format: int64 }
+        academic_program_id: { type: integer, format: int64 }
+        cohort: { type: string, nullable: true }
+        current_year: { type: integer, nullable: true }
+        class_name: { type: string, nullable: true }
+        learning_goals: { type: string, nullable: true }
+        career_orientation: { type: string, nullable: true }
+
+    AlumniProfile:
+      type: object
+      nullable: true
+      properties:
+        graduation_year: { type: integer, nullable: true }
+        current_position: { type: string, nullable: true }
+        current_organization: { type: string, nullable: true }
+        industry: { type: string, nullable: true }
+        career_summary: { type: string, nullable: true }
+        willing_to_mentor: { type: boolean }
+
+    AdvisorProfile:
+      type: object
+      nullable: true
+      properties:
+        department: { type: string, nullable: true }
+        title: { type: string, nullable: true }
+        office_location: { type: string, nullable: true }
+        advising_areas: { type: string, nullable: true }
+
+    ProfileUpdateRequest:
+      type: object
+      properties:
+        display_name: { type: string, maxLength: 255 }
+        bio: { type: string, maxLength: 2000 }
+        faculty_id: { type: integer, format: int64 }
+        academic_program_id: { type: integer, format: int64 }
+        cohort: { type: string, maxLength: 50 }
+        current_year: { type: integer, minimum: 1, maximum: 8 }
+        class_name: { type: string, maxLength: 100 }
+        learning_goals: { type: string, maxLength: 2000 }
+        career_orientation: { type: string, maxLength: 2000 }
+        skills:
+          type: array
+          items: { type: string, maxLength: 100 }
+        interests:
+          type: array
+          items: { type: string, maxLength: 100 }
+
+    ProfilePrivacySettings:
+      type: object
+      properties:
+        show_faculty: { $ref: "#/components/schemas/Visibility" }
+        show_major: { $ref: "#/components/schemas/Visibility" }
+        show_cohort: { $ref: "#/components/schemas/Visibility" }
+        show_bio: { $ref: "#/components/schemas/Visibility" }
+        show_skills: { $ref: "#/components/schemas/Visibility" }
+        show_interests: { $ref: "#/components/schemas/Visibility" }
+        show_social_links: { $ref: "#/components/schemas/Visibility" }
+        show_career_info: { $ref: "#/components/schemas/Visibility" }
+        show_mentor_status: { $ref: "#/components/schemas/Visibility" }
+        discoverable: { type: boolean }
+        allow_greetings: { type: boolean }
+        allow_messages_from_connections: { type: boolean }
+        show_read_receipts: { type: boolean }
+
+    MediaFile:
+      type: object
+      properties:
+        id: { type: integer, format: int64 }
+        original_name: { type: string }
+        mime_type: { type: string }
+        extension: { type: string }
+        size_bytes: { type: integer, format: int64 }
+        visibility:
+          type: string
+          enum: [public, authenticated, private, community, admin_only]
+        file_category:
+          type: string
+          enum: [avatar, verification_evidence, post_image, message_attachment, community_resource, admin_export, other]
+        preview_url: { type: string, nullable: true }
+
+    MediaPreview:
+      type: object
+      properties:
+        media_file: { $ref: "#/components/schemas/MediaFile" }
+        temporary_url: { type: string, nullable: true }
+        expires_at: { type: string, format: date-time, nullable: true }
+
+    VerificationRequestCreate:
+      type: object
+      required: [role_requested, submitted_name, submitted_email]
+      properties:
+        role_requested: { type: string, enum: [student, alumni, advisor] }
+        submitted_name: { type: string, maxLength: 255 }
+        submitted_student_code: { type: string, maxLength: 50, nullable: true }
+        submitted_faculty_id: { type: integer, format: int64, nullable: true }
+        submitted_academic_program_id: { type: integer, format: int64, nullable: true }
+        submitted_cohort: { type: string, maxLength: 50, nullable: true }
+        submitted_email:
+          type: string
+          format: email
+          pattern: "^[^@]+@hcmue\\.edu\\.vn$"
+        submitted_note: { type: string, nullable: true }
+
+    VerificationRequest:
+      type: object
+      properties:
+        id: { type: integer, format: int64 }
+        user_id: { type: integer, format: int64 }
+        role_requested: { type: string, enum: [student, alumni, advisor] }
+        status: { $ref: "#/components/schemas/VerificationStatus" }
+        submitted_name: { type: string }
+        submitted_student_code: { type: string, nullable: true }
+        submitted_faculty: { $ref: "#/components/schemas/Faculty" }
+        submitted_academic_program: { $ref: "#/components/schemas/AcademicProgram" }
+        submitted_cohort: { type: string, nullable: true }
+        submitted_email: { type: string, format: email }
+        submitted_note: { type: string, nullable: true }
+        evidences:
+          type: array
+          items: { $ref: "#/components/schemas/VerificationEvidence" }
+        submitted_at: { type: string, format: date-time, nullable: true }
+        reviewed_at: { type: string, format: date-time, nullable: true }
+        expires_at: { type: string, format: date-time, nullable: true }
+
+    VerificationEvidenceUpload:
+      type: object
+      required: [evidence_type, user_note]
+      properties:
+        evidence_type:
+          type: string
+          enum: [student_card, admission_letter, transcript, graduation_certificate, advisor_document, email_evidence, other]
+        user_note: { type: string, minLength: 1, maxLength: 1000 }
+        file:
+          type: string
+          format: binary
+          nullable: true
+          description: jpg/jpeg/png/pdf/webp, max 5MB.
+        evidence_link:
+          type: string
+          format: uri
+          nullable: true
+
+    VerificationEvidence:
+      type: object
+      properties:
+        id: { type: integer, format: int64 }
+        evidence_type: { type: string }
+        user_note: { type: string }
+        evidence_link: { type: string, nullable: true }
+        status:
+          type: string
+          enum: [uploaded, accepted, rejected, needs_more_information, archived]
+        media: { $ref: "#/components/schemas/MediaFile" }
+        preview_url: { type: string, nullable: true }
+
+    PostCreateRequest:
+      type: object
+      required: [body, visibility]
+      properties:
+        body: { type: string, maxLength: 5000 }
+        visibility: { $ref: "#/components/schemas/PostVisibility" }
+        community_id: { type: integer, format: int64, nullable: true }
+        images:
+          type: array
+          maxItems: 4
+          items: { type: string, format: binary }
+
+    Post:
+      type: object
+      properties:
+        id: { type: integer, format: int64 }
+        author: { $ref: "#/components/schemas/UserSummary" }
+        community: { $ref: "#/components/schemas/CommunitySummary" }
+        post_type:
+          type: string
+          enum: [user_post, community_post, system_announcement, mentor_insight, career_share]
+        body: { type: string, nullable: true }
+        visibility: { $ref: "#/components/schemas/PostVisibility" }
+        status: { $ref: "#/components/schemas/PostStatus" }
+        moderation_status: { type: string, nullable: true }
+        media:
+          type: array
+          items: { $ref: "#/components/schemas/MediaFile" }
+        comment_count: { type: integer }
+        created_at: { type: string, format: date-time }
+
+    Comment:
+      type: object
+      properties:
+        id: { type: integer, format: int64 }
+        post_id: { type: integer, format: int64 }
+        author: { $ref: "#/components/schemas/UserSummary" }
+        parent_comment_id: { type: integer, format: int64, nullable: true }
+        body: { type: string, nullable: true }
+        status:
+          type: string
+          enum: [published, hidden_by_moderation, removed_by_moderation, deleted]
+        created_at: { type: string, format: date-time }
+
+    Greeting:
+      type: object
+      properties:
+        id: { type: integer, format: int64 }
+        sender: { $ref: "#/components/schemas/UserSummary" }
+        receiver: { $ref: "#/components/schemas/UserSummary" }
+        message: { type: string }
+        status: { $ref: "#/components/schemas/GreetingStatus" }
+        accepted_at: { type: string, format: date-time, nullable: true }
+        declined_at: { type: string, format: date-time, nullable: true }
+        expires_at: { type: string, format: date-time, nullable: true }
+
+    Connection:
+      type: object
+      properties:
+        id: { type: integer, format: int64 }
+        user: { $ref: "#/components/schemas/UserSummary" }
+        status: { $ref: "#/components/schemas/ConnectionStatus" }
+        connected_at: { type: string, format: date-time }
+
+    Conversation:
+      type: object
+      properties:
+        id: { type: integer, format: int64 }
+        conversation_type: { $ref: "#/components/schemas/ConversationType" }
+        status: { $ref: "#/components/schemas/ConversationStatus" }
+        participants:
+          type: array
+          items: { $ref: "#/components/schemas/UserSummary" }
+        last_message: { $ref: "#/components/schemas/Message" }
+        last_message_at: { type: string, format: date-time, nullable: true }
+        unread_count: { type: integer }
+
+    MessageCreateRequest:
+      type: object
+      properties:
+        body: { type: string, maxLength: 5000, nullable: true }
+        attachments:
+          type: array
+          maxItems: 5
+          items: { type: string, format: binary }
+
+    Message:
+      type: object
+      properties:
+        id: { type: integer, format: int64 }
+        conversation_id: { type: integer, format: int64 }
+        sender: { $ref: "#/components/schemas/UserSummary" }
+        body: { type: string, nullable: true }
+        message_type: { type: string, enum: [text, image, file, system] }
+        status: { $ref: "#/components/schemas/MessageStatus" }
+        attachments:
+          type: array
+          items: { $ref: "#/components/schemas/MediaFile" }
+        created_at: { type: string, format: date-time }
+        edited_at: { type: string, format: date-time, nullable: true }
+
+    Notification:
+      type: object
+      properties:
+        id: { type: integer, format: int64 }
+        type:
+          type: string
+          enum: [verification_approved, verification_rejected, verification_need_more_info, greeting_received, greeting_accepted, message_received, mentor_request_update, moderation_action, community_update, system_announcement]
+        title: { type: string }
+        body: { type: string, nullable: true }
+        preview: { type: string, nullable: true }
+        target_type: { type: string, nullable: true }
+        target_id: { type: integer, format: int64, nullable: true }
+        read_at: { type: string, format: date-time, nullable: true }
+        expires_at: { type: string, format: date-time }
+        created_at: { type: string, format: date-time }
+
+    BrowserPushSubscriptionRequest:
+      type: object
+      required: [endpoint, keys]
+      properties:
+        endpoint: { type: string }
+        keys:
+          type: object
+          required: [p256dh, auth]
+          properties:
+            p256dh: { type: string }
+            auth: { type: string }
+        content_encoding: { type: string, nullable: true }
+        user_agent: { type: string, nullable: true }
+
+    BrowserPushSubscription:
+      type: object
+      properties:
+        id: { type: integer, format: int64 }
+        endpoint: { type: string }
+        last_used_at: { type: string, format: date-time, nullable: true }
+        revoked_at: { type: string, format: date-time, nullable: true }
+
+    MentorProfile:
+      type: object
+      properties:
+        id: { type: integer, format: int64 }
+        user: { $ref: "#/components/schemas/UserSummary" }
+        status: { $ref: "#/components/schemas/MentorStatus" }
+        headline: { type: string, nullable: true }
+        summary: { type: string, nullable: true }
+        expertise_summary: { type: string, nullable: true }
+        availability_status: { $ref: "#/components/schemas/MentorAvailabilityStatus" }
+        topics:
+          type: array
+          items: { $ref: "#/components/schemas/MentorTopic" }
+
+    MentorTopic:
+      type: object
+      properties:
+        id: { type: integer, format: int64 }
+        name: { type: string }
+        slug: { type: string }
+        description: { type: string, nullable: true }
+        status: { type: string }
+
+    MentorRequestCreate:
+      type: object
+      required: [topic_id, question, goal, urgency]
+      properties:
+        topic_id: { type: integer, format: int64 }
+        question: { type: string, minLength: 3, maxLength: 3000 }
+        goal: { type: string, minLength: 3, maxLength: 3000 }
+        urgency: { $ref: "#/components/schemas/Urgency" }
+
+    MentorRequest:
+      type: object
+      properties:
+        id: { type: integer, format: int64 }
+        student: { $ref: "#/components/schemas/UserSummary" }
+        mentor: { $ref: "#/components/schemas/UserSummary" }
+        mentor_profile_id: { type: integer, format: int64 }
+        topic: { $ref: "#/components/schemas/MentorTopic" }
+        question: { type: string }
+        goal: { type: string }
+        urgency: { $ref: "#/components/schemas/Urgency" }
+        status: { $ref: "#/components/schemas/MentorRequestStatus" }
+        mentor_response: { type: string, nullable: true }
+        need_more_info_instruction: { type: string, nullable: true }
+        conversation_id: { type: integer, format: int64, nullable: true }
+
+    CareerPathway:
+      type: object
+      properties:
+        id: { type: integer, format: int64 }
+        faculty: { $ref: "#/components/schemas/Faculty" }
+        academic_program: { $ref: "#/components/schemas/AcademicProgram" }
+        title: { type: string }
+        slug: { type: string }
+        summary: { type: string }
+        source_type:
+          type: string
+          enum: [official_hcmue, admin_curated, mentor_insight, alumni_insight, community_suggestion]
+        status:
+          type: string
+          enum: [draft, published, needs_review, archived, hidden]
+        steps:
+          type: array
+          items: { $ref: "#/components/schemas/CareerPathwayStep" }
+        resources:
+          type: array
+          items: { $ref: "#/components/schemas/CareerPathwayResource" }
+
+    CareerPathwayStep:
+      type: object
+      properties:
+        id: { type: integer, format: int64 }
+        title: { type: string }
+        description: { type: string }
+        year_stage:
+          type: string
+          enum: [year_1, year_2, year_3, year_4, after_graduation, anytime]
+        sort_order: { type: integer }
+
+    CareerPathwayResource:
+      type: object
+      properties:
+        id: { type: integer, format: int64 }
+        title: { type: string }
+        url: { type: string, nullable: true }
+        media: { $ref: "#/components/schemas/MediaFile" }
+        resource_type: { type: string, enum: [file, link, document, video, slide, other] }
+        sort_order: { type: integer }
+
+    CommunitySummary:
+      type: object
+      nullable: true
+      properties:
+        id: { type: integer, format: int64 }
+        name: { type: string }
+        slug: { type: string }
+        community_type: { $ref: "#/components/schemas/CommunityType" }
+
+    Community:
+      type: object
+      properties:
+        id: { type: integer, format: int64 }
+        name: { type: string }
+        slug: { type: string }
+        description: { type: string, nullable: true }
+        community_type: { $ref: "#/components/schemas/CommunityType" }
+        visibility: { $ref: "#/components/schemas/CommunityVisibility" }
+        join_policy: { $ref: "#/components/schemas/JoinPolicy" }
+        status: { $ref: "#/components/schemas/CommunityStatus" }
+        owner: { $ref: "#/components/schemas/UserSummary" }
+        member_count: { type: integer }
+        viewer_membership: { $ref: "#/components/schemas/CommunityMember" }
+
+    CommunityCreateRequest:
+      type: object
+      required: [name, community_type, visibility, join_policy]
+      properties:
+        name: { type: string, maxLength: 255 }
+        description: { type: string, nullable: true }
+        community_type: { $ref: "#/components/schemas/CommunityType" }
+        visibility: { $ref: "#/components/schemas/CommunityVisibility" }
+        join_policy: { $ref: "#/components/schemas/JoinPolicy" }
+
+    CommunityUpdateRequest:
+      allOf:
+        - $ref: "#/components/schemas/CommunityCreateRequest"
+
+    CommunityMember:
+      type: object
+      nullable: true
+      properties:
+        id: { type: integer, format: int64 }
+        user: { $ref: "#/components/schemas/UserSummary" }
+        member_role:
+          type: string
+          enum: [owner, manager, moderator, member, guest]
+        status: { $ref: "#/components/schemas/MembershipStatus" }
+        joined_at: { type: string, format: date-time, nullable: true }
+
+    CommunityJoinRequest:
+      type: object
+      properties:
+        id: { type: integer, format: int64 }
+        community: { $ref: "#/components/schemas/CommunitySummary" }
+        user: { $ref: "#/components/schemas/UserSummary" }
+        status: { type: string, enum: [pending, approved, rejected, cancelled, expired] }
+        message: { type: string, nullable: true }
+
+    CommunityChannel:
+      type: object
+      properties:
+        id: { type: integer, format: int64 }
+        community_id: { type: integer, format: int64 }
+        name: { type: string }
+        slug: { type: string }
+        description: { type: string, nullable: true }
+        channel_type: { type: string, enum: [feed, chat, resources, announcements, events] }
+        visibility: { type: string }
+        status: { type: string, enum: [active, readonly, archived, hidden] }
+        sort_order: { type: integer }
+
+    CommunityResourceCreateRequest:
+      type: object
+      required: [title, resource_type, copyright_attested]
+      properties:
+        title: { type: string, maxLength: 255 }
+        description: { type: string, nullable: true }
+        resource_type: { type: string, enum: [file, link, document, video, slide, other] }
+        url: { type: string, format: uri, nullable: true }
+        file: { type: string, format: binary, nullable: true }
+        copyright_attested: { type: boolean }
+
+    CommunityResource:
+      type: object
+      properties:
+        id: { type: integer, format: int64 }
+        community_id: { type: integer, format: int64 }
+        submitted_by: { $ref: "#/components/schemas/UserSummary" }
+        title: { type: string }
+        description: { type: string, nullable: true }
+        resource_type: { type: string, enum: [file, link, document, video, slide, other] }
+        url: { type: string, nullable: true }
+        media: { $ref: "#/components/schemas/MediaFile" }
+        status:
+          type: string
+          enum: [draft, pending_review, published, rejected, hidden_by_moderation, archived, unavailable]
+        copyright_attested: { type: boolean }
+
+    SearchResult:
+      type: object
+      properties:
+        users:
+          type: array
+          items: { $ref: "#/components/schemas/UserSummary" }
+        posts:
+          type: array
+          items: { $ref: "#/components/schemas/Post" }
+        communities:
+          type: array
+          items: { $ref: "#/components/schemas/Community" }
+        mentors:
+          type: array
+          items: { $ref: "#/components/schemas/MentorProfile" }
+        pathways:
+          type: array
+          items: { $ref: "#/components/schemas/CareerPathway" }
+        resources:
+          type: array
+          items: { $ref: "#/components/schemas/CommunityResource" }
+
+    ReportCreateRequest:
+      type: object
+      required: [target_type, target_id, reason]
+      properties:
+        target_type:
+          type: string
+          enum: [profile, post, comment, message, community, community_post, mentor_request, verification_evidence]
+        target_id: { type: integer, format: int64 }
+        reason: { $ref: "#/components/schemas/ReportReason" }
+        description: { type: string, maxLength: 3000, nullable: true }
+        auto_block: { type: boolean, default: true }
+
+    Report:
+      type: object
+      properties:
+        id: { type: integer, format: int64 }
+        reporter: { $ref: "#/components/schemas/UserSummary" }
+        target_type: { type: string }
+        target_id: { type: integer, format: int64 }
+        reason: { $ref: "#/components/schemas/ReportReason" }
+        description:
+          type: string
+          nullable: true
+          description: Visible only to reporter and authorized safety/admin users.
+        status: { $ref: "#/components/schemas/ReportStatus" }
+        priority: { $ref: "#/components/schemas/Priority" }
+        auto_blocked: { type: boolean }
+        moderation_case_id: { type: integer, format: int64, nullable: true }
+
+    ModerationCase:
+      type: object
+      properties:
+        id: { type: integer, format: int64 }
+        source_type: { type: string, enum: [report, system_flag, admin_created, ai_flag_future] }
+        source_id: { type: integer, format: int64, nullable: true }
+        target_type: { type: string }
+        target_id: { type: integer, format: int64 }
+        status: { $ref: "#/components/schemas/ModerationCaseStatus" }
+        priority: { $ref: "#/components/schemas/Priority" }
+        assigned_to: { $ref: "#/components/schemas/UserSummary" }
+        summary: { type: string, nullable: true }
+
+    ModerationActionCreate:
+      type: object
+      required: [action_key, reason]
+      properties:
+        action_key: { $ref: "#/components/schemas/ModerationActionKey" }
+        reason: { type: string, minLength: 3 }
+        notify_target: { type: boolean, default: true }
+        metadata:
+          type: object
+          additionalProperties: true
+
+    PermissionGrantCreate:
+      type: object
+      required: [user_id, permission_key, reason]
+      properties:
+        user_id: { type: integer, format: int64 }
+        permission_key: { type: string, example: manage_community_members }
+        scope_type: { type: string, nullable: true, example: community }
+        scope_id: { type: integer, format: int64, nullable: true }
+        reason: { type: string }
+        starts_at: { type: string, format: date-time, nullable: true }
+        expires_at: { type: string, format: date-time, nullable: true }
+
+    PermissionGrant:
+      type: object
+      properties:
+        id: { type: integer, format: int64 }
+        user_id: { type: integer, format: int64 }
+        permission_key: { type: string }
+        scope_type: { type: string, nullable: true }
+        scope_id: { type: integer, format: int64, nullable: true }
+        status: { type: string, enum: [active, expired, revoked, suspended] }
+        granted_by: { type: integer, format: int64 }
+        reason: { type: string, nullable: true }
+
+    AdminUser:
+      type: object
+      properties:
+        id: { type: integer, format: int64 }
+        email: { type: string, format: email }
+        account_status: { $ref: "#/components/schemas/AccountStatus" }
+        profile: { $ref: "#/components/schemas/ProfileSummary" }
+        roles:
+          type: array
+          items: { type: string }
+        verification_status: { $ref: "#/components/schemas/VerificationStatus" }
+        created_at: { type: string, format: date-time }
+
+    AdminDashboard:
+      type: object
+      properties:
+        pending_verification_count: { type: integer }
+        active_users_count: { type: integer }
+        daily_posts_count: { type: integer }
+        pending_reports_count: { type: integer }
+        urgent_moderation_cases_count: { type: integer }
+        pending_mentor_requests_count: { type: integer }
+        active_communities_count: { type: integer }
+        queue_health:
+          type: object
+          additionalProperties: true
+
+    AdminActionResponse:
+      allOf:
+        - $ref: "#/components/schemas/SuccessEnvelope"
+        - type: object
+          properties:
+            data:
+              type: object
+              properties:
+                target_type: { type: string }
+                target_id: { type: integer, format: int64 }
+                new_status: { type: string, nullable: true }
+                audit_log_id: { type: integer, format: int64, nullable: true }
+
+    AuditLog:
+      type: object
+      properties:
+        id: { type: integer, format: int64 }
+        actor: { $ref: "#/components/schemas/UserSummary" }
+        actor_type: { type: string }
+        action_key: { type: string }
+        target_type: { type: string }
+        target_id: { type: integer, format: int64, nullable: true }
+        context_type: { type: string, nullable: true }
+        context_id: { type: integer, format: int64, nullable: true }
+        reason: { type: string, nullable: true }
+        metadata:
+          type: object
+          additionalProperties: true
+        created_at: { type: string, format: date-time }
+
+    AnalyticsEventCreate:
+      type: object
+      required: [event_name, occurred_at]
+      properties:
+        event_name:
+          type: string
+          enum: [user_registered, verification_submitted, verification_approved, profile_completed, post_created, comment_created, greeting_sent, greeting_accepted, message_sent, mentor_request_created, community_join_requested, report_submitted, moderation_action_taken, ui_interaction]
+        target_type: { type: string, nullable: true }
+        target_id: { type: integer, format: int64, nullable: true }
+        context_type: { type: string, nullable: true }
+        context_id: { type: integer, format: int64, nullable: true }
+        properties:
+          type: object
+          additionalProperties: true
+          description: Must not include sensitive message/report/evidence/private data.
+        occurred_at: { type: string, format: date-time }
+
+webhooks:
+  messageSent:
+    post:
+      tags: [Realtime]
+      summary: Realtime event contract for MessageSent
+      description: Broadcast over private conversation channel after database commit.
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [event, conversation_id, message]
+              properties:
+                event: { type: string, const: MessageSent }
+                conversation_id: { type: integer, format: int64 }
+                message: { $ref: "#/components/schemas/Message" }
+      responses:
+        "200":
+          description: Client receives event.
+
+  notificationCreated:
+    post:
+      tags: [Realtime]
+      summary: Realtime event contract for NotificationCreated
+      description: Broadcast over private user notification channel after database commit.
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [event, notification]
+              properties:
+                event: { type: string, const: NotificationCreated }
+                notification: { $ref: "#/components/schemas/Notification" }
+      responses:
+        "200":
+          description: Client receives event.
