@@ -12,8 +12,22 @@ class RedirectToMicrosoft
      */
     public function execute(): RedirectResponse
     {
+        $tenant = config('services.microsoft.tenant');
+        $enabled = config('services.microsoft.enabled')
+            && ! empty(config('services.microsoft.client_id'))
+            && ! empty(config('services.microsoft.client_secret'))
+            && ! empty(config('services.microsoft.redirect'))
+            && ! empty($tenant)
+            && ! in_array($tenant, ['common', 'organizations']);
+
+        if (! $enabled) {
+            return redirect()->route('login')->withErrors([
+                'sso' => ['Đăng nhập bằng Microsoft hiện chưa được cấu hình hoặc kích hoạt trên môi trường này.'],
+            ]);
+        }
+
         return Socialite::driver('microsoft')
-            ->scopes(['User.Read'])
+            ->scopes(['openid', 'profile', 'email', 'User.Read'])
             ->redirect();
     }
 }

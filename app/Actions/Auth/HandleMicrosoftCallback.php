@@ -15,6 +15,13 @@ use Laravel\Socialite\Facades\Socialite;
 class HandleMicrosoftCallback
 {
     /**
+     * Create a new callback handler instance.
+     */
+    public function __construct(
+        protected ValidateMicrosoftIdentity $validator
+    ) {}
+
+    /**
      * Handle the Microsoft authentication callback and return the authenticated user.
      *
      * @throws ValidationException
@@ -36,48 +43,19 @@ class HandleMicrosoftCallback
             ]);
 
             throw ValidationException::withMessages([
-                'sso' => ['Không thể kết nối với dịch vụ xác thực. Vui lòng thử lại sau.'],
+                'sso' => ['Không thể đăng nhập bằng Microsoft HCMUE. Vui lòng kiểm tra tài khoản hoặc thử lại.'],
             ]);
         }
 
-        // P0-1: Validate tenant ID (tid claim) against configured single-tenant
-        $allowedTenantId = config('services.microsoft.tenant');
-        $actualTenantId = $socialiteUser->user['tid'] ?? null;
-
-        if (! empty($allowedTenantId) && $allowedTenantId !== 'organizations' && $allowedTenantId !== 'common') {
-            if ($actualTenantId !== $allowedTenantId) {
-                Log::warning('Microsoft SSO tenant mismatch', [
-                    'expected' => $allowedTenantId,
-                    'received' => $actualTenantId,
-                ]);
-
-                throw ValidationException::withMessages([
-                    'sso' => ['Tài khoản Microsoft của bạn không thuộc tổ chức được phép.'],
-                ]);
-            }
-        }
-
-        $email = $socialiteUser->getEmail();
-        if (empty($email)) {
-            throw ValidationException::withMessages([
-                'email' => ['Không tìm thấy địa chỉ email trong tài khoản Microsoft của bạn.'],
-            ]);
-        }
-
-        // Normalize email
-        $normalizedEmail = Str::lower(trim($email));
-
-        // Strict allowed-domain constraint (configurable, defaults to hcmue.edu.vn)
-        $allowedDomain = config('services.microsoft.allowed_domain', 'hcmue.edu.vn');
-        if (! Str::endsWith($normalizedEmail, '@'.$allowedDomain)) {
-            throw ValidationException::withMessages([
-                'email' => ['Tài khoản Microsoft phải thuộc hệ sinh thái email @'.$allowedDomain.' của Trường Đại học Sư phạm TP.HCM.'],
-            ]);
-        }
+        // Validate and resolve Microsoft identity data
+        $identityData = $this->validator->execute($socialiteUser);
+        $normalizedEmail = $identityData['email'];
+        $providerUserId = $identityData['provider_user_id'];
+        $actualTenantId = $identityData['tenant_id'];
 
         // 1. Check if identity provider mapping already exists
         $identity = UserIdentityProvider::where('provider_name', 'microsoft')
-            ->where('provider_user_id', $socialiteUser->getId())
+            ->where('provider_user_id', $providerUserId)
             ->first();
 
         if ($identity) {
@@ -106,14 +84,17 @@ class HandleMicrosoftCallback
             UserIdentityProvider::create([
                 'user_id' => $user->id,
                 'provider_name' => 'microsoft',
-                'provider_user_id' => $socialiteUser->getId(),
+                'provider_user_id' => $providerUserId,
                 'provider_tenant_id' => $actualTenantId,
                 'provider_email' => $normalizedEmail,
                 'linked_at' => now(),
                 'last_login_at' => now(),
             ]);
 
-            $user->update(['last_login_at' => now()]);
+            $user->update([
+                'last_login_at' => now(),
+                'intended_identity_type' => $user->intended_identity_type ?? ($identityData['intended_identity_type'] ?? null),
+            ]);
             Auth::login($user, true);
 
             return $user;
@@ -126,6 +107,7 @@ class HandleMicrosoftCallback
             'email' => $normalizedEmail,
             'password' => Hash::make(Str::random(24)),
             'account_status' => AccountStatus::REGISTERED,
+            'intended_identity_type' => $identityData['intended_identity_type'] ?? null,
             'last_login_at' => now(),
         ]);
 
@@ -133,7 +115,7 @@ class HandleMicrosoftCallback
         UserIdentityProvider::create([
             'user_id' => $user->id,
             'provider_name' => 'microsoft',
-            'provider_user_id' => $socialiteUser->getId(),
+            'provider_user_id' => $providerUserId,
             'provider_tenant_id' => $actualTenantId,
             'provider_email' => $normalizedEmail,
             'linked_at' => now(),

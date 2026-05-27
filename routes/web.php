@@ -37,6 +37,9 @@ Route::middleware(['auth', 'active.account', 'verified.identity'])->group(functi
 
 // 5. Admin Panel (protected by account status and review permission)
 Route::middleware(['auth', 'active.account', 'can:review_verification'])->group(function () {
+    Route::view('admin/dashboard', 'admin.dashboard')
+        ->name('admin.dashboard');
+
     Route::get('admin/verification/evidence/{evidence}', [VerificationEvidenceController::class, 'show'])
         ->name('admin.verification.evidence');
 
@@ -47,6 +50,10 @@ Route::middleware(['auth', 'active.account', 'can:review_verification'])->group(
         return view('admin.verification-detail', ['id' => $id]);
     })->name('admin.verifications.detail');
 });
+
+// 6. Legacy redirects
+Route::redirect('/dashboard', '/app/home')->name('dashboard.legacy');
+Route::redirect('/verification', '/verification/status')->name('verification.legacy');
 
 /*
  * Design system preview — local environment only.
