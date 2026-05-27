@@ -7,6 +7,7 @@ use App\Models\User;
 use App\Models\UserIdentityProvider;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
 use Laravel\Socialite\Facades\Socialite;
@@ -20,12 +21,40 @@ class HandleMicrosoftCallback
      */
     public function execute(): User
     {
+        // Gate: SSO must be explicitly enabled in configuration
+        if (! config('services.microsoft.enabled')) {
+            throw ValidationException::withMessages([
+                'sso' => ['Đăng nhập bằng Microsoft hiện chưa được kích hoạt.'],
+            ]);
+        }
+
         try {
             $socialiteUser = Socialite::driver('microsoft')->user();
         } catch (\Exception $e) {
-            throw ValidationException::withMessages([
-                'sso' => ['Không thể kết nối với dịch vụ Microsoft: '.$e->getMessage()],
+            Log::warning('Microsoft SSO provider error', [
+                'exception' => $e->getMessage(),
             ]);
+
+            throw ValidationException::withMessages([
+                'sso' => ['Không thể kết nối với dịch vụ xác thực. Vui lòng thử lại sau.'],
+            ]);
+        }
+
+        // P0-1: Validate tenant ID (tid claim) against configured single-tenant
+        $allowedTenantId = config('services.microsoft.tenant');
+        $actualTenantId = $socialiteUser->user['tid'] ?? null;
+
+        if (! empty($allowedTenantId) && $allowedTenantId !== 'organizations' && $allowedTenantId !== 'common') {
+            if ($actualTenantId !== $allowedTenantId) {
+                Log::warning('Microsoft SSO tenant mismatch', [
+                    'expected' => $allowedTenantId,
+                    'received' => $actualTenantId,
+                ]);
+
+                throw ValidationException::withMessages([
+                    'sso' => ['Tài khoản Microsoft của bạn không thuộc tổ chức được phép.'],
+                ]);
+            }
         }
 
         $email = $socialiteUser->getEmail();
@@ -38,10 +67,11 @@ class HandleMicrosoftCallback
         // Normalize email
         $normalizedEmail = Str::lower(trim($email));
 
-        // Strict HCMUE email domain constraint
-        if (! Str::endsWith($normalizedEmail, '@hcmue.edu.vn')) {
+        // Strict allowed-domain constraint (configurable, defaults to hcmue.edu.vn)
+        $allowedDomain = config('services.microsoft.allowed_domain', 'hcmue.edu.vn');
+        if (! Str::endsWith($normalizedEmail, '@'.$allowedDomain)) {
             throw ValidationException::withMessages([
-                'email' => ['Tài khoản Microsoft phải thuộc hệ sinh thái email @hcmue.edu.vn của Trường Đại học Sư phạm TP.HCM.'],
+                'email' => ['Tài khoản Microsoft phải thuộc hệ sinh thái email @'.$allowedDomain.' của Trường Đại học Sư phạm TP.HCM.'],
             ]);
         }
 
@@ -77,7 +107,7 @@ class HandleMicrosoftCallback
                 'user_id' => $user->id,
                 'provider_name' => 'microsoft',
                 'provider_user_id' => $socialiteUser->getId(),
-                'provider_tenant_id' => $socialiteUser->user['tenantId'] ?? null,
+                'provider_tenant_id' => $actualTenantId,
                 'provider_email' => $normalizedEmail,
                 'linked_at' => now(),
                 'last_login_at' => now(),
@@ -89,7 +119,8 @@ class HandleMicrosoftCallback
             return $user;
         }
 
-        // 3. Register a new user
+        // 3. Register a new user — no role assigned here.
+        // Roles (student/alumni/advisor) are assigned only upon admin verification approval.
         $user = User::create([
             'name' => $socialiteUser->getName() ?? Str::title(explode('@', $normalizedEmail)[0]),
             'email' => $normalizedEmail,
@@ -98,15 +129,12 @@ class HandleMicrosoftCallback
             'last_login_at' => now(),
         ]);
 
-        // Assign default student role
-        $user->assignRole('student');
-
         // Create identity provider mapping
         UserIdentityProvider::create([
             'user_id' => $user->id,
             'provider_name' => 'microsoft',
             'provider_user_id' => $socialiteUser->getId(),
-            'provider_tenant_id' => $socialiteUser->user['tenantId'] ?? null,
+            'provider_tenant_id' => $actualTenantId,
             'provider_email' => $normalizedEmail,
             'linked_at' => now(),
             'last_login_at' => now(),
