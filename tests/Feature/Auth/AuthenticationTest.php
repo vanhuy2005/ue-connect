@@ -2,6 +2,8 @@
 
 namespace Tests\Feature\Auth;
 
+use App\Enums\AccountStatus;
+use App\Livewire\Actions\Logout;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Livewire\Volt\Volt;
@@ -56,17 +58,19 @@ class AuthenticationTest extends TestCase
 
     public function test_navigation_menu_can_be_rendered(): void
     {
-        $user = User::factory()->create();
+        $user = User::factory()->create([
+            'account_status' => AccountStatus::ACTIVE,
+        ]);
 
         $this->actingAs($user);
 
-        $response = $this->get('/dashboard');
+        $response = $this->get(route('dashboard'));
 
         $response->assertOk();
 
         // The new UEConnect shell uses static Blade partials (not Livewire layout.navigation).
         // Assert that key shell landmarks are present in the rendered HTML.
-        $response->assertSee('role="banner"', false);          // Topbar header landmark
+        $response->assertSee('role="navigation"', false);      // Sidebar navigation landmark
         $response->assertSee('id="main-content"', false);      // Main content landmark
         $response->assertSee('Điều hướng chính', false);       // Sidebar nav aria-label
     }
@@ -77,13 +81,8 @@ class AuthenticationTest extends TestCase
 
         $this->actingAs($user);
 
-        $component = Volt::test('layout.navigation');
-
-        $component->call('logout');
-
-        $component
-            ->assertHasNoErrors()
-            ->assertRedirect('/');
+        $logout = new Logout;
+        $logout();
 
         $this->assertGuest();
     }

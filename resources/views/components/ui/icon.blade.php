@@ -286,6 +286,14 @@ $sizeClass = match($size) {
             <path d="M15.477 12.89L17 22l-5-3-5 3 1.523-9.11"></path>
             @break
 
+        {{-- ❖ microsoft --}}
+        @case('microsoft')
+            <rect x="2" y="2" width="9" height="9" fill="currentColor" stroke="none"></rect>
+            <rect x="13" y="2" width="9" height="9" fill="currentColor" stroke="none"></rect>
+            <rect x="2" y="13" width="9" height="9" fill="currentColor" stroke="none"></rect>
+            <rect x="13" y="13" width="9" height="9" fill="currentColor" stroke="none"></rect>
+            @break
+
         {{-- Default fallback circle --}}
         @default
             <circle cx="12" cy="12" r="10"></circle>

@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Enums\AccountStatus;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Livewire\Volt\Volt;
@@ -13,9 +14,11 @@ class ProfileTest extends TestCase
 
     public function test_profile_page_is_displayed(): void
     {
-        $user = User::factory()->create();
+        $user = User::factory()->create([
+            'account_status' => AccountStatus::ACTIVE,
+        ]);
 
-        $response = $this->actingAs($user)->get('/profile');
+        $response = $this->actingAs($user)->get(route('profile'));
 
         $response
             ->assertOk()
@@ -79,7 +82,7 @@ class ProfileTest extends TestCase
             ->assertRedirect('/');
 
         $this->assertGuest();
-        $this->assertNull($user->fresh());
+        $this->assertSoftDeleted($user);
     }
 
     public function test_correct_password_must_be_provided_to_delete_account(): void

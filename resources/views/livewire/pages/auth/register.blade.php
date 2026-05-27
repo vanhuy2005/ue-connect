@@ -22,17 +22,28 @@ new #[Layout('layouts.guest')] class extends Component
     {
         $validated = $this->validate([
             'name' => ['required', 'string', 'max:255'],
-            'email' => ['required', 'string', 'lowercase', 'email', 'max:255', 'unique:'.User::class],
+            'email' => [
+                'required', 
+                'string', 
+                'lowercase', 
+                'email', 
+                'max:255', 
+                'unique:'.User::class,
+                'regex:/^[a-zA-Z0-9._%+-]+@hcmue\.edu\.vn$/i'
+            ],
             'password' => ['required', 'string', 'confirmed', Rules\Password::defaults()],
+        ], [
+            'email.regex' => 'Địa chỉ email phải thuộc tên miền @hcmue.edu.vn của Trường Đại học Sư phạm TP.HCM.',
         ]);
 
         $validated['password'] = Hash::make($validated['password']);
+        $validated['account_status'] = \App\Enums\AccountStatus::REGISTERED;
 
         event(new Registered($user = User::create($validated)));
 
         Auth::login($user);
 
-        $this->redirect(route('dashboard', absolute: false), navigate: true);
+        $this->redirect(route('verification.start', absolute: false), navigate: true);
     }
 }; ?>
 
@@ -85,4 +96,18 @@ new #[Layout('layouts.guest')] class extends Component
             </x-primary-button>
         </div>
     </form>
+
+    <div class="mt-6 flex flex-col items-center justify-center gap-4">
+        <div class="relative w-full flex items-center justify-center">
+            <div class="border-t border-ue-border w-full"></div>
+            <div class="absolute bg-ue-surface px-4 text-xs font-semibold uppercase tracking-wider text-ue-text-muted">
+                Hoặc đăng ký bằng
+            </div>
+        </div>
+        
+        <a href="{{ route('auth.microsoft.redirect') }}" class="w-full flex items-center justify-center gap-2 h-10 px-4 rounded-lg font-semibold text-sm border border-ue-border bg-ue-surface hover:bg-ue-surface-hover active:bg-ue-surface-pressed text-ue-text ue-focus-ring select-none whitespace-nowrap transition-colors duration-sm ease-out shadow-sm">
+            <x-ui.icon name="microsoft" size="md" />
+            <span>Đăng ký nhanh bằng Outlook HCMUE</span>
+        </a>
+    </div>
 </div>

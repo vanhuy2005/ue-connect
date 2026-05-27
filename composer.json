@@ -10,9 +10,11 @@
         "laravel/framework": "^13.8",
         "laravel/reverb": "^1.10",
         "laravel/sanctum": "^4.3",
+        "laravel/socialite": "^5.27",
         "laravel/tinker": "^3.0",
         "livewire/livewire": "^4.3",
         "livewire/volt": "^1.7.0",
+        "socialiteproviders/microsoft": "^4.9",
         "spatie/laravel-permission": "^7.4"
     },
     "require-dev": {
