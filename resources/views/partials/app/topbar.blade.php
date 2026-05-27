@@ -62,14 +62,29 @@
             variant="ghost"
         />
 
-        {{-- Avatar / profile dropdown --}}
-        {{-- TODO: Replace with real user avatar + dropdown --}}
+        {{-- Avatar / profile --}}
         <a
-            href="#"
+            href="{{ route('profile') }}"
             class="flex items-center ue-focus-ring rounded-full ml-1"
             aria-label="Hồ sơ của tôi"
         >
             <x-ui.avatar size="sm" />
         </a>
+
+        {{-- Logout (visible on mobile where sidebar is hidden) --}}
+        <form method="POST" action="{{ route('logout') }}" class="lg:hidden">
+            @csrf
+            <button
+                type="submit"
+                aria-label="Đăng xuất"
+                class="inline-flex items-center justify-center w-10 h-10 min-h-touch min-w-touch
+                       rounded-lg border border-transparent bg-transparent
+                       text-ue-text-secondary transition-colors duration-sm ease-out
+                       hover:bg-ue-surface-hover hover:text-ue-text ue-focus-ring"
+            >
+                <x-ui.icon name="log-out" size="md" aria-hidden="true" />
+            </button>
+        </form>
+
     </div>
 </header>

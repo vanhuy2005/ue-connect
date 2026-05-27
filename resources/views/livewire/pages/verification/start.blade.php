@@ -151,79 +151,106 @@ new #[Layout('layouts.app')] class extends Component
         // Validate step 3: files & links
         $this->validate([
             'evidence_files.*' => ['nullable', 'file', 'mimes:jpeg,png,pdf,webp', 'max:5120'], // 5MB
+            'evidence_links.*' => ['nullable', 'url', 'max:2048'],
             'evidence_notes.*' => ['required', 'string', 'max:500'],
         ], [
             'evidence_files.*.max' => 'Kích thước tệp tin không được vượt quá 5MB.',
             'evidence_files.*.mimes' => 'Hệ thống chỉ chấp nhận tệp ảnh (JPEG, PNG, WEBP) hoặc tệp PDF.',
+            'evidence_links.*.url' => 'Liên kết minh chứng phải là một URL hợp lệ (bắt đầu bằng https://).',
             'evidence_notes.*.required' => 'Vui lòng điền ghi chú giải thích minh chứng này chứng minh điều gì.',
         ]);
 
-        if (empty($this->evidence_files) && empty($this->evidence_links)) {
+        // Count non-empty files and links
+        $fileCount = count(array_filter($this->evidence_files));
+        $linkCount = count(array_filter($this->evidence_links));
+        $totalItems = $fileCount + $linkCount;
+
+        if ($totalItems < 1) {
             $this->addError('evidence', 'Bạn cần cung cấp ít nhất một tài liệu minh chứng (file tải lên hoặc link).');
             return;
         }
 
-        DB::transaction(function () use ($user) {
-            // 1. Create Verification Request
-            $request = VerificationRequest::create([
-                'user_id' => $user->id,
-                'role_requested' => $this->role_requested,
-                'status' => VerificationStatus::PENDING_REVIEW,
-                'submitted_name' => $this->submitted_name,
-                'submitted_student_code' => $this->role_requested !== 'advisor' ? $this->submitted_student_code : null,
-                'submitted_faculty_id' => $this->submitted_faculty_id,
-                'submitted_academic_program_id' => $this->role_requested !== 'advisor' ? $this->submitted_academic_program_id : null,
-                'submitted_cohort' => $this->role_requested !== 'advisor' ? $this->submitted_cohort : null,
-                'submitted_email' => $this->submitted_email,
-                'submitted_note' => $this->submitted_note,
-                'submitted_at' => now(),
-                'expires_at' => now()->addDays(30),
-            ]);
+        if ($totalItems > 3) {
+            $this->addError('evidence', 'Bạn chỉ được cung cấp tối đa 3 tài liệu minh chứng.');
+            return;
+        }
 
-            // 2. Upload Files & Create Evidences
-            foreach ($this->evidence_files as $index => $file) {
-                if ($file) {
-                    $path = $file->store('verifications/' . $user->id, 'private');
+        // Collect paths of uploaded files so we can clean up on failure (P0-4)
+        $uploadedPaths = [];
 
-                    $mediaFile = MediaFile::create([
-                        'owner_id' => $user->id,
-                        'disk' => 'private',
-                        'path' => $path,
-                        'original_name' => $file->getClientOriginalName(),
-                        'mime_type' => $file->getMimeType(),
-                        'extension' => $file->getClientOriginalExtension(),
-                        'size_bytes' => $file->getSize(),
-                        'visibility' => 'private',
-                        'file_category' => 'verification_evidence',
-                    ]);
+        try {
+            DB::transaction(function () use ($user, &$uploadedPaths) {
+                // 1. Create Verification Request
+                $request = VerificationRequest::create([
+                    'user_id' => $user->id,
+                    'role_requested' => $this->role_requested,
+                    'status' => VerificationStatus::PENDING_REVIEW,
+                    'submitted_name' => $this->submitted_name,
+                    'submitted_student_code' => $this->role_requested !== 'advisor' ? $this->submitted_student_code : null,
+                    'submitted_faculty_id' => $this->submitted_faculty_id,
+                    'submitted_academic_program_id' => $this->role_requested !== 'advisor' ? $this->submitted_academic_program_id : null,
+                    'submitted_cohort' => $this->role_requested !== 'advisor' ? $this->submitted_cohort : null,
+                    'submitted_email' => $this->submitted_email,
+                    'submitted_note' => $this->submitted_note,
+                    'submitted_at' => now(),
+                    'expires_at' => now()->addDays(30),
+                ]);
 
-                    VerificationEvidence::create([
-                        'verification_request_id' => $request->id,
-                        'media_file_id' => $mediaFile->id,
-                        'evidence_type' => $this->evidence_types[$index] ?? 'other',
-                        'user_note' => $this->evidence_notes[$index] ?? 'Minh chứng tải lên.',
-                        'status' => 'uploaded',
-                    ]);
+                // 2. Upload Files & Create Evidences
+                foreach ($this->evidence_files as $index => $file) {
+                    if ($file) {
+                        $path = $file->store('verifications/'.$user->id, 'private');
+                        $uploadedPaths[] = $path;
+
+                        $mediaFile = MediaFile::create([
+                            'owner_id' => $user->id,
+                            'disk' => 'private',
+                            'path' => $path,
+                            'original_name' => $file->getClientOriginalName(),
+                            'mime_type' => $file->getMimeType(),
+                            'extension' => $file->getClientOriginalExtension(),
+                            'size_bytes' => $file->getSize(),
+                            'visibility' => 'private',
+                            'file_category' => 'verification_evidence',
+                        ]);
+
+                        VerificationEvidence::create([
+                            'verification_request_id' => $request->id,
+                            'media_file_id' => $mediaFile->id,
+                            'evidence_type' => $this->evidence_types[$index] ?? 'other',
+                            'user_note' => $this->evidence_notes[$index] ?? 'Minh chứng tải lên.',
+                            'status' => 'uploaded',
+                        ]);
+                    }
                 }
+
+                // 3. Save Link Evidences
+                foreach ($this->evidence_links as $index => $link) {
+                    if (! empty($link)) {
+                        VerificationEvidence::create([
+                            'verification_request_id' => $request->id,
+                            'media_file_id' => null,
+                            'evidence_type' => $this->evidence_types[$index] ?? 'other',
+                            'evidence_link' => $link,
+                            'user_note' => $this->evidence_notes[$index] ?? 'Liên kết minh chứng.',
+                            'status' => 'uploaded',
+                        ]);
+                    }
+                }
+
+                // 4. Update user status
+                $user->update(['account_status' => AccountStatus::PENDING_VERIFICATION]);
+            });
+        } catch (\Throwable $e) {
+            // P0-4: Clean up any files uploaded before the DB failure
+            foreach ($uploadedPaths as $orphanedPath) {
+                Storage::disk('private')->delete($orphanedPath);
             }
 
-            // 3. Save Link Evidences
-            foreach ($this->evidence_links as $index => $link) {
-                if (!empty($link)) {
-                    VerificationEvidence::create([
-                        'verification_request_id' => $request->id,
-                        'media_file_id' => null,
-                        'evidence_type' => $this->evidence_types[$index] ?? 'other',
-                        'evidence_link' => $link,
-                        'user_note' => $this->evidence_notes[$index] ?? 'Liên kết minh chứng.',
-                        'status' => 'uploaded',
-                    ]);
-                }
-            }
+            $this->addError('evidence', 'Đã xảy ra lỗi khi lưu hồ sơ. Vui lòng thử lại.');
 
-            // 4. Update user status
-            $user->update(['account_status' => AccountStatus::PENDING_VERIFICATION]);
-        });
+            return;
+        }
 
         // Redirect to status page
         $this->redirect(route('verification.status'), navigate: true);

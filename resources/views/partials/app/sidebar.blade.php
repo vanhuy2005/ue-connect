@@ -85,12 +85,24 @@ $navItems = [
         @endforeach
     </ul>
 
-    {{-- Profile link at bottom --}}
-    <div class="border-t border-ue-border pt-3 mt-3">
-        {{-- TODO: route('profile.show', auth()->user()) --}}
+    {{-- Profile link + Logout at bottom --}}
+    <div class="border-t border-ue-border pt-3 mt-3 flex flex-col gap-1">
         <a href="{{ route('profile') }}" class="ue-nav-link" @if(request()->routeIs('profile')) aria-current="page" @endif>
             <x-ui.avatar size="sm" />
             <span>Hồ sơ</span>
         </a>
+
+        {{-- Logout --}}
+        <form method="POST" action="{{ route('logout') }}">
+            @csrf
+            <button
+                type="submit"
+                class="ue-nav-link w-full text-left text-ue-text-secondary hover:text-danger"
+                aria-label="Đăng xuất"
+            >
+                <x-ui.icon name="log-out" size="md" aria-hidden="true" class="flex-shrink-0" />
+                <span>Đăng xuất</span>
+            </button>
+        </form>
     </div>
 </nav>
