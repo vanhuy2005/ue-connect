@@ -172,6 +172,28 @@ paths:
         "401": { $ref: "#/components/responses/InvalidCredentialsError" }
         "422": { $ref: "#/components/responses/ValidationError" }
 
+  /auth/microsoft/redirect:
+    get:
+      tags: [Authentication]
+      summary: Redirect to Microsoft Entra ID login provider
+      operationId: redirectMicrosoft
+      responses:
+        "302":
+          description: Redirection to login.microsoftonline.com.
+        "422":
+          description: SSO is disabled or configuration is missing.
+
+  /auth/microsoft/callback:
+    get:
+      tags: [Authentication]
+      summary: Receive Microsoft Entra ID authentication callback
+      operationId: callbackMicrosoft
+      responses:
+        "302":
+          description: Redirects to target page based on account status (dashboard, profile setup, status page, or restricted).
+        "422":
+          description: Tenant mismatch or email domain validation failed.
+
   /auth/logout:
     post:
       tags: [Authentication]
