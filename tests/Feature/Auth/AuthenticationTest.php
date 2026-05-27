@@ -62,9 +62,13 @@ class AuthenticationTest extends TestCase
 
         $response = $this->get('/dashboard');
 
-        $response
-            ->assertOk()
-            ->assertSeeVolt('layout.navigation');
+        $response->assertOk();
+
+        // The new UEConnect shell uses static Blade partials (not Livewire layout.navigation).
+        // Assert that key shell landmarks are present in the rendered HTML.
+        $response->assertSee('role="banner"', false);          // Topbar header landmark
+        $response->assertSee('id="main-content"', false);      // Main content landmark
+        $response->assertSee('Điều hướng chính', false);       // Sidebar nav aria-label
     }
 
     public function test_users_can_logout(): void
