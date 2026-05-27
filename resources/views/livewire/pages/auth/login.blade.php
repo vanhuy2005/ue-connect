@@ -22,64 +22,170 @@ new #[Layout('layouts.guest')] class extends Component
 
         $this->redirectIntended(default: route('dashboard', absolute: false), navigate: true);
     }
+
+    /**
+     * Redirect to Microsoft Outlook SSO.
+     */
+    public function redirectToMicrosoft()
+    {
+        return redirect()->route('auth.microsoft.redirect');
+    }
 }; ?>
 
-<div>
-    <!-- Session Status -->
-    <x-auth-session-status class="mb-4" :status="session('status')" />
+<div class="space-y-6">
+    {{-- Header / Welcome --}}
+    <div class="text-center">
+        <h1 class="text-2xl font-bold text-ue-text tracking-snug">Đăng nhập</h1>
+        <p class="text-xs text-ue-text-muted mt-1.5 leading-relaxed">
+            Kết nối cộng đồng Sư phạm HCMUE
+        </p>
+    </div>
 
-    <form wire:submit="login">
-        <!-- Email Address -->
-        <div>
-            <x-input-label for="email" :value="__('Email')" />
-            <x-text-input wire:model="form.email" id="email" class="block mt-1 w-full" type="email" name="email" required autofocus autocomplete="username" />
-            <x-input-error :messages="$errors->get('form.email')" class="mt-2" />
+    {{-- Session Status --}}
+    @if (session('status'))
+        <x-ui.alert variant="success" :dismissible="true">
+            {{ session('status') }}
+        </x-ui.alert>
+    @endif
+
+    @foreach (['sso', 'microsoft', 'email'] as $key)
+        @php
+            $msg = $errors->first($key) ?: (session('errors') ? session('errors')->first($key) : null);
+        @endphp
+        @if ($msg)
+            <x-ui.alert variant="danger" :dismissible="true" class="mb-4">
+                {{ $msg }}
+            </x-ui.alert>
+        @endif
+    @endforeach
+
+    {{-- Credentials Form --}}
+    <form wire:submit="login" class="space-y-4">
+        {{-- Email Address --}}
+        <div class="space-y-1.5">
+            <x-ui.label for="email" :required="true">Email HCMUE</x-ui.label>
+            <x-ui.input 
+                id="email" 
+                name="form.email" 
+                type="email" 
+                wire:model="form.email" 
+                placeholder="tensinhvien@hcmue.edu.vn" 
+                required 
+                autofocus 
+                autocomplete="username"
+                :hasError="$errors->has('form.email')"
+            />
+            <x-ui.field-error name="form.email" />
         </div>
 
-        <!-- Password -->
-        <div class="mt-4">
-            <x-input-label for="password" :value="__('Password')" />
-
-            <x-text-input wire:model="form.password" id="password" class="block mt-1 w-full"
-                            type="password"
-                            name="password"
-                            required autocomplete="current-password" />
-
-            <x-input-error :messages="$errors->get('form.password')" class="mt-2" />
+        {{-- Password --}}
+        <div class="space-y-1.5">
+            <div class="flex items-center justify-between">
+                <x-ui.label for="password" :required="true">Mật khẩu</x-ui.label>
+                @if (Route::has('password.request'))
+                    <a class="text-xs font-semibold text-ue-brand hover:text-ue-brand-hover hover:underline transition-colors" href="{{ route('password.request') }}" wire:navigate>
+                        Quên mật khẩu?
+                    </a>
+                @endif
+            </div>
+            <x-ui.input 
+                id="password" 
+                name="form.password" 
+                type="password" 
+                wire:model="form.password" 
+                placeholder="••••••••" 
+                required 
+                autocomplete="current-password"
+                :hasError="$errors->has('form.password')"
+            />
+            <x-ui.field-error name="form.password" />
         </div>
 
-        <!-- Remember Me -->
-        <div class="block mt-4">
-            <label for="remember" class="inline-flex items-center">
-                <input wire:model="form.remember" id="remember" type="checkbox" class="rounded border-gray-300 text-indigo-600 shadow-sm focus:ring-indigo-500" name="remember">
-                <span class="ms-2 text-sm text-gray-600">{{ __('Remember me') }}</span>
+        {{-- Remember Me & Submit --}}
+        <div class="flex items-center justify-between pt-1">
+            <label for="remember" class="inline-flex items-center cursor-pointer select-none">
+                <input 
+                    wire:model="form.remember" 
+                    id="remember" 
+                    type="checkbox" 
+                    class="rounded border-ue-border text-ue-brand focus:ring-ue-brand/20 transition duration-sm cursor-pointer" 
+                    name="remember"
+                >
+                <span class="ml-2 text-sm font-medium text-ue-text-secondary">Duy trì đăng nhập</span>
             </label>
         </div>
 
-        <div class="flex items-center justify-end mt-4">
-            @if (Route::has('password.request'))
-                <a class="underline text-sm text-gray-600 hover:text-gray-900 rounded-md focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500" href="{{ route('password.request') }}" wire:navigate>
-                    {{ __('Forgot your password?') }}
-                </a>
-            @endif
-
-            <x-primary-button class="ms-3">
-                {{ __('Log in') }}
-            </x-primary-button>
+        <div class="pt-2">
+            <x-ui.button 
+                type="submit" 
+                variant="primary" 
+                class="w-full justify-center shadow-sm" 
+                size="lg" 
+                wire:loading.attr="disabled"
+                wire:target="login"
+            >
+                <span wire:loading.remove wire:target="login">Đăng nhập</span>
+                <span wire:loading wire:target="login" class="flex items-center gap-2">
+                    <span class="ue-spinner" aria-hidden="true"></span>
+                    Đang xử lý...
+                </span>
+            </x-ui.button>
         </div>
     </form>
 
-    <div class="mt-6 flex flex-col items-center justify-center gap-4">
-        <div class="relative w-full flex items-center justify-center">
+    {{-- Microsoft SSO Divider --}}
+    @php
+        $microsoftEnabled = config('services.microsoft.enabled')
+            && !empty(config('services.microsoft.client_id'))
+            && !empty(config('services.microsoft.client_secret'))
+            && !empty(config('services.microsoft.redirect'))
+            && !empty(config('services.microsoft.tenant'));
+    @endphp
+
+    <div class="space-y-4">
+        <div class="relative w-full flex items-center justify-center py-2">
             <div class="border-t border-ue-border w-full"></div>
-            <div class="absolute bg-ue-surface px-4 text-xs font-semibold uppercase tracking-wider text-ue-text-muted">
-                Hoặc đăng nhập bằng
+            <div class="absolute bg-ue-surface px-4 text-2xs font-bold uppercase tracking-widest text-ue-text-muted">
+                Hoặc
             </div>
         </div>
-        
-        <a href="{{ route('auth.microsoft.redirect') }}" class="w-full flex items-center justify-center gap-2 h-10 px-4 rounded-lg font-semibold text-sm border border-ue-border bg-ue-surface hover:bg-ue-surface-hover active:bg-ue-surface-pressed text-ue-text ue-focus-ring select-none whitespace-nowrap transition-colors duration-sm ease-out shadow-sm">
-            <x-ui.icon name="microsoft" size="md" />
-            <span>Tiếp tục với Outlook HCMUE</span>
-        </a>
+
+        @if ($microsoftEnabled)
+            <x-ui.button 
+                wire:click="redirectToMicrosoft" 
+                variant="outline" 
+                class="w-full justify-center shadow-sm hover:border-ue-border-strong" 
+                size="lg" 
+                icon="microsoft"
+                wire:loading.attr="disabled"
+                wire:target="redirectToMicrosoft"
+            >
+                <span wire:loading.remove wire:target="redirectToMicrosoft">Tiếp tục với Outlook HCMUE</span>
+                <span wire:loading wire:target="redirectToMicrosoft" class="flex items-center gap-2">
+                    <span class="ue-spinner" aria-hidden="true"></span>
+                    Đang chuyển hướng...
+                </span>
+            </x-ui.button>
+        @else
+            <div class="p-3.5 bg-ue-surface-subtle border border-ue-border rounded-xl flex items-start gap-3 opacity-60">
+                <x-ui.icon name="microsoft" size="md" class="text-ue-text-disabled mt-0.5 flex-shrink-0" />
+                <div class="space-y-0.5">
+                    <p class="text-xs font-semibold text-ue-text-secondary">Đăng nhập Microsoft SSO chưa sẵn sàng</p>
+                    <p class="text-2xs text-ue-text-muted leading-relaxed">
+                        Hệ thống xác thực nhanh bằng tài khoản trường hiện chưa được cấu hình.
+                    </p>
+                </div>
+            </div>
+        @endif
+    </div>
+
+    {{-- Footer Registration Link --}}
+    <div class="text-center pt-2">
+        <p class="text-sm text-ue-text-secondary">
+            Bạn là thành viên mới? 
+            <a class="font-semibold text-ue-brand hover:text-ue-brand-hover hover:underline transition-colors ml-1" href="{{ route('register') }}" wire:navigate>
+                Đăng ký tài khoản
+            </a>
+        </p>
     </div>
 </div>

@@ -29,6 +29,10 @@ new #[Layout('layouts.app')] class extends Component
     public ?int $submitted_academic_program_id = null;
     public string $submitted_cohort = '';
     public string $submitted_email = '';
+    public string $submitted_graduation_year = '';
+    public string $submitted_old_student_email = '';
+    public string $submitted_position = '';
+    public string $submitted_organization = '';
     public string $submitted_note = '';
 
     // Evidence fields
@@ -43,6 +47,16 @@ new #[Layout('layouts.app')] class extends Component
         if ($user) {
             $this->submitted_name = $user->name;
             $this->submitted_email = $user->email;
+
+            // Pre-fill role requested based on user's intended_identity_type
+            if ($user->intended_identity_type) {
+                $this->role_requested = match($user->intended_identity_type->value ?? $user->intended_identity_type) {
+                    'current_student' => 'student',
+                    'teacher_advisor' => 'advisor',
+                    'alumni' => 'alumni',
+                    default => 'student',
+                };
+            }
 
             // If already submitted and pending, redirect to status
             $activeRequest = $user->activeVerificationRequest;
@@ -89,13 +103,20 @@ new #[Layout('layouts.app')] class extends Component
                 'submitted_email' => ['required', 'email', 'max:255'],
             ];
 
-            if ($this->role_requested !== 'advisor') {
+            if ($this->role_requested === 'student') {
                 $rules['submitted_student_code'] = ['required', 'string', 'max:50'];
                 $rules['submitted_faculty_id'] = ['required', 'integer', 'exists:faculties,id'];
                 $rules['submitted_academic_program_id'] = ['required', 'integer', 'exists:academic_programs,id'];
                 $rules['submitted_cohort'] = ['required', 'string', 'max:50'];
-            } else {
+            } elseif ($this->role_requested === 'alumni') {
+                $rules['submitted_student_code'] = ['nullable', 'string', 'max:50'];
+                $rules['submitted_faculty_id'] = ['required', 'integer', 'exists:faculties,id'];
+                $rules['submitted_academic_program_id'] = ['required', 'integer', 'exists:academic_programs,id'];
+                $rules['submitted_graduation_year'] = ['required', 'string', 'max:10'];
+                $rules['submitted_old_student_email'] = ['nullable', 'email', 'max:255'];
+            } elseif ($this->role_requested === 'advisor') {
                 $rules['submitted_faculty_id'] = ['nullable', 'integer', 'exists:faculties,id'];
+                $rules['submitted_position'] = ['required', 'string', 'max:100'];
             }
 
             $this->validate($rules, [
@@ -104,6 +125,8 @@ new #[Layout('layouts.app')] class extends Component
                 'submitted_faculty_id.required' => 'Vui lòng chọn Khoa.',
                 'submitted_academic_program_id.required' => 'Vui lòng chọn ngành đào tạo.',
                 'submitted_cohort.required' => 'Vui lòng nhập khóa học (ví dụ: K48).',
+                'submitted_graduation_year.required' => 'Vui lòng nhập năm tốt nghiệp.',
+                'submitted_position.required' => 'Vui lòng nhập chức vụ / vai trò công tác.',
             ]);
 
             $this->step = 3;
@@ -120,14 +143,22 @@ new #[Layout('layouts.app')] class extends Component
 
     public function addEvidenceField(): void
     {
-        if (count($this->evidence_files) + count($this->evidence_links) >= 3) {
-            $this->addError('evidence', 'Bạn chỉ được tải lên tối đa 3 tài liệu minh chứng.');
+        $fileCount = 0;
+        foreach ($this->evidence_files as $file) {
+            if ($file) {
+                $fileCount++;
+            }
+        }
+        $linkCount = count($this->evidence_links);
+        
+        if ($fileCount + $linkCount >= 3) {
+            $this->addError('evidence', 'Bạn chỉ được cung cấp tối đa 3 tài liệu minh chứng.');
             return;
         }
 
         $this->evidence_links[] = '';
         $this->evidence_notes[] = '';
-        $this->evidence_types[] = 'student_card';
+        $this->evidence_types[] = 'other';
     }
 
     public function removeEvidenceField(int $index): void
@@ -148,25 +179,49 @@ new #[Layout('layouts.app')] class extends Component
             return;
         }
 
+        // Only one active verification request per user
+        $activeRequest = $user->activeVerificationRequest;
+        if ($activeRequest) {
+            $this->addError('evidence', 'Bạn đã có một yêu cầu xác thực đang được xử lý.');
+            return;
+        }
+
         // Validate step 3: files & links
         $this->validate([
             'evidence_files.*' => ['nullable', 'file', 'mimes:jpeg,png,pdf,webp', 'max:5120'], // 5MB
             'evidence_links.*' => ['nullable', 'url', 'max:2048'],
-            'evidence_notes.*' => ['required', 'string', 'max:500'],
+            'evidence_notes.*' => ['required_with:evidence_files.*,evidence_links.*', 'nullable', 'string', 'max:500'],
         ], [
             'evidence_files.*.max' => 'Kích thước tệp tin không được vượt quá 5MB.',
             'evidence_files.*.mimes' => 'Hệ thống chỉ chấp nhận tệp ảnh (JPEG, PNG, WEBP) hoặc tệp PDF.',
             'evidence_links.*.url' => 'Liên kết minh chứng phải là một URL hợp lệ (bắt đầu bằng https://).',
-            'evidence_notes.*.required' => 'Vui lòng điền ghi chú giải thích minh chứng này chứng minh điều gì.',
+            'evidence_notes.*.required_with' => 'Vui lòng điền ghi chú giải thích minh chứng này chứng minh điều gì.',
         ]);
 
         // Count non-empty files and links
-        $fileCount = count(array_filter($this->evidence_files));
-        $linkCount = count(array_filter($this->evidence_links));
+        $fileCount = 0;
+        foreach ($this->evidence_files as $file) {
+            if ($file) {
+                $fileCount++;
+            }
+        }
+        
+        $linkCount = 0;
+        foreach ($this->evidence_links as $link) {
+            if (! empty($link)) {
+                $linkCount++;
+            }
+        }
+
         $totalItems = $fileCount + $linkCount;
 
         if ($totalItems < 1) {
             $this->addError('evidence', 'Bạn cần cung cấp ít nhất một tài liệu minh chứng (file tải lên hoặc link).');
+            return;
+        }
+
+        if ($this->role_requested === 'alumni' && $fileCount < 1) {
+            $this->addError('evidence', 'Cựu sinh viên bắt buộc phải tải lên ít nhất một tệp tin minh chứng (ví dụ: bằng tốt nghiệp, bảng điểm).');
             return;
         }
 
@@ -184,14 +239,19 @@ new #[Layout('layouts.app')] class extends Component
                 $request = VerificationRequest::create([
                     'user_id' => $user->id,
                     'role_requested' => $this->role_requested,
+                    'requested_identity_type' => $user->intended_identity_type ?? null,
                     'status' => VerificationStatus::PENDING_REVIEW,
                     'submitted_name' => $this->submitted_name,
                     'submitted_student_code' => $this->role_requested !== 'advisor' ? $this->submitted_student_code : null,
                     'submitted_faculty_id' => $this->submitted_faculty_id,
                     'submitted_academic_program_id' => $this->role_requested !== 'advisor' ? $this->submitted_academic_program_id : null,
-                    'submitted_cohort' => $this->role_requested !== 'advisor' ? $this->submitted_cohort : null,
+                    'submitted_cohort' => $this->role_requested === 'student' ? $this->submitted_cohort : null,
+                    'submitted_graduation_year' => $this->role_requested === 'alumni' ? $this->submitted_graduation_year : null,
                     'submitted_email' => $this->submitted_email,
+                    'submitted_old_student_email' => $this->role_requested === 'alumni' ? $this->submitted_old_student_email : null,
                     'submitted_note' => $this->submitted_note,
+                    'submitted_position' => $this->role_requested === 'advisor' ? $this->submitted_position : null,
+                    'submitted_organization' => $this->role_requested === 'advisor' ? $this->submitted_organization : null,
                     'submitted_at' => now(),
                     'expires_at' => now()->addDays(30),
                 ]);
@@ -344,7 +404,7 @@ new #[Layout('layouts.app')] class extends Component
                         </div>
                     </div>
 
-                    @if ($role_requested !== 'advisor')
+                    @if ($role_requested === 'student')
                         <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                             <div>
                                 <x-ui.label for="submitted_student_code" :required="true">Mã số sinh viên (MSSV)</x-ui.label>
@@ -380,16 +440,65 @@ new #[Layout('layouts.app')] class extends Component
                                 <x-ui.field-error name="submitted_academic_program_id" />
                             </div>
                         </div>
-                    @else
+                    @elseif ($role_requested === 'alumni')
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div>
+                                <x-ui.label for="submitted_student_code">Mã số sinh viên cũ (MSSV - Nếu nhớ)</x-ui.label>
+                                <x-ui.input wire:model="submitted_student_code" id="submitted_student_code" placeholder="Nhập MSSV cũ nếu nhớ" class="mt-1" />
+                                <x-ui.field-error name="submitted_student_code" />
+                            </div>
+                            <div>
+                                <x-ui.label for="submitted_graduation_year" :required="true">Năm tốt nghiệp</x-ui.label>
+                                <x-ui.input wire:model="submitted_graduation_year" id="submitted_graduation_year" placeholder="Ví dụ: 2022" class="mt-1" />
+                                <x-ui.field-error name="submitted_graduation_year" />
+                            </div>
+                        </div>
+
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div>
+                                <x-ui.label for="submitted_old_student_email">Email sinh viên cũ (Nếu nhớ)</x-ui.label>
+                                <x-ui.input wire:model="submitted_old_student_email" id="submitted_old_student_email" type="email" placeholder="Ví dụ: mssv@student.hcmue.edu.vn" class="mt-1" />
+                                <x-ui.field-error name="submitted_old_student_email" />
+                            </div>
+                            <div>
+                                <x-ui.label for="submitted_faculty_id" :required="true">Khoa đã học</x-ui.label>
+                                <x-ui.select wire:model.live="submitted_faculty_id" id="submitted_faculty_id" class="mt-1">
+                                    <option value="">-- Chọn Khoa --</option>
+                                    @foreach ($this->faculties as $faculty)
+                                        <option value="{{ $faculty->id }}">{{ $faculty->name }}</option>
+                                    @endforeach
+                                </x-ui.select>
+                                <x-ui.field-error name="submitted_faculty_id" />
+                            </div>
+                        </div>
+
                         <div>
-                            <x-ui.label for="submitted_faculty_id">Khoa / Phòng ban công tác</x-ui.label>
-                            <x-ui.select wire:model="submitted_faculty_id" id="submitted_faculty_id" class="mt-1">
-                                <option value="">-- Chọn Khoa/Phòng ban (Tùy chọn) --</option>
-                                @foreach ($this->faculties as $faculty)
-                                    <option value="{{ $faculty->id }}">{{ $faculty->name }}</option>
+                            <x-ui.label for="submitted_academic_program_id" :required="true">Ngành đào tạo đã tốt nghiệp</x-ui.label>
+                            <x-ui.select wire:model="submitted_academic_program_id" id="submitted_academic_program_id" class="mt-1" :disabled="!$submitted_faculty_id">
+                                <option value="">-- Chọn chuyên ngành --</option>
+                                @foreach ($this->academicPrograms as $program)
+                                    <option value="{{ $program->id }}">{{ $program->name }}</option>
                                 @endforeach
                             </x-ui.select>
-                            <x-ui.field-error name="submitted_faculty_id" />
+                            <x-ui.field-error name="submitted_academic_program_id" />
+                        </div>
+                    @elseif ($role_requested === 'advisor')
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div>
+                                <x-ui.label for="submitted_faculty_id">Khoa / Phòng ban công tác</x-ui.label>
+                                <x-ui.select wire:model="submitted_faculty_id" id="submitted_faculty_id" class="mt-1">
+                                    <option value="">-- Chọn Khoa/Phòng ban (Tùy chọn) --</option>
+                                    @foreach ($this->faculties as $faculty)
+                                        <option value="{{ $faculty->id }}">{{ $faculty->name }}</option>
+                                    @endforeach
+                                </x-ui.select>
+                                <x-ui.field-error name="submitted_faculty_id" />
+                            </div>
+                            <div>
+                                <x-ui.label for="submitted_position" :required="true">Chức vụ / Vai trò</x-ui.label>
+                                <x-ui.input wire:model="submitted_position" id="submitted_position" placeholder="Ví dụ: Giảng viên, Cố vấn học tập" class="mt-1" />
+                                <x-ui.field-error name="submitted_position" />
+                            </div>
                         </div>
                     @endif
 

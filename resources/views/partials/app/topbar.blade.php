@@ -15,7 +15,7 @@
 >
     {{-- Logo (mobile: mark, desktop: horizontal) --}}
     <div class="flex items-center gap-3 flex-shrink-0">
-        <a href="/" class="flex items-center ue-focus-ring rounded-lg" aria-label="UEConnect - Trang chủ">
+        <a href="{{ route('dashboard') }}" class="flex items-center ue-focus-ring rounded-lg" aria-label="UEConnect - Trang chủ">
             {{-- Mobile: show mark --}}
             <span class="lg:hidden">
                 <x-brand.logo variant="mark" size="sm" />

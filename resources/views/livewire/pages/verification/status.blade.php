@@ -189,10 +189,17 @@ new #[Layout('layouts.app')] class extends Component
         {{-- Empty State (No submission exists) --}}
         <div class="bg-ue-surface rounded-2xl border border-ue-border shadow-md p-8 text-center">
             <x-ui.icon name="shield" size="xl" class="text-ue-text-muted mx-auto mb-4" />
-            <h2 class="text-xl font-bold text-ue-text mb-2">Tài khoản chưa được xác minh</h2>
-            <p class="text-sm text-ue-text-secondary mb-6 max-w-md mx-auto">
-                Để truy cập UEConnect và mở các tính năng bảng tin, tìm kiếm bạn bè, cố vấn học tập, bạn cần gửi hồ sơ xác thực danh tính.
+            <h2 class="text-xl font-bold text-ue-text mb-2">Cần hoàn tất xác thực hồ sơ</h2>
+            <p class="text-sm text-ue-text-secondary mb-4 max-w-md mx-auto">
+                Email HCMUE của bạn đã được xác minh. Để truy cập đầy đủ UEConnect, bạn cần gửi hồ sơ xác thực danh tính.
             </p>
+            @if (auth()->user() && auth()->user()->intended_identity_type === \App\Enums\IdentityType::ALUMNI)
+                <p class="text-xs text-ue-text-muted mb-6 max-w-md mx-auto">
+                    Bạn có thể dùng email cá nhân nếu email sinh viên đã hết hạn. Vui lòng gửi minh chứng cựu sinh viên để được xét duyệt.
+                </p>
+            @else
+                <p class="mb-4"></p>
+            @endif
             <x-ui.button href="{{ route('verification.start') }}" variant="primary" icon="arrow-right" icon-position="right">
                 Bắt đầu xác thực
             </x-ui.button>
