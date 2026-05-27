@@ -5,7 +5,10 @@ namespace Database\Seeders;
 use App\Enums\AccountStatus;
 use App\Models\User;
 use Illuminate\Database\Seeder;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
+use Spatie\Permission\Models\Role;
+use Spatie\Permission\PermissionRegistrar;
 
 /**
  * UAT Seeder — creates well-known test accounts for manual testing.
@@ -21,6 +24,15 @@ class UatSeeder extends Seeder
 {
     public function run(): void
     {
+        // Output the active DB
+        $this->command->info('Database: '.DB::connection()->getDatabaseName());
+
+        // Reset permission cache
+        app(PermissionRegistrar::class)->forgetCachedPermissions();
+
+        // Ensure admin role exists
+        Role::firstOrCreate(['name' => 'admin', 'guard_name' => 'web']);
+
         // UAT 1 — Admin account
         $admin = User::updateOrCreate(
             ['email' => 'admin@hcmue.edu.vn'],
