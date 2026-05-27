@@ -23,7 +23,7 @@ class MicrosoftSsoTest extends TestCase
 
         // Enable SSO for tests that need it
         config(['services.microsoft.enabled' => true]);
-        config(['services.microsoft.tenant' => 'organizations']);
+        config(['services.microsoft.tenant' => 'b1a9fdc0-1d56-4c3d-a481-809fff8a26db']);
         config(['services.microsoft.allowed_domain' => 'hcmue.edu.vn']);
     }
 
@@ -33,7 +33,7 @@ class MicrosoftSsoTest extends TestCase
     private function mockSocialiteUser(array $userAttributes = []): void
     {
         $microsoftUser = array_merge([
-            'tid' => null,
+            'tid' => config('services.microsoft.tenant', 'b1a9fdc0-1d56-4c3d-a481-809fff8a26db'),
         ], $userAttributes['user'] ?? []);
 
         $mockUser = mock(\Laravel\Socialite\Two\User::class);
@@ -138,7 +138,7 @@ class MicrosoftSsoTest extends TestCase
         $this->assertDatabaseHas('users', ['email' => 'goodtenant@hcmue.edu.vn']);
     }
 
-    public function test_sso_callback_skips_tenant_check_for_organizations_tenant(): void
+    public function test_sso_callback_fails_for_tenant_mismatch_with_organizations_tenant(): void
     {
         config(['services.microsoft.tenant' => 'organizations']);
 
@@ -151,8 +151,9 @@ class MicrosoftSsoTest extends TestCase
 
         $response = $this->get(route('auth.microsoft.callback'));
 
-        $response->assertRedirect();
-        $this->assertDatabaseHas('users', ['email' => 'multi@hcmue.edu.vn']);
+        $response->assertRedirect(route('login'));
+        $response->assertSessionHasErrors(['sso']);
+        $this->assertDatabaseMissing('users', ['email' => 'multi@hcmue.edu.vn']);
     }
 
     // -------------------------------------------------------------------------
@@ -161,33 +162,39 @@ class MicrosoftSsoTest extends TestCase
 
     public function test_sso_callback_registers_new_hcmue_user_without_role(): void
     {
-        $this->mockSocialiteUser([
-            'id' => 'ms-user-456',
-            'email' => 'newstudent@hcmue.edu.vn',
-            'name' => 'Nguyen Van Student',
-        ]);
+        try {
+            $this->mockSocialiteUser([
+                'id' => 'ms-user-456',
+                'email' => 'newstudent@hcmue.edu.vn',
+                'name' => 'Nguyen Van Student',
+            ]);
 
-        $response = $this->get(route('auth.microsoft.callback'));
+            $response = $this->get(route('auth.microsoft.callback'));
 
-        $response->assertRedirect(route('verification.status'));
-        $this->assertDatabaseHas('users', [
-            'email' => 'newstudent@hcmue.edu.vn',
-            'name' => 'Nguyen Van Student',
-            'account_status' => AccountStatus::REGISTERED->value,
-        ]);
+            $response->assertRedirect(route('verification.status'));
+            $this->assertDatabaseHas('users', [
+                'email' => 'newstudent@hcmue.edu.vn',
+                'name' => 'Nguyen Van Student',
+                'account_status' => AccountStatus::REGISTERED->value,
+            ]);
 
-        $user = User::where('email', 'newstudent@hcmue.edu.vn')->first();
+            $user = User::where('email', 'newstudent@hcmue.edu.vn')->first();
 
-        // P0-2: New SSO users must NOT be auto-assigned any role at registration
-        $this->assertFalse($user->hasRole('student'));
-        $this->assertFalse($user->hasRole('alumni'));
-        $this->assertFalse($user->hasRole('advisor'));
+            // P0-2: New SSO users must NOT be auto-assigned any role at registration
+            $this->assertFalse($user->hasRole('student'));
+            $this->assertFalse($user->hasRole('alumni'));
+            $this->assertFalse($user->hasRole('advisor'));
 
-        $this->assertDatabaseHas('user_identity_providers', [
-            'user_id' => $user->id,
-            'provider_name' => 'microsoft',
-            'provider_user_id' => 'ms-user-456',
-        ]);
+            $this->assertDatabaseHas('user_identity_providers', [
+                'user_id' => $user->id,
+                'provider_name' => 'microsoft',
+                'provider_user_id' => 'ms-user-456',
+            ]);
+        } catch (\Throwable $e) {
+            dump('TRACEBACK MESSAGE: '.$e->getMessage());
+            dump('TRACEBACK: '.$e->getTraceAsString());
+            throw $e;
+        }
     }
 
     // -------------------------------------------------------------------------
@@ -287,7 +294,7 @@ class MicrosoftSsoTest extends TestCase
         $mockUser->shouldReceive('getId')->andReturn('ms-no-email');
         $mockUser->shouldReceive('getEmail')->andReturn('');
         $mockUser->shouldReceive('getName')->andReturn('No Email User');
-        $mockUser->user = [];
+        $mockUser->user = ['tid' => 'b1a9fdc0-1d56-4c3d-a481-809fff8a26db'];
 
         $mockProvider = mock(AbstractProvider::class);
         $mockProvider->shouldReceive('user')->andReturn($mockUser);
@@ -323,5 +330,179 @@ class MicrosoftSsoTest extends TestCase
         $ssoError = $errors?->first('sso') ?? '';
         $this->assertStringNotContainsString('abc-123-def', $ssoError);
         $this->assertStringNotContainsString('sensitive GUID', $ssoError);
+    }
+
+    public function test_sso_callback_accepts_student_domain(): void
+    {
+        $this->mockSocialiteUser([
+            'id' => 'ms-user-student-domain',
+            'email' => 'student@student.hcmue.edu.vn',
+            'name' => 'HCMUE Student',
+        ]);
+
+        $response = $this->get(route('auth.microsoft.callback'));
+
+        $response->assertRedirect();
+        $this->assertDatabaseHas('users', ['email' => 'student@student.hcmue.edu.vn']);
+    }
+
+    public function test_sso_callback_fails_when_tenant_config_is_missing(): void
+    {
+        config(['services.microsoft.tenant' => '']);
+
+        $this->mockSocialiteUser([
+            'id' => 'ms-user-no-tenant-config',
+            'email' => 'student@hcmue.edu.vn',
+        ]);
+
+        $response = $this->get(route('auth.microsoft.callback'));
+
+        $response->assertRedirect(route('login'));
+        $response->assertSessionHasErrors(['sso']);
+    }
+
+    public function test_login_page_renders_sso_session_errors(): void
+    {
+        // Disable SSO to trigger validation exception on redirect
+        config(['services.microsoft.enabled' => false]);
+
+        $response = $this->followingRedirects()
+            ->get(route('auth.microsoft.redirect'));
+
+        $response->assertOk();
+        $response->assertSee('Đăng nhập bằng Microsoft hiện chưa được cấu hình hoặc kích hoạt trên môi trường này.');
+    }
+
+    public function test_sso_callback_fails_when_tenant_config_is_common_or_organizations(): void
+    {
+        config(['services.microsoft.tenant' => 'common']);
+
+        $this->mockSocialiteUser([
+            'id' => 'ms-user-common-config',
+            'email' => 'student@hcmue.edu.vn',
+        ]);
+
+        $response = $this->get(route('auth.microsoft.callback'));
+
+        $response->assertRedirect(route('login'));
+        $response->assertSessionHasErrors(['sso']);
+
+        config(['services.microsoft.tenant' => 'organizations']);
+
+        $response = $this->get(route('auth.microsoft.callback'));
+
+        $response->assertRedirect(route('login'));
+        $response->assertSessionHasErrors(['sso']);
+    }
+
+    public function test_sso_callback_fails_when_actual_tenant_is_common_or_organizations(): void
+    {
+        // Allowed tenant is valid GUID
+        config(['services.microsoft.tenant' => 'b1a9fdc0-1d56-4c3d-a481-809fff8a26db']);
+
+        $this->mockSocialiteUser([
+            'id' => 'ms-user-common-actual',
+            'email' => 'student@hcmue.edu.vn',
+            'user' => ['tid' => 'common'],
+        ]);
+
+        $response = $this->get(route('auth.microsoft.callback'));
+
+        $response->assertRedirect(route('login'));
+        $response->assertSessionHasErrors(['sso']);
+
+        $this->mockSocialiteUser([
+            'id' => 'ms-user-orgs-actual',
+            'email' => 'student@hcmue.edu.vn',
+            'user' => ['tid' => 'organizations'],
+        ]);
+
+        $response = $this->get(route('auth.microsoft.callback'));
+
+        $response->assertRedirect(route('login'));
+        $response->assertSessionHasErrors(['sso']);
+    }
+
+    public function test_sso_redirect_fails_when_tenant_config_is_common_or_organizations(): void
+    {
+        config(['services.microsoft.tenant' => 'common']);
+
+        $response = $this->get(route('auth.microsoft.redirect'));
+
+        $response->assertRedirect(route('login'));
+        $response->assertSessionHasErrors(['sso']);
+
+        config(['services.microsoft.tenant' => 'organizations']);
+
+        $response = $this->get(route('auth.microsoft.redirect'));
+
+        $response->assertRedirect(route('login'));
+        $response->assertSessionHasErrors(['sso']);
+    }
+
+    public function test_config_parses_microsoft_allowed_domains(): void
+    {
+        config(['services.microsoft.allowed_domains' => ['hcmue.edu.vn', 'student.hcmue.edu.vn', 'teacher.hcmue.edu.vn']]);
+
+        $this->assertEquals(
+            ['hcmue.edu.vn', 'student.hcmue.edu.vn', 'teacher.hcmue.edu.vn'],
+            config('services.microsoft.allowed_domains')
+        );
+    }
+
+    public function test_sso_callback_accepts_teacher_domain(): void
+    {
+        config(['services.microsoft.allowed_domains' => ['hcmue.edu.vn', 'student.hcmue.edu.vn', 'teacher.hcmue.edu.vn']]);
+
+        $this->mockSocialiteUser([
+            'id' => 'ms-user-teacher-domain',
+            'email' => 'teacher@teacher.hcmue.edu.vn',
+            'name' => 'HCMUE Teacher',
+        ]);
+
+        $response = $this->get(route('auth.microsoft.callback'));
+
+        $response->assertRedirect();
+        $this->assertDatabaseHas('users', ['email' => 'teacher@teacher.hcmue.edu.vn']);
+    }
+
+    public function test_sso_callback_succeeds_when_tid_missing_in_profile_but_present_in_id_token(): void
+    {
+        // 1. Build an id_token with tid claim
+        $header = base64_encode(json_encode(['alg' => 'HS256', 'typ' => 'JWT']));
+        $payload = base64_encode(json_encode([
+            'tid' => 'b1a9fdc0-1d56-4c3d-a481-809fff8a26db',
+            'oid' => 'ms-user-id-token',
+            'email' => 'student@student.hcmue.edu.vn',
+        ]));
+        $idToken = "{$header}.{$payload}.signature";
+
+        // 2. Mock Socialite user with missing tid in profile, but with id_token in accessTokenResponseBody
+        $mockUser = mock(\Laravel\Socialite\Two\User::class);
+        $mockUser->shouldReceive('getId')->andReturn('ms-user-id-token');
+        $mockUser->shouldReceive('getEmail')->andReturn('student@student.hcmue.edu.vn');
+        $mockUser->shouldReceive('getName')->andReturn('HCMUE ID Token User');
+
+        // tid is missing in profile
+        $mockUser->user = [
+            'oid' => 'ms-user-id-token',
+        ];
+
+        $mockUser->accessTokenResponseBody = [
+            'id_token' => $idToken,
+        ];
+
+        $mockProvider = mock(AbstractProvider::class);
+        $mockProvider->shouldReceive('user')->andReturn($mockUser);
+
+        Socialite::shouldReceive('driver')->with('microsoft')->andReturn($mockProvider);
+
+        config(['services.microsoft.tenant' => 'b1a9fdc0-1d56-4c3d-a481-809fff8a26db']);
+        config(['services.microsoft.allowed_domains' => ['hcmue.edu.vn', 'student.hcmue.edu.vn']]);
+
+        $response = $this->get(route('auth.microsoft.callback'));
+
+        $response->assertRedirect();
+        $this->assertDatabaseHas('users', ['email' => 'student@student.hcmue.edu.vn']);
     }
 }
