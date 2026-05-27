@@ -2,7 +2,6 @@
 
 namespace Database\Seeders;
 
-use App\Models\User;
 use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 use Illuminate\Database\Seeder;
 
@@ -15,11 +14,17 @@ class DatabaseSeeder extends Seeder
      */
     public function run(): void
     {
-        // User::factory(10)->create();
-
-        User::factory()->create([
-            'name' => 'Test User',
-            'email' => 'test@example.com',
+        // 1. Reference data (roles, permissions, faculties, programs)
+        $this->call([
+            RoleAndPermissionSeeder::class,
+            FacultyAndAcademicProgramSeeder::class,
         ]);
+
+        // 2. UAT test accounts (admin + unverified student)
+        if (app()->environment(['local', 'testing'])) {
+            $this->call(UatSeeder::class);
+        } else {
+            $this->command->warn('Skipped UatSeeder: Not in local/testing environment.');
+        }
     }
 }

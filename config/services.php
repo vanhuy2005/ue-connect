@@ -35,4 +35,16 @@ return [
         ],
     ],
 
+    'microsoft' => [
+        'enabled' => env('MICROSOFT_LOGIN_ENABLED', false),
+        'client_id' => env('MICROSOFT_CLIENT_ID'),
+        'client_secret' => env('MICROSOFT_CLIENT_SECRET'),
+        'redirect' => env('MICROSOFT_REDIRECT_URI'),
+        'tenant' => env('MICROSOFT_TENANT_ID'),
+        'allowed_domains' => array_values(array_filter(array_map(
+            fn ($domain) => strtolower(trim($domain)),
+            explode(',', env('MICROSOFT_ALLOWED_DOMAINS') ?: env('MICROSOFT_ALLOWED_DOMAIN', 'hcmue.edu.vn,student.hcmue.edu.vn'))
+        ))),
+    ],
+
 ];

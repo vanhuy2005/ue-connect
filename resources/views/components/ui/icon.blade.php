@@ -15,7 +15,8 @@
                      bell, home, message, users, book-open, loader, arrow-right,
                      arrow-left, more-horizontal, edit, trash, eye, send,
                      plus, minus, chevron-down, check-circle, x-circle,
-                     clock, calendar, lock, star, link-external, upload
+                     clock, calendar, lock, star, link-external, upload,
+                     log-out, user-circle, shield-x, microsoft
 --}}
 
 @props([
@@ -284,6 +285,34 @@ $sizeClass = match($size) {
         @case('award')
             <circle cx="12" cy="8" r="6"></circle>
             <path d="M15.477 12.89L17 22l-5-3-5 3 1.523-9.11"></path>
+            @break
+
+        {{-- ❖ microsoft --}}
+        @case('microsoft')
+            <rect x="2" y="2" width="9" height="9" fill="currentColor" stroke="none"></rect>
+            <rect x="13" y="2" width="9" height="9" fill="currentColor" stroke="none"></rect>
+            <rect x="2" y="13" width="9" height="9" fill="currentColor" stroke="none"></rect>
+            <rect x="13" y="13" width="9" height="9" fill="currentColor" stroke="none"></rect>
+            @break
+
+        {{-- 🚪 log-out --}}
+        @case('log-out')
+            <path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4"></path>
+            <polyline points="16 17 21 12 16 7"></polyline>
+            <line x1="21" y1="12" x2="9" y2="12"></line>
+            @break
+
+        {{-- 👤 user-circle --}}
+        @case('user-circle')
+            <path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"></path>
+            <circle cx="12" cy="7" r="4"></circle>
+            @break
+
+        {{-- 🛡 shield-x --}}
+        @case('shield-x')
+            <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
+            <line x1="9.5" y1="9.5" x2="14.5" y2="14.5"></line>
+            <line x1="14.5" y1="9.5" x2="9.5" y2="14.5"></line>
             @break
 
         {{-- Default fallback circle --}}

@@ -29,6 +29,7 @@
     'loading'      => false,
     'icon'         => null,
     'iconPosition' => 'left',
+    'href'         => null,
 ])
 
 @php
@@ -97,6 +98,37 @@ $isDisabled   = $disabled || $loading;
 $loadingLabel = $loading ? 'true' : null;
 @endphp
 
+@if($href)
+<a
+    href="{{ $href }}"
+    @if($isDisabled) aria-disabled="true" @endif
+    {{ $attributes->class([
+        /* Base */
+        'inline-flex items-center justify-center font-semibold leading-snug',
+        'select-none whitespace-nowrap border rounded-lg',
+        'transition-colors duration-sm ease-out',
+        'ue-focus-ring',
+        /* Minimum touch target */
+        'min-h-touch',
+        /* Size */
+        $sizeClasses,
+        /* Variant */
+        $variantClasses,
+        /* Disabled state */
+        'opacity-50 cursor-not-allowed pointer-events-none' => $isDisabled,
+    ]) }}
+>
+    @if($icon && $iconPosition === 'left')
+        <x-ui.icon :name="$icon" :size="$iconSize" aria-hidden="true" />
+    @endif
+
+    <span>{{ $slot }}</span>
+
+    @if($icon && $iconPosition === 'right')
+        <x-ui.icon :name="$icon" :size="$iconSize" aria-hidden="true" />
+    @endif
+</a>
+@else
 <button
     type="{{ $type }}"
     {{ $isDisabled ? 'disabled' : '' }}
@@ -134,3 +166,4 @@ $loadingLabel = $loading ? 'true' : null;
         <x-ui.icon :name="$icon" :size="$iconSize" aria-hidden="true" />
     @endif
 </button>
+@endif

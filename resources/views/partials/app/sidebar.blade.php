@@ -85,12 +85,51 @@ $navItems = [
         @endforeach
     </ul>
 
-    {{-- Profile link at bottom --}}
-    <div class="border-t border-ue-border pt-3 mt-3">
-        {{-- TODO: route('profile.show', auth()->user()) --}}
+    {{-- Admin section --}}
+    @can('review_verification')
+        <div class="mt-6 border-t border-ue-border pt-4 flex flex-col gap-1">
+            <p class="px-3 text-2xs font-bold uppercase tracking-wider text-ue-text-muted">
+                Quản trị
+            </p>
+
+            <a
+                href="{{ route('admin.dashboard') }}"
+                class="ue-nav-link"
+                @if(request()->routeIs('admin.dashboard')) aria-current="page" @endif
+            >
+                <x-ui.icon name="shield" size="md" />
+                <span>Tổng quan quản trị</span>
+            </a>
+
+            <a
+                href="{{ route('admin.verifications.queue') }}"
+                class="ue-nav-link"
+                @if(request()->routeIs('admin.verifications.*')) aria-current="page" @endif
+            >
+                <x-ui.icon name="shield-check" size="md" />
+                <span>Duyệt xác thực</span>
+            </a>
+        </div>
+    @endcan
+
+    {{-- Profile link + Logout at bottom --}}
+    <div class="border-t border-ue-border pt-3 mt-3 flex flex-col gap-1">
         <a href="{{ route('profile') }}" class="ue-nav-link" @if(request()->routeIs('profile')) aria-current="page" @endif>
             <x-ui.avatar size="sm" />
             <span>Hồ sơ</span>
         </a>
+
+        {{-- Logout --}}
+        <form method="POST" action="{{ route('logout') }}">
+            @csrf
+            <button
+                type="submit"
+                class="ue-nav-link w-full text-left text-ue-text-secondary hover:text-danger"
+                aria-label="Đăng xuất"
+            >
+                <x-ui.icon name="log-out" size="md" aria-hidden="true" class="flex-shrink-0" />
+                <span>Đăng xuất</span>
+            </button>
+        </form>
     </div>
 </nav>

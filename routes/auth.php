@@ -1,6 +1,8 @@
 <?php
 
+use App\Http\Controllers\Auth\MicrosoftAuthController;
 use App\Http\Controllers\Auth\VerifyEmailController;
+use App\Livewire\Actions\Logout;
 use Illuminate\Support\Facades\Route;
 use Livewire\Volt\Volt;
 
@@ -16,6 +18,12 @@ Route::middleware('guest')->group(function () {
 
     Volt::route('reset-password/{token}', 'pages.auth.reset-password')
         ->name('password.reset');
+
+    Route::get('auth/microsoft/redirect', [MicrosoftAuthController::class, 'redirect'])
+        ->name('auth.microsoft.redirect');
+
+    Route::get('auth/microsoft/callback', [MicrosoftAuthController::class, 'callback'])
+        ->name('auth.microsoft.callback');
 });
 
 Route::middleware('auth')->group(function () {
@@ -28,4 +36,10 @@ Route::middleware('auth')->group(function () {
 
     Volt::route('confirm-password', 'pages.auth.confirm-password')
         ->name('password.confirm');
+
+    Route::post('logout', function (Logout $logout) {
+        $logout();
+
+        return redirect()->route('login');
+    })->name('logout');
 });
