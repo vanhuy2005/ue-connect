@@ -4,6 +4,7 @@ namespace App\Models;
 
 // use Illuminate\Contracts\Auth\MustVerifyEmail;
 use App\Enums\AccountStatus;
+use App\Enums\IdentityType;
 use Database\Factories\UserFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Attributes\Hidden;
@@ -15,7 +16,7 @@ use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Spatie\Permission\Traits\HasRoles;
 
-#[Fillable(['name', 'email', 'password', 'account_status', 'account_status_reason', 'account_restricted_until', 'last_login_at'])]
+#[Fillable(['name', 'email', 'password', 'account_status', 'account_status_reason', 'account_restricted_until', 'last_login_at', 'intended_identity_type'])]
 #[Hidden(['password', 'remember_token'])]
 class User extends Authenticatable
 {
@@ -33,6 +34,7 @@ class User extends Authenticatable
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
             'account_status' => AccountStatus::class,
+            'intended_identity_type' => IdentityType::class,
             'account_restricted_until' => 'datetime',
             'last_login_at' => 'datetime',
         ];
