@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\VerificationEvidence;
+use App\Services\AuditLogService;
 use Illuminate\Support\Facades\Storage;
 use Symfony\Component\HttpFoundation\BinaryFileResponse;
 
@@ -28,6 +29,22 @@ class VerificationEvidenceController extends Controller
         if (! Storage::disk($mediaFile->disk)->exists($mediaFile->path)) {
             abort(404, 'Tệp tin không tồn tại trên hệ thống lưu trữ.');
         }
+
+        // P0-5: Audit log — do not include raw file path to avoid info disclosure
+        AuditLogService::log(
+            actorId: auth()->id(),
+            actorType: 'admin',
+            actionKey: 'admin.evidence.preview',
+            targetType: 'verification_evidence',
+            targetId: $evidence->id,
+            contextType: 'verification_request',
+            contextId: $evidence->verification_request_id,
+            metadata: [
+                'original_name' => $mediaFile->original_name,
+                'mime_type' => $mediaFile->mime_type,
+                'size_bytes' => $mediaFile->size_bytes,
+            ]
+        );
 
         $filePath = Storage::disk($mediaFile->disk)->path($mediaFile->path);
 
