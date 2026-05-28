@@ -5,7 +5,9 @@ namespace App\Actions\Reports;
 use App\Enums\ReportStatus;
 use App\Models\Report;
 use App\Models\User;
+use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Facades\Gate;
 use Illuminate\Validation\ValidationException;
 
 class CreateReport
@@ -16,9 +18,12 @@ class CreateReport
      * @param  array{reason: string, description?: string|null}  $data
      *
      * @throws ValidationException
+     * @throws AuthorizationException
      */
     public function execute(User $user, Model $target, array $data): Report
     {
+        Gate::forUser($user)->authorize('report', $target);
+
         if (! $user->isActive()) {
             throw ValidationException::withMessages([
                 'reporter_id' => 'Chỉ tài khoản đang hoạt động mới có thể thực hiện báo cáo.',

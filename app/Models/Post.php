@@ -82,4 +82,14 @@ class Post extends Model
     {
         return $this->hasMany(PostSave::class);
     }
+
+    /**
+     * Get the hide exclusions of the post.
+     *
+     * @return HasMany<PostHide, $this>
+     */
+    public function hides(): HasMany
+    {
+        return $this->hasMany(PostHide::class);
+    }
 }

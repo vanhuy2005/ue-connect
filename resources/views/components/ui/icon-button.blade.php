@@ -6,6 +6,7 @@
         <x-ui.icon-button icon="more-horizontal" label="Mở menu" />
         <x-ui.icon-button icon="x" label="Đóng" variant="ghost" />
         <x-ui.icon-button icon="trash" label="Xóa tin nhắn" variant="danger" />
+        <x-ui.icon-button icon="bookmark" label="Đã lưu" href="{{ route('posts.saved') }}" />
 
     Props:
         icon     (string, required) — icon name for x-ui.icon
@@ -13,6 +14,8 @@
         variant  (string) ghost|soft|outline|brand|danger|inverse
         size     (string) sm|md|lg
         disabled (bool)
+        type     (string) button|submit|reset
+        href     (string, optional) — if provided, renders as anchor <a> element
 --}}
 
 @props([
@@ -21,6 +24,8 @@
     'variant'  => 'ghost',
     'size'     => 'md',
     'disabled' => false,
+    'type'     => 'button',
+    'href'     => null,
 ])
 
 @php
@@ -73,23 +78,38 @@ $variantClasses = match($variant) {
         'hover:bg-ue-brand-soft hover:text-ue-brand-active ' .
         'active:bg-ue-brand-soft-hover active:text-ue-brand-active',
 };
+
+$sharedClasses = [
+    'inline-flex items-center justify-center flex-shrink-0',
+    'rounded-lg border',
+    'transition-colors duration-sm ease-out',
+    'ue-focus-ring',
+    /* Min touch target */
+    'min-h-touch min-w-touch',
+    $sizeClasses,
+    $variantClasses,
+];
 @endphp
 
-<button
-    type="button"
-    aria-label="{{ $label }}"
-    {{ $disabled ? 'disabled' : '' }}
-    {{ $attributes->class([
-        'inline-flex items-center justify-center flex-shrink-0',
-        'rounded-lg border',
-        'transition-colors duration-sm ease-out',
-        'ue-focus-ring',
-        /* Min touch target */
-        'min-h-touch min-w-touch',
-        $sizeClasses,
-        $variantClasses,
-        'opacity-50 cursor-not-allowed pointer-events-none' => $disabled,
-    ]) }}
->
-    <x-ui.icon :name="$icon" :size="$iconSize" aria-hidden="true" />
-</button>
+@if ($href)
+    <a
+        href="{{ $href }}"
+        aria-label="{{ $label }}"
+        {{ $attributes->class(array_merge($sharedClasses, [
+            'opacity-50 cursor-not-allowed pointer-events-none' => $disabled,
+        ])) }}
+    >
+        <x-ui.icon :name="$icon" :size="$iconSize" aria-hidden="true" />
+    </a>
+@else
+    <button
+        type="{{ $type }}"
+        aria-label="{{ $label }}"
+        {{ $disabled ? 'disabled' : '' }}
+        {{ $attributes->class(array_merge($sharedClasses, [
+            'opacity-50 cursor-not-allowed pointer-events-none' => $disabled,
+        ])) }}
+    >
+        <x-ui.icon :name="$icon" :size="$iconSize" aria-hidden="true" />
+    </button>
+@endif

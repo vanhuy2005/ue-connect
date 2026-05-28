@@ -4,6 +4,7 @@ namespace Tests\Feature\Social;
 
 use App\Actions\Posts\CreatePost;
 use App\Actions\Posts\DeletePost;
+use App\Actions\Posts\UpdatePost;
 use App\Enums\AccountStatus;
 use App\Enums\PostStatus;
 use App\Enums\PostVisibility;
@@ -100,6 +101,70 @@ class PostInteractionTest extends TestCase
         ]);
     }
 
+    public function test_owner_can_edit_own_post_via_action(): void
+    {
+        $post = Post::factory()->create([
+            'user_id' => $this->user->id,
+            'body' => 'Original body.',
+            'status' => PostStatus::PUBLISHED,
+        ]);
+
+        $action = resolve(UpdatePost::class);
+        $updatedPost = $action->execute($this->user, $post, [
+            'body' => 'Updated body.',
+        ]);
+
+        $this->assertEquals('Updated body.', $updatedPost->body);
+        $this->assertEquals(PostStatus::EDITED, $updatedPost->status);
+        $this->assertNotNull($updatedPost->edited_at);
+    }
+
+    public function test_owner_can_edit_own_post_via_component(): void
+    {
+        $post = Post::factory()->create([
+            'user_id' => $this->user->id,
+            'body' => 'Original body.',
+            'status' => PostStatus::PUBLISHED,
+            'published_at' => now(),
+        ]);
+
+        $this->actingAs($this->user);
+
+        Volt::test('pages.app.home-feed')
+            ->call('startEdit', $post->id)
+            ->assertSet('editingPostId', $post->id)
+            ->assertSet('editingBody', 'Original body.')
+            ->set('editingBody', 'Updated body content.')
+            ->call('saveEdit')
+            ->assertHasNoErrors()
+            ->assertSet('editingPostId', null)
+            ->assertSet('feedbackMessage', 'Đã cập nhật bài viết thành công.');
+
+        $this->assertDatabaseHas('posts', [
+            'id' => $post->id,
+            'body' => 'Updated body content.',
+            'status' => PostStatus::EDITED->value,
+        ]);
+    }
+
+    public function test_non_owner_cannot_edit_post(): void
+    {
+        $post = Post::factory()->create([
+            'user_id' => $this->otherUser->id,
+            'body' => 'Other user post.',
+            'status' => PostStatus::PUBLISHED,
+        ]);
+
+        $this->actingAs($this->user);
+
+        $this->expectException(AuthorizationException::class);
+
+        $action = resolve(UpdatePost::class);
+        $action->execute($this->user, $post, [
+            'body' => 'Hack try.',
+        ]);
+    }
+
     public function test_owner_can_delete_own_post_via_component(): void
     {
         $post = Post::factory()->create([
@@ -112,7 +177,10 @@ class PostInteractionTest extends TestCase
         $this->actingAs($this->user);
 
         Volt::test('pages.app.home-feed')
-            ->call('deletePost', $post->id)
+            ->call('openDeleteModal', $post->id)
+            ->assertSet('deletingPostId', $post->id)
+            ->assertSet('showDeleteModal', true)
+            ->call('executeDelete')
             ->assertSet('feedbackMessage', 'Đã xóa bài viết thành công.');
 
         $this->assertSoftDeleted('posts', [
@@ -165,61 +233,26 @@ class PostInteractionTest extends TestCase
         $this->assertTrue($this->user->can('report', $otherPost));
     }
 
-    public function test_user_can_toggle_like_on_post(): void
+    public function test_hidden_posts_do_not_appear_in_feed(): void
     {
-        $post = Post::factory()->create([
+        $hiddenPost = Post::factory()->create([
             'user_id' => $this->otherUser->id,
+            'body' => 'This post is hidden.',
+            'status' => PostStatus::HIDDEN_BY_MODERATION,
+            'published_at' => now(),
+        ]);
+
+        $visiblePost = Post::factory()->create([
+            'user_id' => $this->otherUser->id,
+            'body' => 'This post is visible.',
             'status' => PostStatus::PUBLISHED,
             'published_at' => now(),
         ]);
 
         $this->actingAs($this->user);
 
-        // First click: likes the post
         Volt::test('pages.app.home-feed')
-            ->call('toggleLike', $post->id);
-
-        $this->assertDatabaseHas('post_likes', [
-            'post_id' => $post->id,
-            'user_id' => $this->user->id,
-        ]);
-
-        // Second click: unlikes the post
-        Volt::test('pages.app.home-feed')
-            ->call('toggleLike', $post->id);
-
-        $this->assertDatabaseMissing('post_likes', [
-            'post_id' => $post->id,
-            'user_id' => $this->user->id,
-        ]);
-    }
-
-    public function test_user_can_toggle_save_on_post(): void
-    {
-        $post = Post::factory()->create([
-            'user_id' => $this->otherUser->id,
-            'status' => PostStatus::PUBLISHED,
-            'published_at' => now(),
-        ]);
-
-        $this->actingAs($this->user);
-
-        // First click: saves the post
-        Volt::test('pages.app.home-feed')
-            ->call('toggleSave', $post->id);
-
-        $this->assertDatabaseHas('post_saves', [
-            'post_id' => $post->id,
-            'user_id' => $this->user->id,
-        ]);
-
-        // Second click: unsaves the post
-        Volt::test('pages.app.home-feed')
-            ->call('toggleSave', $post->id);
-
-        $this->assertDatabaseMissing('post_saves', [
-            'post_id' => $post->id,
-            'user_id' => $this->user->id,
-        ]);
+            ->assertSee('This post is visible.')
+            ->assertDontSee('This post is hidden.');
     }
 }

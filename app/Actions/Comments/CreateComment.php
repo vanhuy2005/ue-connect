@@ -3,6 +3,7 @@
 namespace App\Actions\Comments;
 
 use App\Enums\CommentStatus;
+use App\Enums\PostStatus;
 use App\Models\Comment;
 use App\Models\Post;
 use App\Models\User;
@@ -22,7 +23,13 @@ class CreateComment
      */
     public function execute(User $user, Post $post, array $data): Comment
     {
+        Gate::forUser($user)->authorize('view', $post);
         Gate::forUser($user)->authorize('create', Comment::class);
+
+        // Reject commenting on hidden/deleted/moderated posts
+        if (! in_array($post->status, [PostStatus::PUBLISHED, PostStatus::EDITED])) {
+            throw new AuthorizationException('Không thể bình luận trên bài viết đã bị ẩn hoặc xóa.');
+        }
 
         $parentId = $data['parent_id'] ?? null;
 

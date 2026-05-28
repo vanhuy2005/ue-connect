@@ -1,6 +1,5 @@
 <?php
 
-use App\Actions\Posts\CreatePost;
 use App\Actions\Posts\DeletePost;
 use App\Actions\Posts\UpdatePost;
 use App\Actions\Posts\TogglePostLike;
@@ -11,6 +10,7 @@ use App\Enums\PostStatus;
 use App\Enums\PostVisibility;
 use App\Enums\ReportReason;
 use App\Models\Post;
+use App\Models\PostSave;
 use Illuminate\Support\Facades\Auth;
 use Livewire\Attributes\Layout;
 use Livewire\Volt\Component;
@@ -19,10 +19,6 @@ use Livewire\WithPagination;
 new #[Layout('layouts.app')] class extends Component
 {
     use WithPagination;
-
-    // Composer properties
-    public string $body = '';
-    public string $visibility = 'verified_users';
 
     // Edit post properties
     public ?int $editingPostId = null;
@@ -48,27 +44,8 @@ new #[Layout('layouts.app')] class extends Component
      * Rules for validation.
      */
     protected array $rules = [
-        'body' => 'required|string|max:3000',
-        'visibility' => 'required|string|in:verified_users,connections_only,community,private',
+        'editingBody' => 'required|string|max:3000',
     ];
-
-    /**
-     * Submit a new post.
-     */
-    public function submitPost(CreatePost $createPost): void
-    {
-        $this->validate();
-
-        $createPost->execute(Auth::user(), [
-            'body' => $this->body,
-            'visibility' => $this->visibility,
-        ]);
-
-        $this->body = '';
-        $this->feedbackMessage = 'Đăng bài viết thành công.';
-        $this->dispatch('post-created');
-        $this->resetPage(); // Re-render feed at page 1
-    }
 
     /**
      * Toggle post like using policy action.
@@ -84,7 +61,7 @@ new #[Layout('layouts.app')] class extends Component
     }
 
     /**
-     * Toggle post save using policy action.
+     * Toggle post save (unsave) using policy action.
      */
     public function toggleSave(int $postId, TogglePostSave $togglePostSave): void
     {
@@ -125,11 +102,6 @@ new #[Layout('layouts.app')] class extends Component
 
         try {
             $post = Post::findOrFail($this->editingPostId);
-            
-            $this->validate([
-                'editingBody' => 'required|string|max:3000',
-            ]);
-
             $updatePost->execute(Auth::user(), $post, [
                 'body' => $this->editingBody,
             ]);
@@ -296,20 +268,23 @@ new #[Layout('layouts.app')] class extends Component
     {
         $user = Auth::user();
 
-        // Get latest verified active posts (Strictly PUBLISHED and EDITED only, excluding hidden posts, except those hidden in current session)
-        $posts = Post::with(['user.profile', 'comments', 'likes', 'saves'])
-            ->whereIn('status', [PostStatus::PUBLISHED, PostStatus::EDITED])
-            ->where(function ($query) use ($user) {
-                $query->whereDoesntHave('hides', function ($q) use ($user) {
-                    $q->where('user_id', $user->id);
-                })
-                ->orWhereIn('id', $this->locallyHiddenPostIds);
+        // Get saved posts (latest saved first, filtering out hidden/deleted and user-hidden posts, except those hidden in current session)
+        $saves = PostSave::with(['post.user.profile', 'post.comments', 'post.likes', 'post.saves'])
+            ->where('user_id', $user->id)
+            ->whereHas('post', function ($query) use ($user) {
+                $query->whereIn('status', [PostStatus::PUBLISHED, PostStatus::EDITED])
+                    ->where(function ($q) use ($user) {
+                        $q->whereDoesntHave('hides', function ($h) use ($user) {
+                            $h->where('user_id', $user->id);
+                        })
+                        ->orWhereIn('id', $this->locallyHiddenPostIds);
+                    });
             })
-            ->latest('published_at')
+            ->latest('id')
             ->paginate(10);
 
         return [
-            'posts' => $posts,
+            'saves' => $saves,
             'currentUser' => $user,
         ];
     }
@@ -318,6 +293,12 @@ new #[Layout('layouts.app')] class extends Component
 ?>
 
 <div class="max-w-[640px] mx-auto px-4 py-6 sm:py-8 space-y-6">
+
+    {{-- Header title --}}
+    <div class="flex items-center gap-2 border-b border-slate-150 pb-4 mb-2">
+        <x-ui.icon name="bookmark" size="lg" class="text-ue-brand" />
+        <h1 class="text-xl font-bold text-slate-800">Bài viết đã lưu</h1>
+    </div>
 
     {{-- System feedback alerts --}}
     @if ($feedbackMessage)
@@ -330,89 +311,23 @@ new #[Layout('layouts.app')] class extends Component
         </div>
     @endif
 
-    {{-- 1. THREADS-LIKE COMPOSER --}}
-    @if ($currentUser->isActive())
-        <div class="bg-white border border-slate-150 rounded-2xl p-4 sm:p-5 shadow-xs">
-            <div class="flex items-start gap-3">
-                {{-- Left Avatar --}}
-                <div class="w-9 h-9 rounded-full bg-ue-brand-soft border border-slate-100 flex items-center justify-center font-bold text-ue-brand text-xs shadow-xs select-none flex-shrink-0">
-                    {{ mb_substr($currentUser->name, 0, 2) }}
-                </div>
-
-                {{-- Center/Right body --}}
-                <div class="flex-1 min-w-0">
-                    <form wire:submit.prevent="submitPost">
-                        <div class="mb-3">
-                            <label for="post-body" class="sr-only">Nội dung bài viết</label>
-                            <textarea
-                                id="post-body"
-                                wire:model="body"
-                                placeholder="Có gì mới trong cộng đồng HCMUE hôm nay?"
-                                rows="2"
-                                class="w-full border-0 focus:ring-0 p-0 text-slate-700 placeholder-slate-400 text-sm sm:text-base resize-none bg-transparent"
-                                maxlength="3000"
-                            ></textarea>
-                            @error('body')
-                                <p class="text-xs text-red-600 mt-1 font-semibold">{{ $message }}</p>
-                            @enderror
-                        </div>
-
-                        <div class="flex flex-col sm:flex-row sm:items-center justify-between pt-3 border-t border-slate-100/65 gap-3">
-                            <div class="flex items-center gap-3 justify-between sm:justify-start">
-                                {{-- Character counter --}}
-                                <span class="text-xxs text-slate-400 font-semibold">
-                                    {{ mb_strlen($body) }}/3000
-                                </span>
-
-                                {{-- Visibility chip --}}
-                                <div class="relative">
-                                    <label for="post-visibility" class="sr-only">Quyền xem</label>
-                                    <select
-                                        id="post-visibility"
-                                        wire:model="visibility"
-                                        class="text-xxs font-bold text-slate-500 bg-slate-50 border-0 rounded-lg py-1 pl-2 pr-8 focus:ring-0 focus:outline-none cursor-pointer"
-                                    >
-                                        <option value="verified_users">Chỉ sinh viên xác thực</option>
-                                        <option value="connections_only" disabled>Bạn bè (Sắp ra mắt)</option>
-                                        <option value="community" disabled>Cộng đồng (Sắp ra mắt)</option>
-                                    </select>
-                                </div>
-                            </div>
-
-                            <div class="w-full sm:w-auto">
-                                <x-ui.button
-                                    type="submit"
-                                    variant="primary"
-                                    size="sm"
-                                    icon="send"
-                                    class="w-full sm:w-auto"
-                                >
-                                    Đăng bài
-                                </x-ui.button>
-                            </div>
-                        </div>
-                    </form>
-                </div>
-            </div>
-        </div>
-    @endif
-
-    {{-- 2. FEED LIST (THREADS-LIKE ITEMS) --}}
+    {{-- SAVED POSTS LIST --}}
     <div class="space-y-4">
-        @forelse ($posts as $post)
+        @forelse ($saves as $save)
             @php
+                $post = $save->post;
                 $author = $post->user;
                 $profile = $author->profile;
                 $isLiked = $post->likes->where('user_id', $currentUser->id)->isNotEmpty();
-                $isSaved = $post->saves->where('user_id', $currentUser->id)->isNotEmpty();
+                $isSaved = true; // since it is in saves
                 $likeCount = $post->likes->count();
                 $commentCount = $post->comments->where('status', \App\Enums\CommentStatus::PUBLISHED->value)->count();
                 $isOwner = $post->user_id === $currentUser->id;
             @endphp
 
             @if (in_array($post->id, $locallyHiddenPostIds))
-                {{-- Hidden Post Placeholder with Hoàn tác button --}}
-                <div class="bg-slate-50 border border-slate-200 rounded-2xl p-4 sm:p-5 shadow-xs flex items-center justify-between gap-4 ue-animate-fade-in mb-4" wire:key="hidden-post-placeholder-{{ $post->id }}">
+                {{-- Hidden Saved Post Placeholder with Hoàn tác button --}}
+                <div class="bg-slate-50 border border-slate-200 rounded-2xl p-4 sm:p-5 shadow-xs flex items-center justify-between gap-4 ue-animate-fade-in mb-4" wire:key="hidden-saved-placeholder-{{ $post->id }}">
                     <div class="flex items-center gap-3">
                         <div class="w-8 h-8 rounded-full bg-slate-100 border border-slate-200 flex items-center justify-center text-slate-500 flex-shrink-0">
                             <x-ui.icon name="eye-off" size="xs" />
@@ -431,7 +346,7 @@ new #[Layout('layouts.app')] class extends Component
                     </button>
                 </div>
             @else
-                <div class="bg-white border border-slate-150 rounded-2xl p-4 sm:p-5 shadow-xs hover:border-slate-350 transition-colors ue-animate-fade-in" wire:key="post-card-{{ $post->id }}">
+                <div class="bg-white border border-slate-150 rounded-2xl p-4 sm:p-5 shadow-xs hover:border-slate-350 transition-colors ue-animate-fade-in" wire:key="saved-post-card-{{ $post->id }}">
                 <div class="flex items-start gap-3">
                     {{-- Left Avatar --}}
                     <div class="w-9 h-9 rounded-full bg-ue-brand-soft border border-slate-100 flex items-center justify-center font-bold text-ue-brand text-xs shadow-xs select-none flex-shrink-0">
@@ -710,16 +625,16 @@ new #[Layout('layouts.app')] class extends Component
                                 </a>
                             </div>
 
-                            {{-- Save --}}
+                            {{-- Save (Unsave) --}}
                             <button
                                 type="button"
                                 wire:click="toggleSave({{ $post->id }})"
                                 class="flex items-center gap-1 text-xxs font-bold hover:text-amber-600 transition-colors py-1 px-1.5 rounded-lg hover:bg-amber-50/50 {{ $isSaved ? 'text-amber-600' : '' }}"
-                                title="{{ $isSaved ? 'Hủy lưu bài viết' : 'Lưu bài viết' }}"
+                                title="Hủy lưu bài viết"
                                 aria-pressed="{{ $isSaved ? 'true' : 'false' }}"
                             >
-                                <x-ui.icon name="bookmark" size="xs" class="{{ $isSaved ? 'fill-amber-600 text-amber-600' : '' }}" />
-                                <span>{{ $isSaved ? 'Đã lưu' : 'Lưu' }}</span>
+                                <x-ui.icon name="bookmark" size="xs" class="fill-amber-600 text-amber-600" />
+                                <span>Đã lưu</span>
                             </button>
                         </div>
                     </div>
@@ -731,33 +646,30 @@ new #[Layout('layouts.app')] class extends Component
             {{-- EMPTY STATE --}}
             <div class="bg-white border border-slate-200 rounded-2xl p-12 text-center shadow-xs ue-animate-scale-in">
                 <div class="w-16 h-16 rounded-full bg-slate-50 border border-slate-100 flex items-center justify-center mx-auto mb-4">
-                    <x-ui.icon name="message-square" size="lg" class="text-slate-400" />
+                    <x-ui.icon name="bookmark" size="lg" class="text-slate-400" />
                 </div>
-                <h3 class="text-base font-bold text-slate-800 mb-2">Bảng tin chưa có bài viết nào</h3>
+                <h3 class="text-base font-bold text-slate-800 mb-2">Chưa có bài viết đã lưu</h3>
                 <p class="text-sm text-slate-500 max-w-sm mx-auto mb-6">
-                    Hãy là người đầu tiên chia sẻ điều hữu ích với cộng đồng HCMUE.
+                    Khi bạn lưu bài viết hữu ích, chúng sẽ xuất hiện tại đây.
                 </p>
-                @if ($currentUser->isActive())
-                    <x-ui.button
-                        type="button"
-                        variant="primary"
-                        size="md"
-                        icon="edit"
-                        onclick="document.getElementById('post-body').focus()"
-                    >
-                        Viết bài đầu tiên
-                    </x-ui.button>
-                @endif
+                <x-ui.button
+                    href="{{ route('dashboard') }}"
+                    variant="outline"
+                    size="md"
+                    icon="arrow-left"
+                >
+                    Quay lại bảng tin
+                </x-ui.button>
             </div>
         @endforelse
 
         {{-- Pagination --}}
         <div class="pt-4">
-            {{ $posts->links() }}
+            {{ $saves->links() }}
         </div>
     </div>
 
-    {{-- 4. REPORT MODAL --}}
+    {{-- REPORT MODAL --}}
     @if ($showReportModal && $reportingPost)
         <div class="fixed inset-0 z-50 overflow-y-auto flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs ue-animate-fade-in" role="dialog" aria-modal="true" aria-labelledby="report-modal-title">
             <div class="bg-white rounded-2xl max-w-md w-full border border-slate-200 shadow-2xl overflow-hidden ue-animate-scale-in">

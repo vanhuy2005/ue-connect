@@ -10,6 +10,7 @@ use App\Models\Comment;
 use App\Models\Post;
 use App\Models\Report;
 use App\Models\User;
+use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Validation\ValidationException;
 use Livewire\Volt\Volt;
@@ -95,8 +96,7 @@ class ReportContentTest extends TestCase
 
         $action = resolve(CreateReport::class);
 
-        $this->expectException(ValidationException::class);
-        $this->expectExceptionMessage('Bạn không thể báo cáo nội dung do chính mình tạo ra.');
+        $this->expectException(AuthorizationException::class);
 
         $action->execute($this->user, $ownPost, [
             'reason' => ReportReason::SPAM->value,
@@ -155,7 +155,7 @@ class ReportContentTest extends TestCase
             ->assertSet('showReportModal', true)
             ->set('reportReason', 'spam')
             ->set('reportDescription', 'Advertising links.')
-            ->call('submitCommentReport')
+            ->call('submitReport')
             ->assertHasNoErrors()
             ->assertSet('showReportModal', false)
             ->assertSet('feedbackMessage', 'Báo cáo của bạn đã được gửi. Cảm ơn bạn đã đóng góp xây dựng môi trường HCMUE an toàn.');

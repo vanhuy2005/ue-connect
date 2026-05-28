@@ -4,8 +4,10 @@ namespace Tests\Feature\Social;
 
 use App\Actions\Comments\CreateComment;
 use App\Actions\Comments\DeleteComment;
+use App\Actions\Comments\UpdateComment;
 use App\Enums\AccountStatus;
 use App\Enums\CommentStatus;
+use App\Enums\PostStatus;
 use App\Models\Comment;
 use App\Models\Post;
 use App\Models\User;
@@ -56,6 +58,7 @@ class CommentInteractionTest extends TestCase
         $this->post = Post::factory()->create([
             'user_id' => $this->user->id,
             'body' => 'Post to comment on.',
+            'status' => PostStatus::PUBLISHED,
             'published_at' => now(),
         ]);
     }
@@ -147,6 +150,7 @@ class CommentInteractionTest extends TestCase
             'post_id' => $this->post->id,
             'user_id' => $this->otherUser->id,
             'body' => 'Topic starter.',
+            'status' => CommentStatus::PUBLISHED,
         ]);
 
         $this->actingAs($this->user);
@@ -167,6 +171,72 @@ class CommentInteractionTest extends TestCase
         ]);
     }
 
+    public function test_owner_can_edit_own_comment_via_action(): void
+    {
+        $comment = Comment::factory()->create([
+            'post_id' => $this->post->id,
+            'user_id' => $this->user->id,
+            'body' => 'Original comment.',
+            'status' => CommentStatus::PUBLISHED,
+        ]);
+
+        $action = resolve(UpdateComment::class);
+        $updatedComment = $action->execute($this->user, $comment, [
+            'body' => 'Updated comment body.',
+        ]);
+
+        $this->assertEquals('Updated comment body.', $updatedComment->body);
+        $this->assertEquals(CommentStatus::EDITED, $updatedComment->status);
+        $this->assertNotNull($updatedComment->edited_at);
+    }
+
+    public function test_owner_can_edit_own_comment_via_component(): void
+    {
+        $comment = Comment::factory()->create([
+            'post_id' => $this->post->id,
+            'user_id' => $this->user->id,
+            'body' => 'Original comment text.',
+            'status' => CommentStatus::PUBLISHED,
+        ]);
+
+        $this->actingAs($this->user);
+
+        Volt::test('pages.app.post-detail', ['post' => $this->post])
+            ->call('startCommentEdit', $comment->id)
+            ->assertSet('editingCommentId', $comment->id)
+            ->assertSet('editingCommentBody', 'Original comment text.')
+            ->set('editingCommentBody', 'Updated comment text.')
+            ->call('saveCommentEdit')
+            ->assertHasNoErrors()
+            ->assertSet('editingCommentId', null)
+            ->assertSet('feedbackMessage', 'Đã cập nhật bình luận thành công.');
+
+        $this->assertDatabaseHas('comments', [
+            'id' => $comment->id,
+            'body' => 'Updated comment text.',
+            'status' => CommentStatus::EDITED->value,
+        ]);
+    }
+
+    public function test_non_owner_cannot_edit_comment(): void
+    {
+        $comment = Comment::factory()->create([
+            'post_id' => $this->post->id,
+            'user_id' => $this->otherUser->id,
+            'body' => 'Other comment.',
+            'status' => CommentStatus::PUBLISHED,
+        ]);
+
+        $this->actingAs($this->user);
+
+        $this->expectException(AuthorizationException::class);
+
+        $action = resolve(UpdateComment::class);
+        $action->execute($this->user, $comment, [
+            'body' => 'Hack try.',
+        ]);
+    }
+
     public function test_owner_can_delete_own_comment_via_component(): void
     {
         $comment = Comment::factory()->create([
@@ -179,7 +249,10 @@ class CommentInteractionTest extends TestCase
         $this->actingAs($this->user);
 
         Volt::test('pages.app.post-detail', ['post' => $this->post])
-            ->call('deleteComment', $comment->id)
+            ->call('openCommentDeleteModal', $comment->id)
+            ->assertSet('deletingCommentId', $comment->id)
+            ->assertSet('showDeleteModal', true)
+            ->call('executeCommentDelete')
             ->assertSet('feedbackMessage', 'Đã xóa bình luận thành công.');
 
         $this->assertSoftDeleted('comments', [
@@ -229,32 +302,44 @@ class CommentInteractionTest extends TestCase
         $this->assertTrue($this->user->can('report', $otherComment));
     }
 
-    public function test_user_can_toggle_like_on_comment(): void
+    public function test_hidden_comments_do_not_appear_in_post_detail(): void
     {
-        $comment = Comment::factory()->create([
+        $hiddenComment = Comment::factory()->create([
             'post_id' => $this->post->id,
             'user_id' => $this->otherUser->id,
-            'body' => 'Random comment.',
+            'body' => 'This comment is hidden.',
+            'status' => CommentStatus::HIDDEN_BY_MODERATION,
+        ]);
+
+        $visibleComment = Comment::factory()->create([
+            'post_id' => $this->post->id,
+            'user_id' => $this->otherUser->id,
+            'body' => 'This comment is visible.',
+            'status' => CommentStatus::PUBLISHED,
         ]);
 
         $this->actingAs($this->user);
 
-        // Toggle like on comment
         Volt::test('pages.app.post-detail', ['post' => $this->post])
-            ->call('toggleCommentLike', $comment->id);
+            ->assertSee('This comment is visible.')
+            ->assertDontSee('This comment is hidden.');
+    }
 
-        $this->assertDatabaseHas('comment_likes', [
-            'comment_id' => $comment->id,
-            'user_id' => $this->user->id,
+    public function test_cannot_comment_on_hidden_post(): void
+    {
+        $hiddenPost = Post::factory()->create([
+            'user_id' => $this->otherUser->id,
+            'body' => 'Hidden post body.',
+            'status' => PostStatus::HIDDEN_BY_MODERATION,
         ]);
 
-        // Toggle again to unlike
-        Volt::test('pages.app.post-detail', ['post' => $this->post])
-            ->call('toggleCommentLike', $comment->id);
+        $this->actingAs($this->user);
 
-        $this->assertDatabaseMissing('comment_likes', [
-            'comment_id' => $comment->id,
-            'user_id' => $this->user->id,
+        $this->expectException(AuthorizationException::class);
+
+        $action = resolve(CreateComment::class);
+        $action->execute($this->user, $hiddenPost, [
+            'body' => 'Trying to comment on a hidden post.',
         ]);
     }
 }

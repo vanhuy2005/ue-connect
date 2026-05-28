@@ -315,9 +315,66 @@ $sizeClass = match($size) {
             <line x1="14.5" y1="9.5" x2="9.5" y2="14.5"></line>
             @break
 
-        {{-- Default fallback circle --}}
+        {{-- 🚩 flag --}}
+        @case('flag')
+            <path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"></path>
+            <line x1="4" y1="22" x2="4" y2="15"></line>
+            @break
+
+        {{-- ⋮ more-vertical --}}
+        @case('more-vertical')
+            <circle cx="12" cy="12" r="1"></circle>
+            <circle cx="12" cy="5" r="1"></circle>
+            <circle cx="12" cy="19" r="1"></circle>
+            @break
+
+        {{-- ♥ heart --}}
+        @case('heart')
+            <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path>
+            @break
+
+        {{-- 🔖 bookmark --}}
+        @case('bookmark')
+            <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"></path>
+            @break
+
+        {{-- ✏ edit-3 --}}
+        @case('edit-3')
+            <path d="M12 20h9"></path>
+            <path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"></path>
+            @break
+
+        {{-- 💬 message-circle --}}
+        @case('message-circle')
+            <path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"></path>
+            @break
+
+        {{-- ↩ reply --}}
+        @case('reply')
+            <polyline points="9 17 4 12 9 7"></polyline>
+            <path d="M20 18v-2a4 4 0 0 0-4-4H4"></path>
+            @break
+
+        {{-- 👁 eye-off --}}
+        @case('eye-off')
+            <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"></path>
+            <line x1="1" y1="1" x2="23" y2="23"></line>
+            @break
+
+        {{-- Default fallback circle with warnings in local --}}
         @default
-            <circle cx="12" cy="12" r="10"></circle>
+            @if(app()->environment('local', 'testing'))
+                @php
+                    logger()->warning("Missing icon in UI component: {$name}");
+                @endphp
+                <path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z" stroke="#EF4444" stroke-width="3"></path>
+                <line x1="12" y1="9" x2="12" y2="13" stroke="#EF4444" stroke-width="3"></line>
+                <line x1="12" y1="17" x2="12.01" y2="17" stroke="#EF4444" stroke-width="3"></line>
+            @else
+                <circle cx="12" cy="12" r="10"></circle>
+                <path d="M9.09 9a3 3 0 015.83 1c0 2-3 3-3 3"></path>
+                <line x1="12" y1="17" x2="12.01" y2="17"></line>
+            @endif
 
     @endswitch
 </svg>

@@ -182,4 +182,14 @@ class User extends Authenticatable
     {
         return $this->hasMany(UserIdentityProvider::class);
     }
+
+    /**
+     * Get user's hidden posts exclusions.
+     *
+     * @return HasMany<PostHide, $this>
+     */
+    public function hiddenPosts(): HasMany
+    {
+        return $this->hasMany(PostHide::class);
+    }
 }
