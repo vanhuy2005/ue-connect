@@ -40,31 +40,38 @@ $iconSize = match($size) {
 $variantClasses = match($variant) {
     'ghost' =>
         'bg-transparent text-ue-text-secondary border-transparent ' .
-        'hover:bg-ue-surface-hover hover:text-ue-text',
+        'hover:bg-ue-brand-soft hover:text-ue-brand-active ' .
+        'active:bg-ue-brand-soft-hover active:text-ue-brand-active',
 
     'soft' =>
         'bg-ue-surface-hover text-ue-text-secondary border-transparent ' .
-        'hover:bg-ue-surface-pressed hover:text-ue-text',
+        'hover:bg-ue-surface-pressed hover:text-ue-text ' .
+        'active:bg-ue-surface-pressed active:text-ue-text',
 
     'outline' =>
-        'bg-transparent text-ue-text border border-ue-border ' .
-        'hover:bg-ue-surface-hover hover:border-ue-border-strong',
+        'bg-white text-ue-text border border-ue-border ' .
+        'hover:bg-ue-brand-soft hover:border-ue-brand hover:text-ue-brand-active ' .
+        'active:bg-ue-brand-soft-hover active:text-ue-brand-active',
 
     'brand' =>
         'bg-ue-brand-soft text-ue-brand border-transparent ' .
-        'hover:bg-ue-brand-soft-hover',
+        'hover:bg-ue-brand-soft-hover hover:text-ue-brand-active ' .
+        'active:bg-ue-brand-soft-hover active:text-ue-brand-active',
 
     'danger' =>
-        'bg-transparent text-ue-danger border-transparent ' .
-        'hover:bg-[rgba(220,38,38,0.08)] hover:text-[#B91C1C]',
+        'bg-transparent text-ue-danger border border-transparent ' .
+        'hover:bg-red-50 hover:text-red-700 ' .
+        'active:bg-red-100 active:text-red-800',
 
     'inverse' =>
         'bg-white/20 text-white border-transparent ' .
-        'hover:bg-white/30',
+        'hover:bg-white/30 hover:text-white ' .
+        'active:bg-white/40 active:text-white',
 
     default =>
         'bg-transparent text-ue-text-secondary border-transparent ' .
-        'hover:bg-ue-surface-hover hover:text-ue-text',
+        'hover:bg-ue-brand-soft hover:text-ue-brand-active ' .
+        'active:bg-ue-brand-soft-hover active:text-ue-brand-active',
 };
 @endphp
 

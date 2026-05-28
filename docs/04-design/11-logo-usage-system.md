@@ -130,13 +130,29 @@ Biểu tượng mà phải hét thẳng chữ cái vào mặt người xem thì 
 
 ## 3. Logo Variants
 
-UEConnect có 3 biến thể logo chính:
+UEConnect có 4 biến thể logo chính:
 
 | Variant         | Description                    | Primary Usage                      |
 | --------------- | ------------------------------ | ---------------------------------- |
 | Primary Logo    | Icon Mark + Wordmark + Tagline | Brand cover, auth, landing, splash |
 | Horizontal Logo | Icon Mark + Wordmark           | Navbar, app shell, admin header    |
 | Icon Mark       | Symbol only                    | Favicon, app icon, compact UI      |
+| App Icon        | Symbol on squared background   | PWA, mobile install, high-impact   |
+
+### 3.1. Official Asset Files Mapping
+
+| Asset | File | Use Case | Avoid |
+|---|---|---|---|
+| App Icon | app-icon-nobg.png | PWA/app icon, large app identity | tiny navbar/favicon if unclear |
+| Horizontal Logo | horizontal-nobg.png | navbar, sidebar, footer compact | hero slogan use |
+| Primary Logo | primary-logo-nobg.png | hero, README, brand docs | small navbar |
+| Icon Mark | ueconnect-mark-nobg.png | favicon, compact UI, empty/loading state | long-form brand lockup |
+
+### 3.2. Universal Usage Constraints
+1. **Do not distort:** Always preserve the correct aspect ratio. Do not stretch horizontally or vertically.
+2. **Do not recolor:** The logo must only use official HCMUE Cerulean (#124874) or white/black monochrome fallbacks.
+3. **Contrast safety:** Never place the blue logo variant on a dark blue background.
+4. **Readable scale:** Do not use the slogan variant below readable size.
 
 ---
 

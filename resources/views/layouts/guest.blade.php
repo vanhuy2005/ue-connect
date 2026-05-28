@@ -19,7 +19,7 @@
         >
 
         {{-- Favicon --}}
-        <link rel="icon" type="image/png" href="{{ asset('images/brand/favicon.png') }}">
+        <link rel="icon" type="image/png" href="{{ asset('images/brand/ueconnect-mark-nobg.png') }}">
 
         {{-- Vite Assets --}}
         @vite(['resources/css/app.css', 'resources/js/app.js'])

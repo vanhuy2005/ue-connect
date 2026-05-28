@@ -19,7 +19,7 @@
         >
 
         {{-- Favicon --}}
-        <link rel="icon" type="image/png" href="{{ asset('images/brand/favicon.png') }}">
+        <link rel="icon" type="image/png" href="{{ asset('images/brand/ueconnect-mark-nobg.png') }}">
 
         {{-- Vite Assets --}}
         @vite(['resources/css/app.css', 'resources/js/app.js'])
@@ -43,6 +43,9 @@
 
                 {{-- Topbar --}}
                 @include('partials.app.topbar')
+
+                {{-- Account status banner for restrictions --}}
+                <x-ui.account-status-banner />
 
                 {{-- Page content --}}
                 <main

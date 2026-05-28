@@ -109,6 +109,9 @@ export default {
                 'ue-brand-hover':    'var(--ue-brand-hover)',
                 'ue-brand-active':   'var(--ue-brand-active)',
                 'ue-brand-soft':     'var(--ue-brand-soft)',
+                'ue-brand-soft-hover': 'var(--ue-brand-soft-hover)',
+                'ue-brand-border':    'var(--ue-brand-border)',
+                'ue-brand-tint':      'var(--ue-brand-tint)',
 
                 /* Semantic status */
                 'ue-success':        'var(--success)',

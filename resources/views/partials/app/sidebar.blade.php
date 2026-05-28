@@ -65,7 +65,7 @@ $navItems = [
     {{-- Logo --}}
     <div class="px-2 mb-6">
         <a href="{{ route('dashboard') }}" class="flex items-center ue-focus-ring rounded-lg" aria-label="UEConnect - Trang chủ">
-            <x-brand.logo variant="horizontal" size="md" />
+            <x-brand.logo variant="horizontal" size="sm" />
         </a>
     </div>
 
