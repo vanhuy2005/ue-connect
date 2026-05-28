@@ -152,7 +152,8 @@ new class extends Component {
 
     {{-- Requests Table / Queue --}}
     <x-ui.card padding="none" class="overflow-hidden">
-        <div class="overflow-x-auto">
+        {{-- Desktop view --}}
+        <div class="hidden md:block overflow-x-auto">
             <table class="min-w-full divide-y divide-ue-border text-left">
                 <thead class="bg-ue-surface-subtle text-xs font-bold text-ue-text-muted uppercase tracking-wider">
                     <tr>
@@ -254,6 +255,107 @@ new class extends Component {
                     @endforelse
                 </tbody>
             </table>
+        </div>
+
+        {{-- Mobile card list view --}}
+        <div class="md:hidden divide-y divide-ue-border">
+            @forelse ($this->requests as $req)
+                @php
+                    $badgeVariant = match($req->status) {
+                        VerificationStatus::PENDING_REVIEW => 'pending',
+                        VerificationStatus::UNDER_REVIEW => 'info',
+                        VerificationStatus::RESUBMITTED => 'pending',
+                        VerificationStatus::NEEDS_MORE_INFORMATION => 'need-more-info',
+                        VerificationStatus::APPROVED => 'success',
+                        VerificationStatus::REJECTED => 'rejected',
+                        VerificationStatus::CONFLICT => 'warning',
+                        VerificationStatus::SUSPICIOUS => 'danger',
+                        default => 'neutral',
+                    };
+
+                    $roleBadgeVariant = match($req->role_requested) {
+                        'student' => 'student',
+                        'alumni' => 'alumni',
+                        'advisor' => 'advisor',
+                        default => 'neutral',
+                    };
+
+                    $roleLabel = match($req->role_requested) {
+                        'student' => 'Sinh viên',
+                        'alumni' => 'Cựu sinh viên',
+                        'advisor' => 'Cố vấn',
+                        default => $req->role_requested,
+                    };
+                @endphp
+                <div class="p-4 bg-ue-surface hover:bg-ue-surface-hover transition-colors flex flex-col gap-3">
+                    {{-- Requester + Role --}}
+                    <div class="flex items-start justify-between gap-2">
+                        <div>
+                            <div class="font-bold text-ue-text text-base leading-snug">{{ $req->submitted_name }}</div>
+                            <div class="text-xs text-ue-text-muted mt-0.5">{{ $req->submitted_email }}</div>
+                        </div>
+                        <x-ui.badge :variant="$roleBadgeVariant" size="sm">{{ $roleLabel }}</x-ui.badge>
+                    </div>
+
+                    {{-- Identity details (MSSV, Faculty/Academic program) --}}
+                    <div class="grid grid-cols-2 gap-x-4 gap-y-2 text-xs border-t border-b border-ue-border py-2.5">
+                        <div>
+                            <span class="text-ue-text-muted block text-[10px] uppercase font-bold tracking-wider">MSSV / Mã</span>
+                            <span class="font-semibold text-ue-text mt-0.5 block">
+                                {{ $req->submitted_student_code ?: 'N/A' }}
+                                @if ($req->submitted_cohort)
+                                    <span class="text-xs text-ue-text-muted font-normal"> (Khóa {{ $req->submitted_cohort }})</span>
+                                @endif
+                            </span>
+                        </div>
+                        <div>
+                            <span class="text-ue-text-muted block text-[10px] uppercase font-bold tracking-wider">Khoa & Ngành</span>
+                            <span class="font-semibold text-ue-text mt-0.5 block leading-tight">
+                                @if ($req->submittedFaculty)
+                                    {{ $req->submittedFaculty->name }}
+                                @else
+                                    N/A
+                                @endif
+                                @if ($req->submittedAcademicProgram)
+                                    <span class="text-[10px] text-ue-text-muted block font-normal mt-0.5">{{ $req->submittedAcademicProgram->name }}</span>
+                                @endif
+                            </span>
+                        </div>
+                    </div>
+
+                    {{-- Status + Submitted Time + Action --}}
+                    <div class="flex items-center justify-between gap-4 mt-1">
+                        <div class="flex flex-col gap-1">
+                            <div class="flex items-center gap-1.5">
+                                <x-ui.badge :variant="$badgeVariant" size="sm">
+                                    {{ match($req->status) {
+                                        VerificationStatus::PENDING_REVIEW => 'Chờ duyệt',
+                                        VerificationStatus::UNDER_REVIEW => 'Đang kiểm tra',
+                                        VerificationStatus::RESUBMITTED => 'Gửi lại',
+                                        VerificationStatus::NEEDS_MORE_INFORMATION => 'Yêu cầu thêm',
+                                        VerificationStatus::APPROVED => 'Đã duyệt',
+                                        VerificationStatus::REJECTED => 'Từ chối',
+                                        VerificationStatus::CONFLICT => 'Xung đột MSSV',
+                                        VerificationStatus::SUSPICIOUS => 'Nghi ngờ',
+                                        default => $req->status->value,
+                                    } }}
+                                </x-ui.badge>
+                            </div>
+                            <span class="text-[10px] text-ue-text-muted font-medium">
+                                Gửi: {{ $req->submitted_at ? $req->submitted_at->diffForHumans() : 'N/A' }}
+                            </span>
+                        </div>
+                        
+                        <x-ui.button href="{{ route('admin.verifications.detail', ['id' => $req->id]) }}" variant="secondary" size="sm" icon="eye">
+                            Chi tiết
+                        </x-ui.button>
+                    </div>
+                </div>
+            @empty
+                <div class="px-6 py-12 text-center">
+                    <x-ui.empty-state icon="shield" title="Không tìm thấy yêu cầu nào" description="Hiện tại không có hồ sơ xác thực nào khớp với bộ lọc của bạn." />
+                </div>
+            @endforelse
         </div>
 
         {{-- Pagination --}}

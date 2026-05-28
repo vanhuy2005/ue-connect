@@ -4,7 +4,7 @@ use App\Http\Controllers\Admin\VerificationEvidenceController;
 use Illuminate\Support\Facades\Route;
 
 // 1. Public & Guest Routes
-Route::view('/', 'welcome');
+Route::view('/', 'welcome')->name('landing');
 
 // 2. System pages
 Route::view('system/account-restricted', 'system.account-restricted')

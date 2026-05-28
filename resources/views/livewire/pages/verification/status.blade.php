@@ -485,4 +485,15 @@ new #[Layout('layouts.app')] class extends Component
             @endif
         </div>
     @endif
+
+    {{-- Privacy & Security Guarantee --}}
+    <div class="mt-8 p-4 bg-ue-neutral-25 rounded-2xl border border-ue-border flex items-start gap-3">
+        <x-ui.icon name="shield" size="md" class="text-ue-brand flex-shrink-0 mt-0.5" />
+        <div>
+            <h4 class="text-xs font-bold text-ue-neutral-900 mb-1">Cam kết bảo mật dữ liệu minh chứng</h4>
+            <p class="text-[11px] text-ue-text-secondary leading-relaxed">
+                Tất cả các tài liệu, hình ảnh hoặc thông tin minh chứng được đăng tải phục vụ cho mục đích đối chiếu và phê duyệt vai trò thành viên. Mọi tập tin minh chứng của bạn đều được mã hóa lưu trữ ở phân vùng bảo mật riêng tư và sẽ được <strong>tự động xóa vĩnh viễn khỏi hệ thống</strong> ngay sau khi quá trình đối soát phê duyệt hoàn tất.
+            </p>
+        </div>
+    </div>
 </div>
