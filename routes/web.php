@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\Admin\VerificationEvidenceController;
+use App\Models\Post;
 use Illuminate\Support\Facades\Route;
 
 // 1. Public & Guest Routes
@@ -27,6 +28,10 @@ Route::middleware(['auth', 'active.account'])->group(function () {
 Route::middleware(['auth', 'active.account', 'verified.identity'])->group(function () {
     Route::view('app/home', 'app.home')
         ->name('dashboard');
+
+    Route::get('app/posts/{post}', function (Post $post) {
+        return view('app.posts.show', ['post' => $post]);
+    })->name('posts.show');
 
     Route::view('app/profile/setup', 'app.profile-setup')
         ->name('profile.setup');
