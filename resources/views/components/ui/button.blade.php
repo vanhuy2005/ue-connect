@@ -53,32 +53,40 @@ $iconSize = match($size) {
 /** Variant visual tokens */
 $variantClasses = match($variant) {
     'primary' =>
-        'bg-ue-brand text-ue-text-inverse border-transparent ' .
-        'hover:bg-ue-brand-hover active:bg-ue-brand-active ' .
-        'focus-visible:bg-ue-brand',
+        'bg-ue-brand text-white border-transparent ' .
+        'hover:bg-ue-brand-hover hover:text-white ' .
+        'active:bg-ue-brand-active active:text-white ' .
+        'focus-visible:bg-ue-brand focus-visible:text-white',
 
     'secondary' =>
         'bg-ue-surface-hover text-ue-text border border-ue-border ' .
-        'hover:bg-ue-surface-pressed hover:border-ue-border-strong ' .
-        'active:bg-ue-surface-pressed',
+        'hover:bg-ue-surface-pressed hover:border-ue-border-strong hover:text-ue-text ' .
+        'active:bg-ue-surface-pressed active:text-ue-text',
 
     'outline' =>
-        'bg-transparent text-ue-text border border-ue-border ' .
-        'hover:bg-ue-surface-hover hover:border-ue-border-strong ' .
-        'active:bg-ue-surface-pressed',
+        'bg-white text-ue-brand border border-ue-brand-border ' .
+        'hover:bg-ue-brand-soft hover:border-ue-brand/30 hover:text-ue-brand-active ' .
+        'active:bg-ue-brand-soft-hover active:text-ue-brand-active',
 
     'ghost' =>
         'bg-transparent text-ue-text-secondary border border-transparent ' .
-        'hover:bg-ue-surface-hover hover:text-ue-text ' .
-        'active:bg-ue-surface-pressed',
+        'hover:bg-ue-brand-soft hover:text-ue-brand-active ' .
+        'active:bg-ue-brand-soft-hover active:text-ue-brand-active',
+
+    'soft' =>
+        'bg-ue-brand-soft text-ue-brand border border-transparent ' .
+        'hover:bg-ue-brand-soft-hover hover:text-ue-brand-active ' .
+        'active:bg-ue-brand-soft-hover active:text-ue-brand-active',
 
     'danger' =>
-        'bg-ue-danger text-ue-text-inverse border-transparent ' .
-        'hover:bg-[#B91C1C] active:bg-[#991B1B]',
+        'bg-ue-danger text-white border-transparent ' .
+        'hover:bg-red-700 hover:text-white ' .
+        'active:bg-red-800 active:text-white',
 
     'danger-outline' =>
-        'bg-transparent text-ue-danger border border-ue-danger ' .
-        'hover:bg-[rgba(220,38,38,0.06)] active:bg-[rgba(220,38,38,0.12)]',
+        'bg-white text-ue-danger border border-ue-danger ' .
+        'hover:bg-red-50 hover:text-red-700 hover:border-red-600 ' .
+        'active:bg-red-100 active:text-red-800 active:border-red-700',
 
     'link' =>
         'bg-transparent text-ue-brand border-transparent underline-offset-2 ' .
@@ -87,11 +95,13 @@ $variantClasses = match($variant) {
 
     'inverse' =>
         'bg-white text-ue-brand border-transparent ' .
-        'hover:bg-ue-brand-soft active:bg-ue-brand-soft-hover',
+        'hover:bg-ue-brand-soft hover:text-ue-brand ' .
+        'active:bg-ue-brand-soft-hover active:text-ue-brand',
 
     default =>
-        'bg-ue-brand text-ue-text-inverse border-transparent ' .
-        'hover:bg-ue-brand-hover active:bg-ue-brand-active',
+        'bg-ue-brand text-white border-transparent ' .
+        'hover:bg-ue-brand-hover hover:text-white ' .
+        'active:bg-ue-brand-active active:text-white',
 };
 
 $isDisabled   = $disabled || $loading;

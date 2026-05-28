@@ -16,9 +16,13 @@
 --}}
 
 @props([
-    'variant' => 'neutral',
-    'size'    => 'md',
-    'icon'    => null,
+    'variant'     => 'neutral',
+    'size'        => 'md',
+    'icon'        => null,
+    'href'        => null,
+    'interactive' => false,
+    'label'       => null,
+    'pressed'     => null,
 ])
 
 @php
@@ -78,7 +82,7 @@ $variantClasses = match($variant) {
 
     /* Neutral/default */
     default =>
-        'bg-ue-surface-hover text-ue-text-secondary border-ue-border',
+        'bg-white text-slate-700 border-slate-200',
 };
 
 /** Auto-assign icon if none provided and variant implies one */
@@ -96,8 +100,43 @@ $autoIcon = match($variant) {
 };
 
 $displayIcon = $icon ?? $autoIcon;
+$isInteractive = $interactive || $href;
 @endphp
 
+@if($href)
+<a
+    href="{{ $href }}"
+    @if($label) aria-label="{{ $label }}" @endif
+    {{ $attributes->class([
+        'ue-badge border font-semibold select-none transition-colors duration-sm ease-out ue-focus-ring',
+        $sizeClasses,
+        $variantClasses,
+        'hover:bg-ue-brand-soft hover:border-ue-brand/30 hover:text-ue-brand-active cursor-pointer',
+    ]) }}
+>
+    @if($displayIcon)
+        <x-ui.icon :name="$displayIcon" :size="$iconSize" aria-hidden="true" />
+    @endif
+    <span>{{ $slot }}</span>
+</a>
+@elseif($interactive)
+<button
+    type="button"
+    @if($label) aria-label="{{ $label }}" @endif
+    @if($pressed !== null) aria-pressed="{{ $pressed ? 'true' : 'false' }}" @endif
+    {{ $attributes->class([
+        'ue-badge border font-semibold select-none transition-colors duration-sm ease-out ue-focus-ring',
+        $sizeClasses,
+        $variantClasses,
+        'hover:bg-ue-brand-soft hover:border-ue-brand/30 hover:text-ue-brand-active cursor-pointer',
+    ]) }}
+>
+    @if($displayIcon)
+        <x-ui.icon :name="$displayIcon" :size="$iconSize" aria-hidden="true" />
+    @endif
+    <span>{{ $slot }}</span>
+</button>
+@else
 <span {{ $attributes->class([
     'ue-badge border font-semibold',
     $sizeClasses,
@@ -106,5 +145,6 @@ $displayIcon = $icon ?? $autoIcon;
     @if($displayIcon)
         <x-ui.icon :name="$displayIcon" :size="$iconSize" aria-hidden="true" />
     @endif
-    {{ $slot }}
+    <span>{{ $slot }}</span>
 </span>
+@endif
