@@ -90,6 +90,66 @@ class User extends Authenticatable
     }
 
     /**
+     * Get the user's posts.
+     *
+     * @return HasMany<Post, $this>
+     */
+    public function posts(): HasMany
+    {
+        return $this->hasMany(Post::class);
+    }
+
+    /**
+     * Get the user's comments.
+     *
+     * @return HasMany<Comment, $this>
+     */
+    public function comments(): HasMany
+    {
+        return $this->hasMany(Comment::class);
+    }
+
+    /**
+     * Get the user's post likes.
+     *
+     * @return HasMany<PostLike, $this>
+     */
+    public function postLikes(): HasMany
+    {
+        return $this->hasMany(PostLike::class);
+    }
+
+    /**
+     * Get the user's post saves.
+     *
+     * @return HasMany<PostSave, $this>
+     */
+    public function postSaves(): HasMany
+    {
+        return $this->hasMany(PostSave::class);
+    }
+
+    /**
+     * Get the user's comment likes.
+     *
+     * @return HasMany<CommentLike, $this>
+     */
+    public function commentLikes(): HasMany
+    {
+        return $this->hasMany(CommentLike::class);
+    }
+
+    /**
+     * Get the user's reports.
+     *
+     * @return HasMany<Report, $this>
+     */
+    public function reports(): HasMany
+    {
+        return $this->hasMany(Report::class, 'reporter_id');
+    }
+
+    /**
      * Get user's identity verification requests.
      */
     public function verificationRequests(): HasMany
