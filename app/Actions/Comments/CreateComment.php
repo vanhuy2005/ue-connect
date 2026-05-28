@@ -9,6 +9,7 @@ use App\Models\Post;
 use App\Models\User;
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Support\Facades\Gate;
+use Illuminate\Support\Facades\Validator;
 use Illuminate\Validation\ValidationException;
 
 class CreateComment
@@ -23,6 +24,11 @@ class CreateComment
      */
     public function execute(User $user, Post $post, array $data): Comment
     {
+        Validator::make($data, [
+            'body' => 'required|string|max:1000',
+            'parent_id' => 'nullable|integer',
+        ])->validate();
+
         Gate::forUser($user)->authorize('view', $post);
         Gate::forUser($user)->authorize('create', Comment::class);
 
