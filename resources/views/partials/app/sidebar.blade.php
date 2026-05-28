@@ -54,6 +54,12 @@ $navItems = [
         'active' => false,
         // TODO: route('notifications.index')
     ],
+    [
+        'icon'   => 'bookmark',
+        'label'  => 'Đã lưu',
+        'href'   => route('posts.saved'),
+        'active' => request()->routeIs('posts.saved'),
+    ],
 ];
 @endphp
 
@@ -86,7 +92,7 @@ $navItems = [
     </ul>
 
     {{-- Admin section --}}
-    @can('review_verification')
+    @if(auth()->user()->can('review_verification') || auth()->user()->can('manage_reports'))
         <div class="mt-6 border-t border-ue-border pt-4 flex flex-col gap-1">
             <p class="px-3 text-2xs font-bold uppercase tracking-wider text-ue-text-muted">
                 Quản trị
@@ -101,16 +107,29 @@ $navItems = [
                 <span>Tổng quan quản trị</span>
             </a>
 
-            <a
-                href="{{ route('admin.verifications.queue') }}"
-                class="ue-nav-link"
-                @if(request()->routeIs('admin.verifications.*')) aria-current="page" @endif
-            >
-                <x-ui.icon name="shield-check" size="md" />
-                <span>Duyệt xác thực</span>
-            </a>
+            @can('review_verification')
+                <a
+                    href="{{ route('admin.verifications.queue') }}"
+                    class="ue-nav-link"
+                    @if(request()->routeIs('admin.verifications.*')) aria-current="page" @endif
+                >
+                    <x-ui.icon name="shield-check" size="md" />
+                    <span>Duyệt xác thực</span>
+                </a>
+            @endcan
+
+            @can('manage_reports')
+                <a
+                    href="{{ route('admin.reports.index') }}"
+                    class="ue-nav-link"
+                    @if(request()->routeIs('admin.reports.*')) aria-current="page" @endif
+                >
+                    <x-ui.icon name="flag" size="md" />
+                    <span>Báo cáo vi phạm</span>
+                </a>
+            @endcan
         </div>
-    @endcan
+    @endif
 
     {{-- Profile link + Logout at bottom --}}
     <div class="border-t border-ue-border pt-3 mt-3 flex flex-col gap-1">

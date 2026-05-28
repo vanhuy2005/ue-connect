@@ -68,4 +68,24 @@ class Profile extends Model
     {
         return $this->hasOne(AdvisorProfile::class);
     }
+
+    /**
+     * Get the faculty name dynamically.
+     */
+    public function getFacultyAttribute(): ?string
+    {
+        if ($this->role_type === 'student' && $this->studentProfile && $this->studentProfile->faculty) {
+            return $this->studentProfile->faculty->name;
+        }
+
+        if ($this->role_type === 'alumni' && $this->alumniProfile && $this->alumniProfile->faculty) {
+            return $this->alumniProfile->faculty->name;
+        }
+
+        if ($this->role_type === 'advisor' && $this->advisorProfile && $this->advisorProfile->faculty) {
+            return $this->advisorProfile->faculty->name;
+        }
+
+        return null;
+    }
 }

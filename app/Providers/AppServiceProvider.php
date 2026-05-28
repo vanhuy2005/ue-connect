@@ -2,6 +2,9 @@
 
 namespace App\Providers;
 
+use App\Models\Comment;
+use App\Models\Post;
+use Illuminate\Database\Eloquent\Relations\Relation;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\ServiceProvider;
 use SocialiteProviders\Manager\SocialiteWasCalled;
@@ -26,5 +29,10 @@ class AppServiceProvider extends ServiceProvider
             SocialiteWasCalled::class,
             MicrosoftExtendSocialite::class
         );
+
+        Relation::morphMap([
+            'post' => Post::class,
+            'comment' => Comment::class,
+        ]);
     }
 }

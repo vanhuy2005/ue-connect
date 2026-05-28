@@ -1,6 +1,9 @@
 <?php
 
 use App\Http\Controllers\Admin\VerificationEvidenceController;
+use App\Models\Post;
+use App\Models\Report;
+use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Route;
 
 // 1. Public & Guest Routes
@@ -28,11 +31,20 @@ Route::middleware(['auth', 'active.account', 'verified.identity'])->group(functi
     Route::view('app/home', 'app.home')
         ->name('dashboard');
 
+    Route::get('app/posts/{post}', function (Post $post) {
+        Gate::authorize('view', $post);
+
+        return view('app.posts.show', ['post' => $post]);
+    })->name('posts.show');
+
     Route::view('app/profile/setup', 'app.profile-setup')
         ->name('profile.setup');
 
     Route::view('app/profile', 'profile')
         ->name('profile');
+
+    Route::view('app/saved-posts', 'app.saved-posts')
+        ->name('posts.saved');
 });
 
 // 5. Admin Panel (protected by account status and review permission)
@@ -49,6 +61,14 @@ Route::middleware(['auth', 'active.account', 'can:review_verification'])->group(
     Route::get('admin/verifications/{id}', function ($id) {
         return view('admin.verification-detail', ['id' => $id]);
     })->name('admin.verifications.detail');
+});
+
+// Admin reports moderation queue (protected by account status and manage_reports permission)
+Route::middleware(['auth', 'active.account', 'can:manage_reports'])->group(function () {
+    Route::view('admin/reports', 'admin.reports-queue')->name('admin.reports.index');
+    Route::get('admin/reports/{report}', function (Report $report) {
+        return view('admin.report-detail', ['report' => $report]);
+    })->name('admin.reports.show');
 });
 
 // 6. Legacy redirects
