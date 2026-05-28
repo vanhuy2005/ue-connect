@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="docs\04-design\primary-logo.png" alt="UEConnect Logo" width="760">
+  <img src="public/images/brand/primary-logo-nobg.png" alt="UEConnect Logo" width="760">
 </p>
 
 <p align="center">
