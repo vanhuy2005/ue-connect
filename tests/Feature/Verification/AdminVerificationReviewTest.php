@@ -206,7 +206,6 @@ class AdminVerificationReviewTest extends TestCase
             'academic_program_id' => $this->program->id,
         ]);
 
-
         $this->actingAs($this->admin);
 
         $component = Volt::test('pages.admin.verification-detail', ['id' => $this->request->id])
