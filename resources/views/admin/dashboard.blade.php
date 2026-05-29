@@ -1,4 +1,4 @@
-<x-app-layout>
+<x-app-layout shell="admin">
     <x-slot name="title">Tổng quan quản trị</x-slot>
 
     <div class="py-6">

@@ -26,8 +26,6 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Validation\ValidationException;
 use Livewire\Volt\Volt;
 use Tests\TestCase;
-use Illuminate\Support\Facades\Gate;
-use Illuminate\Support\Facades\Auth;
 
 class MessagingTest extends TestCase
 {
@@ -154,9 +152,8 @@ class MessagingTest extends TestCase
 
         $this->actingAs($this->stranger);
 
-        $this->expectException(\Symfony\Component\HttpKernel\Exception\HttpException::class);
-
-        Volt::test('pages.app.messages', ['activeConversation' => $conversation]);
+        Volt::test('pages.app.messages', ['activeConversation' => $conversation])
+            ->assertForbidden();
     }
 
     public function test_non_participant_cannot_load_conversation_via_livewire_selection(): void
@@ -166,10 +163,9 @@ class MessagingTest extends TestCase
 
         $this->actingAs($this->stranger);
 
-        $this->expectException(\Symfony\Component\HttpKernel\Exception\HttpException::class);
-
         Volt::test('pages.app.messages')
-            ->call('selectConversation', $conversation->id);
+            ->call('selectConversation', $conversation->id)
+            ->assertForbidden();
     }
 
     public function test_user_can_send_text_message(): void

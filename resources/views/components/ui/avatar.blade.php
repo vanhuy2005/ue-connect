@@ -16,6 +16,7 @@
 --}}
 
 @props([
+    'user'     => null,
     'src'      => null,
     'alt'      => '',
     'size'     => 'md',
@@ -24,6 +25,26 @@
 ])
 
 @php
+// When a User model is provided, resolve src and fallback automatically.
+if ($user) {
+    $profile = $user->profile;
+    $avatarMedia = $profile?->avatar ?? null;
+    if ($avatarMedia && $avatarMedia->path) {
+        $src = \Illuminate\Support\Facades\Storage::url($avatarMedia->path);
+    }
+    if (! $fallback) {
+        $displayName = $profile?->display_name ?? $user->name ?? '';
+        // Build up to 2 initials from the name
+        $parts = array_filter(explode(' ', trim($displayName)));
+        $fallback = count($parts) >= 2
+            ? mb_strtoupper(mb_substr($parts[0], 0, 1) . mb_substr(end($parts), 0, 1))
+            : mb_strtoupper(mb_substr($displayName, 0, 2));
+    }
+    if (! $alt) {
+        $alt = $user->name ?? 'Ảnh đại diện';
+    }
+}
+
 $sizeClasses = match($size) {
     'xs'  => 'w-6 h-6 text-2xs',
     'sm'  => 'w-8 h-8 text-xs',
@@ -43,6 +64,7 @@ $initials = $fallback
     ? strtoupper(mb_substr($fallback, 0, 2))
     : null;
 @endphp
+
 
 <span
     {{ $attributes->class([

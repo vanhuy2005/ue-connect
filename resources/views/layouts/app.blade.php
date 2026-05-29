@@ -34,23 +34,34 @@
         <a href="#main-content" class="skip-link">Bỏ qua và đến nội dung chính</a>
 
         {{-- App shell --}}
-        <div class="ue-shell">
-            {{-- Desktop sidebar --}}
-            @include('partials.app.sidebar')
+        <div class="ue-shell ue-shell--{{ $shell }}">
+            {{-- Desktop sidebar (only for authenticated layouts) --}}
+            @if(in_array($shell, ['social', 'admin', 'conversation']))
+                @include('partials.app.sidebar')
+            @endif
 
             {{-- Main column --}}
             <div class="ue-shell__main flex flex-col min-h-full">
 
-                {{-- Topbar --}}
-                @include('partials.app.topbar')
+                {{-- Topbar (Only for admin or custom shells, NOT social, conversation, guest, or auth) --}}
+                @if(!in_array($shell, ['social', 'conversation', 'guest', 'auth']))
+                    @include('partials.app.topbar')
+                @endif
+
+                {{-- Threads-style mobile topbar for social shell (desktop uses sidebar) --}}
+                @if($shell === 'social')
+                    @include('partials.app.social-mobile-topbar')
+                @endif
 
                 {{-- Account status banner for restrictions --}}
-                <x-ui.account-status-banner />
+                @if(in_array($shell, ['social', 'admin', 'conversation']))
+                    <x-ui.account-status-banner />
+                @endif
 
                 {{-- Page content --}}
                 <main
                     id="main-content"
-                    class="flex-1 pb-16 lg:pb-0"
+                    class="flex-1 {{ in_array($shell, ['social', 'admin', 'conversation']) ? 'pb-16 lg:pb-0' : '' }}"
                     tabindex="-1"
                 >
                     {{ $slot }}
@@ -60,7 +71,9 @@
         </div>
 
         {{-- Mobile bottom nav --}}
-        @include('partials.app.mobile-bottom-nav')
+        @if(in_array($shell, ['social', 'admin', 'conversation']))
+            @include('partials.app.mobile-bottom-nav')
+        @endif
 
         {{-- Additional script slots --}}
         @stack('scripts')
