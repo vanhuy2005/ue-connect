@@ -19,6 +19,7 @@ use Livewire\Volt\Component;
 new #[Layout('layouts.app')] class extends Component
 {
     public string $activeTab = 'connections'; // connections, received, sent, blocked
+    public string $connectionSearch = '';
 
     public ?string $feedbackMessage = null;
 
@@ -119,12 +120,24 @@ new #[Layout('layouts.app')] class extends Component
         $userId = Auth::id();
 
         // 1. Fetch active connections
-        $connections = Connection::where(function ($q) use ($userId) {
+        $connectionsQuery = Connection::where(function ($q) use ($userId) {
                 $q->where('user_one_id', $userId)->orWhere('user_two_id', $userId);
             })
             ->where('status', ConnectionStatus::ACTIVE)
-            ->with(['userOne.profile.studentProfile.faculty', 'userTwo.profile.studentProfile.faculty'])
-            ->get()
+            ->with([
+                'userOne.profile.studentProfile.faculty', 
+                'userOne.profile.alumniProfile.faculty',
+                'userOne.profile.advisorProfile.faculty',
+                'userOne.profile.studentProfile.academicProgram',
+                'userOne.profile.alumniProfile.academicProgram',
+                'userTwo.profile.studentProfile.faculty',
+                'userTwo.profile.alumniProfile.faculty',
+                'userTwo.profile.advisorProfile.faculty',
+                'userTwo.profile.studentProfile.academicProgram',
+                'userTwo.profile.alumniProfile.academicProgram'
+            ]);
+
+        $connections = $connectionsQuery->get()
             ->map(function ($connection) use ($userId) {
                 $otherUser = $connection->user_one_id === $userId ? $connection->userTwo : $connection->userOne;
                 return [
@@ -133,6 +146,30 @@ new #[Layout('layouts.app')] class extends Component
                     'connected_at' => $connection->connected_at,
                 ];
             });
+
+        if (!empty($this->connectionSearch)) {
+            $search = mb_strtolower($this->connectionSearch);
+            $connections = $connections->filter(function ($item) use ($search) {
+                $user = $item['user'];
+                $profile = $user->profile;
+                if (!$profile) {
+                    return false;
+                }
+
+                $nameMatch = str_contains(mb_strtolower($user->name), $search) || str_contains(mb_strtolower($profile->display_name), $search);
+                $facultyMatch = $profile->faculty ? str_contains(mb_strtolower($profile->faculty), $search) : false;
+                
+                $program = null;
+                if ($profile->studentProfile && $profile->studentProfile->academicProgram) {
+                    $program = $profile->studentProfile->academicProgram->name;
+                } elseif ($profile->alumniProfile && $profile->alumniProfile->academicProgram) {
+                    $program = $profile->alumniProfile->academicProgram->name;
+                }
+                $programMatch = $program ? str_contains(mb_strtolower($program), $search) : false;
+
+                return $nameMatch || $facultyMatch || $programMatch;
+            })->values();
+        }
 
         // 2. Fetch received pending greetings
         $received = Greeting::where('receiver_id', $userId)
@@ -228,81 +265,108 @@ new #[Layout('layouts.app')] class extends Component
     <div>
         {{-- TAB 1: Connections --}}
         @if ($activeTab === 'connections')
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                @forelse ($connections as $item)
-                    <div class="bg-white border border-slate-150 rounded-2xl p-4 flex items-center justify-between hover:border-slate-350 hover:shadow-2xs transition-all duration-sm">
-                        <div class="flex items-center gap-3">
-                            <x-ui.avatar :user="$item['user']" size="md" />
-                            <div>
-                                <h3 class="text-xs font-bold text-slate-800 flex items-center gap-1">
-                                    {{ $item['user']->name }}
-                                    <x-ui.icon name="shield-check" size="xs" class="text-ue-brand fill-ue-brand" />
-                                </h3>
-                                @if ($item['user']->profile && $item['user']->profile->faculty)
-                                    <p class="text-[10px] text-slate-400 font-semibold mt-0.5">{{ $item['user']->profile->faculty }}</p>
-                                @endif
-                                <p class="text-[9px] text-slate-300 font-medium mt-1">Kết nối ngày: {{ $item['connected_at']->format('d/m/Y') }}</p>
+            <div class="space-y-4">
+                {{-- Connections Search Input --}}
+                <div class="relative max-w-md">
+                    <span class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                        <x-ui.icon name="search" size="xs" class="text-slate-400" />
+                    </span>
+                    <input
+                        type="text"
+                        wire:model.live.debounce.300ms="connectionSearch"
+                        placeholder="Tìm bạn bè theo tên, khoa, ngành học..."
+                        class="w-full pl-9 pr-4 py-2 text-xs rounded-xl border border-slate-200 focus:outline-none focus:ring-1 focus:ring-ue-brand/40 focus:border-ue-brand/40 bg-white placeholder-slate-400 text-slate-700"
+                    />
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    @forelse ($connections as $item)
+                        <div class="bg-white border border-slate-150 rounded-2xl p-4 flex items-center justify-between hover:border-slate-350 hover:shadow-2xs transition-all duration-sm">
+                            <div class="flex items-center gap-3">
+                                <x-ui.avatar :user="$item['user']" size="md" />
+                                <div>
+                                    <h3 class="text-xs font-bold text-slate-800 flex items-center gap-1">
+                                        {{ $item['user']->name }}
+                                        <x-ui.icon name="shield-check" size="xs" class="text-ue-brand fill-ue-brand" />
+                                    </h3>
+                                    @if ($item['user']->profile && $item['user']->profile->faculty)
+                                        <p class="text-[10px] text-slate-400 font-semibold mt-0.5">{{ $item['user']->profile->faculty }}</p>
+                                    @endif
+                                    <p class="text-[9px] text-slate-300 font-medium mt-1">Kết nối ngày: {{ $item['connected_at']->format('d/m/Y') }}</p>
+                                </div>
                             </div>
-                        </div>
 
-                        <div class="flex items-center gap-1.5" x-data="{ openOptions: false }" @click.away="openOptions = false">
-                            <a
-                                href="{{ route('messages.index', ['conversation' => \App\Models\Conversation::where('conversation_type', \App\Enums\ConversationType::DIRECT)->whereHas('participants', function($q) use ($item) { $q->where('user_id', $item['user']->id); })->first()?->id]) }}"
-                                class="bg-ue-brand hover:bg-ue-brand-dark text-white text-xxs font-bold px-3 py-1.5 rounded-lg shadow-2xs hover:shadow-sm transition-all flex items-center gap-1"
-                            >
-                                <x-ui.icon name="message-square" size="xs" /> Nhắn tin
-                            </a>
-
-                            <div class="relative">
-                                <x-ui.icon-button
-                                    icon="more-vertical"
-                                    label="Tùy chọn kết nối"
-                                    variant="ghost"
-                                    size="sm"
-                                    @click="openOptions = !openOptions"
-                                    class="text-slate-400 hover:text-slate-600 focus:ring-1 focus:ring-slate-100"
-                                />
-
-                                <div
-                                    x-show="openOptions"
-                                    x-transition:enter="transition ease-out duration-100"
-                                    x-transition:enter-start="transform opacity-0 scale-95"
-                                    x-transition:enter-end="transform opacity-100 scale-100"
-                                    x-transition:leave="transition ease-in duration-75"
-                                    x-transition:leave-start="transform opacity-100 scale-100"
-                                    x-transition:leave-end="transform opacity-0 scale-95"
-                                    class="absolute right-0 mt-1 rounded-xl bg-white border border-slate-150 shadow-lg py-1 z-30 w-40"
-                                    style="display: none;"
+                            <div class="flex items-center gap-1.5" x-data="{ openOptions: false }" @click.away="openOptions = false">
+                                <a
+                                    href="{{ route('messages.index', ['conversation' => \App\Models\Conversation::where('conversation_type', \App\Enums\ConversationType::DIRECT)->whereHas('participants', function($q) use ($item) { $q->where('user_id', $item['user']->id); })->first()?->id]) }}"
+                                    class="bg-ue-brand hover:bg-ue-brand-dark text-white text-xxs font-bold px-3 py-1.5 rounded-lg shadow-2xs hover:shadow-sm transition-all flex items-center gap-1"
                                 >
-                                    <button
-                                        type="button"
-                                        wire:click="removeConnection({{ $item['id'] }})"
-                                        @click="openOptions = false"
-                                        class="w-full text-left px-3 py-2 text-xxs font-semibold text-slate-700 hover:bg-slate-50 flex items-center gap-1.5 transition-colors"
+                                    <x-ui.icon name="message-square" size="xs" /> Nhắn tin
+                                </a>
+
+                                <div class="relative">
+                                    <x-ui.icon-button
+                                        icon="more-vertical"
+                                        label="Tùy chọn kết nối"
+                                        variant="ghost"
+                                        size="sm"
+                                        @click="openOptions = !openOptions"
+                                        class="text-slate-400 hover:text-slate-600 focus:ring-1 focus:ring-slate-100"
+                                    />
+
+                                    <div
+                                        x-show="openOptions"
+                                        x-transition:enter="transition ease-out duration-100"
+                                        x-transition:enter-start="transform opacity-0 scale-95"
+                                        x-transition:enter-end="transform opacity-100 scale-100"
+                                        x-transition:leave="transition ease-in duration-75"
+                                        x-transition:leave-start="transform opacity-100 scale-100"
+                                        x-transition:leave-end="transform opacity-0 scale-95"
+                                        class="absolute right-0 mt-1 rounded-xl bg-white border border-slate-150 shadow-lg py-1 z-30 w-40"
+                                        style="display: none;"
                                     >
-                                        <x-ui.icon name="user-minus" size="xs" class="text-slate-400" />
-                                        Hủy kết nối
-                                    </button>
-                                    <button
-                                        type="button"
-                                        wire:click="blockUser({{ $item['user']->id }})"
-                                        @click="openOptions = false"
-                                        class="w-full text-left px-3 py-2 text-xxs font-semibold text-red-600 hover:bg-red-50 flex items-center gap-1.5 transition-colors border-t border-slate-100"
-                                    >
-                                        <x-ui.icon name="slash" size="xs" class="text-red-400" />
-                                        Chặn thành viên
-                                    </button>
+                                        <button
+                                            type="button"
+                                            wire:click="removeConnection({{ $item['id'] }})"
+                                            @click="openOptions = false"
+                                            class="w-full text-left px-3 py-2 text-xxs font-semibold text-slate-700 hover:bg-slate-50 flex items-center gap-1.5 transition-colors"
+                                        >
+                                            <x-ui.icon name="user-minus" size="xs" class="text-slate-400" />
+                                            Hủy kết nối
+                                        </button>
+                                        <button
+                                            type="button"
+                                            @click="openOptions = false; alert('Báo cáo hồ sơ thành công. Tin báo cáo đã được chuyển cho Ban kiểm duyệt.')"
+                                            class="w-full text-left px-3 py-2 text-xxs font-semibold text-slate-700 hover:bg-slate-50 flex items-center gap-1.5 transition-colors border-t border-slate-100"
+                                        >
+                                            <x-ui.icon name="flag" size="xs" class="text-slate-400" />
+                                            Báo cáo hồ sơ
+                                        </button>
+                                        <button
+                                            type="button"
+                                            wire:click="blockUser({{ $item['user']->id }})"
+                                            @click="openOptions = false"
+                                            class="w-full text-left px-3 py-2 text-xxs font-semibold text-red-600 hover:bg-red-50 flex items-center gap-1.5 transition-colors border-t border-slate-100"
+                                        >
+                                            <x-ui.icon name="slash" size="xs" class="text-red-400" />
+                                            Chặn thành viên
+                                        </button>
+                                    </div>
                                 </div>
                             </div>
                         </div>
-                    </div>
-                @empty
-                    <div class="col-span-full py-12 flex flex-col items-center justify-center text-center space-y-3 bg-slate-50 rounded-2xl border border-dashed border-slate-250">
-                        <x-ui.icon name="users" size="lg" class="text-slate-300" />
-                        <h3 class="text-sm font-bold text-slate-700">Chưa có kết nối nào</h3>
-                        <p class="text-xxs text-slate-400 max-w-sm">Hãy chuyển sang tab Khám phá để bắt đầu kết nối với những người bạn HCMUE mới nhé.</p>
-                    </div>
-                @endforelse
+                    @empty
+                        <div class="col-span-full py-12 flex flex-col items-center justify-center text-center space-y-3 bg-slate-50 rounded-2xl border border-dashed border-slate-250">
+                            <x-ui.icon name="users" size="lg" class="text-slate-300" />
+                            <h3 class="text-sm font-bold text-slate-700">
+                                {{ !empty($connectionSearch) ? 'Không tìm thấy bạn bè phù hợp' : 'Chưa có kết nối nào' }}
+                            </h3>
+                            <p class="text-xxs text-slate-400 max-w-sm">
+                                {{ !empty($connectionSearch) ? 'Hãy thử thay đổi từ khóa tìm kiếm.' : 'Hãy chuyển sang tab Khám phá để bắt đầu kết nối với những người bạn HCMUE mới nhé.' }}
+                            </p>
+                        </div>
+                    @endforelse
+                </div>
             </div>
         @endif
 

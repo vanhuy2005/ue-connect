@@ -53,6 +53,9 @@ Route::middleware(['auth', 'active.account', 'verified.identity'])->group(functi
     Route::view('app/connections', 'app.connections')
         ->name('connections.index');
 
+    Route::view('app/notifications', 'app.notifications')
+        ->name('notifications.index');
+
     Route::get('app/messages/{conversation?}', function (?Conversation $conversation = null) {
         if ($conversation) {
             Gate::authorize('view', $conversation);

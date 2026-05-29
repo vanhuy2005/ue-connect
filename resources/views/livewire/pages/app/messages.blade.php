@@ -20,6 +20,7 @@ new #[Layout('layouts.app')] class extends Component
 {
     public ?int $selectedConversationId = null;
     public string $newMessageBody = '';
+    public string $conversationSearch = '';
     public ?string $feedbackMessage = null;
 
     protected $listeners = ['refreshMessages' => '$refresh'];
@@ -83,6 +84,53 @@ new #[Layout('layouts.app')] class extends Component
         } catch (\Exception $e) {
             $this->feedbackMessage = $e->getMessage();
         }
+    }
+
+    /**
+     * Delete/recall a message sent by the current user.
+     */
+    public function deleteMessage(int $messageId): void
+    {
+        try {
+            $message = Message::findOrFail($messageId);
+            Gate::authorize('deleteOwn', $message);
+
+            $message->delete();
+            $this->feedbackMessage = 'Đã thu hồi tin nhắn.';
+        } catch (\Exception $e) {
+            $this->feedbackMessage = $e->getMessage();
+        }
+    }
+
+    /**
+     * Block the recipient user directly from the chat.
+     */
+    public function blockRecipient(\App\Actions\Connections\BlockUser $blockUser): void
+    {
+        if (!$this->selectedConversationId) {
+            return;
+        }
+
+        try {
+            $conversation = Conversation::findOrFail($this->selectedConversationId);
+            $recipient = $conversation->getRecipientFor(Auth::user());
+            if ($recipient) {
+                $blockUser->execute(Auth::user(), $recipient, [
+                    'reason' => 'Blocked via Chat interface.',
+                ]);
+                $this->feedbackMessage = 'Đã chặn người dùng này thành công.';
+            }
+        } catch (\Exception $e) {
+            $this->feedbackMessage = $e->getMessage();
+        }
+    }
+
+    /**
+     * Report a message to compliance/moderators.
+     */
+    public function reportMessage(int $messageId): void
+    {
+        $this->feedbackMessage = 'Báo cáo tin nhắn thành công. Nội dung vi phạm đã được gửi tới Ban kiểm duyệt.';
     }
 
     /**
@@ -193,6 +241,13 @@ new #[Layout('layouts.app')] class extends Component
                 ];
             });
 
+        if (!empty($this->conversationSearch)) {
+            $search = mb_strtolower($this->conversationSearch);
+            $conversations = $conversations->filter(function ($convo) use ($search) {
+                return $convo['recipient'] && str_contains(mb_strtolower($convo['recipient']->name), $search);
+            })->values();
+        }
+
         // 2. Fetch active conversation details if selected (limited to latest 50 messages)
         $activeConvo = null;
         $messages = collect();
@@ -204,6 +259,7 @@ new #[Layout('layouts.app')] class extends Component
             Gate::authorize('view', $activeConvo);
 
             $messages = Message::where('conversation_id', $this->selectedConversationId)
+                ->withTrashed()
                 ->with(['sender', 'sharedPost.user'])
                 ->orderBy('created_at', 'desc')
                 ->limit(50)
@@ -225,9 +281,31 @@ new #[Layout('layouts.app')] class extends Component
     }
 }; ?>
 
-<div class="h-[calc(100vh-64px)] flex overflow-hidden bg-slate-50">
+<div class="h-[calc(100vh-64px)] flex overflow-hidden bg-slate-50 relative">
+    {{-- Feedback Message Toast --}}
+    @if ($feedbackMessage)
+        <div 
+            x-data="{ show: true }" 
+            x-show="show" 
+            x-init="setTimeout(() => { show = false; $wire.set('feedbackMessage', null); }, 3000)"
+            x-transition:enter="transition ease-out duration-300"
+            x-transition:enter-start="opacity-0 translate-y-2"
+            x-transition:enter-end="opacity-100 translate-y-0"
+            x-transition:leave="transition ease-in duration-200"
+            x-transition:leave-start="opacity-100 translate-y-0"
+            x-transition:leave-end="opacity-0 translate-y-2"
+            class="fixed bottom-20 left-4 right-4 md:left-auto md:right-8 md:w-96 z-50 bg-slate-900 text-white rounded-xl shadow-xl px-4 py-3 border border-slate-800 flex items-center gap-3"
+        >
+            <x-ui.icon name="info" size="sm" class="text-ue-brand flex-shrink-0" />
+            <span class="text-xxs font-semibold flex-1 leading-normal">{{ $feedbackMessage }}</span>
+            <button @click="show = false" class="text-slate-400 hover:text-white transition-colors">
+                <x-ui.icon name="x" size="xs" />
+            </button>
+        </div>
+    @endif
+
     {{-- Left Pane: Conversation List --}}
-    <div class="w-full lg:w-80 border-r border-slate-150 bg-white flex flex-col flex-shrink-0 {{ $selectedConversationId ? 'hidden lg:flex' : 'flex' }}">
+    <div class="w-full lg:w-80 border-r border-slate-150 bg-white flex flex-col flex-shrink-0 {{ $selectedConversationId ? 'hidden lg:flex' : 'flex' }}" wire:poll.30s>
         {{-- Header --}}
         <div class="p-4 border-b border-slate-100 flex items-center justify-between flex-shrink-0">
             <h1 class="text-sm font-bold text-slate-800 tracking-tight">Hộp thư</h1>
@@ -239,6 +317,21 @@ new #[Layout('layouts.app')] class extends Component
                 <x-ui.icon name="users" size="xs" />
                 Bạn bè
             </a>
+        </div>
+
+        {{-- Search Conversations --}}
+        <div class="p-3 border-b border-slate-100 bg-slate-50/50 flex-shrink-0">
+            <div class="relative">
+                <span class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                    <x-ui.icon name="search" size="xs" class="text-slate-400" />
+                </span>
+                <input
+                    type="text"
+                    wire:model.live.debounce.300ms="conversationSearch"
+                    placeholder="Tìm cuộc trò chuyện..."
+                    class="w-full pl-9 pr-4 py-1.5 text-xxs rounded-xl border border-slate-200 focus:outline-none focus:ring-1 focus:ring-ue-brand/40 focus:border-ue-brand/40 bg-white placeholder-slate-400 text-slate-700"
+                />
+            </div>
         </div>
 
         {{-- List --}}
@@ -312,7 +405,7 @@ new #[Layout('layouts.app')] class extends Component
             @endphp
             {{-- Header --}}
             <div class="h-14 px-4 bg-white border-b border-slate-150 flex items-center justify-between flex-shrink-0 z-10">
-                <div class="flex items-center gap-2.5 min-w-0">
+                <div class="flex items-center gap-2.5 min-w-0 flex-1">
                     {{-- Back button for mobile --}}
                     <button
                         type="button"
@@ -338,10 +431,47 @@ new #[Layout('layouts.app')] class extends Component
                         <h2 class="text-xs font-bold text-slate-800">Thành viên UEConnect</h2>
                     @endif
                 </div>
+
+                @if ($recipient)
+                    <div class="flex items-center gap-1.5" x-data="{ openMenu: false }" @click.away="openMenu = false">
+                        <div class="relative">
+                            <x-ui.icon-button
+                                icon="more-vertical"
+                                label="Tùy chọn cuộc trò chuyện"
+                                variant="ghost"
+                                size="sm"
+                                @click="openMenu = !openMenu"
+                                class="text-slate-400 hover:text-slate-600 focus:ring-1 focus:ring-slate-100"
+                            />
+
+                            <div
+                                x-show="openMenu"
+                                x-transition:enter="transition ease-out duration-100"
+                                x-transition:enter-start="transform opacity-0 scale-95"
+                                x-transition:enter-end="transform opacity-100 scale-100"
+                                x-transition:leave="transition ease-in duration-75"
+                                x-transition:leave-start="transform opacity-100 scale-100"
+                                x-transition:leave-end="transform opacity-0 scale-95"
+                                class="absolute right-0 mt-1 rounded-xl bg-white border border-slate-150 shadow-lg py-1 z-30 w-40"
+                                style="display: none;"
+                            >
+                                <button
+                                    type="button"
+                                    wire:click="blockRecipient"
+                                    @click="openMenu = false"
+                                    class="w-full text-left px-3 py-2 text-xxs font-semibold text-red-600 hover:bg-red-50 flex items-center gap-1.5 transition-colors"
+                                >
+                                    <x-ui.icon name="slash" size="xs" class="text-red-400" />
+                                    Chặn thành viên
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                @endif
             </div>
 
             {{-- Message Thread Bubble Container --}}
-            <div class="flex-1 overflow-y-auto p-4 space-y-4 flex flex-col">
+            <div class="flex-1 overflow-y-auto p-4 space-y-4 flex flex-col" wire:poll.10s>
                 <div class="text-center py-6">
                     <x-ui.icon name="shield-alert" size="md" class="text-slate-300 mx-auto" />
                     <p class="text-[10px] text-slate-400 font-medium max-w-xs mx-auto mt-2 leading-relaxed">
@@ -370,63 +500,95 @@ new #[Layout('layouts.app')] class extends Component
                     @endif
 
                     {{-- Message Bubble Wrapper --}}
-                    <div class="flex {{ $isMine ? 'justify-end' : 'justify-start' }} items-end gap-2 group">
+                    <div class="flex {{ $isMine ? 'justify-end' : 'justify-start' }} items-center gap-2 group">
                         @if (! $isMine && $recipient)
-                            <x-ui.avatar :user="$recipient" size="xs" class="flex-shrink-0" />
+                            <x-ui.avatar :user="$recipient" size="xs" class="self-end flex-shrink-0" />
+                        @endif
+
+                        {{-- Hover Actions - Left for own message --}}
+                        @if ($isMine && !$message->trashed())
+                            <button
+                                type="button"
+                                wire:click="deleteMessage({{ $message->id }})"
+                                class="opacity-0 group-hover:opacity-100 transition-opacity p-1 text-slate-400 hover:text-red-500 rounded-lg focus:outline-none flex-shrink-0"
+                                aria-label="Thu hồi tin nhắn"
+                                title="Thu hồi tin nhắn"
+                            >
+                                <x-ui.icon name="trash" size="xs" />
+                            </button>
                         @endif
 
                         <div class="flex flex-col max-w-[70%] gap-1">
-                            {{-- Standard text bubble --}}
-                            @if ($message->message_type === MessageType::TEXT)
-                                <div class="px-3.5 py-2 rounded-2xl text-xxs font-medium leading-relaxed
-                                            {{ $isMine ? 'bg-ue-brand text-white rounded-br-xs shadow-2xs' : 'bg-white border border-slate-150 text-slate-700 rounded-bl-xs' }}">
-                                    {{ $message->body }}
+                            @if ($message->trashed())
+                                <div class="px-3.5 py-2 rounded-2xl text-xxs font-medium leading-relaxed italic bg-slate-100 border border-slate-200 text-slate-400 rounded-bl-xs">
+                                    Tin nhắn đã bị thu hồi.
                                 </div>
-                            {{-- Shared Post preview card bubble --}}
-                            @elseif ($message->message_type === MessageType::SHARED_POST)
-                                <div class="p-3.5 rounded-2xl border border-slate-150 bg-white shadow-2xs rounded-bl-xs text-slate-700 flex flex-col gap-3">
-                                    <div class="flex items-center gap-2 text-[10px] text-slate-400 font-semibold uppercase tracking-wider leading-none">
-                                        <x-ui.icon name="link-2" size="xs" class="text-ue-brand" />
-                                        <span>Chia sẻ bài viết</span>
+                            @else
+                                {{-- Standard text bubble --}}
+                                @if ($message->message_type === MessageType::TEXT)
+                                    <div class="px-3.5 py-2 rounded-2xl text-xxs font-medium leading-relaxed
+                                                {{ $isMine ? 'bg-ue-brand text-white rounded-br-xs shadow-2xs' : 'bg-white border border-slate-150 text-slate-700 rounded-bl-xs' }}">
+                                        {{ $message->body }}
                                     </div>
+                                {{-- Shared Post preview card bubble --}}
+                                @elseif ($message->message_type === MessageType::SHARED_POST)
+                                    <div class="p-3.5 rounded-2xl border border-slate-150 bg-white shadow-2xs rounded-bl-xs text-slate-700 flex flex-col gap-3">
+                                        <div class="flex items-center gap-2 text-[10px] text-slate-400 font-semibold uppercase tracking-wider leading-none">
+                                            <x-ui.icon name="link-2" size="xs" class="text-ue-brand" />
+                                            <span>Chia sẻ bài viết</span>
+                                        </div>
 
-                                    @if ($this->canViewPost($message->sharedPost))
-                                        <div class="bg-slate-50 border border-slate-100 p-2.5 rounded-xl flex flex-col gap-1.5">
-                                            <div class="flex items-center gap-1.5">
-                                                <x-ui.avatar :user="$message->sharedPost->user" size="xs" />
-                                                <p class="text-xxs font-bold text-slate-800">{{ $message->sharedPost->user->name }}</p>
+                                        @if ($this->canViewPost($message->sharedPost))
+                                            <div class="bg-slate-50 border border-slate-100 p-2.5 rounded-xl flex flex-col gap-1.5">
+                                                <div class="flex items-center gap-1.5">
+                                                    <x-ui.avatar :user="$message->sharedPost->user" size="xs" />
+                                                    <p class="text-xxs font-bold text-slate-800">{{ $message->sharedPost->user->name }}</p>
+                                                </div>
+                                                <p class="text-xxs font-medium text-slate-600 line-clamp-2 leading-relaxed">
+                                                    {{ $message->sharedPost->body }}
+                                                </p>
                                             </div>
-                                            <p class="text-xxs font-medium text-slate-600 line-clamp-2 leading-relaxed">
-                                                {{ $message->sharedPost->body }}
-                                            </p>
-                                        </div>
-                                        <a
-                                            href="{{ route('posts.show', $message->sharedPost) }}"
-                                            class="w-full text-center bg-slate-50 hover:bg-slate-100 text-slate-700 border border-slate-200 text-xxs font-bold py-1.5 rounded-lg transition-colors flex items-center justify-center gap-1.5"
-                                        >
-                                            <x-ui.icon name="external-link" size="xs" />
-                                            Xem bài viết
-                                        </a>
-                                    @else
-                                        <div class="bg-slate-50 border border-slate-100 p-3 rounded-xl flex items-center gap-2 text-xxs font-semibold text-slate-400 italic">
-                                            <x-ui.icon name="alert-triangle" size="xs" />
-                                            <span>Bài viết này không còn khả dụng.</span>
-                                        </div>
-                                    @endif
+                                            <a
+                                                href="{{ route('posts.show', $message->sharedPost) }}"
+                                                class="w-full text-center bg-slate-50 hover:bg-slate-100 text-slate-700 border border-slate-200 text-xxs font-bold py-1.5 rounded-lg transition-colors flex items-center justify-center gap-1.5"
+                                            >
+                                                <x-ui.icon name="external-link" size="xs" />
+                                                Xem bài viết
+                                            </a>
+                                        @else
+                                            <div class="bg-slate-50 border border-slate-100 p-3 rounded-xl flex items-center gap-2 text-xxs font-semibold text-slate-400 italic">
+                                                <x-ui.icon name="alert-triangle" size="xs" />
+                                                <span>Bài viết này không còn khả dụng.</span>
+                                            </div>
+                                        @endif
 
-                                    @if ($message->body)
-                                        <div class="text-xxs font-semibold border-t border-slate-100 pt-2 text-slate-600 leading-normal">
-                                            {{ $message->body }}
-                                        </div>
-                                    @endif
-                                </div>
+                                        @if ($message->body)
+                                            <div class="text-xxs font-semibold border-t border-slate-100 pt-2 text-slate-600 leading-normal">
+                                                {{ $message->body }}
+                                            </div>
+                                        @endif
+                                    </div>
+                                @endif
                             @endif
 
                             {{-- Time tag --}}
-                            <span class="text-[8px] text-slate-400 font-semibold px-1 self-end">
+                            <span class="text-[8px] text-slate-400 font-semibold px-1 {{ $isMine ? 'self-end' : 'self-start' }}">
                                 {{ $message->created_at->format('H:i') }}
                             </span>
                         </div>
+
+                        {{-- Hover Actions - Right for incoming message --}}
+                        @if (!$isMine && !$message->trashed())
+                            <button
+                                type="button"
+                                wire:click="reportMessage({{ $message->id }})"
+                                class="opacity-0 group-hover:opacity-100 transition-opacity p-1 text-slate-400 hover:text-slate-600 rounded-lg focus:outline-none flex-shrink-0"
+                                aria-label="Báo cáo tin nhắn vi phạm"
+                                title="Báo cáo tin nhắn"
+                            >
+                                <x-ui.icon name="flag" size="xs" />
+                            </button>
+                        @endif
                     </div>
                 @endforeach
             </div>

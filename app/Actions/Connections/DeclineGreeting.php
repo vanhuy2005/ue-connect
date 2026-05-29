@@ -6,6 +6,7 @@ use App\Enums\GreetingStatus;
 use App\Models\Connection;
 use App\Models\Greeting;
 use App\Models\User;
+use App\Notifications\GreetingDeclined;
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Support\Facades\Gate;
 
@@ -27,6 +28,8 @@ class DeclineGreeting
             'decline_reason' => $data['reason'] ?? null,
             'declined_at' => now(),
         ]);
+
+        $greeting->sender->notify(new GreetingDeclined($greeting));
 
         return $greeting;
     }

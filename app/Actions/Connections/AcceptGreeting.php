@@ -8,6 +8,7 @@ use App\Enums\GreetingStatus;
 use App\Models\Connection;
 use App\Models\Greeting;
 use App\Models\User;
+use App\Notifications\GreetingAccepted;
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Gate;
@@ -52,7 +53,9 @@ class AcceptGreeting
 
             // 3. Initialize 1:1 direct conversation immediately
             $findConversation = new FindOrCreateDirectConversation;
-            $findConversation->execute($sender, $receiver);
+            $conversation = $findConversation->execute($sender, $receiver);
+
+            $sender->notify(new GreetingAccepted($greeting, $conversation->id));
 
             return $connection;
         });
