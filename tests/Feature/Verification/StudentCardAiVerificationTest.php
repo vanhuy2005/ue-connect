@@ -129,7 +129,8 @@ class StudentCardAiVerificationTest extends TestCase
         $this->assertEquals(EvidenceAnalysisStatus::Skipped, $analysisJob->status);
 
         $result = $analysisJob->result;
-        $this->assertContains(EvidenceRiskFlag::UnsupportedDocumentType->value, $result->risk_flags_json);
+        $this->assertContains(EvidenceRiskFlag::NotCameraCapture->value, $result->risk_flags_json);
+        $this->assertContains(EvidenceRiskFlag::ManualReviewRequired->value, $result->risk_flags_json);
     }
 
     public function test_ai_never_auto_approves_request(): void
