@@ -407,461 +407,177 @@ new #[Layout('layouts.app')] class extends Component
         ];
     }
 };
-
 ?>
-
-<div class="max-w-[640px] mx-auto px-4 py-6 sm:py-8 space-y-6">
-
-    {{-- System feedback alerts --}}
-    @if ($feedbackMessage)
-        <div class="p-4 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-800 text-sm flex items-start gap-2 shadow-xs ue-animate-fade-in" role="alert">
-            <x-ui.icon name="check-circle" size="sm" class="text-emerald-600 mt-0.5 flex-shrink-0" />
-            <div class="flex-1 font-semibold">{{ $feedbackMessage }}</div>
-            <button type="button" wire:click="$set('feedbackMessage', null)" class="text-emerald-400 hover:text-emerald-600 transition-colors">
-                <x-ui.icon name="x" size="xs" />
-            </button>
-        </div>
-    @endif
-
-    {{-- 1. THREADS-LIKE COMPOSER --}}
-    @if ($currentUser->isActive())
-        <div class="bg-white border border-slate-150 rounded-2xl p-4 sm:p-5 shadow-xs">
-            <div class="flex items-start gap-3">
-                {{-- Left Avatar --}}
-                <div class="w-9 h-9 rounded-full bg-ue-brand-soft border border-slate-100 flex items-center justify-center font-bold text-ue-brand text-xs shadow-xs select-none flex-shrink-0">
-                    {{ mb_substr($currentUser->name, 0, 2) }}
+ <div class="ue-feed-layout">
+    <div class="ue-feed-column">
+        {{-- Page-local Header --}}
+        <header class="ue-feed-header">
+            <div class="ue-feed-header__top">
+                <div>
+                    <h1 class="text-xl font-bold text-slate-800">Bảng tin</h1>
+                    <p class="text-xs text-slate-400 font-medium mt-0.5">HCMUE Student-verified community updates</p>
                 </div>
-
-                {{-- Center/Right body --}}
-                <div class="flex-1 min-w-0">
-                    <form wire:submit.prevent="submitPost">
-                        <div class="mb-3">
-                            <label for="post-body" class="sr-only">Nội dung bài viết</label>
-                            <textarea
-                                id="post-body"
-                                wire:model="body"
-                                placeholder="Có gì mới trong cộng đồng HCMUE hôm nay?"
-                                rows="2"
-                                class="w-full border-0 focus:ring-0 p-0 text-slate-700 placeholder-slate-400 text-sm sm:text-base resize-none bg-transparent"
-                                maxlength="3000"
-                            ></textarea>
-                            @error('body')
-                                <p class="text-xs text-red-600 mt-1 font-semibold">{{ $message }}</p>
-                            @enderror
-                        </div>
-
-                        <div class="flex flex-col sm:flex-row sm:items-center justify-between pt-3 border-t border-slate-100/65 gap-3">
-                            <div class="flex items-center gap-3 justify-between sm:justify-start">
-                                {{-- Character counter --}}
-                                <span class="text-xxs text-slate-400 font-semibold">
-                                    {{ mb_strlen($body) }}/3000
-                                </span>
-
-                                {{-- Visibility chip --}}
-                                <div class="relative">
-                                    <label for="post-visibility" class="sr-only">Quyền xem</label>
-                                    <select
-                                        id="post-visibility"
-                                        wire:model="visibility"
-                                        class="text-xxs font-bold text-slate-500 bg-slate-50 border-0 rounded-lg py-1 pl-2 pr-8 focus:ring-0 focus:outline-none cursor-pointer"
-                                    >
-                                        <option value="verified_users">Chỉ sinh viên xác thực</option>
-                                        <option value="connections_only" disabled>Bạn bè (Sắp ra mắt)</option>
-                                        <option value="community" disabled>Cộng đồng (Sắp ra mắt)</option>
-                                    </select>
-                                </div>
-                            </div>
-
-                            <div class="w-full sm:w-auto">
-                                <x-ui.button
-                                    type="submit"
-                                    variant="primary"
-                                    size="sm"
-                                    icon="send"
-                                    class="w-full sm:w-auto"
-                                >
-                                    Đăng bài
-                                </x-ui.button>
-                            </div>
-                        </div>
-                    </form>
-                </div>
-            </div>
-        </div>
-    @endif
-
-    {{-- 2. FEED LIST (THREADS-LIKE ITEMS) --}}
-    <div class="space-y-4">
-        @forelse ($posts as $post)
-            @php
-                $author = $post->user;
-                $profile = $author->profile;
-                $isLiked = $post->likes->where('user_id', $currentUser->id)->isNotEmpty();
-                $isSaved = $post->saves->where('user_id', $currentUser->id)->isNotEmpty();
-                $likeCount = $post->likes->count();
-                $commentCount = $post->comments->where('status', \App\Enums\CommentStatus::PUBLISHED->value)->count();
-                $isOwner = $post->user_id === $currentUser->id;
-            @endphp
-
-            @if (in_array($post->id, $locallyHiddenPostIds))
-                {{-- Hidden Post Placeholder with Hoàn tác button --}}
-                <div class="bg-slate-50 border border-slate-200 rounded-2xl p-4 sm:p-5 shadow-xs flex items-center justify-between gap-4 ue-animate-fade-in mb-4" wire:key="hidden-post-placeholder-{{ $post->id }}">
-                    <div class="flex items-center gap-3">
-                        <div class="w-8 h-8 rounded-full bg-slate-100 border border-slate-200 flex items-center justify-center text-slate-500 flex-shrink-0">
-                            <x-ui.icon name="eye-off" size="xs" />
-                        </div>
-                        <div class="space-y-0.5 text-left">
-                            <h4 class="text-xs font-bold text-slate-800">Đã ẩn bài viết</h4>
-                            <p class="text-[10px] text-slate-500 leading-normal">Việc ẩn bài viết giúp UEConnect cá nhân hóa Bảng tin của bạn.</p>
-                        </div>
-                    </div>
-                    <button
-                        type="button"
-                        wire:click="undoHidePost({{ $post->id }})"
-                        class="px-3 py-1.5 text-xs font-bold text-ue-brand bg-ue-brand-soft border border-ue-brand/10 rounded-xl hover:bg-ue-brand hover:text-white transition-all flex-shrink-0"
-                    >
-                        Hoàn tác
+                
+                {{-- Tabs --}}
+                <div class="ue-feed-tabs">
+                    <button type="button" class="px-3 py-1.5 rounded-full text-xxs font-bold bg-ue-brand-soft text-ue-brand">
+                        Dành cho bạn
+                    </button>
+                    <button type="button" class="px-3 py-1.5 rounded-full text-xxs font-bold text-slate-400 hover:bg-slate-50 transition-colors" disabled>
+                        Theo dõi
                     </button>
                 </div>
-            @else
-                <div class="bg-white border border-slate-150 rounded-2xl p-4 sm:p-5 shadow-xs hover:border-slate-350 transition-colors ue-animate-fade-in" wire:key="post-card-{{ $post->id }}">
-                <div class="flex items-start gap-3">
-                    {{-- Left Avatar --}}
-                    <div class="w-9 h-9 rounded-full bg-ue-brand-soft border border-slate-100 flex items-center justify-center font-bold text-ue-brand text-xs shadow-xs select-none flex-shrink-0">
-                        {{ mb_substr($author->name, 0, 2) }}
-                    </div>
+            </div>
+        </header>
 
-                    {{-- Right Content Column --}}
-                    <div class="flex-1 min-w-0">
-                        {{-- Post header --}}
-                        <div class="flex items-center justify-between mb-1.5">
-                            <div>
-                                <div class="flex items-center gap-1.5">
-                                    <span class="text-sm font-bold text-slate-800">{{ $author->name }}</span>
-                                    <x-ui.icon name="check-circle" size="xs" class="text-ue-brand flex-shrink-0" aria-label="Đã xác thực" />
-                                    
-                                    {{-- Relative timestamp --}}
-                                    <span class="text-xxs text-slate-400 font-semibold">
-                                        · {{ $post->published_at->diffForHumans() }}
-                                    </span>
-                                </div>
-                                
-                                {{-- Faculty and major metadata --}}
-                                @if ($profile)
-                                    <div class="text-xxs text-slate-400 font-medium">
-                                        {{ Str::ucfirst($profile->role_type) }}
-                                        @if ($profile->faculty)
-                                            · {{ $profile->faculty }}
-                                        @endif
-                                    </div>
-                                @endif
-                            </div>
+        {{-- Toast system component --}}
+        <x-ui.toast />
 
-                            {{-- Actions Dropdown Menu & Quick Hide X button via Alpine --}}
-                            <div class="flex items-center gap-1.5 flex-shrink-0">
-                                {{-- X button: Quick hide --}}
-                                <x-ui.icon-button
-                                    icon="x"
-                                    label="Ẩn bài viết khỏi bảng tin"
-                                    variant="ghost"
-                                    size="xs"
-                                    wire:click="hidePost({{ $post->id }})"
-                                    class="text-slate-400 hover:text-slate-600 focus:ring-1 focus:ring-slate-200"
-                                />
-
-                                {{-- Three-dot options menu --}}
-                                <div class="relative" x-data="{ open: false }" @click.away="open = false" @keydown.escape.window="open = false">
-                                    <x-ui.icon-button
-                                        icon="more-horizontal"
-                                        label="Mở menu bài viết"
-                                        variant="ghost"
-                                        size="sm"
-                                        @click="open = !open"
-                                        class="text-slate-400 hover:text-slate-600 focus:ring-1 focus:ring-slate-200"
-                                        aria-label="Mở menu bài viết"
-                                    />
-                                    <div
-                                        x-show="open"
-                                        x-transition:enter="transition ease-out duration-100"
-                                        x-transition:enter-start="transform opacity-0 scale-95"
-                                        x-transition:enter-end="transform opacity-100 scale-100"
-                                        x-transition:leave="transition ease-in duration-75"
-                                        x-transition:leave-start="transform opacity-100 scale-100"
-                                        x-transition:leave-end="transform opacity-0 scale-95"
-                                        class="absolute right-0 mt-1 rounded-xl bg-white border border-slate-150 shadow-lg py-1.5 z-30"
-                                        style="display: none; width: 240px;"
-                                    >
-                                        {{-- 1. Save/Unsave (Available to everyone) --}}
-                                        <button
-                                            type="button"
-                                            wire:click="toggleSave({{ $post->id }})"
-                                            @click="open = false"
-                                            class="w-full text-left px-4 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50 flex flex-col transition-colors"
-                                        >
-                                            <div class="flex items-center gap-2">
-                                                <x-ui.icon name="bookmark" size="xs" class="{{ $isSaved ? 'text-amber-600 fill-amber-600' : 'text-slate-400' }}" />
-                                                <span class="{{ $isSaved ? 'text-amber-600 font-bold' : '' }}">
-                                                    {{ $isSaved ? 'Bỏ lưu bài viết' : 'Lưu bài viết' }}
-                                                </span>
-                                            </div>
-                                            <span class="text-[10px] text-slate-400 font-medium pl-6">
-                                                {{ $isSaved ? 'Gỡ khỏi danh sách đã lưu.' : 'Thêm vào danh sách bài viết đã lưu.' }}
-                                            </span>
-                                        </button>
-
-                                        {{-- 2. Owner-only actions --}}
-                                        @if ($isOwner)
-                                            @if ($editingPostId !== $post->id)
-                                                <button
-                                                    type="button"
-                                                    wire:click="startEdit({{ $post->id }})"
-                                                    @click="open = false"
-                                                    class="w-full text-left px-4 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50 flex flex-col transition-colors"
-                                                >
-                                                    <div class="flex items-center gap-2">
-                                                        <x-ui.icon name="edit" size="xs" class="text-slate-400" />
-                                                        <span>Chỉnh sửa bài viết</span>
-                                                    </div>
-                                                    <span class="text-[10px] text-slate-400 font-medium pl-6">Cập nhật nội dung bài viết của bạn.</span>
-                                                </button>
-                                            @endif
-                                            <button
-                                                type="button"
-                                                wire:click="openDeleteModal({{ $post->id }})"
-                                                @click="open = false"
-                                                class="w-full text-left px-4 py-2 text-xs font-semibold text-red-600 hover:bg-red-50 flex flex-col transition-colors"
-                                            >
-                                                <div class="flex items-center gap-2">
-                                                    <x-ui.icon name="trash" size="xs" class="text-red-400" />
-                                                    <span>Xóa bài viết</span>
-                                                </div>
-                                                <span class="text-[10px] text-red-400 font-medium pl-6">Gỡ bài viết khỏi bảng tin.</span>
-                                            </button>
-                                        @endif
-
-                                        {{-- 3. Non-owner actions --}}
-                                        @if (! $isOwner)
-                                            <button
-                                                type="button"
-                                                wire:click="hidePost({{ $post->id }})"
-                                                @click="open = false"
-                                                class="w-full text-left px-4 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50 flex flex-col transition-colors"
-                                            >
-                                                <div class="flex items-center gap-2">
-                                                    <x-ui.icon name="eye-off" size="xs" class="text-slate-400" />
-                                                    <span>Ẩn bài viết</span>
-                                                </div>
-                                                <span class="text-[10px] text-slate-400 font-medium pl-6">Bạn sẽ không nhìn thấy bài viết này trong bảng tin.</span>
-                                            </button>
-
-                                            <button
-                                                type="button"
-                                                wire:click="openReport({{ $post->id }})"
-                                                @click="open = false"
-                                                class="w-full text-left px-4 py-2 text-xs font-semibold text-slate-700 hover:bg-yellow-50 hover:text-yellow-700 flex flex-col transition-colors"
-                                            >
-                                                <div class="flex items-center gap-2">
-                                                    <x-ui.icon name="flag" size="xs" class="text-slate-400" />
-                                                    <span>Báo cáo bài viết</span>
-                                                </div>
-                                                <span class="text-[10px] text-slate-400 font-medium pl-6">Gửi báo cáo đến Ban kiểm duyệt UEConnect.</span>
-                                            </button>
-                                        @endif
-
-                                        {{-- 4. Shared actions: Copy link & Share --}}
-                                        <button
-                                            type="button"
-                                            wire:click="startShare({{ $post->id }})"
-                                            @click="open = false"
-                                            class="w-full text-left px-4 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50 flex flex-col transition-colors border-t border-slate-100"
-                                        >
-                                            <div class="flex items-center gap-2">
-                                                <x-ui.icon name="send" size="xs" class="text-slate-400" />
-                                                <span>Chia sẻ qua tin nhắn</span>
-                                            </div>
-                                            <span class="text-[10px] text-slate-400 font-medium pl-6">Gửi bài viết cho bạn bè trong tin nhắn riêng tư.</span>
-                                        </button>
-
-                                        <button
-                                            type="button"
-                                            @click="navigator.clipboard.writeText('{{ route('posts.show', $post) }}'); open = false;"
-                                            wire:click="copyLinkFeedback"
-                                            class="w-full text-left px-4 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50 flex flex-col transition-colors border-t border-slate-100"
-                                        >
-                                            <div class="flex items-center gap-2">
-                                                <x-ui.icon name="link" size="xs" class="text-slate-400" />
-                                                <span>Sao chép liên kết</span>
-                                            </div>
-                                            <span class="text-[10px] text-slate-400 font-medium pl-6">Sao chép địa chỉ liên kết bài viết.</span>
-                                        </button>
-
-                                        {{-- 5. Admin/Moderator options --}}
-                                        @if ($currentUser->hasAnyPermission(['moderate_content', 'manage_reports']))
-                                            <div class="border-t border-slate-100 mt-1 pt-1 bg-slate-50/50">
-                                                <div class="px-4 py-1 text-[9px] font-bold text-slate-400 uppercase tracking-wider">Ban kiểm duyệt</div>
-                                                
-                                                <button
-                                                    type="button"
-                                                    wire:click="hidePostGlobally({{ $post->id }})"
-                                                    @click="open = false"
-                                                    class="w-full text-left px-4 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-100 flex flex-col transition-colors"
-                                                >
-                                                    <div class="flex items-center gap-2">
-                                                        <x-ui.icon name="shield" size="xs" class="text-slate-500" />
-                                                        <span>Ẩn khỏi cộng đồng</span>
-                                                    </div>
-                                                </button>
-
-                                                <button
-                                                    type="button"
-                                                    wire:click="openDeleteModal({{ $post->id }})"
-                                                    @click="open = false"
-                                                    class="w-full text-left px-4 py-2 text-xs font-semibold text-red-700 hover:bg-red-50 flex flex-col transition-colors"
-                                                >
-                                                    <div class="flex items-center gap-2">
-                                                        <x-ui.icon name="shield-alert" size="xs" class="text-red-500" />
-                                                        <span>Xóa bởi kiểm duyệt</span>
-                                                    </div>
-                                                </button>
-
-                                                <a
-                                                    href="{{ route('admin.reports.index') }}"
-                                                    class="w-full text-left px-4 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-100 flex flex-col transition-colors"
-                                                >
-                                                    <div class="flex items-center gap-2">
-                                                        <x-ui.icon name="bell" size="xs" class="text-slate-500" />
-                                                        <span>Xem báo cáo liên quan</span>
-                                                    </div>
-                                                </a>
-                                            </div>
-                                        @endif
-                                    </div>
-                                </div>
-                            </div>
+        {{-- Feed Surface Area --}}
+        <section class="ue-feed-surface">
+            {{-- Inline Composer --}}
+            @if ($currentUser->isActive())
+                <div class="ue-feed-composer border-b border-ue-border/40">
+                    <div class="ue-composer">
+                        {{-- Left Column: Avatar --}}
+                        <div class="flex justify-start">
+                            <x-ui.avatar :user="$currentUser" size="md" />
                         </div>
-
-                        {{-- Post body / Editing interface --}}
-                        @if ($editingPostId === $post->id)
-                            <div class="mt-2 space-y-3 bg-slate-50 p-3 rounded-xl border border-slate-100 ue-animate-fade-in">
-                                <label for="edit-body-{{ $post->id }}" class="sr-only">Nội dung chỉnh sửa</label>
-                                <textarea
-                                    id="edit-body-{{ $post->id }}"
-                                    wire:model="editingBody"
-                                    rows="3"
-                                    class="w-full border-0 focus:ring-0 p-0 text-slate-700 text-sm resize-none bg-transparent"
-                                    maxlength="3000"
-                                ></textarea>
-                                @error('editingBody')
-                                    <p class="text-xs text-red-600 font-semibold">{{ $message }}</p>
-                                @enderror
-
-                                <div class="flex items-center justify-between pt-2 border-t border-slate-200/60">
-                                    <span class="text-xxs text-slate-400 font-semibold">
-                                        {{ mb_strlen($editingBody) }}/3000
-                                    </span>
-                                    <div class="flex items-center gap-2">
-                                        <button 
-                                            type="button" 
-                                            wire:click="cancelEdit" 
-                                            class="px-3 py-1.5 text-xxs font-bold text-slate-500 hover:text-slate-700 transition-colors"
-                                        >
-                                            Hủy
-                                        </button>
-                                        <x-ui.button
-                                            type="button"
-                                            wire:click="saveEdit"
-                                            variant="primary"
-                                            size="xs"
-                                            icon="check"
-                                        >
-                                            Lưu thay đổi
-                                        </x-ui.button>
-                                    </div>
+                        
+                        {{-- Right Column: Form content --}}
+                        <div class="min-w-0">
+                            <form wire:submit.prevent="submitPost">
+                                <div>
+                                    <label for="post-body" class="sr-only">Nội dung bài viết</label>
+                                    <textarea
+                                        id="post-body"
+                                        wire:model="body"
+                                        placeholder="Có gì mới trong cộng đồng HCMUE hôm nay?"
+                                        rows="2"
+                                        class="ue-composer__textarea focus:outline-none"
+                                        maxlength="3000"
+                                    ></textarea>
+                                    @error('body')
+                                        <p class="text-xs text-red-650 font-semibold mt-1">{{ $message }}</p>
+                                    @enderror
                                 </div>
-                            </div>
-                        @else
-                            <div class="mt-1 text-slate-700 text-sm whitespace-pre-wrap leading-relaxed">
-                                {{ $post->body }}
-                            </div>
-                            
-                            {{-- Edited Indicator --}}
-                            @if ($post->status === PostStatus::EDITED)
-                                <span class="inline-block mt-2 text-[10px] font-bold text-slate-400 bg-slate-50 border border-slate-100 rounded px-1.5 py-0.5">
-                                    Đã chỉnh sửa
-                                </span>
-                            @endif
-                        @endif
 
-                        {{-- Action Buttons Row --}}
-                        <div class="flex items-center justify-between pt-3 mt-4 border-t border-slate-100/65 text-slate-500">
-                            <div class="flex items-center gap-6">
-                                {{-- Like --}}
-                                <button
-                                    type="button"
-                                    wire:click="toggleLike({{ $post->id }})"
-                                    class="flex items-center gap-1 text-xxs font-bold hover:text-rose-600 transition-colors py-1 px-1.5 rounded-lg hover:bg-rose-50/50 {{ $isLiked ? 'text-rose-600' : '' }}"
-                                    aria-pressed="{{ $isLiked ? 'true' : 'false' }}"
-                                >
-                                    <x-ui.icon name="heart" size="xs" class="transition-transform active:scale-125 {{ $isLiked ? 'fill-rose-600 text-rose-600' : '' }}" />
-                                    <span>{{ $likeCount }} Thích</span>
-                                </button>
-
-                                {{-- Comments --}}
-                                <a
-                                    href="{{ route('posts.show', $post) }}"
-                                    class="flex items-center gap-1 text-xxs font-bold hover:text-ue-brand transition-colors py-1 px-1.5 rounded-lg hover:bg-blue-50/50"
-                                >
-                                    <x-ui.icon name="message-square" size="xs" />
-                                    <span>{{ $commentCount }} Bình luận</span>
-                                </a>
-                            </div>
-
-                            {{-- Save --}}
-                            <button
-                                type="button"
-                                wire:click="toggleSave({{ $post->id }})"
-                                class="flex items-center gap-1 text-xxs font-bold hover:text-amber-600 transition-colors py-1 px-1.5 rounded-lg hover:bg-amber-50/50 {{ $isSaved ? 'text-amber-600' : '' }}"
-                                title="{{ $isSaved ? 'Hủy lưu bài viết' : 'Lưu bài viết' }}"
-                                aria-pressed="{{ $isSaved ? 'true' : 'false' }}"
-                            >
-                                <x-ui.icon name="bookmark" size="xs" class="{{ $isSaved ? 'fill-amber-600 text-amber-600' : '' }}" />
-                                <span>{{ $isSaved ? 'Đã lưu' : 'Lưu' }}</span>
-                            </button>
+                                <div class="ue-composer__toolbar">
+                                    <div class="ue-composer__actions">
+                                        <span class="ue-composer__counter">
+                                            {{ mb_strlen($body) }}/3000
+                                        </span>
+                                        <div class="relative">
+                                            <label for="post-visibility" class="sr-only">Quyền xem</label>
+                                            <select
+                                                id="post-visibility"
+                                                wire:model="visibility"
+                                                class="text-xxs font-bold text-slate-500 bg-slate-50 border-0 rounded-lg py-1 pl-2 pr-8 focus:ring-0 focus:outline-none cursor-pointer"
+                                            >
+                                                <option value="verified_users">Chỉ sinh viên xác thực</option>
+                                                <option value="connections_only" disabled>Bạn bè (Sắp ra mắt)</option>
+                                                <option value="community" disabled>Cộng đồng (Sắp ra mắt)</option>
+                                            </select>
+                                        </div>
+                                    </div>
+                                    <x-ui.button
+                                        type="submit"
+                                        variant="primary"
+                                        size="sm"
+                                        icon="send"
+                                    >
+                                        Đăng bài
+                                    </x-ui.button>
+                                </div>
+                            </form>
                         </div>
                     </div>
                 </div>
-            </div>
             @endif
 
-        @empty
-            {{-- EMPTY STATE --}}
-            <div class="bg-white border border-slate-200 rounded-2xl p-12 text-center shadow-xs ue-animate-scale-in">
-                <div class="w-16 h-16 rounded-full bg-slate-50 border border-slate-100 flex items-center justify-center mx-auto mb-4">
-                    <x-ui.icon name="message-square" size="lg" class="text-slate-400" />
-                </div>
-                <h3 class="text-base font-bold text-slate-800 mb-2">Bảng tin chưa có bài viết nào</h3>
-                <p class="text-sm text-slate-500 max-w-sm mx-auto mb-6">
-                    Hãy là người đầu tiên chia sẻ điều hữu ích với cộng đồng HCMUE.
-                </p>
-                @if ($currentUser->isActive())
-                    <x-ui.button
-                        type="button"
-                        variant="primary"
-                        size="md"
-                        icon="edit"
-                        onclick="document.getElementById('post-body').focus()"
-                    >
-                        Viết bài đầu tiên
-                    </x-ui.button>
-                @endif
-            </div>
-        @endforelse
+            {{-- Posts list loop --}}
+            <div class="ue-feed-list">
+                @forelse ($posts as $post)
+                    @php
+                        $isLiked = $post->likes->where('user_id', $currentUser->id)->isNotEmpty();
+                        $isSaved = $post->saves->where('user_id', $currentUser->id)->isNotEmpty();
+                        $likeCount = $post->likes->count();
+                        $commentCount = $post->comments->where('status', \App\Enums\CommentStatus::PUBLISHED->value)->count();
+                    @endphp
 
-        {{-- Pagination --}}
-        <div class="pt-4">
-            {{ $posts->links() }}
-        </div>
+                    @if (in_array($post->id, $locallyHiddenPostIds))
+                        {{-- Hidden Post Placeholder --}}
+                        <article class="ue-feed-item p-4 sm:p-5 bg-slate-50/50 flex items-center justify-between gap-4 ue-animate-fade-in" wire:key="hidden-post-placeholder-{{ $post->id }}">
+                            <div class="flex items-center gap-3">
+                                <div class="w-8 h-8 rounded-full bg-slate-100 border border-slate-200 flex items-center justify-center text-slate-500 flex-shrink-0">
+                                    <x-ui.icon name="eye-off" size="xs" />
+                                </div>
+                                <div class="space-y-0.5 text-left">
+                                    <h4 class="text-xs font-bold text-slate-800">Đã ẩn bài viết</h4>
+                                    <p class="text-[10px] text-slate-500 leading-normal">Việc ẩn bài viết giúp UEConnect cá nhân hóa Bảng tin của bạn.</p>
+                                </div>
+                            </div>
+                            <button
+                                type="button"
+                                wire:click="undoHidePost({{ $post->id }})"
+                                class="px-3 py-1.5 text-xs font-bold text-ue-brand bg-ue-brand-soft border border-ue-brand/10 rounded-xl hover:bg-ue-brand hover:text-white transition-all flex-shrink-0"
+                            >
+                                Hoàn tác
+                            </button>
+                        </article>
+                    @else
+                        <article class="ue-feed-item" wire:key="post-item-{{ $post->id }}">
+                            <x-ui.post-card
+                                :post="$post"
+                                :currentUser="$currentUser"
+                                :isSaved="$isSaved"
+                                :isLiked="$isLiked"
+                                :likeCount="$likeCount"
+                                :commentCount="$commentCount"
+                                :editingPostId="$editingPostId"
+                                :editingBody="$editingBody"
+                            />
+                        </article>
+                    @endif
+                @empty
+                    <div class="p-8">
+                        <x-ui.empty-state
+                            icon="message-square"
+                            title="Bảng tin chưa có bài viết nào"
+                            description="Hãy là người đầu tiên chia sẻ điều hữu ích với cộng đồng HCMUE."
+                        >
+                            @if ($currentUser->isActive())
+                                <x-ui.button
+                                    type="button"
+                                    variant="primary"
+                                    size="md"
+                                    icon="edit"
+                                    onclick="document.getElementById('post-body').focus()"
+                                >
+                                    Viết bài đầu tiên
+                                </x-ui.button>
+                            @endif
+                        </x-ui.empty-state>
+                    </div>
+                @endforelse
+            </div>
+
+            {{-- End state / Pagination Sentinel inside feed surface --}}
+            <div class="ue-feed-end-state">
+                <div class="w-full flex flex-col items-center justify-center gap-2">
+                    <span class="text-xxs text-slate-400 font-semibold mb-1">Bạn đã xem hết bài viết hiện có.</span>
+                    {{ $posts->links() }}
+                </div>
+            </div>
+        </section>
     </div>
+
+    {{-- Mobile bottom nav padding buffer --}}
+    <div class="ue-mobile-bottom-spacer"></div>
+
+    {{-- Modals & Sheets --}}
+    <x-ui.create-post-modal :body="$body" :visibility="$visibility" />
+    <x-ui.floating-action-button />
 
     {{-- 4. REPORT MODAL --}}
     @if ($showReportModal && $reportingPost)
@@ -935,7 +651,7 @@ new #[Layout('layouts.app')] class extends Component
         <div class="fixed inset-0 z-50 overflow-y-auto flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs ue-animate-fade-in" role="dialog" aria-modal="true" aria-labelledby="delete-modal-title">
             <div class="bg-white rounded-2xl max-w-md w-full border border-slate-200 shadow-2xl overflow-hidden ue-animate-scale-in">
                 <div class="p-6 text-center space-y-4">
-                    <div class="w-12 h-12 rounded-full bg-red-50 border border-red-100 flex items-center justify-center mx-auto text-red-600">
+                    <div class="w-12 h-12 rounded-full bg-red-50 border border-red-100 flex items-center justify-center mx-auto text-red-650">
                         <x-ui.icon name="trash" size="md" />
                     </div>
                     <div class="space-y-2">
@@ -973,7 +689,7 @@ new #[Layout('layouts.app')] class extends Component
                         <x-ui.icon name="send" size="xs" class="text-ue-brand" />
                         Chia sẻ bài viết qua tin nhắn
                     </h3>
-                    <button type="button" wire:click="$set('showShareModal', false)" class="text-slate-400 hover:text-slate-600 transition-colors">
+                    <button type="button" wire:click="$set('showShareModal', false)" class="text-slate-400 hover:text-slate-655 transition-colors">
                         <x-ui.icon name="x" size="xs" />
                     </button>
                 </div>
@@ -1058,5 +774,4 @@ new #[Layout('layouts.app')] class extends Component
             </div>
         </div>
     @endif
-
 </div>
