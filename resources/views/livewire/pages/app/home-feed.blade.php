@@ -412,7 +412,8 @@ new #[Layout('layouts.app')] class extends Component
     <div class="ue-feed-column">
         {{-- Page-local Header --}}
         <header class="ue-feed-header">
-            <div class="ue-feed-header__top">
+            {{-- Desktop: Title + Tabs side-by-side --}}
+            <div class="hidden sm:flex ue-feed-header__top">
                 <div>
                     <h1 class="text-xl font-bold text-slate-800">Bảng tin</h1>
                     <p class="text-xs text-slate-400 font-medium mt-0.5">HCMUE Student-verified community updates</p>
@@ -427,6 +428,16 @@ new #[Layout('layouts.app')] class extends Component
                         Theo dõi
                     </button>
                 </div>
+            </div>
+
+            {{-- Mobile: Threads-style centered tab strip only --}}
+            <div class="flex sm:hidden items-center justify-center border-b border-slate-100 pb-1">
+                <button type="button" class="flex-1 py-2 text-xs font-bold text-slate-800 border-b-2 border-slate-800 text-center">
+                    Dành cho bạn
+                </button>
+                <button type="button" class="flex-1 py-2 text-xs font-medium text-slate-400 text-center" disabled>
+                    Theo dõi
+                </button>
             </div>
         </header>
 
@@ -472,12 +483,18 @@ new #[Layout('layouts.app')] class extends Component
                                             <select
                                                 id="post-visibility"
                                                 wire:model="visibility"
-                                                class="text-xxs font-bold text-slate-500 bg-slate-50 border-0 rounded-lg py-1 pl-2 pr-8 focus:ring-0 focus:outline-none cursor-pointer"
+                                                class="absolute inset-0 w-full h-full opacity-0 z-10 cursor-pointer"
                                             >
                                                 <option value="verified_users">Chỉ sinh viên xác thực</option>
                                                 <option value="connections_only" disabled>Bạn bè (Sắp ra mắt)</option>
                                                 <option value="community" disabled>Cộng đồng (Sắp ra mắt)</option>
                                             </select>
+                                            <div class="flex items-center gap-1.5 px-2.5 py-1 bg-slate-50 text-slate-500 rounded-lg select-none pointer-events-none">
+                                                <x-ui.icon name="shield-check" size="xs" class="text-ue-brand fill-ue-brand/10" />
+                                                <span class="hidden sm:inline text-xxs font-bold">Chỉ sinh viên xác thực</span>
+                                                <span class="sm:hidden text-[10px] font-bold">Xác thực</span>
+                                                <x-ui.icon name="chevron-down" size="xs" class="text-slate-400" />
+                                            </div>
                                         </div>
                                     </div>
                                     <x-ui.button

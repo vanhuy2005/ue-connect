@@ -556,6 +556,7 @@
         background-color: var(--ue-surface);
         border-top: 1px solid var(--ue-border);
         padding-bottom: env(safe-area-inset-bottom);
+        overflow: hidden;
     }
 
     /* -------------------------------------------------------------------------
@@ -726,7 +727,10 @@
     }
 
     .ue-feed-surface {
-        overflow: hidden;
+        /* overflow:clip prevents paint bleed at rounded corners without creating
+           a new stacking context. This lets position:fixed children (bottom sheets,
+           toasts) escape the feed surface and render at the correct viewport layer. */
+        overflow: clip;
         border: 1px solid var(--feed-divider-color);
         border-radius: var(--feed-surface-radius);
         background: var(--ue-surface);
@@ -879,30 +883,66 @@
     }
 
     @media (max-width: 767px) {
-        .ue-post-card__quick-hide {
-            display: none;
+        /* ── Mobile: Threads-like full-bleed feed surface ─────────────────────── */
+        .ue-feed-layout {
+            padding: 0;
+            padding-top: env(safe-area-inset-top);
         }
 
         .ue-feed-column {
             max-width: 100%;
-            padding-inline: 8px;
+            /* Zero inline padding: surface goes edge-to-edge */
+            padding-inline: 0;
         }
 
+        .ue-feed-header {
+            /* Feed header gets its own horizontal padding */
+            padding: 12px 16px 8px;
+            margin-bottom: 0;
+        }
+
+        /* Surface is completely flat on mobile — no card illusion */
         .ue-feed-surface {
-            border-radius: 20px;
+            border: none;
+            border-radius: 0;
+            box-shadow: none;
+            overflow: visible; /* No clip needed without border-radius */
         }
 
         .ue-post-card {
-            padding: 16px;
+            padding: 14px 16px;
         }
 
         .ue-post-card__body {
-            grid-template-columns: 40px minmax(0, 1fr);
-            column-gap: 12px;
+            grid-template-columns: 36px minmax(0, 1fr);
+            column-gap: 10px;
+        }
+
+        /* Prevent timestamp from wrapping — keep name + meta on one line */
+        .ue-post-card__header > div:first-child > div:first-child {
+            flex-wrap: nowrap;
+            min-width: 0;
+        }
+
+        .ue-post-card__header > div:first-child > div:first-child > span:first-child {
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+            min-width: 0;
+            flex-shrink: 1;
+        }
+
+        .ue-post-card__actions {
+            gap: 0.875rem;
+            margin-top: 10px;
         }
 
         .ue-feed-composer {
-            padding: 16px;
+            padding: 12px 16px;
+        }
+
+        .ue-post-card__quick-hide {
+            display: none;
         }
     }
 
@@ -1120,8 +1160,8 @@
         margin-top: 0.75rem;
         padding-top: 0.75rem;
         border-t: 1px solid var(--ue-border-subtle);
-        gap: 1rem;
-        flex-wrap: wrap;
+        gap: 0.75rem;
+        flex-wrap: nowrap; /* Button must never wrap onto its own line */
     }
 
     .ue-composer__actions {

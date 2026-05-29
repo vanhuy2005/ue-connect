@@ -10,7 +10,7 @@ The old horizontal desktop topbar is removed for the authenticated social experi
 
 - [ ] **No Content Overlay/Clipping**: Ensure page headers and content flow cleanly below layout edges without overlapping sidebars or bottom navs.
 - [ ] **Desktop Social Navigation Structure**:
-  - [ ] Centered Content Column: Content area restricted to a maximum width of `680px` (`.ue-feed-column`).
+  - [ ] Centered Content Column: Content area restricted to a maximum width of `720px` (`.ue-feed-column`, `--layout-feed-max-w: 720px`).
   - [ ] Left Sidebar (280px): Stays sticky at the left side of the viewport.
   - [ ] Bottom-Left "Xem thêm" Trigger:
     - [ ] Dynamic Menu Popover: Appears cleanly on click and closes on escape/outside click.
@@ -57,7 +57,7 @@ Verify client-side interaction speed and server-side synchronization.
 - [ ] **Optimistic State Feedback**:
   - [ ] Like Toggle: Click increments the like counter and fills the icon immediately.
   - [ ] Save Toggle: Click changes the icon immediately to indicate save status.
-  - [ ] If Server Request Fails: The UI must automatically rollback to the original state without breaking layout structure.
+  - [ ] Action Failure: On server error, a toast notification is shown and the component re-renders from server state (best-effort rollback; server rerender is the final source of truth).
 - [ ] **Central SPA Listener Binding**:
   - [ ] Verify that all Vanilla JS interactions (dropdowns, sheets, optimistic counters) bind and fire correctly after page navigation under Livewire's `livewire:navigated` event hooks.
 
@@ -74,5 +74,7 @@ Verify modals, composers, and layout buffers.
   - [ ] FAB: Persistent in the bottom-right corner of the feed page.
   - [ ] Dialog: Opens a clean, accessible centered composer modal on click.
   - [ ] Focus Trap: Tabbing inside the modal must loop correctly; keyboard focus cannot escape to background page controls.
+  - [ ] Submit Timing: Modal remains open if validation fails; closes **only** after `post-created` Livewire event is dispatched (successful server submit).
+  - [ ] Draft Preservation: If validation fails, textarea content is preserved and error is shown inline.
 - [ ] **Empty States**:
   - [ ] Verify that blank feeds or empty lists cleanly display the customized `<x-ui.empty-state>` component with contextual action triggers.

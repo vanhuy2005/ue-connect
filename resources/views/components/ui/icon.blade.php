@@ -64,6 +64,7 @@ $sizeClass = match($size) {
 
         {{-- ℹ info --}}
         @case('info')
+        @case('info-circle')
             <circle cx="12" cy="12" r="10"></circle>
             <line x1="12" y1="16" x2="12" y2="12"></line>
             <line x1="12" y1="8" x2="12.01" y2="8"></line>
@@ -100,6 +101,14 @@ $sizeClass = match($size) {
         @case('user')
             <path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"></path>
             <circle cx="12" cy="7" r="4"></circle>
+            @break
+
+        {{-- 👤 user-plus --}}
+        @case('user-plus')
+            <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"></path>
+            <circle cx="9" cy="7" r="4"></circle>
+            <line x1="19" y1="8" x2="19" y2="14"></line>
+            <line x1="16" y1="11" x2="22" y2="11"></line>
             @break
 
         {{-- 👥 users --}}
@@ -182,6 +191,18 @@ $sizeClass = match($size) {
         @case('arrow-left')
             <line x1="19" y1="12" x2="5" y2="12"></line>
             <polyline points="12 19 5 12 12 5"></polyline>
+            @break
+
+        {{-- ↓ arrow-down --}}
+        @case('arrow-down')
+            <line x1="12" y1="5" x2="12" y2="19"></line>
+            <polyline points="19 12 12 19 5 12"></polyline>
+            @break
+
+        {{-- ↑ arrow-up --}}
+        @case('arrow-up')
+            <line x1="12" y1="19" x2="12" y2="5"></line>
+            <polyline points="5 12 12 5 19 12"></polyline>
             @break
 
         {{-- ⋯ more-horizontal --}}
@@ -326,6 +347,47 @@ $sizeClass = match($size) {
             <rect x="13" y="2" width="9" height="9" fill="currentColor" stroke="none"></rect>
             <rect x="2" y="13" width="9" height="9" fill="currentColor" stroke="none"></rect>
             <rect x="13" y="13" width="9" height="9" fill="currentColor" stroke="none"></rect>
+            @break
+
+        {{-- 💼 briefcase --}}
+        @case('briefcase')
+            <rect x="2" y="7" width="20" height="14" rx="2" ry="2"></rect>
+            <path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"></path>
+            @break
+
+        {{-- 📢 megaphone --}}
+        @case('megaphone')
+            <path d="m3 11 18-5v12L3 14v-3z"></path>
+            <path d="M11.6 16.8a3 3 0 1 1-5.8-1.6"></path>
+            @break
+
+        {{-- 🌐 globe --}}
+        @case('globe')
+            <circle cx="12" cy="12" r="10"></circle>
+            <path d="M12 2a14.5 14.5 0 0 0 0 20 14.5 14.5 0 0 0 0-20"></path>
+            <path d="M2 12h20"></path>
+            @break
+
+        {{-- 📍 map-pin --}}
+        @case('map-pin')
+            <path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"></path>
+            <circle cx="12" cy="10" r="3"></circle>
+            @break
+
+        {{-- ✉ mail --}}
+        @case('mail')
+            <rect x="2" y="4" width="20" height="16" rx="2"></rect>
+            <path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"></path>
+            @break
+
+        {{-- 📞 phone --}}
+        @case('phone')
+            <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"></path>
+            @break
+
+        {{-- 🔑 key --}}
+        @case('key')
+            <path d="m21 2-2 2m-7.61 7.61a5.5 5.5 0 1 1-7.778 7.778 5.5 5.5 0 0 1 7.778-7.778zm0 0L15.5 7.5m0 0 1.5 1.5M15.5 7.5 14 6"></path>
             @break
 
         {{-- 🚪 log-out --}}

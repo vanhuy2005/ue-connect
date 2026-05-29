@@ -4,6 +4,7 @@ namespace Tests\Feature\Social;
 
 use App\Actions\Reports\CreateReport;
 use App\Enums\AccountStatus;
+use App\Enums\PostStatus;
 use App\Enums\ReportReason;
 use App\Enums\ReportStatus;
 use App\Models\Comment;
@@ -166,6 +167,53 @@ class ReportContentTest extends TestCase
             'target_id' => $this->comment->id,
             'reason' => 'spam',
             'description' => 'Advertising links.',
+        ]);
+    }
+
+    public function test_user_cannot_report_post_with_hidden_status(): void
+    {
+        $hiddenPost = Post::factory()->create([
+            'user_id' => $this->otherUser->id,
+            'body' => 'Moderated post.',
+            'status' => PostStatus::HIDDEN_BY_MODERATION,
+            'published_at' => now(),
+        ]);
+
+        $action = resolve(CreateReport::class);
+
+        $this->expectException(AuthorizationException::class);
+
+        $action->execute($this->user, $hiddenPost, [
+            'reason' => ReportReason::SPAM->value,
+        ]);
+    }
+
+    public function test_user_cannot_report_soft_deleted_post(): void
+    {
+        $this->post->delete();
+
+        $action = resolve(CreateReport::class);
+
+        $this->expectException(AuthorizationException::class);
+
+        $action->execute($this->user, $this->post, [
+            'reason' => ReportReason::SPAM->value,
+        ]);
+    }
+
+    public function test_inactive_user_cannot_report_post(): void
+    {
+        $inactiveUser = User::factory()->create([
+            'account_status' => AccountStatus::REGISTERED,
+        ]);
+        $inactiveUser->assignRole('student');
+
+        $action = resolve(CreateReport::class);
+
+        $this->expectException(AuthorizationException::class);
+
+        $action->execute($inactiveUser, $this->post, [
+            'reason' => ReportReason::SPAM->value,
         ]);
     }
 }

@@ -102,8 +102,12 @@ class PostPolicy
      */
     public function report(User $user, Post $post): bool
     {
-        // Active verified users can report posts, except their own
-        return $user->isActive() && $post->user_id !== $user->id;
+        // Reporter must be able to view the post (covers: active, not trashed,
+        // published/edited status, visibility rules) and cannot report their own post.
+        return $this->view($user, $post)
+            && $post->user_id !== $user->id
+            && in_array($post->status, [PostStatus::PUBLISHED, PostStatus::EDITED])
+            && ! $post->trashed();
     }
 
     /**

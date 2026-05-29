@@ -48,6 +48,11 @@
                     @include('partials.app.topbar')
                 @endif
 
+                {{-- Threads-style mobile topbar for social shell (desktop uses sidebar) --}}
+                @if($shell === 'social')
+                    @include('partials.app.social-mobile-topbar')
+                @endif
+
                 {{-- Account status banner for restrictions --}}
                 @if(in_array($shell, ['social', 'admin', 'conversation']))
                     <x-ui.account-status-banner />

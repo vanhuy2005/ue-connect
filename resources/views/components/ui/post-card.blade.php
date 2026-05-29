@@ -31,14 +31,14 @@
             {{-- Post Author Header --}}
             <div class="ue-post-card__header">
                 <div>
-                    <div class="flex items-center gap-1.5">
-                        <span class="text-sm font-bold text-slate-800 leading-tight">
+                    <div class="flex items-center gap-1.5 flex-nowrap min-w-0">
+                        <span class="text-sm font-bold text-slate-800 leading-tight truncate min-w-0">
                             {{ $author->name }}
                         </span>
                         <x-ui.icon name="check-circle" size="xs" class="text-ue-brand flex-shrink-0" aria-label="Đã xác thực" />
                         
                         {{-- Relative timestamp --}}
-                        <span class="ue-post-card__meta">
+                        <span class="ue-post-card__meta flex-shrink-0 whitespace-nowrap">
                             · {{ $post->published_at->diffForHumans() }}
                         </span>
                     </div>
