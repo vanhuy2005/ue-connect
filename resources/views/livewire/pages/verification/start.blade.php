@@ -299,7 +299,9 @@ new #[Layout('layouts.app')] class extends Component
             }
 
             $sessionHash = hash('sha256', $this->captureSessionToken);
-            $session = EvidenceCaptureSession::where('session_token_hash', $sessionHash)->first();
+            $session = EvidenceCaptureSession::where('session_token_hash', $sessionHash)
+                ->where('user_id', $user->id)
+                ->first();
 
             if (!$session || !$session->isActive()) {
                 $this->addError('evidence', 'Phiên chụp ảnh đã hết hạn hoặc không hợp lệ. Vui lòng thử lại.');
@@ -360,16 +362,23 @@ new #[Layout('layouts.app')] class extends Component
                     ]);
                 }
 
-                $capturedPath = 'verifications/' . $user->id . '/captures/' . Str::uuid() . '.' . ($extension === 'png' ? 'png' : 'jpg');
+                $mimeToExtension = [
+                    'image/jpeg' => 'jpg',
+                    'image/png' => 'png',
+                    'image/webp' => 'webp',
+                ];
+                $targetExtension = $mimeToExtension[$mimeType] ?? 'jpg';
+
+                $capturedPath = 'verifications/' . $user->id . '/captures/' . Str::uuid() . '.' . $targetExtension;
                 Storage::disk('private')->put($capturedPath, $rawImage);
                 
                 $capturedMedia = [
                     'owner_id' => $user->id,
                     'disk' => 'private',
                     'path' => $capturedPath,
-                    'original_name' => 'camera_capture_' . time() . '.' . ($extension === 'png' ? 'png' : 'jpg'),
-                    'mime_type' => $extension === 'png' ? 'image/png' : 'image/jpeg',
-                    'extension' => $extension === 'png' ? 'png' : 'jpg',
+                    'original_name' => 'camera_capture_' . time() . '.' . $targetExtension,
+                    'mime_type' => $mimeType ?? 'image/jpeg',
+                    'extension' => $targetExtension,
                     'size_bytes' => strlen($rawImage),
                     'visibility' => 'private',
                     'file_category' => 'verification_evidence',

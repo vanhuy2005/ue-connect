@@ -12,6 +12,7 @@ use App\Enums\VerificationStatus;
 use App\Jobs\AnalyzeStudentCardEvidenceJob;
 use App\Models\AcademicProgram;
 use App\Models\EvidenceAnalysisJob;
+use App\Models\EvidenceAnalysisResult;
 use App\Models\Faculty;
 use App\Models\MediaFile;
 use App\Models\User;
@@ -175,5 +176,48 @@ class StudentCardAiVerificationTest extends TestCase
         $result = $analysisJob->result;
         $this->assertContains(EvidenceRiskFlag::ExternalProviderDisabled->value, $result->risk_flags_json);
         $this->assertEquals(EvidenceAnalysisRecommendation::ManualReview, $result->recommendation);
+    }
+
+    public function test_job_is_idempotent_and_prevents_duplicate_records(): void
+    {
+        config(['ai-verification.provider' => 'mock']);
+
+        // First execution
+        $job = new AnalyzeStudentCardEvidenceJob($this->evidence->id);
+        $job->handle(app(EvidenceAnalyzerManager::class));
+
+        $initialJobCount = EvidenceAnalysisJob::where('verification_evidence_id', $this->evidence->id)->count();
+        $initialResultCount = EvidenceAnalysisResult::where('verification_evidence_id', $this->evidence->id)->count();
+
+        $this->assertEquals(1, $initialJobCount);
+        $this->assertEquals(1, $initialResultCount);
+
+        // Second execution (retry/double dispatch simulation)
+        $job->handle(app(EvidenceAnalyzerManager::class));
+
+        $secondJobCount = EvidenceAnalysisJob::where('verification_evidence_id', $this->evidence->id)->count();
+        $secondResultCount = EvidenceAnalysisResult::where('verification_evidence_id', $this->evidence->id)->count();
+
+        $this->assertEquals(1, $secondJobCount);
+        $this->assertEquals(1, $secondResultCount);
+    }
+
+    public function test_local_provider_resolves_configured_model_name(): void
+    {
+        config([
+            'ai-verification.provider' => 'local_hybrid',
+            'ai-verification.local_hybrid.ocr_engine' => 'tesseract',
+            'ai-verification.local_hybrid.ollama_model' => 'qwen2.5:1.5b',
+        ]);
+
+        // Make the evidence ineligible so it skips analyzer execution, keeping the initial model_name
+        $this->evidence->update(['evidence_type' => 'transcript']);
+
+        $job = new AnalyzeStudentCardEvidenceJob($this->evidence->id);
+        $job->handle(app(EvidenceAnalyzerManager::class));
+
+        $analysisJob = EvidenceAnalysisJob::where('verification_evidence_id', $this->evidence->id)->first();
+        $this->assertNotNull($analysisJob);
+        $this->assertEquals('tesseract+qwen2.5:1.5b', $analysisJob->model_name);
     }
 }

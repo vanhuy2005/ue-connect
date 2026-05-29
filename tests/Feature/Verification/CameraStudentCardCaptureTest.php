@@ -250,4 +250,93 @@ class CameraStudentCardCaptureTest extends TestCase
             ->call('submit')
             ->assertHasErrors(['evidence']);
     }
+
+    public function test_user_cannot_submit_using_another_users_session_token(): void
+    {
+        Storage::fake('private');
+
+        $userB = User::factory()->create([
+            'email' => 'userb@hcmue.edu.vn',
+            'account_status' => AccountStatus::REGISTERED,
+        ]);
+        $userB->assignRole('student');
+
+        // Create capture session for User B
+        $componentB = Volt::actingAs($userB)
+            ->test('pages.verification.start')
+            ->set('role_requested', 'student')
+            ->call('nextStep')
+            ->set('submitted_name', 'Nguyen Van B')
+            ->set('submitted_student_code', '48.01.103.002')
+            ->set('submitted_faculty_id', $this->faculty->id)
+            ->set('submitted_academic_program_id', $this->program->id)
+            ->set('submitted_cohort', 'K48')
+            ->call('nextStep')
+            ->set('evidenceMethod', 'camera');
+
+        $tokenB = $componentB->get('captureSessionToken');
+
+        // Try to submit as User A using User B's capture session token
+        $componentA = Volt::actingAs($this->user)
+            ->test('pages.verification.start')
+            ->set('role_requested', 'student')
+            ->call('nextStep')
+            ->set('submitted_name', 'Nguyen Van A')
+            ->set('submitted_student_code', '48.01.103.001')
+            ->set('submitted_faculty_id', $this->faculty->id)
+            ->set('submitted_academic_program_id', $this->program->id)
+            ->set('submitted_cohort', 'K48')
+            ->call('nextStep')
+            ->set('evidenceMethod', 'camera')
+            ->set('captureSessionToken', $tokenB);
+
+        $validBase64 = $this->generateValidImageBase64();
+
+        $componentA->set('capturedImageData', $validBase64)
+            ->call('submit')
+            ->assertHasErrors(['evidence']);
+    }
+
+    public function test_camera_accepts_valid_webp_image(): void
+    {
+        Storage::fake('private');
+        Bus::fake();
+
+        $component = Volt::actingAs($this->user)
+            ->test('pages.verification.start')
+            ->set('role_requested', 'student')
+            ->call('nextStep')
+            ->set('submitted_name', 'Nguyen Van A')
+            ->set('submitted_student_code', '48.01.103.001')
+            ->set('submitted_faculty_id', $this->faculty->id)
+            ->set('submitted_academic_program_id', $this->program->id)
+            ->set('submitted_cohort', 'K48')
+            ->call('nextStep')
+            ->set('evidenceMethod', 'camera');
+
+        // Create WebP raw image
+        $img = imagecreatetruecolor(640, 360);
+        ob_start();
+        imagewebp($img);
+        $webpContent = ob_get_clean();
+        imagedestroy($img);
+
+        $webpBase64 = 'data:image/webp;base64,'.base64_encode($webpContent);
+
+        $component->set('capturedImageData', $webpBase64)
+            ->call('submit')
+            ->assertHasNoErrors()
+            ->assertRedirect(route('verification.status'));
+
+        $this->assertDatabaseHas('verification_evidences', [
+            'capture_method' => EvidenceCaptureMethod::Camera->value,
+            'evidence_type' => 'student_card',
+        ]);
+
+        $this->assertDatabaseHas('media_files', [
+            'owner_id' => $this->user->id,
+            'extension' => 'webp',
+            'mime_type' => 'image/webp',
+        ]);
+    }
 }

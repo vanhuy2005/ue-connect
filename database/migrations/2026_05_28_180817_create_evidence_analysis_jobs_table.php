@@ -26,7 +26,7 @@ return new class extends Migration
             $table->timestamps();
 
             $table->index('verification_request_id');
-            $table->index('verification_evidence_id');
+            $table->unique('verification_evidence_id');
             $table->index('status');
             $table->index('provider');
         });
