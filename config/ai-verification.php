@@ -34,6 +34,9 @@ return [
         'ollama_base_url' => env('OLLAMA_BASE_URL', 'http://127.0.0.1:11434'),
         'ollama_model' => env('OLLAMA_MODEL', 'qwen2.5:1.5b'),
         'ollama_timeout_seconds' => (int) env('OLLAMA_TIMEOUT_SECONDS', 20),
+        'tesseract_binary' => env('TESSERACT_BINARY', 'tesseract'),
+        'tesseract_langs' => env('AI_TESSERACT_LANGS', 'vie+eng'),
+        'tesseract_psm' => env('AI_TESSERACT_PSM', '6'),
     ],
 
     'fallback' => [
