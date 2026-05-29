@@ -3,10 +3,11 @@
 use App\Models\Report;
 use App\Enums\ReportStatus;
 use App\Enums\ReportReason;
+use Livewire\Attributes\Layout;
 use Livewire\Volt\Component;
 use Livewire\WithPagination;
 
-new class extends Component {
+new #[Layout('layouts.app', ['shell' => 'admin'])] class extends Component {
     use WithPagination;
 
     public string $status = 'pending'; // default to pending

@@ -1,4 +1,4 @@
-<x-app-layout>
+<x-app-layout shell="conversation">
     <x-slot name="title">Tin nhắn</x-slot>
     <livewire:pages.app.messages :active-conversation="$activeConversation ?? null" />
 </x-app-layout>

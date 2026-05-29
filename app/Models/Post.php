@@ -22,6 +22,7 @@ class Post extends Model
     protected $fillable = [
         'user_id',
         'body',
+        'media_url',
         'visibility',
         'status',
         'edited_at',

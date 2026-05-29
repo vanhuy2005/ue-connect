@@ -28,6 +28,10 @@ class PostPolicy
             return false;
         }
 
+        if ($post->trashed()) {
+            return false;
+        }
+
         // Owner can always view their own post
         if ($post->user_id === $user->id) {
             return true;

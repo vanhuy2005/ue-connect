@@ -154,6 +154,7 @@ class UatFeedSeeder extends Seeder
         $post2 = Post::create([
             'user_id' => $user2->id,
             'body' => 'Khoa CNTT chuẩn bị tổ chức buổi workshop về Laravel và xây dựng web app thực tế vào sáng thứ Bảy tuần này tại hội trường B. Có UEer nào quan tâm tham gia cùng nhóm mình không? Đăng ký trực tiếp qua cổng thông tin nhé!',
+            'media_url' => 'https://images.unsplash.com/photo-1555066931-4365d14bab8c?w=800&auto=format&fit=crop&q=80',
             'visibility' => PostVisibility::VERIFIED_USERS,
             'status' => PostStatus::PUBLISHED,
             'published_at' => now()->subHours(3),

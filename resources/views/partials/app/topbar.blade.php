@@ -76,7 +76,7 @@
                     <div class="w-8 h-8 rounded-full bg-ue-brand-soft border border-slate-100 flex items-center justify-center font-bold text-ue-brand text-xs shadow-xs select-none flex-shrink-0">
                         {{ mb_substr($currentUser->name, 0, 2) }}
                     </div>
-                    <x-ui.icon name="chevron-down" size="xs" class="text-slate-400 hidden sm:block transition-transform duration-150" ::class="userMenuOpen ? 'rotate-180' : ''" />
+                    <x-ui.icon name="chevron-down" size="xs" class="text-slate-400 hidden sm:block transition-transform duration-150" x-bind:class="userMenuOpen ? 'rotate-180' : ''" />
                 </button>
 
                 {{-- Dropdown --}}
