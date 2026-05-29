@@ -26,6 +26,7 @@ depends_on:
   - "17-accessibility-rules.md"
   - "18-responsive-rules.md"
   - "19-design-token-documentation.md"
+  - "21-social-interaction-patterns.md"
 ---
 
 # Component Primitives

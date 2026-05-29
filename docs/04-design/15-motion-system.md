@@ -26,6 +26,7 @@ depends_on:
   - "17-accessibility-rules.md"
   - "18-responsive-rules.md"
   - "19-design-token-documentation.md"
+  - "21-social-interaction-patterns.md"
 related:
   - "../03-product/feature-specs/authentication.md"
   - "../03-product/feature-specs/verification-identity.md"
@@ -225,6 +226,47 @@ Recommended default:
 | `motion.opacity.hidden`  |   `0` |
 | `motion.opacity.muted`   | `0.6` |
 | `motion.opacity.visible` |   `1` |
+
+## 3.6. CSS Variables & Tailwind Configuration
+
+Để hỗ trợ đắc lực cho việc tương tác mạng xã hội kiểu Threads, UEConnect định nghĩa các CSS Variables và Tailwind aliases sau:
+
+### CSS Variables (`:root`)
+```css
+:root {
+  --motion-duration-instant: 75ms;
+  --motion-duration-fast: 120ms;
+  --motion-duration-base: 180ms;
+  --motion-duration-slow: 240ms;
+  --motion-duration-sheet: 280ms;
+
+  --motion-ease-standard: cubic-bezier(0.2, 0, 0, 1);
+  --motion-ease-out: cubic-bezier(0, 0, 0.2, 1);
+  --motion-ease-in: cubic-bezier(0.4, 0, 1, 1);
+  --motion-ease-emphasized: cubic-bezier(0.2, 0, 0, 1.2);
+
+  --motion-press-scale: 0.98;
+  --motion-popover-scale-from: 0.96;
+  --motion-like-scale: 1.16;
+}
+```
+
+### Tailwind Aliases
+```js
+transitionDuration: {
+  instant: '75ms',
+  fast: '120ms',
+  base: '180ms',
+  slow: '240ms',
+  sheet: '280ms',
+},
+transitionTimingFunction: {
+  standard: 'cubic-bezier(0.2, 0, 0, 1)',
+  out: 'cubic-bezier(0, 0, 0.2, 1)',
+  in: 'cubic-bezier(0.4, 0, 1, 1)',
+  emphasized: 'cubic-bezier(0.2, 0, 0, 1.2)',
+}
+```
 
 ---
 

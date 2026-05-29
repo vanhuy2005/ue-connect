@@ -21,6 +21,7 @@ related:
   - "page-specs/discovery.md"
   - "page-specs/messaging.md"
   - "page-specs/admin-dashboard.md"
+  - "21-social-interaction-patterns.md"
 ---
 
 # 08. Shadow & Elevation System

@@ -817,6 +817,25 @@ Rules:
 
 ---
 
+## 14.7. Social Action Selected Colors
+
+```css
+.post-action-like.active {
+  color: #DC2626; /* Red for liked heart */
+}
+
+.post-action-save.active {
+  color: var(--ue-brand); /* HCMUE Cerulean for saved bookmark */
+}
+```
+
+Rules:
+* Like active uses semantic danger red `#DC2626` (or active brand cerulean).
+* Save active uses brand cerulean `var(--ue-brand)`.
+* Default icons remain neutral muted `var(--ue-text-muted)`.
+
+---
+
 ## 15. Page-level Color Usage
 
 ## 15.1. Onboarding
