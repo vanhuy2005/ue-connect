@@ -89,4 +89,19 @@ class VerificationRequest extends Model
     {
         return $this->hasMany(VerificationReviewAction::class);
     }
+
+    public function evidenceCaptureSessions(): HasMany
+    {
+        return $this->hasMany(EvidenceCaptureSession::class);
+    }
+
+    public function evidenceAnalysisJobs(): HasMany
+    {
+        return $this->hasMany(EvidenceAnalysisJob::class);
+    }
+
+    public function evidenceAnalysisResults(): HasMany
+    {
+        return $this->hasMany(EvidenceAnalysisResult::class);
+    }
 }

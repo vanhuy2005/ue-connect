@@ -192,4 +192,9 @@ class User extends Authenticatable
     {
         return $this->hasMany(PostHide::class);
     }
+
+    public function evidenceCaptureSessions(): HasMany
+    {
+        return $this->hasMany(EvidenceCaptureSession::class);
+    }
 }
