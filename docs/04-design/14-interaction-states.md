@@ -2210,5 +2210,26 @@ Before adding or changing an interaction state:
 
 Nếu không làm đủ, UI sẽ lại rơi vào trạng thái “bấm được nhưng không biết có gì xảy ra”. Một loại địa ngục nhỏ, có border-radius.
 
+---
+
+# 38. Social Interaction State Matrix
+
+UEConnect social features follow this precise matrix for optimistic UI, state change, server confirmation, rollback, and accessibility announcements:
+
+| Action | Trigger | Immediate UI Feedback | Server Action | Success UI | Failure UI | ARIA Announcement | Reduced Motion |
+| :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- |
+| **Like Post** | click/tap like button | icon selected, count +1, button press scale | Livewire action `toggleLike` | keep selected state | rollback icon/count, toast error | *"Đã thích bài viết"* / *"Đã bỏ thích bài viết"* | no scale pop, color/state only |
+| **Save Post** | click/tap save button | icon bookmark filled, optimistic update | Livewire action `toggleSave` | keep saved state, show undo toast | rollback bookmark icon, toast error | *"Đã lưu bài viết"* / *"Đã bỏ lưu bài viết"* | no scale, state change only |
+| **Hide Post** | click quick hide `X` or post menu "Ẩn" | dim and collapse post immediately | Livewire action `hidePost` | remove post, show undo toast | restore post, toast error | *"Đã ẩn bài viết"* | instant collapse without transition |
+| **Delete Post** | click "Xóa" inside confirmation modal | show loading in button | Livewire action `deletePost` | remove post from feed, show success toast | enable delete button, show toast error | *"Đã xóa bài viết"* | instant fade out of post card |
+| **Report Post** | submit report modal | show loading spinner in submit button | Livewire action `submitReport` | close modal, show thank-you toast | enable submit, show error text | *"Đã gửi báo cáo vi phạm"* | instant modal close |
+| **Comment Like** | click comment like button | icon filled, count +1, scale pop | Livewire action `toggleCommentLike` | keep selected state | rollback icon/count, toast error | *"Đã thích bình luận"* / *"Đã bỏ thích"* | color/state only, no scale |
+| **Comment Reply** | click "Phản hồi" | focus comment composer, pre-fill tag | local state only | composer ready | N/A | *"Đang soạn phản hồi cho..."* | instant keyboard focus |
+| **Composer Submit** | click "Đăng" / submit form | disable submit button, show inline spinner | Livewire action `createPost` / `createComment` | clear composer, append new item | enable submit button, preserve text | *"Đã đăng bài viết mới thành công"* | instant insertion without slide/fade |
+| **Menu Open** | click `...` button | show popover dropdown or bottom sheet | local state only | menu fully visible | N/A | *"Menu hành động bài viết mở"* | instant pop without scale/slide |
+| **Bottom Sheet Open**| tap `...` on mobile | overlay fade in, sheet slide up | local state only | bottom sheet visible | N/A | *"Bảng lựa chọn hành động mở"* | overlay fade-in only, sheet pop |
+| **Toast Undo** | click "Hoàn tác" in toast | show spinner in toast, rollback action | Livewire action `undoAction` | hide toast, restore UI state | hide toast, show error toast | *"Đã hoàn tác hành động"* | instant transition |
+
+
 ```
 ```

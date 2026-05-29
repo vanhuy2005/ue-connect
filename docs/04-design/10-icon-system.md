@@ -27,6 +27,7 @@ related:
   - "page-specs/messaging.md"
   - "page-specs/mentor.md"
   - "page-specs/safety-reporting.md"
+  - "21-social-interaction-patterns.md"
 ---
 
 # 10. Icon System

@@ -255,6 +255,7 @@ Thư mục `docs/04-design` được chia thành 5 nhóm chính.
 ├── 18-responsive-rules.md
 ├── 19-design-token-documentation.md
 ├── 20-agent-prompt-guide.md
+├── 21-social-interaction-patterns.md
 │
 ├── page-specs/
 │   ├── onboarding.md
@@ -329,6 +330,7 @@ Mục tiêu:
 17-accessibility-rules.md
 18-responsive-rules.md
 19-design-token-documentation.md
+21-social-interaction-patterns.md
 ```
 
 Mục tiêu:
@@ -427,6 +429,7 @@ Mục tiêu:
 | `18-responsive-rules.md`           | Desktop/tablet/mobile adaptive behavior                       |
 | `19-design-token-documentation.md` | Token naming, Tailwind mapping, CSS variables                 |
 | `20-agent-prompt-guide.md`         | Prompt rules cho AI design/coding agent                       |
+| `21-social-interaction-patterns.md` | Threads-inspired social UX, micro-interactions, optimistic UI |
 
 ---
 
