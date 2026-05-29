@@ -42,7 +42,7 @@ class EvidenceAnalyzerManager
         $analyzer = $this->resolveProvider($provider);
 
         try {
-            return $analyzer->analyze($evidence);
+            $result = $analyzer->analyze($evidence);
         } catch (\Throwable $e) {
             Log::warning('EvidenceAnalyzerManager: Provider failed, falling back to manual review.', [
                 'provider' => $provider,
@@ -53,6 +53,61 @@ class EvidenceAnalyzerManager
                 EvidenceRiskFlag::ManualReviewRequired,
             );
         }
+
+        // P0-2: Check if fallback is enabled and we need it based on confidence threshold
+        $fallbackEnabled = config('ai-verification.fallback.enabled', false);
+        $minConfidence = config('ai-verification.fallback.min_confidence_to_skip', 0.75);
+
+        if ($fallbackEnabled && $result->confidenceScore < $minConfidence) {
+            // We need fallback! Check if external provider is allowed
+            if (! config('ai-verification.privacy.allow_external_provider', false)) {
+                Log::warning('EvidenceAnalyzerManager: Fallback needed but external providers are disabled.');
+                // Add the ExternalProviderDisabled risk flag if it isn't there already
+                $flags = $result->riskFlags;
+                if (! in_array(EvidenceRiskFlag::ExternalProviderDisabled, $flags)) {
+                    $flags[] = EvidenceRiskFlag::ExternalProviderDisabled;
+                }
+
+                return new EvidenceAnalysisResultData(
+                    recommendation: $result->recommendation,
+                    confidenceScore: $result->confidenceScore,
+                    documentTypeDetected: $result->documentTypeDetected,
+                    documentTypeConfidence: $result->documentTypeConfidence,
+                    ocrText: $result->ocrText,
+                    extractedFields: $result->extractedFields,
+                    matchResult: $result->matchResult,
+                    riskFlags: $flags,
+                    reviewSummary: $result->reviewSummary,
+                    provider: $result->provider,
+                    modelName: $result->modelName,
+                );
+            }
+
+            $fallbackProviders = config('ai-verification.fallback.providers', []);
+            foreach ($fallbackProviders as $fallbackProvider) {
+                try {
+                    $fallbackAnalyzer = $this->resolveExternalProvider($fallbackProvider);
+                    $fallbackResult = $fallbackAnalyzer->analyze($evidence);
+
+                    // If fallback analyzer succeeded and got a better score, use it
+                    if ($fallbackResult->confidenceScore > $result->confidenceScore) {
+                        Log::info("EvidenceAnalyzerManager: Fallback to {$fallbackProvider} yielded better score: {$fallbackResult->confidenceScore} > {$result->confidenceScore}");
+                        $result = $fallbackResult;
+                    }
+
+                    // If we crossed the skip threshold, we can stop the chain
+                    if ($result->confidenceScore >= $minConfidence) {
+                        break;
+                    }
+                } catch (\Throwable $e) {
+                    Log::warning("EvidenceAnalyzerManager: Fallback provider {$fallbackProvider} failed.", [
+                        'error' => $e->getMessage(),
+                    ]);
+                }
+            }
+        }
+
+        return $result;
     }
 
     private function resolveProvider(string $provider): EvidenceAnalyzer

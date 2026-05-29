@@ -23,4 +23,5 @@ enum EvidenceRiskFlag: string
     case ExternalProviderDisabled = 'external_provider_disabled';
     case ManualReviewRequired = 'manual_review_required';
     case UnsupportedDocumentType = 'unsupported_document_type';
+    case OcrLanguageMissing = 'ocr_language_missing';
 }

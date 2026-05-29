@@ -70,6 +70,17 @@ class AnalyzeStudentCardEvidenceJob implements ShouldQueue
                 'finished_at' => now(),
             ]);
 
+            $riskFlags = [EvidenceRiskFlag::UnsupportedDocumentType->value];
+            $summary = 'Không hỗ trợ phân tích AI cho hình thức này hoặc loại minh chứng này.';
+
+            if ($evidence->capture_method === EvidenceCaptureMethod::UploadFallback) {
+                $riskFlags = [
+                    EvidenceRiskFlag::NotCameraCapture->value,
+                    EvidenceRiskFlag::ManualReviewRequired->value,
+                ];
+                $summary = 'Minh chứng tải lên thủ công. Không hỗ trợ phân tích AI. Cần duyệt thủ công.';
+            }
+
             EvidenceAnalysisResult::create([
                 'analysis_job_id' => $analysisJob->id,
                 'verification_request_id' => $request->id,
@@ -79,10 +90,10 @@ class AnalyzeStudentCardEvidenceJob implements ShouldQueue
                 'ocr_text' => null,
                 'extracted_fields_json' => [],
                 'match_result_json' => [],
-                'risk_flags_json' => [EvidenceRiskFlag::UnsupportedDocumentType->value],
+                'risk_flags_json' => $riskFlags,
                 'confidence_score' => 0.0,
                 'recommendation' => EvidenceAnalysisRecommendation::ManualReview,
-                'review_summary' => 'Không hỗ trợ phân tích AI cho hình thức này hoặc loại minh chứng này.',
+                'review_summary' => $summary,
             ]);
 
             return;
@@ -102,6 +113,8 @@ class AnalyzeStudentCardEvidenceJob implements ShouldQueue
                 $analysisJob->update([
                     'status' => $status,
                     'finished_at' => now(),
+                    'provider' => $resultData->provider ?? $analysisJob->provider,
+                    'model_name' => $resultData->modelName ?? $analysisJob->model_name,
                 ]);
 
                 EvidenceAnalysisResult::create([

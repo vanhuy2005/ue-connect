@@ -36,12 +36,16 @@ class StudentCardOcrService
     {
         $absolutePath = Storage::disk('private')->path($privateDiskPath);
 
+        $binary = config('ai-verification.local_hybrid.tesseract_binary', 'tesseract');
+        $langs = config('ai-verification.local_hybrid.tesseract_langs', 'vie+eng');
+        $psm = config('ai-verification.local_hybrid.tesseract_psm', '6');
+
         $process = new Process([
-            'tesseract',
+            $binary,
             $absolutePath,
             'stdout',
-            '-l', 'vie+eng',
-            '--psm', '6',
+            '-l', $langs,
+            '--psm', $psm,
         ]);
         $process->setTimeout(30);
 
@@ -56,15 +60,22 @@ class StudentCardOcrService
                 'flags' => [],
             ];
         } catch (ProcessFailedException $e) {
+            $stderr = $process->getErrorOutput();
             // Do NOT log image path or OCR content
             Log::warning('StudentCardOcrService: Tesseract process failed.', [
                 'error_code' => $process->getExitCode(),
+                'stderr' => $stderr,
             ]);
+
+            $flag = EvidenceRiskFlag::OcrUnavailable;
+            if (str_contains($stderr, 'Error opening data file') || str_contains($stderr, 'traineddata')) {
+                $flag = EvidenceRiskFlag::OcrLanguageMissing;
+            }
 
             return [
                 'text' => '',
                 'engine' => 'tesseract',
-                'flags' => [EvidenceRiskFlag::OcrUnavailable],
+                'flags' => [$flag],
             ];
         } catch (\Throwable $e) {
             Log::warning('StudentCardOcrService: Tesseract unavailable.', [
