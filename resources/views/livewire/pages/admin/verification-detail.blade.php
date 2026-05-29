@@ -732,6 +732,7 @@ new class extends Component {
                                                                     \App\Enums\EvidenceRiskFlag::NameMismatch => 'Họ tên không khớp',
                                                                     \App\Enums\EvidenceRiskFlag::SchoolMismatch => 'Không khớp tên trường',
                                                                     \App\Enums\EvidenceRiskFlag::OcrUnavailable => 'OCR không hoạt động',
+                                                                    \App\Enums\EvidenceRiskFlag::OcrLanguageMissing => 'Thiếu dữ liệu ngôn ngữ OCR (tải vie.traineddata)',
                                                                     \App\Enums\EvidenceRiskFlag::OllamaUnavailable => 'Ollama không hoạt động',
                                                                     \App\Enums\EvidenceRiskFlag::ExternalProviderUnavailable => 'AI bên thứ ba lỗi',
                                                                     \App\Enums\EvidenceRiskFlag::ExternalProviderDisabled => 'AI ngoài bị vô hiệu hóa',

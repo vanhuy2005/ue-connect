@@ -212,6 +212,12 @@ new #[Layout('layouts.app')] class extends Component
         ]);
     }
 
+    /** Called from Alpine cameraCapture via $wire.call() to push base64 image data. */
+    public function setCapturedImage(string $base64Data): void
+    {
+        $this->capturedImageData = $base64Data;
+    }
+
     public function submit(): void
     {
         $user = auth()->user();
@@ -310,17 +316,48 @@ new #[Layout('layouts.app')] class extends Component
             try {
                 $base64Data = $this->capturedImageData;
                 if (!preg_match('/^data:image\/(\w+);base64,/', $base64Data, $typeMatches)) {
-                    throw new \Exception('Dữ liệu hình ảnh không đúng định dạng base64.');
+                    throw ValidationException::withMessages([
+                        'evidence' => 'Dữ liệu hình ảnh không đúng định dạng base64.',
+                    ]);
                 }
                 
                 $extension = strtolower($typeMatches[1]);
                 if (!in_array($extension, ['jpg', 'jpeg', 'png', 'webp'])) {
-                    throw new \Exception('Hệ thống chỉ chấp nhận ảnh định dạng JPEG, PNG, WEBP.');
+                    throw ValidationException::withMessages([
+                        'evidence' => 'Hệ thống chỉ chấp nhận ảnh định dạng JPEG, PNG, WEBP.',
+                    ]);
                 }
 
                 $rawImage = base64_decode(substr($base64Data, strpos($base64Data, ',') + 1));
                 if ($rawImage === false) {
-                    throw new \Exception('Không thể giải mã dữ liệu hình ảnh.');
+                    throw ValidationException::withMessages([
+                        'evidence' => 'Không thể giải mã dữ liệu hình ảnh.',
+                    ]);
+                }
+
+                // P0-1: Server-side validation of real image
+                $imageInfo = @getimagesizefromstring($rawImage);
+                if ($imageInfo === false) {
+                    throw ValidationException::withMessages([
+                        'evidence' => 'Ảnh chụp không hợp lệ. Vui lòng chụp lại.',
+                    ]);
+                }
+
+                $mimeType = $imageInfo['mime'] ?? null;
+                if (!in_array($mimeType, ['image/jpeg', 'image/png', 'image/webp'])) {
+                    throw ValidationException::withMessages([
+                        'evidence' => 'Hệ thống chỉ chấp nhận định dạng ảnh JPEG, PNG, WEBP.',
+                    ]);
+                }
+
+                [$width, $height] = $imageInfo;
+                $minWidth = config('ai-verification.capture.min_width', 640);
+                $minHeight = config('ai-verification.capture.min_height', 360);
+
+                if ($width < $minWidth || $height < $minHeight) {
+                    throw ValidationException::withMessages([
+                        'evidence' => "Ảnh chụp quá nhỏ ($width x $height). Vui lòng chụp lại rõ hơn (tối thiểu {$minWidth}x{$minHeight}px).",
+                    ]);
                 }
 
                 $capturedPath = 'verifications/' . $user->id . '/captures/' . Str::uuid() . '.' . ($extension === 'png' ? 'png' : 'jpg');
@@ -337,11 +374,14 @@ new #[Layout('layouts.app')] class extends Component
                     'visibility' => 'private',
                     'file_category' => 'verification_evidence',
                 ];
-
-                $session->update([
-                    'status' => EvidenceCaptureStatus::Completed,
-                    'completed_at' => now(),
-                ]);
+            } catch (ValidationException $e) {
+                if ($session) {
+                    $session->update([
+                        'status' => EvidenceCaptureStatus::Failed,
+                        'failed_at' => now(),
+                    ]);
+                }
+                throw $e;
             } catch (\Throwable $e) {
                 if ($session) {
                     $session->update([
@@ -386,6 +426,8 @@ new #[Layout('layouts.app')] class extends Component
                 if ($session) {
                     $session->update([
                         'verification_request_id' => $request->id,
+                        'status' => EvidenceCaptureStatus::Completed,
+                        'completed_at' => now(),
                     ]);
                 }
 
@@ -477,6 +519,13 @@ new #[Layout('layouts.app')] class extends Component
             // Clean up files on error
             foreach ($uploadedPaths as $orphanedPath) {
                 Storage::disk('private')->delete($orphanedPath);
+            }
+
+            if ($session) {
+                $session->update([
+                    'status' => EvidenceCaptureStatus::Failed,
+                    'failed_at' => now(),
+                ]);
             }
 
             Log::error('Verification submit failed: ' . $e->getMessage());
@@ -753,7 +802,7 @@ new #[Layout('layouts.app')] class extends Component
                     {{-- Camera Capture UI (student + camera method selected) --}}
                     @if($role_requested === 'student' && $evidenceMethod === 'camera')
                     <div
-                        x-data="cameraCapture()"
+                        x-data="cameraCapture"
                         x-init="init()"
                         class="space-y-4"
                     >
@@ -814,22 +863,27 @@ new #[Layout('layouts.app')] class extends Component
                                     muted
                                 ></video>
 
-                                {{-- Card guide frame overlay --}}
+                                {{-- Card guide frame overlay — portrait 54×86 mm ratio --}}
                                 <div x-show="state === 'camera_ready'" class="absolute inset-0 flex items-center justify-center pointer-events-none">
-                                    <div class="border-2 border-white border-opacity-70 rounded-lg"
-                                         style="width: 85%; height: 55%; box-shadow: 0 0 0 9999px rgba(0,0,0,0.4);">
-                                        <div class="absolute -top-6 left-0 right-0 text-center">
-                                            <span class="text-white text-xs bg-black bg-opacity-50 px-2 py-1 rounded">Đặt thẻ sinh viên vào khung</span>
+                                    <div class="relative rounded-xl"
+                                         style="width: 38%; aspect-ratio: 54/86; box-shadow: 0 0 0 9999px rgba(0,0,0,0.45);">
+                                        {{-- Corner markers --}}
+                                        <span class="absolute top-0 left-0 w-5 h-5 border-t-2 border-l-2 border-white rounded-tl-lg"></span>
+                                        <span class="absolute top-0 right-0 w-5 h-5 border-t-2 border-r-2 border-white rounded-tr-lg"></span>
+                                        <span class="absolute bottom-0 left-0 w-5 h-5 border-b-2 border-l-2 border-white rounded-bl-lg"></span>
+                                        <span class="absolute bottom-0 right-0 w-5 h-5 border-b-2 border-r-2 border-white rounded-br-lg"></span>
+                                        {{-- Label --}}
+                                        <div class="absolute -bottom-7 left-0 right-0 text-center">
+                                            <span class="text-white text-xs bg-black bg-opacity-50 px-2 py-1 rounded whitespace-nowrap">📷 Đặt thẻ sinh viên vào khung</span>
                                         </div>
                                     </div>
                                 </div>
 
-                                {{-- Capture preview image --}}
+                                {{-- Capture preview image — bound to Alpine data, survives Livewire morphs --}}
                                 <img
-                                    x-ref="previewImg"
                                     x-show="state === 'capture_preview'"
+                                    :src="capturedData"
                                     class="w-full h-full object-cover"
-                                    src=""
                                     alt="Ảnh đã chụp"
                                 />
 
@@ -891,97 +945,6 @@ new #[Layout('layouts.app')] class extends Component
                         {{-- Hidden input: passes base64 to Livewire --}}
                         <input type="hidden" x-model="capturedData" wire:model="capturedImageData" />
                     </div>
-
-                    <script>
-                    function cameraCapture() {
-                        return {
-                            state: 'idle',
-                            errorMessage: '',
-                            capturedData: '',
-                            stream: null,
-                            isSecureContext: window.isSecureContext || window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1',
-
-                            init() {
-                                this.$watch('state', val => {
-                                    if (val !== 'camera_ready' && val !== 'capture_preview') {
-                                        this.stopStream();
-                                    }
-                                });
-                            },
-
-                            async startCamera() {
-                                if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-                                    this.state = 'error';
-                                    this.errorMessage = 'Trình duyệt của bạn không hỗ trợ camera. Hãy thử dùng Chrome/Firefox phiên bản mới nhất hoặc chọn upload file.';
-                                    return;
-                                }
-
-                                this.state = 'loading';
-
-                                try {
-                                    this.stream = await navigator.mediaDevices.getUserMedia({
-                                        video: {
-                                            facingMode: { ideal: 'environment' },
-                                            width: { ideal: 1280 },
-                                            height: { ideal: 720 }
-                                        },
-                                        audio: false
-                                    });
-
-                                    await this.$nextTick();
-                                    this.$refs.videoEl.srcObject = this.stream;
-                                    this.state = 'camera_ready';
-                                } catch (err) {
-                                    this.state = 'error';
-                                    if (err.name === 'NotAllowedError') {
-                                        this.errorMessage = 'Bạn đã từ chối quyền truy cập camera. Hãy cấp quyền trong cài đặt trình duyệt rồi thử lại.';
-                                    } else if (err.name === 'NotFoundError') {
-                                        this.errorMessage = 'Không tìm thấy camera. Hãy kết nối camera và thử lại, hoặc dùng upload file.';
-                                    } else {
-                                        this.errorMessage = 'Không thể khởi động camera: ' + err.message + '. Hãy thử upload file thay thế.';
-                                    }
-                                }
-                            },
-
-                            capturePhoto() {
-                                const video = this.$refs.videoEl;
-                                const canvas = this.$refs.canvasEl;
-                                canvas.width = video.videoWidth;
-                                canvas.height = video.videoHeight;
-                                const ctx = canvas.getContext('2d');
-                                ctx.drawImage(video, 0, 0);
-                                const dataUrl = canvas.toDataURL('image/jpeg', 0.9);
-                                this.$refs.previewImg.src = dataUrl;
-                                this.capturedData = dataUrl;
-                                this.state = 'capture_preview';
-                                this.stopStream();
-                            },
-
-                            retakePhoto() {
-                                this.capturedData = '';
-                                this.$refs.previewImg.src = '';
-                                this.startCamera();
-                            },
-
-                            confirmPhoto() {
-                                this.state = 'confirmed';
-                            },
-
-                            retakeAll() {
-                                this.capturedData = '';
-                                this.$refs.previewImg.src = '';
-                                this.state = 'idle';
-                            },
-
-                            stopStream() {
-                                if (this.stream) {
-                                    this.stream.getTracks().forEach(t => t.stop());
-                                    this.stream = null;
-                                }
-                            }
-                        };
-                    }
-                    </script>
                     @endif
 
                     {{-- Upload form (non-student roles always see this; students see it when upload method selected) --}}
@@ -1087,3 +1050,118 @@ new #[Layout('layouts.app')] class extends Component
         @endif
     </div>
 </div>
+
+@script
+<script>
+    // Register cameraCapture outside Livewire conditionals so Alpine always finds it
+    // after any Livewire DOM morph / re-render.
+    Alpine.data('cameraCapture', () => ({
+        state: 'idle',
+        errorMessage: '',
+        capturedData: '',
+        stream: null,
+        isSecureContext: window.isSecureContext
+            || window.location.hostname === 'localhost'
+            || window.location.hostname === '127.0.0.1',
+
+        init() {
+            this.$watch('state', val => {
+                if (val !== 'camera_ready' && val !== 'capture_preview') {
+                    this.stopStream();
+                }
+            });
+        },
+
+        async startCamera() {
+            if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+                this.state = 'error';
+                this.errorMessage = 'Trình duyệt của bạn không hỗ trợ camera. Hãy thử dùng Chrome/Firefox phiên bản mới nhất hoặc chọn upload file.';
+                return;
+            }
+
+            this.state = 'loading';
+
+            try {
+                this.stream = await navigator.mediaDevices.getUserMedia({
+                    video: {
+                        facingMode: { ideal: 'environment' },
+                        width: { ideal: 1280 },
+                        height: { ideal: 720 },
+                    },
+                    audio: false,
+                });
+
+                await this.$nextTick();
+                const video = this.$refs.videoEl;
+                video.srcObject = this.stream;
+
+                // Wait for metadata + first frame before declaring camera ready
+                await new Promise((resolve, reject) => {
+                    video.onloadedmetadata = () => {
+                        video.play().then(resolve).catch(reject);
+                    };
+                    video.onerror = reject;
+                    // Fallback: declare ready after 3 s if events don't fire
+                    setTimeout(resolve, 3000);
+                });
+
+                this.state = 'camera_ready';
+            } catch (err) {
+                this.state = 'error';
+                if (err.name === 'NotAllowedError') {
+                    this.errorMessage = 'Bạn đã từ chối quyền truy cập camera. Hãy cấp quyền trong cài đặt trình duyệt rồi thử lại.';
+                } else if (err.name === 'NotFoundError') {
+                    this.errorMessage = 'Không tìm thấy camera. Hãy kết nối camera và thử lại, hoặc dùng upload file.';
+                } else {
+                    this.errorMessage = 'Không thể khởi động camera: ' + err.message + '. Hãy thử upload file thay thế.';
+                }
+            }
+        },
+
+        capturePhoto() {
+            const video = this.$refs.videoEl;
+            const canvas = this.$refs.canvasEl;
+
+            if (!video.videoWidth || !video.videoHeight) {
+                this.state = 'error';
+                this.errorMessage = 'Camera chưa sẵn sàng. Vui lòng thử bật lại camera.';
+                return;
+            }
+
+            canvas.width = video.videoWidth;
+            canvas.height = video.videoHeight;
+            const ctx = canvas.getContext('2d');
+            ctx.drawImage(video, 0, 0);
+            const dataUrl = canvas.toDataURL('image/jpeg', 0.9);
+            this.capturedData = dataUrl;
+            this.state = 'capture_preview';
+            this.stopStream();
+        },
+
+        retakePhoto() {
+            this.capturedData = '';
+            this.startCamera();
+        },
+
+        confirmPhoto() {
+            // Only push base64 to Livewire when user confirms the photo
+            this.$wire.call('setCapturedImage', this.capturedData);
+            this.state = 'confirmed';
+        },
+
+        retakeAll() {
+            this.capturedData = '';
+            this.$wire.call('setCapturedImage', '');
+            this.state = 'idle';
+        },
+
+
+        stopStream() {
+            if (this.stream) {
+                this.stream.getTracks().forEach(t => t.stop());
+                this.stream = null;
+            }
+        },
+    }));
+</script>
+@endscript
