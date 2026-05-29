@@ -7,10 +7,15 @@ use App\Actions\Posts\TogglePostLike;
 use App\Actions\Posts\TogglePostSave;
 use App\Actions\Posts\HidePostFromFeed;
 use App\Actions\Reports\CreateReport;
+use App\Actions\Messaging\SendSharedPostMessage;
+use App\Actions\Messaging\FindOrCreateDirectConversation;
 use App\Enums\PostStatus;
 use App\Enums\PostVisibility;
 use App\Enums\ReportReason;
+use App\Enums\ConnectionStatus;
 use App\Models\Post;
+use App\Models\User;
+use App\Models\Connection;
 use Illuminate\Support\Facades\Auth;
 use Livewire\Attributes\Layout;
 use Livewire\Volt\Component;
@@ -43,6 +48,13 @@ new #[Layout('layouts.app')] class extends Component
 
     // Locally hidden posts for this session
     public array $locallyHiddenPostIds = [];
+
+    // Sharing post properties
+    public bool $showShareModal = false;
+    public ?int $sharingPostId = null;
+    public string $shareSearch = '';
+    public ?int $selectedShareUserId = null;
+    public string $shareOptionalMessage = '';
 
     /**
      * Rules for validation.
@@ -287,6 +299,87 @@ new #[Layout('layouts.app')] class extends Component
     public function copyLinkFeedback(): void
     {
         $this->feedbackMessage = 'Đã sao chép liên kết bài viết vào bộ nhớ tạm.';
+    }
+
+    /**
+     * Start post sharing flow.
+     */
+    public function startShare(int $postId): void
+    {
+        $post = Post::findOrFail($postId);
+        
+        if (! Auth::user()->can('share', $post)) {
+            $this->feedbackMessage = 'Bạn không có quyền chia sẻ bài viết này.';
+            return;
+        }
+
+        $this->sharingPostId = $postId;
+        $this->shareSearch = '';
+        $this->selectedShareUserId = null;
+        $this->shareOptionalMessage = '';
+        $this->showShareModal = true;
+    }
+
+    /**
+     * Execute post sharing to conversation.
+     */
+    public function executeShare(
+        SendSharedPostMessage $sendSharedPostMessage,
+        FindOrCreateDirectConversation $findOrCreateDirectConversation
+    ): void {
+        if (! $this->sharingPostId || ! $this->selectedShareUserId) {
+            return;
+        }
+
+        try {
+            $post = Post::findOrFail($this->sharingPostId);
+            $recipient = User::findOrFail($this->selectedShareUserId);
+
+            // Find or create conversation
+            $conversation = $findOrCreateDirectConversation->execute(Auth::user(), $recipient);
+
+            // Send share post message
+            $sendSharedPostMessage->execute(Auth::user(), $conversation, $post, [
+                'body' => $this->shareOptionalMessage ?: null,
+            ]);
+
+            $this->showShareModal = false;
+            $this->sharingPostId = null;
+            $this->selectedShareUserId = null;
+            $this->shareOptionalMessage = '';
+            
+            $this->feedbackMessage = 'Đã chia sẻ bài viết qua tin nhắn thành công.';
+        } catch (\Exception $e) {
+            $this->feedbackMessage = $e->getMessage();
+        }
+    }
+
+    /**
+     * Get connections list for sharing posts.
+     */
+    public function getShareConnections(): \Illuminate\Support\Collection
+    {
+        $userId = Auth::id();
+        $search = trim($this->shareSearch);
+
+        $query = Connection::where(function ($q) use ($userId) {
+                $q->where('user_one_id', $userId)->orWhere('user_two_id', $userId);
+            })
+            ->where('status', ConnectionStatus::ACTIVE)
+            ->with(['userOne.profile', 'userTwo.profile']);
+
+        $connections = $query->get()->map(function ($connection) use ($userId) {
+            return $connection->user_one_id === $userId ? $connection->userTwo : $connection->userOne;
+        });
+
+        if (! empty($search)) {
+            $connections = $connections->filter(function ($user) use ($search) {
+                return \Illuminate\Support\Str::contains(strtolower($user->name), strtolower($search)) ||
+                       ($user->profile && \Illuminate\Support\Str::contains(strtolower($user->profile->display_name), strtolower($search)));
+            });
+        }
+
+        return $connections->values();
     }
 
     /**
@@ -575,7 +668,20 @@ new #[Layout('layouts.app')] class extends Component
                                             </button>
                                         @endif
 
-                                        {{-- 4. Shared actions: Copy link --}}
+                                        {{-- 4. Shared actions: Copy link & Share --}}
+                                        <button
+                                            type="button"
+                                            wire:click="startShare({{ $post->id }})"
+                                            @click="open = false"
+                                            class="w-full text-left px-4 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50 flex flex-col transition-colors border-t border-slate-100"
+                                        >
+                                            <div class="flex items-center gap-2">
+                                                <x-ui.icon name="send" size="xs" class="text-slate-400" />
+                                                <span>Chia sẻ qua tin nhắn</span>
+                                            </div>
+                                            <span class="text-[10px] text-slate-400 font-medium pl-6">Gửi bài viết cho bạn bè trong tin nhắn riêng tư.</span>
+                                        </button>
+
                                         <button
                                             type="button"
                                             @click="navigator.clipboard.writeText('{{ route('posts.show', $post) }}'); open = false;"
@@ -853,6 +959,101 @@ new #[Layout('layouts.app')] class extends Component
                     >
                         Xóa bài viết
                     </x-ui.button>
+                </div>
+            </div>
+        </div>
+    @endif
+
+    {{-- 5. SHARE POST MODAL --}}
+    @if ($showShareModal && $sharingPostId)
+        <div class="fixed inset-0 z-50 overflow-y-auto flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs ue-animate-fade-in" role="dialog" aria-modal="true" aria-labelledby="share-modal-title">
+            <div class="bg-white rounded-2xl max-w-md w-full border border-slate-200 shadow-2xl overflow-hidden ue-animate-scale-in flex flex-col max-h-[85vh]">
+                <div class="px-6 py-4 border-b border-slate-100 flex items-center justify-between flex-shrink-0">
+                    <h3 id="share-modal-title" class="text-sm font-bold text-slate-800 flex items-center gap-2">
+                        <x-ui.icon name="send" size="xs" class="text-ue-brand" />
+                        Chia sẻ bài viết qua tin nhắn
+                    </h3>
+                    <button type="button" wire:click="$set('showShareModal', false)" class="text-slate-400 hover:text-slate-600 transition-colors">
+                        <x-ui.icon name="x" size="xs" />
+                    </button>
+                </div>
+
+                <div class="p-6 space-y-4 overflow-y-auto flex-1">
+                    {{-- Search Recipient --}}
+                    <div class="space-y-1.5">
+                        <label for="share-search" class="block text-xs font-bold text-slate-500">Tìm kiếm người nhận (Bạn bè)</label>
+                        <div class="relative">
+                            <span class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                <x-ui.icon name="search" size="xs" class="text-slate-400" />
+                            </span>
+                            <input
+                                id="share-search"
+                                type="text"
+                                wire:model.live.debounce.150ms="shareSearch"
+                                placeholder="Nhập tên bạn bè..."
+                                class="w-full pl-9 pr-4 py-2 text-xs rounded-xl border border-slate-200 focus:outline-none focus:ring-1 focus:ring-ue-brand/40 focus:border-ue-brand/40 bg-slate-50/60 placeholder-slate-400 text-slate-700"
+                            />
+                        </div>
+                    </div>
+
+                    {{-- Recipient List --}}
+                    <div class="space-y-1 max-h-48 overflow-y-auto border border-slate-100 rounded-xl divide-y divide-slate-50">
+                        @php
+                            $shareConnections = $this->getShareConnections();
+                        @endphp
+                        @forelse ($shareConnections as $connUser)
+                            <button
+                                type="button"
+                                wire:click="$set('selectedShareUserId', {{ $connUser->id }})"
+                                class="w-full text-left p-3 hover:bg-slate-50 flex items-center justify-between transition-colors {{ $selectedShareUserId === $connUser->id ? 'bg-slate-50' : '' }}"
+                            >
+                                <div class="flex items-center gap-3">
+                                    <x-ui.avatar :user="$connUser" size="xs" />
+                                    <div>
+                                        <p class="text-xxs font-bold text-slate-800 leading-tight">{{ $connUser->name }}</p>
+                                        @if ($connUser->profile && $connUser->profile->faculty)
+                                            <p class="text-[9px] text-slate-400 font-semibold leading-none mt-0.5">{{ $connUser->profile->faculty }}</p>
+                                        @endif
+                                    </div>
+                                </div>
+                                @if ($selectedShareUserId === $connUser->id)
+                                    <x-ui.icon name="check" size="xs" class="text-ue-brand fill-ue-brand" />
+                                @endif
+                            </button>
+                        @empty
+                            <div class="p-4 text-center text-xxs text-slate-400 italic">
+                                Không tìm thấy bạn bè phù hợp. Hãy chắc chắn bạn đã kết nối bạn bè với người nhận.
+                            </div>
+                        @endforelse
+                    </div>
+
+                    {{-- Optional Message --}}
+                    <div class="space-y-1.5">
+                        <label for="share-msg" class="block text-xs font-bold text-slate-500">Tin nhắn kèm theo (không bắt buộc)</label>
+                        <textarea
+                            id="share-msg"
+                            wire:model="shareOptionalMessage"
+                            placeholder="Nhập nội dung tin nhắn gửi kèm..."
+                            rows="2"
+                            class="w-full rounded-xl border border-slate-200 text-xxs font-medium p-3 focus:outline-none focus:ring-1 focus:ring-ue-brand/40 focus:border-ue-brand/40 resize-none bg-slate-50 placeholder-slate-400 text-slate-700"
+                            maxlength="200"
+                        ></textarea>
+                    </div>
+                </div>
+
+                <div class="flex items-center justify-end gap-3 px-6 py-4 bg-slate-50 border-t border-slate-100 flex-shrink-0">
+                    <button type="button" wire:click="$set('showShareModal', false)" class="px-4 py-2 text-xs font-bold text-slate-500 hover:text-slate-700 transition-colors">
+                        Hủy bỏ
+                    </button>
+                    <button
+                        type="button"
+                        wire:click="executeShare"
+                        @if (! $selectedShareUserId) disabled @endif
+                        class="px-4 py-2 text-xs font-bold text-white bg-ue-brand hover:bg-ue-brand-dark rounded-xl shadow-2xs hover:shadow-sm transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1.5"
+                    >
+                        <x-ui.icon name="send" size="xs" />
+                        Gửi chia sẻ
+                    </button>
                 </div>
             </div>
         </div>

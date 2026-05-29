@@ -22,16 +22,14 @@ $mobileNavItems = [
     [
         'icon'   => 'users',
         'label'  => 'Khám phá',
-        'href'   => '#',
-        'active' => false,
-        // TODO: route('discovery.index')
+        'href'   => route('discovery.index'),
+        'active' => request()->routeIs('discovery.*'),
     ],
     [
         'icon'   => 'message',
         'label'  => 'Tin nhắn',
-        'href'   => '#',
-        'active' => false,
-        // TODO: route('messages.index')
+        'href'   => route('messages.index'),
+        'active' => request()->routeIs('messages.*'),
     ],
     [
         'icon'   => 'community',

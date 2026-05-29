@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\Admin\VerificationEvidenceController;
+use App\Models\Conversation;
 use App\Models\Post;
 use App\Models\Report;
 use Illuminate\Support\Facades\Gate;
@@ -45,6 +46,20 @@ Route::middleware(['auth', 'active.account', 'verified.identity'])->group(functi
 
     Route::view('app/saved-posts', 'app.saved-posts')
         ->name('posts.saved');
+
+    Route::view('app/discovery', 'app.discovery')
+        ->name('discovery.index');
+
+    Route::view('app/connections', 'app.connections')
+        ->name('connections.index');
+
+    Route::get('app/messages/{conversation?}', function (?Conversation $conversation = null) {
+        if ($conversation) {
+            Gate::authorize('view', $conversation);
+        }
+
+        return view('app.messages', ['activeConversation' => $conversation]);
+    })->name('messages.index');
 });
 
 // 5. Admin Panel (protected by account status and review permission)
