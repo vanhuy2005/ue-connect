@@ -101,4 +101,14 @@ class PostPolicy
         // Active verified users can report posts, except their own
         return $user->isActive() && $post->user_id !== $user->id;
     }
+
+    /**
+     * Determine whether the user can share the model.
+     */
+    public function share(User $user, Post $post): bool
+    {
+        return $this->view($user, $post)
+            && in_array($post->status, [PostStatus::PUBLISHED, PostStatus::EDITED])
+            && ! $post->trashed();
+    }
 }

@@ -10,6 +10,8 @@ use App\Models\User;
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Gate;
+use Illuminate\Support\Facades\Validator;
+use Illuminate\Validation\ValidationException;
 
 class SendMessage
 {
@@ -24,12 +26,26 @@ class SendMessage
     {
         Gate::forUser($sender)->authorize('sendMessage', $conversation);
 
-        return DB::transaction(function () use ($sender, $conversation, $data) {
+        // Validate body
+        Validator::make($data, [
+            'body' => ['required', 'string', 'max:2000'],
+        ])->validate();
+
+        $trimmedBody = trim($data['body']);
+        if (empty($trimmedBody)) {
+            throw new ValidationException(
+                Validator::make([], []) // empty base
+                    ->errors()
+                    ->add('body', 'Tin nhắn không được để trống.')
+            );
+        }
+
+        return DB::transaction(function () use ($sender, $conversation, $trimmedBody) {
             // 1. Create message
             $message = Message::create([
                 'conversation_id' => $conversation->id,
                 'sender_id' => $sender->id,
-                'body' => $data['body'],
+                'body' => $trimmedBody,
                 'message_type' => MessageType::TEXT,
                 'status' => MessageStatus::SENT,
             ]);

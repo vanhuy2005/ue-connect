@@ -9,6 +9,8 @@ use App\Actions\Messaging\FindOrCreateDirectConversation;
 use App\Actions\Messaging\SendMessage;
 use App\Actions\Messaging\SendSharedPostMessage;
 use App\Enums\AccountStatus;
+use App\Enums\ConversationStatus;
+use App\Enums\ConversationType;
 use App\Enums\MessageStatus;
 use App\Enums\MessageType;
 use App\Enums\PostStatus;
@@ -19,9 +21,13 @@ use App\Models\Message;
 use App\Models\Post;
 use App\Models\User;
 use Illuminate\Auth\Access\AuthorizationException;
+use Illuminate\Database\QueryException;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Validation\ValidationException;
 use Livewire\Volt\Volt;
 use Tests\TestCase;
+use Illuminate\Support\Facades\Gate;
+use Illuminate\Support\Facades\Auth;
 
 class MessagingTest extends TestCase
 {
@@ -87,6 +93,85 @@ class MessagingTest extends TestCase
         $this->assertEquals(2, $conversation->participants()->count());
     }
 
+    public function test_direct_conversation_pair_is_reused_and_unique(): void
+    {
+        $action = resolve(FindOrCreateDirectConversation::class);
+
+        // A-B creates conversation
+        $conversation1 = $action->execute($this->user, $this->otherUser);
+
+        // B-A returns the exact same conversation
+        $conversation2 = $action->execute($this->otherUser, $this->user);
+        $this->assertEquals($conversation1->id, $conversation2->id);
+
+        // Try to manually create duplicate and verify database unique constraint prevents duplicate direct pairs
+        $this->expectException(QueryException::class);
+        Conversation::create([
+            'conversation_type' => ConversationType::DIRECT,
+            'direct_user_low_id' => min($this->user->id, $this->otherUser->id),
+            'direct_user_high_id' => max($this->user->id, $this->otherUser->id),
+            'status' => ConversationStatus::ACTIVE,
+        ]);
+    }
+
+    public function test_cannot_create_direct_convo_if_not_connected(): void
+    {
+        $action = resolve(FindOrCreateDirectConversation::class);
+
+        $this->expectException(\Exception::class);
+        $this->expectExceptionMessage('Hãy kết nối bạn bè trước khi bắt đầu trò chuyện.');
+
+        $action->execute($this->user, $this->stranger);
+    }
+
+    public function test_cannot_create_direct_convo_if_blocked(): void
+    {
+        $blockAction = resolve(BlockUser::class);
+        $blockAction->execute($this->user, $this->otherUser);
+
+        $action = resolve(FindOrCreateDirectConversation::class);
+
+        $this->expectException(\Exception::class);
+        $this->expectExceptionMessage('Không thể tạo cuộc trò chuyện do trạng thái chặn giữa hai người dùng.');
+
+        $action->execute($this->user, $this->otherUser);
+    }
+
+    public function test_cannot_create_direct_convo_with_self(): void
+    {
+        $action = resolve(FindOrCreateDirectConversation::class);
+
+        $this->expectException(\Exception::class);
+        $this->expectExceptionMessage('Không thể tạo cuộc trò chuyện với chính mình.');
+
+        $action->execute($this->user, $this->user);
+    }
+
+    public function test_non_participant_cannot_access_conversation_via_route(): void
+    {
+        $convoAction = resolve(FindOrCreateDirectConversation::class);
+        $conversation = $convoAction->execute($this->user, $this->otherUser);
+
+        $this->actingAs($this->stranger);
+
+        $this->expectException(\Symfony\Component\HttpKernel\Exception\HttpException::class);
+
+        Volt::test('pages.app.messages', ['activeConversation' => $conversation]);
+    }
+
+    public function test_non_participant_cannot_load_conversation_via_livewire_selection(): void
+    {
+        $convoAction = resolve(FindOrCreateDirectConversation::class);
+        $conversation = $convoAction->execute($this->user, $this->otherUser);
+
+        $this->actingAs($this->stranger);
+
+        $this->expectException(\Symfony\Component\HttpKernel\Exception\HttpException::class);
+
+        Volt::test('pages.app.messages')
+            ->call('selectConversation', $conversation->id);
+    }
+
     public function test_user_can_send_text_message(): void
     {
         $convoAction = resolve(FindOrCreateDirectConversation::class);
@@ -109,13 +194,61 @@ class MessagingTest extends TestCase
         $this->assertNotNull($conversation->last_message_at);
     }
 
-    public function test_non_connected_users_cannot_send_messages(): void
+    public function test_cannot_send_empty_or_whitespace_message(): void
     {
         $convoAction = resolve(FindOrCreateDirectConversation::class);
-        // Create conversation manually for testing policy bypass attempt
-        $conversation = $convoAction->execute($this->user, $this->stranger);
+        $conversation = $convoAction->execute($this->user, $this->otherUser);
+        $msgAction = resolve(SendMessage::class);
 
-        // Remove active connection if any (none exists)
+        // Empty message
+        try {
+            $msgAction->execute($this->user, $conversation, ['body' => '']);
+            $this->fail('Empty message should be rejected.');
+        } catch (ValidationException $e) {
+            $this->assertArrayHasKey('body', $e->errors());
+        }
+
+        // Whitespace-only message
+        try {
+            $msgAction->execute($this->user, $conversation, ['body' => "   \n  \t  "]);
+            $this->fail('Whitespace-only message should be rejected.');
+        } catch (ValidationException $e) {
+            $this->assertArrayHasKey('body', $e->errors());
+        }
+    }
+
+    public function test_cannot_send_message_over_2000_chars(): void
+    {
+        $convoAction = resolve(FindOrCreateDirectConversation::class);
+        $conversation = $convoAction->execute($this->user, $this->otherUser);
+        $msgAction = resolve(SendMessage::class);
+
+        $longBody = str_repeat('a', 2001);
+
+        $this->expectException(ValidationException::class);
+        $msgAction->execute($this->user, $conversation, ['body' => $longBody]);
+    }
+
+    public function test_valid_message_is_saved_trimmed(): void
+    {
+        $convoAction = resolve(FindOrCreateDirectConversation::class);
+        $conversation = $convoAction->execute($this->user, $this->otherUser);
+        $msgAction = resolve(SendMessage::class);
+
+        $message = $msgAction->execute($this->user, $conversation, ['body' => "   Hello trimming test!   \n "]);
+        $this->assertEquals('Hello trimming test!', $message->body);
+    }
+
+    public function test_non_connected_users_cannot_send_messages(): void
+    {
+        // Manually create direct conversation bypassing FindOrCreateDirectConversation
+        $conversation = Conversation::create([
+            'conversation_type' => ConversationType::DIRECT,
+            'status' => ConversationStatus::ACTIVE,
+        ]);
+        $conversation->participants()->create(['user_id' => $this->user->id]);
+        $conversation->participants()->create(['user_id' => $this->stranger->id]);
+
         $this->expectException(AuthorizationException::class);
 
         $msgAction = resolve(SendMessage::class);
@@ -181,6 +314,102 @@ class MessagingTest extends TestCase
 
         $shareAction = resolve(SendSharedPostMessage::class);
         $shareAction->execute($this->user, $conversation, $post);
+    }
+
+    public function test_shared_post_metadata_does_not_store_body_excerpt(): void
+    {
+        $post = Post::factory()->create([
+            'user_id' => $this->user->id,
+            'body' => 'Secret original post body excerpt',
+            'status' => PostStatus::PUBLISHED,
+        ]);
+
+        $convoAction = resolve(FindOrCreateDirectConversation::class);
+        $conversation = $convoAction->execute($this->user, $this->otherUser);
+
+        $shareAction = resolve(SendSharedPostMessage::class);
+        $message = $shareAction->execute($this->user, $conversation, $post, [
+            'body' => 'Look at this!',
+        ]);
+
+        $metadata = $message->metadata_json;
+        $this->assertArrayNotHasKey('body_excerpt', $metadata);
+        $this->assertArrayNotHasKey('author_name', $metadata);
+        $this->assertEquals($this->user->id, $metadata['author_id']);
+        $this->assertNotNull($metadata['shared_at']);
+    }
+
+    public function test_recipient_sees_preview_if_allowed(): void
+    {
+        $post = Post::factory()->create([
+            'user_id' => $this->user->id,
+            'body' => 'Visble post content',
+            'status' => PostStatus::PUBLISHED,
+        ]);
+
+        $convoAction = resolve(FindOrCreateDirectConversation::class);
+        $conversation = $convoAction->execute($this->user, $this->otherUser);
+
+        $shareAction = resolve(SendSharedPostMessage::class);
+        $message = $shareAction->execute($this->user, $conversation, $post);
+
+        $this->actingAs($this->otherUser);
+
+        Volt::test('pages.app.messages', ['activeConversation' => $conversation])
+            ->assertSee('Visble post content')
+            ->assertDontSee('Bài viết này không còn khả dụng.');
+    }
+
+    public function test_recipient_sees_unavailable_state_after_post_hidden_or_deleted(): void
+    {
+        $post = Post::factory()->create([
+            'user_id' => $this->user->id,
+            'body' => 'Hidden or deleted content',
+            'status' => PostStatus::PUBLISHED,
+        ]);
+
+        $convoAction = resolve(FindOrCreateDirectConversation::class);
+        $conversation = $convoAction->execute($this->user, $this->otherUser);
+
+        $shareAction = resolve(SendSharedPostMessage::class);
+        $message = $shareAction->execute($this->user, $conversation, $post);
+
+        // Hide post
+        $post->update(['status' => PostStatus::HIDDEN_BY_MODERATION]);
+
+        $this->actingAs($this->otherUser);
+
+        Volt::test('pages.app.messages', ['activeConversation' => $conversation])
+            ->assertDontSee('Hidden or deleted content')
+            ->assertSee('Bài viết này không còn khả dụng.');
+
+        // Reset and soft delete post
+        $post->update(['status' => PostStatus::PUBLISHED]);
+        $post->delete();
+
+        Volt::test('pages.app.messages', ['activeConversation' => $conversation])
+            ->assertDontSee('Hidden or deleted content')
+            ->assertSee('Bài viết này không còn khả dụng.');
+    }
+
+    public function test_post_policy_share_authorizations(): void
+    {
+        $post = Post::factory()->create([
+            'user_id' => $this->user->id,
+            'body' => 'Shared post policy test',
+            'status' => PostStatus::PUBLISHED,
+        ]);
+
+        $this->assertTrue($this->user->can('share', $post));
+
+        // Hidden post
+        $post->update(['status' => PostStatus::HIDDEN_BY_MODERATION]);
+        $this->assertFalse($this->user->can('share', $post));
+
+        // Soft deleted post
+        $post->update(['status' => PostStatus::PUBLISHED]);
+        $post->delete();
+        $this->assertFalse($this->user->can('share', $post));
     }
 
     public function test_volt_messages_thread_interaction(): void

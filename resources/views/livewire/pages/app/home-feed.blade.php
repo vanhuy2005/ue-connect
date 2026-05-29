@@ -308,7 +308,7 @@ new #[Layout('layouts.app')] class extends Component
     {
         $post = Post::findOrFail($postId);
         
-        if (! Auth::user()->can('view', $post)) {
+        if (! Auth::user()->can('share', $post)) {
             $this->feedbackMessage = 'Bạn không có quyền chia sẻ bài viết này.';
             return;
         }

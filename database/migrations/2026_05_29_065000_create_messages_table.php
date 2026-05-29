@@ -28,6 +28,7 @@ return new class extends Migration
             $table->index(['conversation_id', 'created_at']);
             $table->index('sender_id');
             $table->index('status');
+            $table->index('shared_post_id');
         });
     }
 

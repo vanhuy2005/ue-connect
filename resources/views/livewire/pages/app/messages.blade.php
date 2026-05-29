@@ -27,6 +27,7 @@ new #[Layout('layouts.app')] class extends Component
     public function mount(?Conversation $activeConversation = null): void
     {
         if ($activeConversation && $activeConversation->id) {
+            Gate::authorize('view', $activeConversation);
             $this->selectedConversationId = $activeConversation->id;
             $this->markAsRead($activeConversation->id);
         }
@@ -37,6 +38,9 @@ new #[Layout('layouts.app')] class extends Component
      */
     public function selectConversation(int $convoId): void
     {
+        $conversation = Conversation::findOrFail($convoId);
+        Gate::authorize('view', $conversation);
+
         $this->selectedConversationId = $convoId;
         $this->newMessageBody = '';
         $this->markAsRead($convoId);
@@ -62,6 +66,7 @@ new #[Layout('layouts.app')] class extends Component
 
         try {
             $conversation = Conversation::findOrFail($this->selectedConversationId);
+            Gate::authorize('view', $conversation);
             
             // Check if restricted
             if ($this->isRestricted($conversation)) {
@@ -136,6 +141,9 @@ new #[Layout('layouts.app')] class extends Component
      */
     protected function markAsRead(int $convoId): void
     {
+        $conversation = Conversation::findOrFail($convoId);
+        Gate::authorize('view', $conversation);
+
         ConversationParticipant::where('conversation_id', $convoId)
             ->where('user_id', Auth::id())
             ->update([
@@ -159,17 +167,15 @@ new #[Layout('layouts.app')] class extends Component
     {
         $userId = Auth::id();
 
-        // 1. Fetch conversations listing
+        // 1. Fetch conversations listing ordered directly in DB
         $conversations = Conversation::whereHas('participants', function ($q) use ($userId) {
                 $q->where('user_id', $userId);
             })
             ->with(['participants.user.profile', 'messages' => function($q) {
                 $q->orderBy('created_at', 'desc')->limit(1);
             }])
+            ->orderByRaw('COALESCE(last_message_at, created_at) DESC')
             ->get()
-            ->sortByDesc(function ($convo) {
-                return $convo->last_message_at ? $convo->last_message_at->timestamp : $convo->created_at->timestamp;
-            })
             ->map(function ($convo) use ($userId) {
                 $recipient = $convo->getRecipientFor(Auth::user());
                 $myParticipant = $convo->participants->firstWhere('user_id', $userId);
@@ -187,7 +193,7 @@ new #[Layout('layouts.app')] class extends Component
                 ];
             });
 
-        // 2. Fetch active conversation details if selected
+        // 2. Fetch active conversation details if selected (limited to latest 50 messages)
         $activeConvo = null;
         $messages = collect();
         $isRestricted = false;
@@ -195,10 +201,15 @@ new #[Layout('layouts.app')] class extends Component
 
         if ($this->selectedConversationId) {
             $activeConvo = Conversation::with(['participants.user.profile'])->findOrFail($this->selectedConversationId);
+            Gate::authorize('view', $activeConvo);
+
             $messages = Message::where('conversation_id', $this->selectedConversationId)
                 ->with(['sender', 'sharedPost.user'])
-                ->orderBy('created_at', 'asc')
-                ->get();
+                ->orderBy('created_at', 'desc')
+                ->limit(50)
+                ->get()
+                ->reverse()
+                ->values();
 
             $isRestricted = $this->isRestricted($activeConvo);
             $isBlocked = $this->isBlockedState($activeConvo);

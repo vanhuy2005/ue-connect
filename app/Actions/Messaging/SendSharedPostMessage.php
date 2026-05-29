@@ -11,7 +11,6 @@ use App\Models\User;
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Gate;
-use Illuminate\Support\Str;
 
 class SendSharedPostMessage
 {
@@ -26,6 +25,9 @@ class SendSharedPostMessage
     {
         // 1. Authorize conversation
         Gate::forUser($sender)->authorize('sendMessage', $conversation);
+
+        // 1b. Authorize sender can share the post
+        Gate::forUser($sender)->authorize('share', $post);
 
         // 2. Retrieve recipient
         $recipient = $conversation->getRecipientFor($sender);
@@ -49,8 +51,9 @@ class SendSharedPostMessage
                 'status' => MessageStatus::SENT,
                 'shared_post_id' => $post->id,
                 'metadata_json' => [
-                    'author_name' => $post->user->name,
-                    'body_excerpt' => Str::limit($post->body, 120),
+                    'shared_at' => now()->toIso8601String(),
+                    'snapshot_version' => '1.0',
+                    'author_id' => $post->user_id,
                 ],
             ]);
 

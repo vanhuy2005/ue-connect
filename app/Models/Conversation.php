@@ -18,6 +18,8 @@ class Conversation extends Model
         'conversation_type',
         'status',
         'created_by',
+        'direct_user_low_id',
+        'direct_user_high_id',
         'last_message_id',
         'last_message_at',
     ];
