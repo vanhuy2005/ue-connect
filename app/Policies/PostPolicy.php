@@ -2,7 +2,10 @@
 
 namespace App\Policies;
 
+use App\Enums\ConnectionStatus;
 use App\Enums\PostStatus;
+use App\Enums\PostVisibility;
+use App\Models\Connection;
 use App\Models\Post;
 use App\Models\User;
 
@@ -31,7 +34,26 @@ class PostPolicy
         }
 
         // Normal users cannot view hidden, deleted, or moderated posts
-        return in_array($post->status, [PostStatus::PUBLISHED, PostStatus::EDITED]);
+        if (! in_array($post->status, [PostStatus::PUBLISHED, PostStatus::EDITED])) {
+            return false;
+        }
+
+        // Check visibility settings
+        if ($post->visibility === PostVisibility::PRIVATE) {
+            return false;
+        }
+
+        if ($post->visibility === PostVisibility::CONNECTIONS_ONLY) {
+            $userOneId = min($user->id, $post->user_id);
+            $userTwoId = max($user->id, $post->user_id);
+
+            return Connection::where('user_one_id', $userOneId)
+                ->where('user_two_id', $userTwoId)
+                ->where('status', ConnectionStatus::ACTIVE)
+                ->exists();
+        }
+
+        return true;
     }
 
     /**
