@@ -20,9 +20,6 @@ related_api_docs:
 
 # Trang Thông Báo Hệ Thống (Notifications)
 
-> [!NOTE]
-> Tài liệu này được đồng bộ hoàn toàn với [notification.md](file:///c:/laragon/www/ue-connect/docs/04-design/page-specs/notification.md) để làm tài liệu đối chiếu cho lập trình viên xây dựng hệ thống thông báo đa kênh.
-
 ## 1. Purpose
 Trang Thông Báo Hệ Thống (Notifications) là trung tâm tổng hợp toàn bộ các thông báo tương tác cá nhân (Thích bài viết, Bình luận, Đề xuất kết nối, Lời mời tham gia nhóm), nhắc tên (Mentions), và các thông báo chính thức từ Nhà trường, Đoàn Hội, Ban chủ nhiệm Khoa dành cho người dùng trên UEConnect.
 
@@ -89,7 +86,7 @@ Thiết kế tối giản, tập trung vào dòng chảy thông báo mượt mà
 
 ### 9.3 Error
 - Lỗi tải thông báo do sự cố mạng:
-  - UI Copy: `"Đã xảy ra lỗi khi tải thông báo. Vui lòng nhấp để tải lại."`
+  - UI Copy: `"Đã xảy ra lỗi khi tải thông báo. Vui lòng nhấp để thử lại."`
 
 ### 9.4 Offline / Reconnecting
 - Hiển thị dải băng mỏng màu cam cảnh báo ngoại tuyến ở đầu trang. Các tính năng đánh dấu đã đọc tạm thời bị vô hiệu hóa.
