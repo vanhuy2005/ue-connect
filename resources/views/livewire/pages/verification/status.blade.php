@@ -386,6 +386,22 @@ new #[Layout('layouts.app')] class extends Component
                                         Mã sinh viên của bạn đang bị xung đột hoặc trùng với một tài khoản khác đã được phê duyệt. Vui lòng gửi email hỗ trợ trực tiếp hoặc chờ giáo vụ liên hệ kiểm tra chéo.
                                     </p>
                                 </div>
+                    @endif
+
+                    @php
+                        $hasCameraEvidence = $request->evidences->contains(fn($ev) => $ev->capture_method === \App\Enums\EvidenceCaptureMethod::Camera || ($ev->capture_method && $ev->capture_method->value === 'camera'));
+                    @endphp
+
+                    @if ($hasCameraEvidence && in_array($request->status, [\App\Enums\VerificationStatus::PENDING_REVIEW, \App\Enums\VerificationStatus::UNDER_REVIEW, \App\Enums\VerificationStatus::RESUBMITTED]))
+                        <div class="mb-6 p-4 bg-blue-50/50 dark:bg-blue-950/10 text-blue-700 dark:text-blue-300 rounded-xl border border-blue-200 dark:border-blue-800/50">
+                            <div class="flex items-start gap-3">
+                                <x-ui.icon name="info" size="md" class="mt-0.5" />
+                                <div>
+                                    <div class="font-bold text-sm mb-0.5">ℹ️ Phân tích tự động</div>
+                                    <p class="text-xs leading-relaxed font-semibold">
+                                        UEConnect đang hỗ trợ kiểm tra thẻ sinh viên bằng AI cục bộ trước khi quản trị viên xét duyệt.
+                                    </p>
+                                </div>
                             </div>
                         </div>
                     @endif

@@ -35,6 +35,8 @@ new class extends Component {
             'submittedFaculty',
             'submittedAcademicProgram',
             'evidences.mediaFile',
+            'evidences.latestAnalysisResult.analysisJob',
+            'evidences.captureSession',
             'reviewActions.admin'
         ])->findOrFail($this->requestId);
 
@@ -593,6 +595,285 @@ new class extends Component {
                                     <div class="text-center text-xs text-ue-text-muted p-4">Không tìm thấy tài liệu đính kèm nào.</div>
                                 @endif
                             </div>
+
+                            {{-- AI Student Card Analysis Panel --}}
+                            @php
+                                $aiResult = $evidence->latestAnalysisResult;
+                                $hasAiResult = !empty($aiResult);
+                            @endphp
+
+                            @if ($evidence->evidence_type === 'student_card' || $hasAiResult)
+                                <div class="mt-4 border border-ue-border rounded-xl bg-ue-surface overflow-hidden shadow-sm">
+                                    <div class="p-4 bg-ue-surface-hover border-b border-ue-border flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                                        <div class="flex items-center gap-2">
+                                            <span class="text-lg">🤖</span>
+                                            <span class="font-bold text-sm text-ue-text">Phân tích thẻ sinh viên bằng AI (HCMUE AI Assist)</span>
+                                        </div>
+                                        <div class="flex flex-wrap gap-1.5">
+                                            {{-- Capture method badge --}}
+                                            @if ($evidence->capture_method)
+                                                <span class="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold bg-slate-100 text-slate-800 border border-slate-200">
+                                                    {{ $evidence->capture_method === \App\Enums\EvidenceCaptureMethod::Camera ? '📷 Chụp Camera' : '📁 Tải lên (Upload)' }}
+                                                </span>
+                                            @endif
+
+                                            {{-- AI status badge --}}
+                                            @if ($hasAiResult && $aiResult->analysisJob)
+                                                @php
+                                                    $jobStatus = $aiResult->analysisJob->status;
+                                                    $statusBg = match($jobStatus) {
+                                                        \App\Enums\EvidenceAnalysisStatus::Succeeded => 'bg-green-50 text-green-700 border-green-200',
+                                                        \App\Enums\EvidenceAnalysisStatus::Failed => 'bg-red-50 text-red-700 border-red-200',
+                                                        \App\Enums\EvidenceAnalysisStatus::Skipped => 'bg-gray-100 text-gray-700 border-gray-200',
+                                                        \App\Enums\EvidenceAnalysisStatus::ManualReviewRequired => 'bg-amber-50 text-amber-700 border-amber-200',
+                                                        default => 'bg-blue-50 text-blue-700 border-blue-200',
+                                                    };
+                                                @endphp
+                                                <span class="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold {{ $statusBg }} border">
+                                                    {{ match($jobStatus) {
+                                                        \App\Enums\EvidenceAnalysisStatus::Succeeded => 'Thành công',
+                                                        \App\Enums\EvidenceAnalysisStatus::Failed => 'Lỗi xử lý',
+                                                        \App\Enums\EvidenceAnalysisStatus::Skipped => 'Bỏ qua',
+                                                        \App\Enums\EvidenceAnalysisStatus::ManualReviewRequired => 'Cần xem xét',
+                                                        default => $jobStatus->value ?? $jobStatus,
+                                                    } }}
+                                                </span>
+                                            @endif
+
+                                            {{-- Provider badge --}}
+                                            @if ($hasAiResult)
+                                                <span class="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold bg-purple-50 text-purple-700 border border-purple-200">
+                                                    {{ match($aiResult->analysisJob?->provider) {
+                                                        'local_hybrid' => 'Local (Tesseract + Ollama)',
+                                                        'local_ocr' => 'Local (Tesseract)',
+                                                        'gemini_flash' => 'Gemini 2.0 Flash',
+                                                        'openrouter' => 'OpenRouter Vision',
+                                                        'mock' => 'Mock AI Analyzer',
+                                                        default => $aiResult->analysisJob?->provider ?? 'AI System',
+                                                    } }}
+                                                </span>
+                                            @endif
+                                        </div>
+                                    </div>
+
+                                    <div class="p-4 space-y-4">
+                                        @if ($hasAiResult)
+                                            {{-- Warning Banner --}}
+                                            <div class="p-2.5 bg-blue-50 dark:bg-blue-950/30 text-blue-800 dark:text-blue-300 rounded-lg border border-blue-200 dark:border-blue-900/50 text-[11px] font-semibold leading-relaxed">
+                                                💡 <strong>Lưu ý:</strong> AI chỉ hỗ trợ phân tích dữ liệu tự động để đề xuất. Quyết định phê duyệt cuối cùng hoàn toàn thuộc về Quản trị viên.
+                                            </div>
+
+                                            {{-- Recommendations and Confidence Bar --}}
+                                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 border-b border-ue-border pb-4">
+                                                <div>
+                                                    <div class="text-[10px] text-ue-text-muted font-bold uppercase tracking-wider mb-1">Đánh giá & Khuyến nghị AI</div>
+                                                    @php
+                                                        $rec = $aiResult->recommendation;
+                                                        $recBg = match($rec) {
+                                                            \App\Enums\EvidenceAnalysisRecommendation::LikelyMatch => 'bg-green-100 text-green-800 border-green-200 dark:bg-green-950/30 dark:text-green-300 dark:border-green-900',
+                                                            \App\Enums\EvidenceAnalysisRecommendation::ManualReview => 'bg-amber-100 text-amber-800 border-amber-200 dark:bg-amber-950/30 dark:text-amber-300 dark:border-amber-900',
+                                                            \App\Enums\EvidenceAnalysisRecommendation::Suspicious => 'bg-orange-100 text-orange-800 border-orange-200 dark:bg-orange-950/30 dark:text-orange-300 dark:border-orange-900',
+                                                            \App\Enums\EvidenceAnalysisRecommendation::RejectRecommended => 'bg-red-100 text-red-800 border-red-200 dark:bg-red-950/30 dark:text-red-300 dark:border-red-900',
+                                                            default => 'bg-gray-100 text-gray-800 border-gray-200 dark:bg-gray-800 dark:text-gray-300 dark:border-gray-700',
+                                                        };
+                                                        $recLabel = match($rec) {
+                                                            \App\Enums\EvidenceAnalysisRecommendation::LikelyMatch => '🟢 Likely Match (Khớp cao - Duyệt đề xuất)',
+                                                            \App\Enums\EvidenceAnalysisRecommendation::ManualReview => '🟡 Manual Review (Cần xem xét kỹ thủ công)',
+                                                            \App\Enums\EvidenceAnalysisRecommendation::Suspicious => '🟠 Suspicious (Nghi ngờ rủi ro)',
+                                                            \App\Enums\EvidenceAnalysisRecommendation::RejectRecommended => '🔴 Reject Recommended (Đề xuất Từ chối)',
+                                                            default => $rec->value ?? $rec,
+                                                        };
+                                                    @endphp
+                                                    <span class="inline-flex items-center px-2.5 py-1 rounded-md text-xs font-bold {{ $recBg }} border">
+                                                        {{ $recLabel }}
+                                                    </span>
+                                                </div>
+                                                <div>
+                                                    <div class="text-[10px] text-ue-text-muted font-bold uppercase tracking-wider mb-1">Độ tin cậy so khớp tổng thể</div>
+                                                    <div class="flex items-center gap-2 mt-1.5">
+                                                        <div class="flex-1 bg-ue-surface-pressed h-2 rounded-full overflow-hidden border border-ue-border dark:bg-gray-700">
+                                                            <div class="bg-ue-brand h-full rounded-full" style="width: {{ $aiResult->confidence_score * 100 }}%"></div>
+                                                        </div>
+                                                        <span class="text-xs font-bold text-ue-text">{{ round($aiResult->confidence_score * 100, 1) }}%</span>
+                                                    </div>
+                                                </div>
+                                            </div>
+
+                                            {{-- Document details --}}
+                                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 border-b border-ue-border pb-4">
+                                                <div>
+                                                    <div class="text-[10px] text-ue-text-muted font-bold uppercase tracking-wider mb-1">Loại tài liệu phát hiện</div>
+                                                    <div class="text-xs font-semibold text-ue-text">
+                                                        {{ $aiResult->document_type_detected === 'student_card' ? 'Thẻ sinh viên HCMUE' : 'Không xác định' }} 
+                                                        <span class="text-[10px] text-ue-text-muted font-normal">({{ round($aiResult->document_type_confidence * 100, 1) }}% tin cậy)</span>
+                                                    </div>
+                                                </div>
+                                                <div>
+                                                    <div class="text-[10px] text-ue-text-muted font-bold uppercase tracking-wider mb-1">Cảnh báo rủi ro (Risk Flags)</div>
+                                                    <div class="flex flex-wrap gap-1 mt-1">
+                                                        @php
+                                                            $flags = $aiResult->risk_flags_json ?? [];
+                                                        @endphp
+                                                        @forelse ($flags as $flagVal)
+                                                            @php
+                                                                $flagEnum = \App\Enums\EvidenceRiskFlag::tryFrom($flagVal);
+                                                                $flagLabel = match($flagEnum) {
+                                                                    \App\Enums\EvidenceRiskFlag::NotCameraCapture => 'Không phải chụp trực tiếp',
+                                                                    \App\Enums\EvidenceRiskFlag::CaptureSessionExpired => 'Phiên chụp đã hết hạn',
+                                                                    \App\Enums\EvidenceRiskFlag::LowResolution => 'Độ phân giải thấp',
+                                                                    \App\Enums\EvidenceRiskFlag::BlurredImage => 'Ảnh bị mờ',
+                                                                    \App\Enums\EvidenceRiskFlag::CroppedDocument => 'Tài liệu bị cắt góc',
+                                                                    \App\Enums\EvidenceRiskFlag::DocumentNotDetected => 'Không phát hiện tài liệu',
+                                                                    \App\Enums\EvidenceRiskFlag::DocumentTypeMismatch => 'Sai loại tài liệu',
+                                                                    \App\Enums\EvidenceRiskFlag::PortraitMissing => 'Thiếu ảnh chân dung',
+                                                                    \App\Enums\EvidenceRiskFlag::StudentCodeMissing => 'Không tìm thấy MSSV',
+                                                                    \App\Enums\EvidenceRiskFlag::StudentCodeMismatch => 'MSSV không khớp',
+                                                                    \App\Enums\EvidenceRiskFlag::MissingName => 'Không tìm thấy họ tên',
+                                                                    \App\Enums\EvidenceRiskFlag::NameMismatch => 'Họ tên không khớp',
+                                                                    \App\Enums\EvidenceRiskFlag::SchoolMismatch => 'Không khớp tên trường',
+                                                                    \App\Enums\EvidenceRiskFlag::OcrUnavailable => 'OCR không hoạt động',
+                                                                    \App\Enums\EvidenceRiskFlag::OllamaUnavailable => 'Ollama không hoạt động',
+                                                                    \App\Enums\EvidenceRiskFlag::ExternalProviderUnavailable => 'AI bên thứ ba lỗi',
+                                                                    \App\Enums\EvidenceRiskFlag::ExternalProviderDisabled => 'AI ngoài bị vô hiệu hóa',
+                                                                    \App\Enums\EvidenceRiskFlag::ManualReviewRequired => 'Yêu cầu duyệt thủ công',
+                                                                    \App\Enums\EvidenceRiskFlag::UnsupportedDocumentType => 'Tài liệu không được hỗ trợ',
+                                                                    default => $flagVal,
+                                                                };
+                                                            @endphp
+                                                            <span class="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-bold bg-amber-50 text-amber-700 border border-amber-200 dark:bg-amber-950/20 dark:text-amber-400 dark:border-amber-900">
+                                                                ⚠ {{ $flagLabel }}
+                                                            </span>
+                                                        @empty
+                                                            <span class="text-xs text-green-600 font-semibold flex items-center gap-1 dark:text-green-400">
+                                                                ✓ Không phát hiện rủi ro nào
+                                                            </span>
+                                                        @endforelse
+                                                    </div>
+                                                </div>
+                                            </div>
+
+                                            {{-- Extracted vs Submitted side-by-side --}}
+                                            <div>
+                                                <div class="text-[10px] text-ue-text-muted font-bold uppercase tracking-wider mb-2">Đối sánh thông tin trích xuất</div>
+                                                <div class="overflow-x-auto rounded-lg border border-ue-border dark:border-gray-700">
+                                                    <table class="w-full text-xs text-left">
+                                                        <thead>
+                                                            <tr class="bg-ue-surface-hover text-ue-text-muted border-b border-ue-border dark:border-gray-700 font-bold">
+                                                                <th class="p-2">Trường thông tin</th>
+                                                                <th class="p-2">Đăng ký định danh</th>
+                                                                <th class="p-2">AI trích xuất được</th>
+                                                                <th class="p-2 text-center">Kết quả khớp</th>
+                                                            </tr>
+                                                        </thead>
+                                                        <tbody class="divide-y divide-ue-border dark:divide-gray-700">
+                                                            @php
+                                                                $ext = $aiResult->extracted_fields_json ?? [];
+                                                                $matchDetails = $aiResult->match_result_json['details'] ?? [];
+                                                            @endphp
+                                                            {{-- Họ tên --}}
+                                                            <tr>
+                                                                <td class="p-2 font-semibold">Họ và tên</td>
+                                                                <td class="p-2">{{ $request->submitted_name }}</td>
+                                                                <td class="p-2 text-ue-brand font-bold dark:text-blue-400">{{ $ext['full_name'] ?? 'N/A' }}</td>
+                                                                <td class="p-2 text-center">
+                                                                    @if(isset($matchDetails['name_similarity']))
+                                                                        <span class="px-1.5 py-0.5 rounded text-[10px] font-bold {{ $matchDetails['name_similarity'] >= 0.8 ? 'bg-green-50 text-green-700 border border-green-200 dark:bg-green-950/20 dark:text-green-400' : 'bg-red-50 text-red-700 border border-red-200 dark:bg-red-950/20 dark:text-red-400' }}">
+                                                                            {{ round($matchDetails['name_similarity'] * 100, 0) }}% khớp
+                                                                        </span>
+                                                                    @else
+                                                                        <span class="text-ue-text-muted">—</span>
+                                                                    @endif
+                                                                </td>
+                                                            </tr>
+                                                            {{-- MSSV --}}
+                                                            <tr>
+                                                                <td class="p-2 font-semibold">Mã số sinh viên (MSSV)</td>
+                                                                <td class="p-2">{{ $request->submitted_student_code }}</td>
+                                                                <td class="p-2 text-ue-brand font-bold dark:text-blue-400">{{ $ext['student_code'] ?? 'N/A' }}</td>
+                                                                <td class="p-2 text-center">
+                                                                    @if(isset($matchDetails['student_code_match']))
+                                                                        <span class="px-1.5 py-0.5 rounded text-[10px] font-bold {{ $matchDetails['student_code_match'] ? 'bg-green-50 text-green-700 border border-green-200 dark:bg-green-950/20 dark:text-green-400' : 'bg-red-50 text-red-700 border border-red-200 dark:bg-red-950/20 dark:text-red-400' }}">
+                                                                            {{ $matchDetails['student_code_match'] ? 'Khớp 100%' : 'Sai lệch' }}
+                                                                        </span>
+                                                                    @else
+                                                                        <span class="text-ue-text-muted">—</span>
+                                                                    @endif
+                                                                </td>
+                                                            </tr>
+                                                            {{-- Khoa --}}
+                                                            <tr>
+                                                                <td class="p-2 font-semibold">Khoa đào tạo</td>
+                                                                <td class="p-2">{{ $request->submittedFaculty ? $request->submittedFaculty->name : 'N/A' }}</td>
+                                                                <td class="p-2 text-ue-brand font-bold dark:text-blue-400">{{ $ext['faculty'] ?? 'N/A' }}</td>
+                                                                <td class="p-2 text-center">
+                                                                    <span class="text-ue-text-muted">{{ isset($ext['faculty']) ? 'Trích xuất được' : 'N/A' }}</span>
+                                                                </td>
+                                                            </tr>
+                                                            {{-- Khóa học --}}
+                                                            <tr>
+                                                                <td class="p-2 font-semibold">Khóa học</td>
+                                                                <td class="p-2">{{ $request->submitted_cohort }}</td>
+                                                                <td class="p-2 text-ue-brand font-bold dark:text-blue-400">{{ $ext['cohort'] ?? 'N/A' }}</td>
+                                                                <td class="p-2 text-center">
+                                                                    <span class="text-ue-text-muted">{{ isset($ext['cohort']) ? 'Trích xuất được' : 'N/A' }}</span>
+                                                                </td>
+                                                            </tr>
+                                                            {{-- Trường học --}}
+                                                            <tr>
+                                                                <td class="p-2 font-semibold">Trường học</td>
+                                                                <td class="p-2">Trường Đại học Sư phạm TP.HCM</td>
+                                                                <td class="p-2 text-ue-brand font-bold dark:text-blue-400">{{ $ext['school_name'] ?? 'N/A' }}</td>
+                                                                <td class="p-2 text-center">
+                                                                    @if(isset($matchDetails['school_match']))
+                                                                        <span class="px-1.5 py-0.5 rounded text-[10px] font-bold {{ $matchDetails['school_match'] ? 'bg-green-50 text-green-700 border border-green-200 dark:bg-green-950/20 dark:text-green-400' : 'bg-red-50 text-red-700 border border-red-200 dark:bg-red-950/20 dark:text-red-400' }}">
+                                                                            {{ $matchDetails['school_match'] ? 'Khớp trường' : 'Sai lệch' }}
+                                                                        </span>
+                                                                    @else
+                                                                        <span class="text-ue-text-muted">—</span>
+                                                                    @endif
+                                                                </td>
+                                                            </tr>
+                                                        </tbody>
+                                                    </table>
+                                                </div>
+                                            </div>
+
+                                            {{-- Summary Blockquote --}}
+                                            @if ($aiResult->review_summary)
+                                                <div class="space-y-1">
+                                                    <div class="text-[10px] text-ue-text-muted font-bold uppercase tracking-wider">Tóm tắt phân tích (AI Summary)</div>
+                                                    <div class="text-xs bg-ue-surface-subtle p-3 rounded-lg border border-ue-border text-ue-text-secondary italic leading-relaxed dark:bg-gray-800 dark:border-gray-700">
+                                                        "{{ $aiResult->review_summary }}"
+                                                    </div>
+                                                </div>
+                                            @endif
+
+                                            {{-- Raw OCR Details --}}
+                                            @if ($aiResult->ocr_text)
+                                                <details class="text-xs group border border-ue-border rounded-lg bg-ue-surface-subtle dark:border-gray-700 dark:bg-gray-800">
+                                                    <summary class="p-2.5 font-semibold text-ue-text-muted cursor-pointer hover:bg-ue-surface-hover flex items-center justify-between select-none">
+                                                        <span>📄 Xem văn bản quét thô từ ảnh (Raw OCR Text)</span>
+                                                        <span class="transition-transform group-open:rotate-180">▼</span>
+                                                    </summary>
+                                                    <div class="p-3 border-t border-ue-border font-mono text-[10px] whitespace-pre-wrap bg-black text-green-400 overflow-x-auto max-h-[160px] dark:border-gray-700">
+                                                        {{ $aiResult->ocr_text }}
+                                                    </div>
+                                                </details>
+                                            @endif
+                                        @else
+                                            @if ($evidence->capture_method === \App\Enums\EvidenceCaptureMethod::UploadFallback)
+                                                <div class="text-center p-6 text-xs text-ue-text-muted">
+                                                    📁 Minh chứng này được tải lên thủ công, không phân tích AI tự động.
+                                                </div>
+                                            @else
+                                                <div class="text-center p-6 text-xs text-ue-text-muted animate-pulse">
+                                                    ⏳ AI đang xử lý phân tích trong nền...
+                                                </div>
+                                            @endif
+                                        @endif
+                                    </div>
+                                </div>
+                            @endif
                         </div>
                     @empty
                         <div class="text-center text-xs text-ue-text-muted py-6">Không tìm thấy tài liệu minh chứng nào được đính kèm.</div>
