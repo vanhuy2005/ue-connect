@@ -18,7 +18,7 @@ class ProfileTest extends TestCase
             'account_status' => AccountStatus::ACTIVE,
         ]);
 
-        $response = $this->actingAs($user)->get(route('profile'));
+        $response = $this->actingAs($user)->get(route('profile.edit'));
 
         $response
             ->assertOk()

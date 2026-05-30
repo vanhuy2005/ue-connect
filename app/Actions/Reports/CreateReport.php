@@ -31,7 +31,8 @@ class CreateReport
         }
 
         // Validate user cannot report their own content
-        if ($target->user_id === $user->id) {
+        $ownerId = $target->user_id ?? $target->sender_id ?? null;
+        if ($ownerId && (int) $ownerId === (int) $user->id) {
             throw ValidationException::withMessages([
                 'target' => 'Bạn không thể báo cáo nội dung do chính mình tạo ra.',
             ]);
