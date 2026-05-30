@@ -273,11 +273,16 @@ new #[Layout('layouts.app')] class extends Component
             ->unique()
             ->toArray();
 
-        $query = Profile::where('discoverable', true)
-            ->where('user_id', '!=', Auth::id())
+        $query = Profile::where('user_id', '!=', Auth::id())
             ->whereNotIn('user_id', $blockedUserIds)
             ->whereHas('user', function ($q) {
-                $q->where('account_status', \App\Enums\AccountStatus::ACTIVE);
+                $q->where('account_status', \App\Enums\AccountStatus::ACTIVE)
+                  ->where(function ($sub) {
+                      $sub->whereDoesntHave('profilePrivacySetting')
+                          ->orWhereHas('profilePrivacySetting', function ($pq) {
+                              $pq->where('discovery_visibility', 'enabled');
+                          });
+                  });
             })
             ->with(['user', 'studentProfile.faculty', 'advisorProfile.faculty', 'alumniProfile.faculty', 'studentProfile.academicProgram', 'alumniProfile.academicProgram']);
 

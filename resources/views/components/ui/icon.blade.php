@@ -260,6 +260,16 @@ $sizeClass = match($size) {
             <polyline points="18 15 12 9 6 15"></polyline>
             @break
 
+        {{-- chevron-right --}}
+        @case('chevron-right')
+            <polyline points="9 18 15 12 9 6"></polyline>
+            @break
+
+        {{-- chevron-left --}}
+        @case('chevron-left')
+            <polyline points="15 18 9 12 15 6"></polyline>
+            @break
+
         {{-- ✓ check-circle --}}
         @case('check-circle')
             <path d="M22 11.08V12a10 10 0 11-5.93-9.14"></path>
@@ -395,6 +405,13 @@ $sizeClass = match($size) {
             <path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4"></path>
             <polyline points="16 17 21 12 16 7"></polyline>
             <line x1="21" y1="12" x2="9" y2="12"></line>
+            @break
+
+        {{-- log-in --}}
+        @case('log-in')
+            <path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"></path>
+            <polyline points="10 17 15 12 10 7"></polyline>
+            <line x1="15" y1="12" x2="3" y2="12"></line>
             @break
 
         {{-- 📌 pin --}}
