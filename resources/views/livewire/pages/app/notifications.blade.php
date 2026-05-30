@@ -97,7 +97,7 @@ new #[Layout('layouts.app')] class extends Component
             $query->whereNotIn('data->type', ['greeting_received', 'message_received']);
         }
 
-        $notifications = $query->orderBy('created_at', 'desc')->paginate(15);
+        $notifications = $query->reorder('created_at', 'desc')->paginate(15);
 
         return [
             'notifications' => $notifications,

@@ -4,6 +4,7 @@ use App\Http\Controllers\Admin\VerificationEvidenceController;
 use App\Models\Conversation;
 use App\Models\Post;
 use App\Models\Report;
+use App\Models\User;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Route;
 
@@ -41,8 +42,20 @@ Route::middleware(['auth', 'active.account', 'verified.identity'])->group(functi
     Route::view('app/profile/setup', 'app.profile-setup')
         ->name('profile.setup');
 
-    Route::view('app/profile', 'profile')
-        ->name('profile');
+    Route::get('app/profile', function () {
+        return view('app.profile', ['user' => Auth::user()]);
+    })->name('profile');
+
+    Route::view('app/profile/edit', 'app.profile-edit')
+        ->name('profile.edit');
+
+    Route::get('app/profile/{user}', function (User $user) {
+        if (! Auth::user()->can('viewProfile', $user->profile)) {
+            abort(403, 'Hồ sơ này không khả dụng hoặc bạn không có quyền xem.');
+        }
+
+        return view('app.profile', ['user' => $user]);
+    })->name('profile.show');
 
     Route::view('app/saved-posts', 'app.saved-posts')
         ->name('posts.saved');
