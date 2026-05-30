@@ -10,36 +10,54 @@
 $currentUser = auth()->user();
 $isAdmin = $currentUser && ($currentUser->can('review_verification') || $currentUser->can('manage_reports'));
 
+$unreadNotificationsCount = $currentUser ? $currentUser->unreadNotifications()->count() : 0;
+$unreadMessagesCount = $currentUser ? \App\Models\ConversationParticipant::where('user_id', $currentUser->id)
+    ->where(function ($q) {
+        $q->whereNull('last_read_at')
+            ->orWhereHas('conversation', function ($q2) {
+                $q2->whereColumn('last_message_at', '>', 'conversation_participants.last_read_at');
+            });
+    })
+    ->whereHas('conversation', function ($q3) {
+        $q3->whereNotNull('last_message_at');
+    })
+    ->count() : 0;
+
 $primaryNav = [
     [
         'icon'   => 'home',
         'label'  => 'Trang chủ',
         'href'   => route('dashboard'),
         'active' => request()->routeIs('dashboard'),
+        'badge'  => 0,
     ],
     [
         'icon'   => 'users',
         'label'  => 'Khám phá',
         'href'   => route('discovery.index'),
         'active' => request()->routeIs('discovery.*'),
+        'badge'  => 0,
     ],
     [
         'icon'   => 'message',
         'label'  => 'Tin nhắn',
         'href'   => route('messages.index'),
         'active' => request()->routeIs('messages.*'),
+        'badge'  => $unreadMessagesCount,
     ],
     [
-        'icon'   => 'bell',
-        'label'  => 'Thông báo',
-        'href'   => '#',
-        'active' => false,
+        'icon'   => 'heart',
+        'label'  => 'Hoạt động',
+        'href'   => route('notifications.index'),
+        'active' => request()->routeIs('notifications.*'),
+        'badge'  => $unreadNotificationsCount,
     ],
     [
         'icon'   => 'user',
         'label'  => 'Hồ sơ',
         'href'   => route('profile'),
         'active' => request()->routeIs('profile'),
+        'badge'  => 0,
     ],
 ];
 
@@ -91,6 +109,11 @@ $secondaryNav = [
                         >
                             <x-ui.icon :name="$item['icon']" size="md" aria-hidden="true" class="flex-shrink-0" />
                             <span>{{ $item['label'] }}</span>
+                            @if (!empty($item['badge']) && $item['badge'] > 0)
+                                <span class="ml-auto px-2 py-0.5 rounded-full bg-ue-brand text-white text-[10px] font-bold">
+                                    {{ $item['badge'] }}
+                                </span>
+                            @endif
                         </a>
                     </li>
                 @endforeach
@@ -163,7 +186,7 @@ $secondaryNav = [
                 <span>Giao diện</span>
             </button>
 
-            <a href="#" class="flex items-center gap-3 px-4 py-2 text-xs font-semibold text-ue-text-secondary hover:bg-ue-surface-hover hover:text-ue-brand-active transition-colors">
+            <a href="{{ route('settings') }}" class="flex items-center gap-3 px-4 py-2 text-xs font-semibold text-ue-text-secondary hover:bg-ue-surface-hover hover:text-ue-brand-active transition-colors">
                 <x-ui.icon name="settings" size="sm" class="text-ue-text-muted" />
                 <span>Cài đặt</span>
             </a>
@@ -173,12 +196,12 @@ $secondaryNav = [
                 <span>Bài viết đã lưu</span>
             </a>
 
-            <a href="#" class="flex items-center gap-3 px-4 py-2 text-xs font-semibold text-ue-text-secondary hover:bg-ue-surface-hover hover:text-ue-brand-active transition-colors">
+            <a href="{{ route('settings', ['section' => 'support']) }}" class="flex items-center gap-3 px-4 py-2 text-xs font-semibold text-ue-text-secondary hover:bg-ue-surface-hover hover:text-ue-brand-active transition-colors">
                 <x-ui.icon name="help-circle" size="sm" class="text-ue-text-muted" />
                 <span>Trung tâm hỗ trợ</span>
             </a>
 
-            <a href="#" class="flex items-center gap-3 px-4 py-2 text-xs font-semibold text-ue-text-secondary hover:bg-ue-surface-hover hover:text-ue-brand-active transition-colors">
+            <a href="{{ route('settings', ['section' => 'support']) }}" class="flex items-center gap-3 px-4 py-2 text-xs font-semibold text-ue-text-secondary hover:bg-ue-surface-hover hover:text-ue-brand-active transition-colors">
                 <x-ui.icon name="alert-triangle" size="sm" class="text-ue-text-muted" />
                 <span>Báo cáo sự cố</span>
             </a>

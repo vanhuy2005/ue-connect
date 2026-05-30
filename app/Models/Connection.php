@@ -24,6 +24,9 @@ class Connection extends Model
     protected function casts(): array
     {
         return [
+            'user_one_id' => 'integer',
+            'user_two_id' => 'integer',
+            'source_greeting_id' => 'integer',
             'status' => ConnectionStatus::class,
             'connected_at' => 'datetime',
             'disconnected_at' => 'datetime',

@@ -24,6 +24,8 @@ class ConversationParticipant extends Model
     protected function casts(): array
     {
         return [
+            'conversation_id' => 'integer',
+            'user_id' => 'integer',
             'joined_at' => 'datetime',
             'left_at' => 'datetime',
             'last_read_at' => 'datetime',

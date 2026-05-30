@@ -37,4 +37,13 @@ class BlockedUser extends Model
     {
         return $this->belongsTo(User::class, 'blocked_id');
     }
+
+    protected function casts(): array
+    {
+        return [
+            'blocker_id' => 'integer',
+            'blocked_id' => 'integer',
+            'source_id' => 'integer',
+        ];
+    }
 }

@@ -170,14 +170,121 @@ new #[Layout('layouts.app')] class extends Component
         return 'none';
     }
 
+    /**
+     * Resolve the shared context between current user and target user.
+     *
+     * @return array<string>
+     */
+    public function resolveSharedContext(Profile $targetProfile): array
+    {
+        $currentUser = Auth::user();
+        if (!$currentUser || !$currentUser->profile) {
+            return [];
+        }
+
+        $myProfile = $currentUser->profile;
+        $shared = [];
+
+        // 1. Same Faculty
+        $myFacultyId = null;
+        $targetFacultyId = null;
+
+        if ($myProfile->role_type === 'student' && $myProfile->studentProfile) {
+            $myFacultyId = $myProfile->studentProfile->faculty_id;
+        } elseif ($myProfile->role_type === 'alumni' && $myProfile->alumniProfile) {
+            $myFacultyId = $myProfile->alumniProfile->faculty_id;
+        } elseif ($myProfile->role_type === 'advisor' && $myProfile->advisorProfile) {
+            $myFacultyId = $myProfile->advisorProfile->faculty_id;
+        }
+
+        if ($targetProfile->role_type === 'student' && $targetProfile->studentProfile) {
+            $targetFacultyId = $targetProfile->studentProfile->faculty_id;
+        } elseif ($targetProfile->role_type === 'alumni' && $targetProfile->alumniProfile) {
+            $targetFacultyId = $targetProfile->alumniProfile->faculty_id;
+        } elseif ($targetProfile->role_type === 'advisor' && $targetProfile->advisorProfile) {
+            $targetFacultyId = $targetProfile->advisorProfile->faculty_id;
+        }
+
+        if ($myFacultyId && $targetFacultyId && $myFacultyId === $targetFacultyId) {
+            if ($targetProfile->role_type === 'advisor') {
+                $shared[] = 'Cố vấn / giảng viên cùng khoa';
+            } elseif ($targetProfile->role_type === 'alumni') {
+                $shared[] = 'Cựu sinh viên cùng khoa';
+            } else {
+                $shared[] = 'Cùng khoa ' . ($targetProfile->faculty ?: '');
+            }
+        }
+
+        // 2. Same Major/Program
+        $myProgramId = null;
+        $targetProgramId = null;
+
+        if ($myProfile->role_type === 'student' && $myProfile->studentProfile) {
+            $myProgramId = $myProfile->studentProfile->academic_program_id;
+        } elseif ($myProfile->role_type === 'alumni' && $myProfile->alumniProfile) {
+            $myProgramId = $myProfile->alumniProfile->academic_program_id;
+        }
+
+        if ($targetProfile->role_type === 'student' && $targetProfile->studentProfile) {
+            $targetProgramId = $targetProfile->studentProfile->academic_program_id;
+        } elseif ($targetProfile->role_type === 'alumni' && $targetProfile->alumniProfile) {
+            $targetProgramId = $targetProfile->alumniProfile->academic_program_id;
+        }
+
+        if ($myProgramId && $targetProgramId && $myProgramId === $targetProgramId) {
+            $programName = null;
+            if ($targetProfile->studentProfile && $targetProfile->studentProfile->academicProgram) {
+                $programName = $targetProfile->studentProfile->academicProgram->name;
+            } elseif ($targetProfile->alumniProfile && $targetProfile->alumniProfile->academicProgram) {
+                $programName = $targetProfile->alumniProfile->academicProgram->name;
+            }
+            if ($programName) {
+                $shared[] = 'Cùng ngành ' . $programName;
+            }
+        }
+
+        // 3. Same Cohort
+        $myCohort = null;
+        $targetCohort = null;
+
+        if ($myProfile->role_type === 'student' && $myProfile->studentProfile) {
+            $myCohort = $myProfile->studentProfile->cohort;
+        } elseif ($myProfile->role_type === 'alumni' && $myProfile->alumniProfile) {
+            $myCohort = $myProfile->alumniProfile->cohort;
+        }
+
+        if ($targetProfile->role_type === 'student' && $targetProfile->studentProfile) {
+            $targetCohort = $targetProfile->studentProfile->cohort;
+        } elseif ($targetProfile->role_type === 'alumni' && $targetProfile->alumniProfile) {
+            $targetCohort = $targetProfile->alumniProfile->cohort;
+        }
+
+        if ($myCohort && $targetCohort && $myCohort === $targetCohort) {
+            $shared[] = 'Cùng khóa ' . $targetCohort;
+        }
+
+        return $shared;
+    }
+
     public function with(): array
     {
-        $query = Profile::where('discoverable', true)
-            ->where('user_id', '!=', Auth::id())
+        $blockedUserIds = BlockedUser::where('blocker_id', Auth::id())->pluck('blocked_id')
+            ->concat(BlockedUser::where('blocked_id', Auth::id())->pluck('blocker_id'))
+            ->unique()
+            ->toArray();
+
+        $query = Profile::where('user_id', '!=', Auth::id())
+            ->whereNotIn('user_id', $blockedUserIds)
             ->whereHas('user', function ($q) {
-                $q->where('account_status', \App\Enums\AccountStatus::ACTIVE);
+                $q->where('account_status', \App\Enums\AccountStatus::ACTIVE)
+                  ->where(function ($sub) {
+                      $sub->whereDoesntHave('profilePrivacySetting')
+                          ->orWhereHas('profilePrivacySetting', function ($pq) {
+                              $pq->where('discovery_visibility', 'enabled');
+                          });
+                  });
             })
-            ->with(['user', 'studentProfile.faculty', 'advisorProfile.faculty', 'alumniProfile.faculty']);
+            ->with(['user', 'studentProfile.faculty', 'advisorProfile.faculty', 'alumniProfile.faculty', 'studentProfile.academicProgram', 'alumniProfile.academicProgram']);
 
         if ($this->roleFilter !== 'all') {
             $query->where('role_type', $this->roleFilter);
@@ -191,6 +298,21 @@ new #[Layout('layouts.app')] class extends Component
                   ->orWhereHas('user', function ($uq) use ($searchTerm) {
                       $uq->where('name', 'like', $searchTerm)
                          ->orWhere('email', 'like', $searchTerm);
+                  })
+                  ->orWhereHas('studentProfile.faculty', function ($fq) use ($searchTerm) {
+                      $fq->where('name', 'like', $searchTerm);
+                  })
+                  ->orWhereHas('studentProfile.academicProgram', function ($apq) use ($searchTerm) {
+                      $apq->where('name', 'like', $searchTerm);
+                  })
+                  ->orWhereHas('alumniProfile.faculty', function ($fq) use ($searchTerm) {
+                      $fq->where('name', 'like', $searchTerm);
+                  })
+                  ->orWhereHas('alumniProfile.academicProgram', function ($apq) use ($searchTerm) {
+                      $apq->where('name', 'like', $searchTerm);
+                  })
+                  ->orWhereHas('advisorProfile.faculty', function ($fq) use ($searchTerm) {
+                      $fq->where('name', 'like', $searchTerm);
                   });
             });
         }
@@ -322,6 +444,21 @@ new #[Layout('layouts.app')] class extends Component
                         <p class="text-xxs text-slate-300 italic font-medium leading-relaxed mt-3.5">
                             Chưa cập nhật giới thiệu bản thân.
                         </p>
+                    @endif
+
+                    {{-- Shared Context Commonalities --}}
+                    @php
+                        $sharedContext = $this->resolveSharedContext($profile);
+                    @endphp
+                    @if (!empty($sharedContext))
+                        <div class="mt-3 flex flex-wrap gap-1.5">
+                            @foreach ($sharedContext as $contextText)
+                                <span class="inline-flex items-center gap-1 bg-ue-brand-soft/40 text-[10px] font-bold text-ue-brand px-2 py-0.5 rounded-md border border-ue-brand-soft leading-none">
+                                    <x-ui.icon name="sparkles" size="2xs" />
+                                    {{ $contextText }}
+                                </span>
+                            @endforeach
+                        </div>
                     @endif
                 </div>
 

@@ -12,37 +12,55 @@
 --}}
 
 @php
+$currentUser = auth()->user();
+$unreadNotificationsCount = $currentUser ? $currentUser->unreadNotifications()->count() : 0;
+$unreadMessagesCount = $currentUser ? \App\Models\ConversationParticipant::where('user_id', $currentUser->id)
+    ->where(function ($q) {
+        $q->whereNull('last_read_at')
+            ->orWhereHas('conversation', function ($q2) {
+                $q2->whereColumn('last_message_at', '>', 'conversation_participants.last_read_at');
+            });
+    })
+    ->whereHas('conversation', function ($q3) {
+        $q3->whereNotNull('last_message_at');
+    })
+    ->count() : 0;
+
 $mobileNavItems = [
     [
         'icon'   => 'home',
         'label'  => 'Trang chủ',
         'href'   => route('dashboard'),
         'active' => request()->routeIs('dashboard'),
+        'badge'  => 0,
     ],
     [
         'icon'   => 'users',
         'label'  => 'Khám phá',
         'href'   => route('discovery.index'),
         'active' => request()->routeIs('discovery.*'),
+        'badge'  => 0,
     ],
     [
         'icon'   => 'message',
         'label'  => 'Tin nhắn',
         'href'   => route('messages.index'),
         'active' => request()->routeIs('messages.*'),
+        'badge'  => $unreadMessagesCount,
     ],
     [
-        'icon'   => 'community',
-        'label'  => 'Cộng đồng',
-        'href'   => '#',
-        'active' => false,
-        // TODO: route('communities.index')
+        'icon'   => 'heart',
+        'label'  => 'Hoạt động',
+        'href'   => route('notifications.index'),
+        'active' => request()->routeIs('notifications.*'),
+        'badge'  => $unreadNotificationsCount,
     ],
     [
         'icon'   => 'user',
         'label'  => 'Hồ sơ',
         'href'   => route('profile'),
         'active' => request()->routeIs('profile'),
+        'badge'  => 0,
     ],
 ];
 @endphp
@@ -64,12 +82,19 @@ $mobileNavItems = [
                 style="color: var(--ue-brand);"
             @endif
         >
-            <x-ui.icon
-                :name="$item['icon']"
-                size="md"
-                aria-hidden="true"
-                class="{{ $item['active'] ? 'text-ue-brand' : 'text-current' }}"
-            />
+            <div class="relative">
+                <x-ui.icon
+                    :name="$item['icon']"
+                    size="md"
+                    aria-hidden="true"
+                    class="{{ $item['active'] ? 'text-ue-brand' : 'text-current' }}"
+                />
+                @if (!empty($item['badge']) && $item['badge'] > 0)
+                    <span class="absolute -top-1.5 -right-2 px-1 py-0.5 rounded-full bg-ue-brand text-white text-[8px] font-bold min-w-[14px] text-center leading-none">
+                        {{ $item['badge'] }}
+                    </span>
+                @endif
+            </div>
             <span class="{{ $item['active'] ? 'text-ue-brand' : '' }}">
                 {{ $item['label'] }}
             </span>

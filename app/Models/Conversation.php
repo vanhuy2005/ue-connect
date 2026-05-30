@@ -27,6 +27,10 @@ class Conversation extends Model
     protected function casts(): array
     {
         return [
+            'created_by' => 'integer',
+            'direct_user_low_id' => 'integer',
+            'direct_user_high_id' => 'integer',
+            'last_message_id' => 'integer',
             'conversation_type' => ConversationType::class,
             'status' => ConversationStatus::class,
             'last_message_at' => 'datetime',
@@ -68,10 +72,46 @@ class Conversation extends Model
      */
     public function getRecipientFor(User $user): ?User
     {
-        $participant = $this->participants()
-            ->where('user_id', '!=', $user->id)
-            ->first();
+        $participant = $this->participants
+            ->first(function ($p) use ($user) {
+                return (int) $p->user_id !== (int) $user->id;
+            });
 
         return $participant ? $participant->user : null;
+    }
+
+    /**
+     * Get the conversation pinned messages.
+     *
+     * @return HasMany<ConversationPinnedMessage, $this>
+     */
+    public function pinnedMessages(): HasMany
+    {
+        return $this->hasMany(ConversationPinnedMessage::class);
+    }
+
+    /**
+     * Get the conversation user settings.
+     *
+     * @return HasMany<ConversationUserSetting, $this>
+     */
+    public function conversationUserSettings(): HasMany
+    {
+        return $this->hasMany(ConversationUserSetting::class);
+    }
+
+    /**
+     * Get or create conversation user settings for a given user.
+     */
+    public function getUserSettingsFor(User $user): ConversationUserSetting
+    {
+        return $this->conversationUserSettings()->firstOrCreate([
+            'user_id' => $user->id,
+        ], [
+            'nickname' => null,
+            'muted_until' => null,
+            'is_restricted' => false,
+            'deleted_at' => null,
+        ]);
     }
 }

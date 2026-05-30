@@ -260,6 +260,16 @@ $sizeClass = match($size) {
             <polyline points="18 15 12 9 6 15"></polyline>
             @break
 
+        {{-- chevron-right --}}
+        @case('chevron-right')
+            <polyline points="9 18 15 12 9 6"></polyline>
+            @break
+
+        {{-- chevron-left --}}
+        @case('chevron-left')
+            <polyline points="15 18 9 12 15 6"></polyline>
+            @break
+
         {{-- ✓ check-circle --}}
         @case('check-circle')
             <path d="M22 11.08V12a10 10 0 11-5.93-9.14"></path>
@@ -397,6 +407,25 @@ $sizeClass = match($size) {
             <line x1="21" y1="12" x2="9" y2="12"></line>
             @break
 
+        {{-- log-in --}}
+        @case('log-in')
+            <path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"></path>
+            <polyline points="10 17 15 12 10 7"></polyline>
+            <line x1="15" y1="12" x2="3" y2="12"></line>
+            @break
+
+        {{-- 📌 pin --}}
+        @case('pin')
+            <line x1="12" y1="17" x2="12" y2="22"></line>
+            <path d="M5 17h14v-1.76a2 2 0 0 0-.44-1.24l-2.78-3.55A2 2 0 0 1 15 9.24V5a1 1 0 0 0-1-1h-4a1 1 0 0 0-1 1v4.24a2 2 0 0 1-.78 1.21L5.44 14a2 2 0 0 0-.44 1.24V17Z"></path>
+            @break
+
+        {{-- ➔ forward --}}
+        @case('forward')
+            <polyline points="15 17 20 12 15 7"></polyline>
+            <path d="M4 18v-2a4 4 0 0 1 4-4h12"></path>
+            @break
+
         {{-- 👤 user-circle --}}
         @case('user-circle')
             <path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"></path>
@@ -463,6 +492,13 @@ $sizeClass = match($size) {
             <path d="M10 9H8"></path>
             <path d="M16 13H8"></path>
             <path d="M16 17H8"></path>
+            @break
+
+        {{-- ✨ sparkles --}}
+        @case('sparkles')
+            <path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275Z"></path>
+            <path d="m5 3 1 2.5L8.5 6 6 7 5 9.5 4 7 1.5 6 4 5z"></path>
+            <path d="m19 17 1 2.5 2.5.5-2.5 1-1 2.5-1-2.5-2.5-1 2.5-1z"></path>
             @break
 
         {{-- Default fallback circle with warnings in local --}}

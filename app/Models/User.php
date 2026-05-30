@@ -90,6 +90,22 @@ class User extends Authenticatable
     }
 
     /**
+     * Get the user's profile privacy settings.
+     */
+    public function profilePrivacySetting(): HasOne
+    {
+        return $this->hasOne(ProfilePrivacySetting::class);
+    }
+
+    /**
+     * Get the user's notification preferences.
+     */
+    public function notificationPreference(): HasOne
+    {
+        return $this->hasOne(NotificationPreference::class);
+    }
+
+    /**
      * Get the user's posts.
      *
      * @return HasMany<Post, $this>

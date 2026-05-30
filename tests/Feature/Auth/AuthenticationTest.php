@@ -163,6 +163,8 @@ class AuthenticationTest extends TestCase
             'account_status' => AccountStatus::ACTIVE,
         ]);
 
+        app(\Spatie\Permission\PermissionRegistrar::class)->forgetCachedPermissions();
+
         $response = $this->actingAs($user)->get(route('dashboard'));
         $response->assertDontSee('Quản trị');
         $response->assertDontSee('Tổng quan quản trị');

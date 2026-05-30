@@ -7,6 +7,7 @@ use App\Enums\MessageType;
 use App\Models\Conversation;
 use App\Models\Message;
 use App\Models\User;
+use App\Notifications\MessageReceived;
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Gate;
@@ -55,6 +56,12 @@ class SendMessage
                 'last_message_id' => $message->id,
                 'last_message_at' => now(),
             ]);
+
+            // 3. Notify other participants
+            $recipient = $conversation->getRecipientFor($sender);
+            if ($recipient) {
+                $recipient->notify(new MessageReceived($message));
+            }
 
             return $message;
         });
