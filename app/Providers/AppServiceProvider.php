@@ -9,12 +9,14 @@ use App\Models\Conversation;
 use App\Models\Message;
 use App\Models\Post;
 use App\Models\Profile;
+use App\Models\User;
 use App\Policies\CommentPolicy;
 use App\Policies\ConnectionPolicy;
 use App\Policies\ConversationPolicy;
 use App\Policies\MessagePolicy;
 use App\Policies\PostPolicy;
 use App\Policies\ProfilePolicy;
+use App\Policies\SettingsPolicy;
 use App\Policies\UserBlockPolicy;
 use Illuminate\Database\Eloquent\Relations\Relation;
 use Illuminate\Support\Facades\Event;
@@ -55,5 +57,6 @@ class AppServiceProvider extends ServiceProvider
         Gate::policy(Post::class, PostPolicy::class);
         Gate::policy(Comment::class, CommentPolicy::class);
         Gate::policy(Profile::class, ProfilePolicy::class);
+        Gate::policy(User::class, SettingsPolicy::class);
     }
 }

@@ -1,10 +1,13 @@
 <?php
 
+use App\Actions\Settings\EnsureUserSettingsExistAction;
 use App\Http\Controllers\Admin\VerificationEvidenceController;
+use App\Models\BlockedUser;
 use App\Models\Conversation;
 use App\Models\Post;
 use App\Models\Report;
 use App\Models\User;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Route;
 
@@ -50,12 +53,27 @@ Route::middleware(['auth', 'active.account', 'verified.identity'])->group(functi
         ->name('profile.edit');
 
     Route::get('app/profile/{user}', function (User $user) {
-        if (! Auth::user()->can('viewProfile', $user->profile)) {
+        $viewer = Auth::user();
+
+        $isBlocked = BlockedUser::where(function ($q) use ($viewer, $user) {
+            $q->where('blocker_id', $viewer->id)->where('blocked_id', $user->id);
+        })->orWhere(function ($q) use ($viewer, $user) {
+            $q->where('blocker_id', $user->id)->where('blocked_id', $viewer->id);
+        })->exists();
+
+        if (! $isBlocked && ! $viewer->can('viewProfile', $user->profile)) {
             abort(403, 'Hồ sơ này không khả dụng hoặc bạn không có quyền xem.');
         }
 
         return view('app.profile', ['user' => $user]);
     })->name('profile.show');
+
+    Route::get('app/settings/{section?}/{subSection?}', function (?string $section = 'index', ?string $subSection = null) {
+        $user = Auth::user();
+        app(EnsureUserSettingsExistAction::class)->execute($user);
+
+        return view('app.settings', ['section' => $section, 'subSection' => $subSection]);
+    })->name('settings');
 
     Route::view('app/saved-posts', 'app.saved-posts')
         ->name('posts.saved');
