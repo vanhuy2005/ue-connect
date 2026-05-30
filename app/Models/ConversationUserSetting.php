@@ -6,19 +6,18 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
-class ConversationParticipant extends Model
+class ConversationUserSetting extends Model
 {
     use HasFactory;
 
     protected $fillable = [
         'conversation_id',
         'user_id',
-        'participant_role',
-        'status',
-        'joined_at',
-        'left_at',
-        'last_read_at',
+        'target_user_id',
+        'nickname',
         'muted_until',
+        'is_restricted',
+        'deleted_at',
     ];
 
     protected function casts(): array
@@ -26,10 +25,10 @@ class ConversationParticipant extends Model
         return [
             'conversation_id' => 'integer',
             'user_id' => 'integer',
-            'joined_at' => 'datetime',
-            'left_at' => 'datetime',
-            'last_read_at' => 'datetime',
+            'target_user_id' => 'integer',
             'muted_until' => 'datetime',
+            'is_restricted' => 'boolean',
+            'deleted_at' => 'datetime',
         ];
     }
 
@@ -44,12 +43,22 @@ class ConversationParticipant extends Model
     }
 
     /**
-     * Get the user.
+     * Get the settings owner/viewer.
      *
      * @return BelongsTo<User, $this>
      */
     public function user(): BelongsTo
     {
-        return $this->belongsTo(User::class);
+        return $this->belongsTo(User::class, 'user_id');
+    }
+
+    /**
+     * Get the target user (the participant whose nickname is being overridden).
+     *
+     * @return BelongsTo<User, $this>
+     */
+    public function targetUser(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'target_user_id');
     }
 }

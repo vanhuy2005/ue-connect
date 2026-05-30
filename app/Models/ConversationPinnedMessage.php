@@ -6,30 +6,22 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
-class ConversationParticipant extends Model
+class ConversationPinnedMessage extends Model
 {
     use HasFactory;
 
     protected $fillable = [
         'conversation_id',
-        'user_id',
-        'participant_role',
-        'status',
-        'joined_at',
-        'left_at',
-        'last_read_at',
-        'muted_until',
+        'message_id',
+        'pinned_by',
     ];
 
     protected function casts(): array
     {
         return [
             'conversation_id' => 'integer',
-            'user_id' => 'integer',
-            'joined_at' => 'datetime',
-            'left_at' => 'datetime',
-            'last_read_at' => 'datetime',
-            'muted_until' => 'datetime',
+            'message_id' => 'integer',
+            'pinned_by' => 'integer',
         ];
     }
 
@@ -44,12 +36,22 @@ class ConversationParticipant extends Model
     }
 
     /**
-     * Get the user.
+     * Get the pinned message.
+     *
+     * @return BelongsTo<Message, $this>
+     */
+    public function message(): BelongsTo
+    {
+        return $this->belongsTo(Message::class);
+    }
+
+    /**
+     * Get the user who pinned this message.
      *
      * @return BelongsTo<User, $this>
      */
-    public function user(): BelongsTo
+    public function pinnedBy(): BelongsTo
     {
-        return $this->belongsTo(User::class);
+        return $this->belongsTo(User::class, 'pinned_by');
     }
 }

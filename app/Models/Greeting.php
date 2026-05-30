@@ -26,6 +26,8 @@ class Greeting extends Model
     protected function casts(): array
     {
         return [
+            'sender_id' => 'integer',
+            'receiver_id' => 'integer',
             'status' => GreetingStatus::class,
             'accepted_at' => 'datetime',
             'declined_at' => 'datetime',
