@@ -25,6 +25,7 @@ class Profile extends Model
     ];
 
     protected $casts = [
+        'user_id' => 'integer',
         'discoverable' => 'boolean',
         'profile_completed_at' => 'datetime',
     ];

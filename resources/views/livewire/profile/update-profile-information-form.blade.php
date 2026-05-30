@@ -27,10 +27,15 @@ new class extends Component
     {
         $user = Auth::user();
 
-        $validated = $this->validate([
-            'name' => ['required', 'string', 'max:255'],
+        $rules = [
             'email' => ['required', 'string', 'lowercase', 'email', 'max:255', Rule::unique(User::class)->ignore($user->id)],
-        ]);
+        ];
+
+        if (! $user->isVerified()) {
+            $rules['name'] = ['required', 'string', 'max:255'];
+        }
+
+        $validated = $this->validate($rules);
 
         $user->fill($validated);
 
@@ -64,11 +69,11 @@ new class extends Component
 
 <section>
     <header>
-        <h2 class="text-lg font-medium text-gray-900">
+        <h2 class="text-sm font-bold text-slate-800">
             {{ __('Profile Information') }}
         </h2>
 
-        <p class="mt-1 text-sm text-gray-600">
+        <p class="mt-1 text-xxs text-slate-400 font-medium">
             {{ __("Update your account's profile information and email address.") }}
         </p>
     </header>
@@ -76,8 +81,16 @@ new class extends Component
     <form wire:submit="updateProfileInformation" class="mt-6 space-y-6">
         <div>
             <x-input-label for="name" :value="__('Name')" />
-            <x-text-input wire:model="name" id="name" name="name" type="text" class="mt-1 block w-full" required autofocus autocomplete="name" />
-            <x-input-error class="mt-2" :messages="$errors->get('name')" />
+            @if (auth()->user()->isVerified())
+                <div class="mt-1 flex items-center gap-2 px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-slate-700 text-xs font-semibold select-none">
+                    <span>{{ $name }}</span>
+                    <x-ui.icon name="shield-check" size="xs" class="text-ue-brand fill-ue-brand" />
+                </div>
+                <p class="mt-1 text-[10px] text-slate-400 font-semibold">Tên tài khoản đã được xác thực qua hồ sơ học đường và không thể chỉnh sửa trực tiếp.</p>
+            @else
+                <x-text-input wire:model="name" id="name" name="name" type="text" class="mt-1 block w-full" required autofocus autocomplete="name" />
+                <x-input-error class="mt-2" :messages="$errors->get('name')" />
+            @endif
         </div>
 
         <div>
