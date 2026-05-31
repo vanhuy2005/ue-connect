@@ -10,34 +10,31 @@ class AuditLog extends Model
 {
     use HasFactory;
 
-    // Append-only table: only has created_at
+    // Append-only table: do not update records; keep timestamps
     const UPDATED_AT = null;
+
+    protected $table = 'audit_logs';
 
     protected $fillable = [
         'actor_id',
         'actor_type',
-        'action_key',
+        'action',
         'target_type',
         'target_id',
-        'context_type',
-        'context_id',
-        'before_snapshot_json',
-        'after_snapshot_json',
+        'before_values',
+        'after_values',
         'reason',
-        'metadata_json',
         'ip_address',
         'user_agent',
+        'metadata',
     ];
 
     protected $casts = [
-        'before_snapshot_json' => 'array',
-        'after_snapshot_json' => 'array',
-        'metadata_json' => 'array',
+        'before_values' => 'array',
+        'after_values' => 'array',
+        'metadata' => 'array',
     ];
 
-    /**
-     * Get the user/actor who triggered this audit log.
-     */
     public function actor(): BelongsTo
     {
         return $this->belongsTo(User::class, 'actor_id');

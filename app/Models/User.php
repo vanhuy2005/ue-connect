@@ -18,6 +18,11 @@ use Spatie\Permission\Traits\HasRoles;
 
 #[Fillable(['name', 'email', 'password', 'account_status', 'account_status_reason', 'account_restricted_until', 'last_login_at', 'intended_identity_type'])]
 #[Hidden(['password', 'remember_token'])]
+/**
+ * App\Models\User
+ *
+ * @method bool can(string $ability, mixed $arguments = null)
+ */
 class User extends Authenticatable
 {
     /** @use HasFactory<UserFactory> */

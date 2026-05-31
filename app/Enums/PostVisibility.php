@@ -8,4 +8,5 @@ enum PostVisibility: string
     case CONNECTIONS_ONLY = 'connections_only';
     case COMMUNITY = 'community';
     case PRIVATE = 'private';
+    case HIDDEN_BY_SYSTEM = 'hidden_by_system';
 }

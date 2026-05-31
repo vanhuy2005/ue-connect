@@ -23,7 +23,7 @@ class RoleAndPermissionSeeder extends Seeder
             'manage_users',
             'manage_reports',
             'moderate_content',
-            'view_audit_logs',
+            'view_audit_log',
             'view_admin_dashboard',
         ];
 

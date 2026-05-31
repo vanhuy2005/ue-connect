@@ -16,7 +16,8 @@
                      arrow-left, more-horizontal, edit, trash, eye, send,
                      plus, minus, chevron-down, check-circle, x-circle,
                      clock, calendar, lock, star, link-external, upload,
-                     log-out, user-circle, shield-x, microsoft
+                     log-out, user-circle, shield-x, microsoft, community,
+                     graduation-cap, key-round, history, bar-chart-3, settings-2
 --}}
 
 @props([
@@ -337,6 +338,7 @@ $sizeClass = match($size) {
 
         {{-- 🏘 community --}}
         @case('community')
+        @case('building-2')
         @case('grid')
             <rect x="3" y="3" width="7" height="7"></rect>
             <rect x="14" y="3" width="7" height="7"></rect>
@@ -344,11 +346,39 @@ $sizeClass = match($size) {
             <rect x="3" y="14" width="7" height="7"></rect>
             @break
 
+        {{-- 📊 bar-chart-3 --}}
+        @case('bar-chart-3')
+            <line x1="5" y1="20" x2="19" y2="20"></line>
+            <rect x="6" y="12" width="3" height="8" rx="1"></rect>
+            <rect x="11" y="8" width="3" height="12" rx="1"></rect>
+            <rect x="16" y="4" width="3" height="16" rx="1"></rect>
+            @break
+
         {{-- 🎓 graduation-cap / mentor --}}
         @case('graduation-cap')
         @case('award')
             <circle cx="12" cy="8" r="6"></circle>
             <path d="M15.477 12.89L17 22l-5-3-5 3 1.523-9.11"></path>
+            @break
+
+        {{-- 🗝 key-round --}}
+        @case('key-round')
+        @case('key')
+            <path d="m21 2-2 2m-7.61 7.61a5.5 5.5 0 1 1-7.778 7.778 5.5 5.5 0 0 1 7.778-7.778zm0 0L15.5 7.5m0 0 1.5 1.5M15.5 7.5 14 6"></path>
+            @break
+
+        {{-- 🕒 history --}}
+        @case('history')
+        @case('clock')
+            <circle cx="12" cy="12" r="10"></circle>
+            <path d="M12 6v6l4 2"></path>
+            @break
+
+        {{-- ⚙ settings-2 --}}
+        @case('settings-2')
+        @case('settings')
+            <circle cx="12" cy="12" r="3"></circle>
+            <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
             @break
 
         {{-- ❖ microsoft --}}

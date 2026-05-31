@@ -97,139 +97,172 @@ $secondaryNav = [
             </a>
         </div>
 
-        {{-- Primary Navigation --}}
-        <div class="flex flex-col gap-1.5">
-            <ul class="flex flex-col gap-1" role="list">
-                @foreach($primaryNav as $item)
-                    <li role="listitem">
-                        <a
-                            href="{{ $item['href'] }}"
-                            class="ue-nav-link {{ $item['active'] ? 'active' : '' }}"
-                            @if($item['active']) aria-current="page" @endif
-                        >
-                            <x-ui.icon :name="$item['icon']" size="md" aria-hidden="true" class="flex-shrink-0" />
-                            <span>{{ $item['label'] }}</span>
-                            @if (!empty($item['badge']) && $item['badge'] > 0)
-                                <span class="ml-auto px-2 py-0.5 rounded-full bg-ue-brand text-white text-[10px] font-bold">
-                                    {{ $item['badge'] }}
-                                </span>
-                            @endif
-                        </a>
-                    </li>
-                @endforeach
-            </ul>
-        </div>
+    {{-- Navigation items --}}
+    @php
+        $navItems = $navItems ?? array_merge($primaryNav, $secondaryNav);
+    @endphp
 
-        {{-- Secondary Navigation Divider & List --}}
-        <div class="border-t border-ue-border/60 pt-4 flex flex-col gap-1.5">
-            <p class="px-3 text-[10px] font-bold uppercase tracking-wider text-ue-text-muted/80">
-                Mở rộng
-            </p>
-            <ul class="flex flex-col gap-1" role="list">
-                @foreach($secondaryNav as $item)
-                    <li role="listitem">
-                        <a
-                            href="{{ $item['href'] }}"
-                            class="ue-nav-link {{ $item['active'] ? 'active' : '' }}"
-                            @if($item['active']) aria-current="page" @endif
-                        >
-                            <x-ui.icon :name="$item['icon']" size="md" aria-hidden="true" class="flex-shrink-0" />
-                            <span>{{ $item['label'] }}</span>
-                        </a>
-                    </li>
-                @endforeach
-            </ul>
-        </div>
-    </div>
-
-    {{-- Bottom More Trigger & Menu --}}
-    <div class="relative mt-auto pt-4 border-t border-ue-border/60">
-        <button
-            type="button"
-            @click="moreOpen = !moreOpen"
-            @click.away="moreOpen = false"
-            class="ue-nav-link w-full flex items-center justify-between"
-            :class="moreOpen ? 'bg-ue-brand-soft text-ue-brand-active' : ''"
-            aria-haspopup="true"
-            :aria-expanded="moreOpen"
-            aria-label="Xem thêm menu"
-        >
-            <div class="flex items-center gap-3">
-                <x-ui.icon name="menu" size="md" class="flex-shrink-0" />
-                <span>Xem thêm</span>
-            </div>
-            <x-ui.icon name="chevron-up" size="xs" class="text-ue-text-muted/60 transition-transform duration-150" x-bind:class="moreOpen ? 'rotate-180' : ''" />
-        </button>
-
-        {{-- More popover menu --}}
-        <div
-            x-show="moreOpen"
-            x-transition:enter="transition ease-out duration-100"
-            x-transition:enter-start="transform opacity-0 scale-95 translate-y-2"
-            x-transition:enter-end="transform opacity-100 scale-100 translate-y-0"
-            x-transition:leave="transition ease-in duration-75"
-            x-transition:leave-start="transform opacity-100 scale-100 translate-y-0"
-            x-transition:leave-end="transform opacity-0 scale-95 translate-y-2"
-            class="absolute left-0 bottom-full mb-2 w-64 bg-white border border-ue-border rounded-xl shadow-lg py-2 z-dropdown"
-            style="display: none;"
-            @keydown.escape.window="moreOpen = false"
-        >
-            {{-- User info summary --}}
-            <div class="px-4 py-2 border-b border-ue-border/60">
-                <p class="text-ue-text font-bold truncate text-xs">{{ $currentUser->name }}</p>
-                <p class="text-[10px] text-ue-text-muted truncate mt-0.5">{{ $currentUser->email }}</p>
-            </div>
-
-            {{-- General options --}}
-            <button type="button" class="w-full text-left flex items-center gap-3 px-4 py-2 text-xs font-semibold text-ue-text-secondary hover:bg-ue-surface-hover hover:text-ue-brand-active transition-colors">
-                <x-ui.icon name="eye" size="sm" class="text-ue-text-muted" />
-                <span>Giao diện</span>
-            </button>
-
-            <a href="{{ route('settings') }}" class="flex items-center gap-3 px-4 py-2 text-xs font-semibold text-ue-text-secondary hover:bg-ue-surface-hover hover:text-ue-brand-active transition-colors">
-                <x-ui.icon name="settings" size="sm" class="text-ue-text-muted" />
-                <span>Cài đặt</span>
-            </a>
-
-            <a href="{{ route('posts.saved') }}" class="flex items-center gap-3 px-4 py-2 text-xs font-semibold text-ue-text-secondary hover:bg-ue-surface-hover hover:text-ue-brand-active transition-colors">
-                <x-ui.icon name="bookmark" size="sm" class="text-ue-text-muted" />
-                <span>Bài viết đã lưu</span>
-            </a>
-
-            <a href="{{ route('settings', ['section' => 'support']) }}" class="flex items-center gap-3 px-4 py-2 text-xs font-semibold text-ue-text-secondary hover:bg-ue-surface-hover hover:text-ue-brand-active transition-colors">
-                <x-ui.icon name="help-circle" size="sm" class="text-ue-text-muted" />
-                <span>Trung tâm hỗ trợ</span>
-            </a>
-
-            <a href="{{ route('settings', ['section' => 'support']) }}" class="flex items-center gap-3 px-4 py-2 text-xs font-semibold text-ue-text-secondary hover:bg-ue-surface-hover hover:text-ue-brand-active transition-colors">
-                <x-ui.icon name="alert-triangle" size="sm" class="text-ue-text-muted" />
-                <span>Báo cáo sự cố</span>
-            </a>
-
-            {{-- Admin items --}}
-            @if ($isAdmin)
-                <div class="border-t border-ue-border/60 my-1.5"></div>
-                <p class="px-4 py-1 text-[9px] font-bold text-ue-text-muted uppercase tracking-wider">Quản lý hệ thống</p>
-                
-                <a href="{{ route('admin.dashboard') }}" class="flex items-center gap-3 px-4 py-2 text-xs font-semibold text-ue-text-secondary hover:bg-ue-surface-hover hover:text-ue-brand-active transition-colors">
-                    <x-ui.icon name="shield" size="sm" class="text-ue-text-muted" />
-                    <span>Tổng quan quản trị</span>
+    <ul class="flex flex-col gap-1 flex-1" role="list">
+        @foreach($navItems as $item)
+            <li role="listitem">
+                <a
+                    href="{{ $item['href'] }}"
+                    class="ue-nav-link"
+                    @if($item['active']) aria-current="page" @endif
+                >
+                    <x-ui.icon :name="$item['icon']" size="md" aria-hidden="true" class="flex-shrink-0" />
+                    <span>{{ $item['label'] }}</span>
                 </a>
+            </li>
+        @endforeach
+    </ul>
 
-                @can('review_verification')
-                    <a href="{{ route('admin.verifications.queue') }}" class="flex items-center gap-3 px-4 py-2 text-xs font-semibold text-ue-text-secondary hover:bg-ue-surface-hover hover:text-ue-brand-active transition-colors">
-                        <x-ui.icon name="shield-check" size="sm" class="text-ue-text-muted" />
-                        <span>Duyệt xác thực</span>
-                    </a>
-                @endcan
+    {{-- Admin section --}}
+    @php
+        $canAccessAdminSidebar = auth()->user()?->can('view_admin_dashboard')
+            || auth()->user()?->can('review_verification')
+            || auth()->user()?->can('manage_users')
+            || auth()->user()?->can('manage_reports')
+            || auth()->user()?->can('manage_mentor_access')
+            || auth()->user()?->can('manage', \App\Models\Announcement::class)
+            || auth()->user()?->can('manage_permissions')
+            || auth()->user()?->can('view_audit_log');
 
-                @can('manage_reports')
-                    <a href="{{ route('admin.reports.index') }}" class="flex items-center gap-3 px-4 py-2 text-xs font-semibold text-ue-text-secondary hover:bg-ue-surface-hover hover:text-ue-brand-active transition-colors">
-                        <x-ui.icon name="flag" size="sm" class="text-ue-text-muted" />
-                        <span>Báo cáo vi phạm</span>
-                    </a>
-                @endcan
-            @endif
+        $adminNavItems = [
+            [
+                'icon' => 'shield',
+                'label' => 'Dashboard',
+                'href' => route('admin.dashboard'),
+                'active' => request()->routeIs('admin.dashboard'),
+                'placeholder' => false,
+            ],
+            [
+                'icon' => 'shield-check',
+                'label' => 'Verification',
+                'href' => route('admin.verifications.queue'),
+                'active' => request()->routeIs('admin.verifications.*'),
+                'placeholder' => false,
+            ],
+            [
+                'icon' => 'users',
+                'label' => 'Users',
+                'href' => route('admin.users.index'),
+                'active' => request()->routeIs('admin.users.*'),
+                'placeholder' => false,
+            ],
+            [
+                'icon' => 'flag',
+                'label' => 'Moderation',
+                'href' => route('admin.moderation.index'),
+                'active' => request()->routeIs('admin.moderation.*'),
+                'placeholder' => false,
+            ],
+            [
+                'icon' => 'alert-triangle',
+                'label' => 'Reports',
+                'href' => route('admin.reports.index'),
+                'active' => request()->routeIs('admin.reports.*'),
+                'placeholder' => false,
+            ],
+            [
+                'icon' => 'graduation-cap',
+                'label' => 'Mentor Access',
+                'href' => route('admin.mentors.index'),
+                'active' => request()->routeIs('admin.mentors.*'),
+                'placeholder' => false,
+            ],
+            [
+                'icon' => 'megaphone',
+                'label' => 'Announcements',
+                'href' => route('admin.announcements.index'),
+                'active' => request()->routeIs('admin.announcements.*'),
+                'placeholder' => false,
+            ],
+            [
+                'icon' => 'key-round',
+                'label' => 'Roles & Permissions',
+                'href' => route('admin.permissions.index'),
+                'active' => request()->routeIs('admin.permissions.*'),
+                'placeholder' => false,
+            ],
+            [
+                'icon' => 'history',
+                'label' => 'Audit Logs',
+                'href' => route('admin.audit-logs.index'),
+                'active' => request()->routeIs('admin.audit-logs.*'),
+                'placeholder' => false,
+            ],
+            [
+                'icon' => 'bell',
+                'label' => 'Notifications',
+                'href' => route('admin.notifications.index'),
+                'active' => request()->routeIs('admin.notifications.*'),
+                'placeholder' => false,
+            ],
+            [
+                'icon' => 'bar-chart-3',
+                'label' => 'Analytics',
+                'href' => route('admin.analytics.index'),
+                'active' => request()->routeIs('admin.analytics.*'),
+                'placeholder' => false,
+            ],
+            [
+                'icon' => 'settings-2',
+                'label' => 'System Settings',
+                'href' => route('admin.system-settings.index'),
+                'active' => request()->routeIs('admin.system-settings.*'),
+                'placeholder' => false,
+            ],
+        ];
+    @endphp
+
+    @if($canAccessAdminSidebar)
+        <div class="mt-6 border-t border-ue-border pt-4 flex flex-col gap-1">
+            <p class="px-3 text-2xs font-bold uppercase tracking-wider text-ue-text-muted">
+                Quản trị
+            </p>
+
+            @foreach($adminNavItems as $item)
+                @php
+                    // Việt hóa label trên đường đi thay vì thay đổi dữ liệu route
+                    $labelVnMap = [
+                        'Dashboard' => 'Tổng quan quản trị',
+                        'Verification' => 'Duyệt xác thực',
+                        'Users' => 'Người dùng',
+                        'Moderation' => 'Kiểm duyệt',
+                        'Reports' => 'Báo cáo',
+                        'Communities' => 'Cộng đồng',
+                        'Mentor Access' => 'Quản lý Mentor',
+                        'Announcements' => 'Thông báo',
+                        'Roles & Permissions' => 'Vai trò & Quyền',
+                        'Audit Logs' => 'Nhật ký thao tác',
+                        'Notifications' => 'Thông báo hệ thống',
+                        'Analytics' => 'Phân tích',
+                        'System Settings' => 'Cài đặt hệ thống',
+                    ];
+
+                    $label = $labelVnMap[$item['label']] ?? $item['label'];
+                @endphp
+
+                <a
+                    href="{{ $item['href'] }}"
+                    class="ue-nav-link {{ $item['placeholder'] ? 'pointer-events-none opacity-60' : '' }}"
+                    @if($item['active']) aria-current="page" @endif
+                    @if($item['placeholder']) aria-disabled="true" tabindex="-1" @endif
+                >
+                    <x-ui.icon :name="$item['icon']" size="md" />
+                    <span>{{ $label }}</span>
+                </a>
+            @endforeach
+        </div>
+    @endif
+
+    {{-- Profile link + Logout at bottom --}}
+    <div class="border-t border-ue-border pt-3 mt-3 flex flex-col gap-1">
+        <a href="{{ route('profile') }}" class="ue-nav-link" @if(request()->routeIs('profile')) aria-current="page" @endif>
+            <x-ui.avatar size="sm" />
+            <span>Hồ sơ</span>
+        </a>
 
             {{-- Logout --}}
             <div class="border-t border-ue-border/60 my-1.5"></div>

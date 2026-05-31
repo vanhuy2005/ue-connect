@@ -7,6 +7,7 @@ use App\Livewire\Actions\Logout;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Livewire\Volt\Volt;
+use Spatie\Permission\PermissionRegistrar;
 use Tests\TestCase;
 
 class AuthenticationTest extends TestCase
@@ -158,12 +159,32 @@ class AuthenticationTest extends TestCase
         $response = $this->actingAs($admin)->get(route('dashboard'));
         $response->assertSee('Quản trị');
         $response->assertSee('Tổng quan quản trị');
+        $response->assertSee('Duyệt xác thực');
+        $response->assertSee('Người dùng');
+        $response->assertSee('Kiểm duyệt');
+        $response->assertSee('Báo cáo');
+        $response->assertSee('Cộng đồng');
+        $response->assertSee('Quản lý Mentor');
+        $response->assertSee('Thông báo');
+        $response->assertSee('Vai trò & Quyền');
+        $response->assertSee('Nhật ký thao tác');
+        $response->assertSee('Phân tích');
+        $response->assertSee('Cài đặt hệ thống');
+        $response->assertSee(route('admin.dashboard'));
+        $response->assertSee(route('admin.verifications.queue'));
+        $response->assertSee(route('admin.users.index'));
+        $response->assertSee(route('admin.reports.index'));
+        $response->assertSee(route('admin.communities.index'));
+        $response->assertSee(route('admin.mentors.index'));
+        $response->assertSee(route('admin.announcements.index'));
+        $response->assertSee(route('admin.permissions.index'));
+        $response->assertSee(route('admin.audit-logs.index'));
 
         $user = User::factory()->create([
             'account_status' => AccountStatus::ACTIVE,
         ]);
 
-        app(\Spatie\Permission\PermissionRegistrar::class)->forgetCachedPermissions();
+        app(PermissionRegistrar::class)->forgetCachedPermissions();
 
         $response = $this->actingAs($user)->get(route('dashboard'));
         $response->assertDontSee('Quản trị');

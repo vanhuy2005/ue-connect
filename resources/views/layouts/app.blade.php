@@ -30,6 +30,9 @@
 
     <body class="font-sans antialiased h-full">
 
+        {{-- Default shell when not provided by caller --}}
+        @php $shell = $shell ?? 'guest'; @endphp
+
         {{-- Skip to main content (accessibility) --}}
         <a href="#main-content" class="skip-link">Bỏ qua và đến nội dung chính</a>
 
@@ -64,7 +67,12 @@
                     class="flex-1 {{ in_array($shell, ['social', 'admin', 'conversation']) ? 'pb-16 lg:pb-0' : '' }}"
                     tabindex="-1"
                 >
-                    {{ $slot }}
+                    {{-- Support both component slot usage and traditional section/yield --}}
+                    @if(isset($slot))
+                        {!! $slot !!}
+                    @else
+                        {!! $__env->yieldContent('content') !!}
+                    @endif
                 </main>
 
             </div>

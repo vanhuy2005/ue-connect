@@ -7,6 +7,7 @@ use App\Models\User;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
+use Spatie\Permission\Models\Permission;
 use Spatie\Permission\Models\Role;
 use Spatie\Permission\PermissionRegistrar;
 
@@ -30,8 +31,14 @@ class UatSeeder extends Seeder
         // Reset permission cache
         app(PermissionRegistrar::class)->forgetCachedPermissions();
 
-        // Ensure admin role exists
-        Role::firstOrCreate(['name' => 'admin', 'guard_name' => 'web']);
+        // Ensure admin permissions exist
+        Permission::firstOrCreate(['name' => 'review_verification', 'guard_name' => 'web']);
+        Permission::firstOrCreate(['name' => 'manage_reports', 'guard_name' => 'web']);
+        Permission::firstOrCreate(['name' => 'manage_users', 'guard_name' => 'web']);
+
+        // Ensure admin role exists and has permissions
+        $adminRole = Role::firstOrCreate(['name' => 'admin', 'guard_name' => 'web']);
+        $adminRole->syncPermissions(['review_verification', 'manage_reports', 'manage_users']);
 
         // UAT 1 — Admin account
         $admin = User::updateOrCreate(

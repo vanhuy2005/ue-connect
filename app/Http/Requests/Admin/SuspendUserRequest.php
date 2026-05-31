@@ -1,0 +1,22 @@
+<?php
+
+namespace App\Http\Requests\Admin;
+
+use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Support\Facades\Gate;
+
+class SuspendUserRequest extends FormRequest
+{
+    public function authorize(): bool
+    {
+        return Gate::allows('manage_users');
+    }
+
+    public function rules(): array
+    {
+        return [
+            'reason' => ['required', 'string', 'max:1000'],
+            'until' => ['nullable', 'date', 'after:now'],
+        ];
+    }
+}
