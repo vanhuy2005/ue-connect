@@ -257,13 +257,8 @@ $secondaryNav = [
         </div>
     @endif
 
-    {{-- Profile link + Logout at bottom --}}
+    {{-- Logout at bottom --}}
     <div class="border-t border-ue-border pt-3 mt-3 flex flex-col gap-1">
-        <a href="{{ route('profile') }}" class="ue-nav-link" @if(request()->routeIs('profile')) aria-current="page" @endif>
-            <x-ui.avatar size="sm" />
-            <span>Hồ sơ</span>
-        </a>
-
             {{-- Logout --}}
             <div class="border-t border-ue-border/60 my-1.5"></div>
             <form method="POST" action="{{ route('logout') }}" class="w-full">
