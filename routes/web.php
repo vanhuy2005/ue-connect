@@ -169,6 +169,10 @@ Route::middleware(['auth', 'active.account', EnsureAdminAccess::class])->group(f
     Route::post('admin/communities/{community}/update', [CommunityController::class, 'update'])->name('admin.communities.update');
     Route::post('admin/communities/{community}/suspend', [CommunityController::class, 'suspend'])->name('admin.communities.suspend');
     Route::post('admin/communities/{community}/reactivate', [CommunityController::class, 'reactivate'])->name('admin.communities.reactivate');
+
+    // Member management: add/remove members
+    Route::post('admin/communities/{community}/members', [CommunityController::class, 'addMember'])->name('admin.communities.members.add');
+    Route::delete('admin/communities/{community}/members/{user}', [CommunityController::class, 'removeMember'])->name('admin.communities.members.remove');
 });
 
 // Admin mentor access management (protected by admin access middleware)

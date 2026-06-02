@@ -1,0 +1,84 @@
+Danh sách chức năng Admin - UE Connect
+
+1) Quản lý người dùng
+- Xem danh sách người dùng (admin.users.index)
+- Xem chi tiết người dùng (admin.users.show)
+- Tạm khóa người dùng (suspend) (admin.users.suspend)
+- Cấm người dùng (ban) (admin.users.ban)
+- Kích hoạt lại người dùng (reactivate) (admin.users.reactivate)
+- Tìm kiếm người dùng qua Admin Search (admin.search)
+
+2) Quản lý xác thực (Verification)
+- Xem hàng đợi xác thực (admin.verifications.queue)
+- Xem chi tiết xác thực (admin.verifications.detail)
+- Xem / stream tài liệu chứng minh (evidence) cho admin (admin.verification.evidence)
+- Thực hiện hành động review: approve, reject, need_more_information, mark_conflict, suspend_suspicious, edit_before_approve (admin.verifications.action)
+- Thông báo kết quả đến người dùng (Notification gửi bởi action)
+
+3) Quản lý quyền & Permission Grants
+- Xem trang danh sách quyền và giao diện cấp quyền (admin.permissions.index)
+- Xem danh sách permission grants (admin.permission-grants.index)
+- Cấp quyền cho user (store)
+- Thu hồi quyền (revoke)
+- Các permission được dùng: manage_users, suspend_users, ban_users, manage_permissions, review_verification, approve_verification, manage_communities, manage_mentor_access, view_audit_log
+
+4) Quản lý cộng đồng (Communities)
+- Xem danh sách cộng đồng (index)
+- Tạo cộng đồng (create / store)
+- Xem chi tiết cộng đồng (show)
+- Cập nhật cộng đồng (update)
+- Tạm khoá cộng đồng (suspend)
+- Kích hoạt lại cộng đồng (reactivate)
+
+5) Thông báo hệ thống (Announcements)
+- Xem danh sách thông báo (index)
+- Tạo thông báo (create / store)
+- Publish thông báo (publish)
+- Expire thông báo (expire)
+- Xoá thông báo (delete)
+
+6) Mentor Access / Yêu cầu mentor
+- Xem hàng đợi yêu cầu mentor (index)
+- Xem chi tiết yêu cầu (show)
+- Xử lý hành động: approve/grant, reject, pause, request_more_info, revoke
+
+7) Nhật ký kiểm toán (Audit Logs)
+- Xem và lọc audit logs (actor_id, action) (admin.audit-logs.index)
+
+8) Cài đặt hệ thống (System Settings)
+- Xem cài đặt hệ thống (index)
+- Cập nhật cài đặt (update)
+- Lưu snapshot cài đặt (snapshot)
+- Khôi phục snapshot (snapshot.restore)
+- Tải về file snapshot (snapshot.download)
+
+9) Moderation & Reports
+- Bảng moderation: tổng hợp số liệu (pending reports, pending verifications, suspended users, recent actions) (admin.moderation.index)
+- Hàng đợi báo cáo (admin.reports.index)
+- Xem chi tiết báo cáo (admin.reports.show)
+
+10) Tìm kiếm Admin (Admin Search)
+- Tìm kiếm users, posts, reports, communities, verifications (admin.search)
+
+11) Dashboard & Analytics
+- Admin dashboard: các chỉ số tóm tắt (verification, safety, engagement, community, recent audit)
+- Analytics view: tổng số người/dữ liệu (admin.analytics.index)
+
+12) Thông báo cho admin
+- Trang thông báo admin và danh sách thông báo (admin.notifications.index)
+
+13) Các hành động, services và tiện ích liên quan
+- `BuildAdminDashboardAction`: tập hợp chỉ số cho dashboard
+- `ReviewVerificationAction`: xử lý chi tiết các hành động review cho VerificationRequest
+- `VerificationEvidenceController@show`: stream file evidence cho admin với audit
+- Audit/Logging và các AuditService/AuditLogService dùng để ghi lại hành động admin
+
+Ghi chú: hầu hết endpoint admin được bảo vệ bởi middleware `auth`, `active.account` và `EnsureAdminAccess` (hoặc kiểm tra Gate/permission nội bộ). Kiểm tra chi tiết trong các controller:
+- app/Http/Controllers/Admin/*
+- app/Actions/Admin/*
+- routes/web.php (các route bắt đầu bằng `admin/`)
+
+Nếu bạn muốn, tôi có thể:
+- Thêm đường dẫn controller/action cụ thể cho từng mục (tên method + file).
+- Xuất file này sang định dạng khác (CSV, markdown).
+- Commit thay đổi vào Git.

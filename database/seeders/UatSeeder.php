@@ -35,10 +35,12 @@ class UatSeeder extends Seeder
         Permission::firstOrCreate(['name' => 'review_verification', 'guard_name' => 'web']);
         Permission::firstOrCreate(['name' => 'manage_reports', 'guard_name' => 'web']);
         Permission::firstOrCreate(['name' => 'manage_users', 'guard_name' => 'web']);
+        // add community management permission for admin
+        Permission::firstOrCreate(['name' => 'manage_communities', 'guard_name' => 'web']);
 
         // Ensure admin role exists and has permissions
         $adminRole = Role::firstOrCreate(['name' => 'admin', 'guard_name' => 'web']);
-        $adminRole->syncPermissions(['review_verification', 'manage_reports', 'manage_users']);
+        $adminRole->syncPermissions(['review_verification', 'manage_reports', 'manage_users', 'manage_communities']);
 
         // UAT 1 — Admin account
         $admin = User::updateOrCreate(

@@ -29,6 +29,19 @@
                 </div>
 
                 <div class="mb-2">
+                    <label class="block text-sm">Phạm vi</label>
+                    <select name="scope_type" class="w-full border rounded p-2">
+                        <option value="">Global</option>
+                        <option value="community">Community</option>
+                    </select>
+                </div>
+
+                <div class="mb-2">
+                    <label class="block text-sm">Scope ID (community_id nếu chọn Community)</label>
+                    <input name="scope_id" class="w-full border rounded p-2" />
+                </div>
+
+                <div class="mb-2">
                     <label class="block text-sm">Lý do</label>
                     <textarea name="reason" class="w-full border rounded p-2" rows="3"></textarea>
                 </div>

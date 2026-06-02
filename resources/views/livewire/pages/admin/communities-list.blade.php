@@ -95,6 +95,7 @@ new class extends Component {
             <table class="min-w-full divide-y divide-ue-border">
                 <thead class="bg-ue-surface-subtle">
                     <tr>
+                        <th scope="col" class="px-6 py-3 text-left text-xs font-semibold text-ue-text-muted uppercase">ID</th>
                         <th scope="col" class="px-6 py-3 text-left text-xs font-semibold text-ue-text-muted uppercase">Tên cộng đồng</th>
                         <th scope="col" class="px-6 py-3 text-left text-xs font-semibold text-ue-text-muted uppercase">Người tạo</th>
                         <th scope="col" class="px-6 py-3 text-left text-xs font-semibold text-ue-text-muted uppercase">Trạng thái</th>
@@ -105,6 +106,7 @@ new class extends Component {
                 <tbody class="bg-ue-surface divide-y divide-ue-border text-sm">
                     @forelse ($this->communities as $community)
                         <tr class="hover:bg-ue-surface-hover transition-colors">
+                            <td class="px-6 py-3 text-ue-text-muted text-xs font-semibold">{{ $community->id }}</td>
                             <td class="px-6 py-3 font-semibold text-ue-text">
                                 <a href="{{ route('admin.communities.show', $community->id) }}" class="hover:text-ue-brand">
                                     {{ $community->name }}

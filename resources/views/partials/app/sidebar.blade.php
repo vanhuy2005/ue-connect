@@ -124,6 +124,7 @@ $secondaryNav = [
             || auth()->user()?->can('manage_users')
             || auth()->user()?->can('manage_reports')
             || auth()->user()?->can('manage_mentor_access')
+            || auth()->user()?->can('manage_communities')
             || auth()->user()?->can('manage', \App\Models\Announcement::class)
             || auth()->user()?->can('manage_permissions')
             || auth()->user()?->can('view_audit_log');
@@ -169,6 +170,13 @@ $secondaryNav = [
                 'label' => 'Mentor Access',
                 'href' => route('admin.mentors.index'),
                 'active' => request()->routeIs('admin.mentors.*'),
+                'placeholder' => false,
+            ],
+            [
+                'icon' => 'building-2',
+                'label' => 'Communities',
+                'href' => route('admin.communities.index'),
+                'active' => request()->routeIs('admin.communities.*'),
                 'placeholder' => false,
             ],
             [
@@ -231,7 +239,7 @@ $secondaryNav = [
                         'Users' => 'Người dùng',
                         'Moderation' => 'Kiểm duyệt',
                         'Reports' => 'Báo cáo',
-                        'Communities' => 'Cộng đồng',
+                        'Communities' => 'Quản lý cộng đồng',
                         'Mentor Access' => 'Quản lý Mentor',
                         'Announcements' => 'Thông báo',
                         'Roles & Permissions' => 'Vai trò & Quyền',

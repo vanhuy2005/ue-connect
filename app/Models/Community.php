@@ -27,4 +27,14 @@ class Community extends Model
     {
         return $this->creator();
     }
+
+    public function members()
+    {
+        return $this->hasMany(CommunityMember::class);
+    }
+
+    public function membersActive()
+    {
+        return $this->members()->where('status', 'active');
+    }
 }

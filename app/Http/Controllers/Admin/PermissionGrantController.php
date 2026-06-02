@@ -20,6 +20,7 @@ class PermissionGrantController extends Controller
         $permissionKeys = [
             'manage_users', 'suspend_users', 'ban_users', 'manage_permissions',
             'review_verification', 'approve_verification', 'manage_communities',
+            'manage_club', 'manage_community_members', 'manage_community_resources',
             'manage_mentor_access', 'view_audit_log',
         ];
 

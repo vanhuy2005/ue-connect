@@ -112,4 +112,75 @@ class CommunityController extends Controller
 
         return back()->with('status', 'Community reactivated.');
     }
+
+    public function addMember(Request $request, Community $community, AuditService $audit)
+    {
+        $this->authorize('manage_communities');
+
+        $data = $request->validate([
+            'user_id' => ['required', 'exists:users,id'],
+            'role' => ['nullable', 'string'],
+        ]);
+
+        // create or ignore duplicate
+        $existing = \DB::table('community_members')
+            ->where('community_id', $community->id)
+            ->where('user_id', $data['user_id'])
+            ->first();
+
+        if ($existing) {
+            return back()->with('status', 'User is already a member.');
+        }
+
+        $member = \App\Models\CommunityMember::create([
+            'community_id' => $community->id,
+            'user_id' => $data['user_id'],
+            'role' => $data['role'] ?? 'member',
+            'joined_at' => now(),
+            'status' => 'active',
+        ]);
+
+        // increment cached counter
+        $community->increment('members_count');
+
+        $audit->log([
+            'action' => 'add_community_member',
+            'target_type' => 'community',
+            'target_id' => $community->id,
+            'after_values' => $member->toArray(),
+            'reason' => $request->input('reason') ?? null,
+        ]);
+
+        return back()->with('status', 'Member added.');
+    }
+
+    public function removeMember(Request $request, Community $community, $userId, AuditService $audit)
+    {
+        $this->authorize('manage_communities');
+
+        $member = \App\Models\CommunityMember::where('community_id', $community->id)->where('user_id', $userId)->first();
+
+        if (! $member) {
+            return back()->with('status', 'Member not found.');
+        }
+
+        $before = $member->toArray();
+        $member->delete();
+
+        // decrement cached counter but avoid negative
+        if ($community->members_count > 0) {
+            $community->decrement('members_count');
+        }
+
+        $audit->log([
+            'action' => 'remove_community_member',
+            'target_type' => 'community',
+            'target_id' => $community->id,
+            'before_values' => $before,
+            'reason' => $request->input('reason') ?? null,
+        ]);
+
+        return back()->with('status', 'Member removed.');
+    }
 }
+

@@ -110,9 +110,26 @@ new class extends Component {
                         <tr class="hover:bg-ue-surface-hover transition-colors">
                             <td class="px-6 py-3">{{ $g->user?->name ?? 'Không rõ' }}<div class="text-xs text-ue-text-muted">{{ $g->user?->email ?? '' }}</div></td>
                             <td class="px-6 py-3">{{ $g->permission_key }}</td>
-                            <td class="px-6 py-3">{{ $g->scope_type ? $g->scope_type . ':' . $g->scope_id : 'toàn cục' }}</td>
+                            <td class="px-6 py-3">
+                                @if($g->scope_type === 'community')
+                                    Cộng đồng: {{ $g->scope_id }}
+                                @elseif($g->scope_type)
+                                    {{ ucfirst($g->scope_type) }}: {{ $g->scope_id }}
+                                @else
+                                    Toàn cục
+                                @endif
+                            </td>
                             <td class="px-6 py-3">{{ $g->granter?->name ?? 'Hệ thống' }}</td>
-                            <td class="px-6 py-3">{{ ucfirst($g->status) }}</td>
+                            <td class="px-6 py-3">
+                                @php
+                                    $statusLabels = [
+                                        'active' => 'Đang có hiệu lực',
+                                        'revoked' => 'Đã thu hồi',
+                                        'expired' => 'Hết hạn',
+                                    ];
+                                @endphp
+                                {{ $statusLabels[$g->status] ?? ucfirst($g->status) }}
+                            </td>
                             <td class="px-6 py-3 text-right">
                                 <button wire:click="revoke({{ $g->id }})" onclick="return confirm('Bạn có chắc muốn thu hồi quyền này?')" class="text-red-600 text-xs font-semibold">Thu hồi</button>
                             </td>
