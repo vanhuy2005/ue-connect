@@ -6,6 +6,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasOne;
+use Illuminate\Database\Eloquent\Relations\MorphMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
 class Profile extends Model
@@ -41,9 +42,27 @@ class Profile extends Model
     /**
      * Get the avatar media file for this profile.
      */
-    public function avatar(): BelongsTo
+    public function legacyAvatar(): BelongsTo
     {
         return $this->belongsTo(MediaFile::class, 'avatar_media_file_id');
+    }
+
+    /**
+     * Get polymorphic media assets for this profile (avatar, cover, etc.)
+     */
+    public function media(): MorphMany
+    {
+        return $this->morphMany(Media::class, 'mediable');
+    }
+
+    public function avatar(): MorphMany
+    {
+        return $this->media()->where('collection', 'avatar');
+    }
+
+    public function cover(): MorphMany
+    {
+        return $this->media()->where('collection', 'profile_cover');
     }
 
     /**

@@ -8,7 +8,12 @@
 
 @php
 $currentUser = auth()->user();
-$isAdmin = $currentUser && ($currentUser->can('review_verification') || $currentUser->can('manage_reports'));
+$adminRoles = ['admin', 'moderator', 'super_admin'];
+$adminPermissions = ['view_admin_dashboard', 'review_verification', 'manage_reports'];
+$isAdmin = $currentUser && (
+    $currentUser->roles()->whereIn('name', $adminRoles)->exists()
+    || $currentUser->permissions()->whereIn('name', $adminPermissions)->exists()
+);
 
 $unreadNotificationsCount = $currentUser ? $currentUser->unreadNotifications()->count() : 0;
 $unreadMessagesCount = $currentUser ? \App\Models\ConversationParticipant::where('user_id', $currentUser->id)
@@ -84,16 +89,16 @@ $secondaryNav = [
 @endphp
 
 <nav
-    class="ue-shell__sidebar hidden lg:flex flex-col py-5 px-4 justify-between h-100dvh sticky top-0"
+    class="ue-shell__sidebar hidden lg:flex flex-col py-5 px-5 justify-between h-100dvh sticky top-0"
     aria-label="Điều hướng chính"
     role="navigation"
     x-data="{ moreOpen: false }"
 >
-    <div class="flex flex-col gap-6 flex-1 min-h-0">
+    <div class="flex flex-col gap-7 flex-1 min-h-0">
         {{-- Logo --}}
-        <div class="px-2">
-            <a href="{{ route('dashboard') }}" class="flex items-center ue-focus-ring rounded-lg" aria-label="UEConnect - Trang chủ">
-                <x-brand.logo variant="horizontal" size="sm" />
+        <div class="px-1">
+            <a href="{{ route('dashboard') }}" class="inline-flex items-center ue-focus-ring rounded-lg" aria-label="UEConnect - Trang chủ">
+                <x-brand.logo variant="horizontal" size="lg" class="h-9 w-auto" />
             </a>
         </div>
 
@@ -121,8 +126,8 @@ $secondaryNav = [
         </div>
 
         {{-- Secondary Navigation Divider & List --}}
-        <div class="border-t border-ue-border/60 pt-4 flex flex-col gap-1.5">
-            <p class="px-3 text-[10px] font-bold uppercase tracking-wider text-ue-text-muted/80">
+        <div class="pt-1 flex flex-col gap-1.5">
+            <p class="px-3 text-[10px] font-bold uppercase tracking-wider text-ue-text-muted/70">
                 Mở rộng
             </p>
             <ul class="flex flex-col gap-1" role="list">
@@ -143,7 +148,7 @@ $secondaryNav = [
     </div>
 
     {{-- Bottom More Trigger & Menu --}}
-    <div class="relative mt-auto pt-4 border-t border-ue-border/60">
+    <div class="relative mt-auto pt-4">
         <button
             type="button"
             @click="moreOpen = !moreOpen"
@@ -170,12 +175,12 @@ $secondaryNav = [
             x-transition:leave="transition ease-in duration-75"
             x-transition:leave-start="transform opacity-100 scale-100 translate-y-0"
             x-transition:leave-end="transform opacity-0 scale-95 translate-y-2"
-            class="absolute left-0 bottom-full mb-2 w-64 bg-white border border-ue-border rounded-xl shadow-lg py-2 z-dropdown"
+            class="absolute left-0 bottom-full mb-2 w-64 bg-white rounded-2xl shadow-lg ring-1 ring-black/5 py-2 z-dropdown"
             style="display: none;"
             @keydown.escape.window="moreOpen = false"
         >
             {{-- User info summary --}}
-            <div class="px-4 py-2 border-b border-ue-border/60">
+            <div class="px-4 py-2">
                 <p class="text-ue-text font-bold truncate text-xs">{{ $currentUser->name }}</p>
                 <p class="text-[10px] text-ue-text-muted truncate mt-0.5">{{ $currentUser->email }}</p>
             </div>
@@ -208,8 +213,8 @@ $secondaryNav = [
 
             {{-- Admin items --}}
             @if ($isAdmin)
-                <div class="border-t border-ue-border/60 my-1.5"></div>
-                <p class="px-4 py-1 text-[9px] font-bold text-ue-text-muted uppercase tracking-wider">Quản lý hệ thống</p>
+                <div class="h-2"></div>
+                <p class="px-4 py-1 text-[9px] font-bold text-ue-text-muted uppercase tracking-wider">Quản trị</p>
                 
                 <a href="{{ route('admin.dashboard') }}" class="flex items-center gap-3 px-4 py-2 text-xs font-semibold text-ue-text-secondary hover:bg-ue-surface-hover hover:text-ue-brand-active transition-colors">
                     <x-ui.icon name="shield" size="sm" class="text-ue-text-muted" />
@@ -232,7 +237,7 @@ $secondaryNav = [
             @endif
 
             {{-- Logout --}}
-            <div class="border-t border-ue-border/60 my-1.5"></div>
+            <div class="h-2"></div>
             <form method="POST" action="{{ route('logout') }}" class="w-full">
                 @csrf
                 <button

@@ -9,6 +9,10 @@ use App\Actions\Posts\HidePostFromFeed;
 use App\Actions\Reports\CreateReport;
 use App\Actions\Messaging\SendSharedPostMessage;
 use App\Actions\Messaging\FindOrCreateDirectConversation;
+use App\Actions\Media\AttachMediaToModelAction;
+use App\Actions\Media\DeleteMediaAction;
+use App\Actions\Media\GenerateMediaUrlAction;
+use App\Actions\Media\StoreTemporaryMediaAction;
 use App\Enums\PostStatus;
 use App\Enums\PostVisibility;
 use App\Enums\ReportReason;
@@ -20,14 +24,19 @@ use Illuminate\Support\Facades\Auth;
 use Livewire\Attributes\Layout;
 use Livewire\Volt\Component;
 use Livewire\WithPagination;
+use Livewire\WithFileUploads;
 
 new #[Layout('layouts.app')] class extends Component
 {
-    use WithPagination;
+    use WithPagination, WithFileUploads;
 
     // Composer properties
     public string $body = '';
     public string $visibility = 'verified_users';
+
+    // Multi-image upload properties
+    public $imageFiles = [];
+    public array $composerImages = []; // Holds items like [['id' => 123, 'uuid' => '...', 'url' => '...']]
 
     // Edit post properties
     public ?int $editingPostId = null;
@@ -65,18 +74,76 @@ new #[Layout('layouts.app')] class extends Component
     ];
 
     /**
+     * Handle temporary composer image uploads.
+     */
+    public function updatedImageFiles(): void
+    {
+        $this->validate([
+            'imageFiles.*' => 'image|max:10240', // Max 10MB per image
+        ]);
+
+        $maxImages = config('media.limits.post_max_images', 4);
+        if (count($this->composerImages) + count($this->imageFiles) > $maxImages) {
+            $this->addError('imageFiles', "Bạn chỉ được phép tải lên tối đa {$maxImages} hình ảnh.");
+            $this->imageFiles = [];
+            return;
+        }
+
+        $storeAction = app(StoreTemporaryMediaAction::class);
+
+        foreach ($this->imageFiles as $file) {
+            try {
+                $media = $storeAction->execute(Auth::user(), $file, 'post_image', ['visibility' => 'public']);
+                
+                $this->composerImages[] = [
+                    'id' => $media->id,
+                    'uuid' => $media->uuid,
+                    'url' => app(GenerateMediaUrlAction::class)->execute($media, 'thumb', Auth::user()),
+                ];
+            } catch (\Exception $e) {
+                $this->addError('imageFiles', 'Lỗi tải ảnh lên: ' . $e->getMessage());
+            }
+        }
+
+        $this->imageFiles = [];
+    }
+
+    /**
+     * Remove a drafted image from the composer before posting.
+     */
+    public function removeComposerImage(int $index): void
+    {
+        if (isset($this->composerImages[$index])) {
+            $mediaData = $this->composerImages[$index];
+            $media = \App\Models\Media::find($mediaData['id']);
+            if ($media) {
+                app(DeleteMediaAction::class)->execute($media);
+            }
+            array_splice($this->composerImages, $index, 1);
+        }
+    }
+
+    /**
      * Submit a new post.
      */
     public function submitPost(CreatePost $createPost): void
     {
         $this->validate();
 
-        $createPost->execute(Auth::user(), [
+        $post = $createPost->execute(Auth::user(), [
             'body' => $this->body,
             'visibility' => $this->visibility,
         ]);
 
+        // Attach composer images polymorphically
+        if (!empty($this->composerImages)) {
+            $mediaIds = array_column($this->composerImages, 'id');
+            app(AttachMediaToModelAction::class)->execute(Auth::user(), $post, $mediaIds, 'post_image');
+        }
+
         $this->body = '';
+        $this->composerImages = [];
+        $this->imageFiles = [];
         $this->feedbackMessage = 'Đăng bài viết thành công.';
         $this->dispatch('post-created');
         $this->resetPage(); // Re-render feed at page 1
@@ -471,11 +538,45 @@ new #[Layout('layouts.app')] class extends Component
                                     @error('body')
                                         <p class="text-xs text-red-650 font-semibold mt-1">{{ $message }}</p>
                                     @enderror
+
+                                    {{-- Image Previews inside composer --}}
+                                    @if (!empty($composerImages))
+                                        <div class="grid grid-cols-4 gap-2 mt-2 select-none">
+                                            @foreach ($composerImages as $index => $img)
+                                                <div class="relative aspect-square rounded-xl border border-slate-150 overflow-hidden bg-slate-50">
+                                                    <img src="{{ $img['url'] }}" alt="Preview" class="object-cover w-full h-full" />
+                                                    <button 
+                                                        type="button" 
+                                                        wire:click="removeComposerImage({{ $index }})" 
+                                                        class="absolute top-1 right-1 w-5 h-5 rounded-full bg-slate-900/60 hover:bg-slate-900/80 text-white flex items-center justify-center transition-colors"
+                                                    >
+                                                        <x-ui.icon name="x" size="xs" />
+                                                    </button>
+                                                </div>
+                                            @endforeach
+                                        </div>
+                                    @endif
+
+                                    @error('imageFiles')
+                                        <p class="text-xs text-red-650 font-semibold mt-1">{{ $message }}</p>
+                                    @enderror
+
+                                    {{-- Uploading spinner indicator --}}
+                                    <div wire:loading wire:target="imageFiles" class="mt-2 text-xxs font-bold text-slate-400 flex items-center gap-1.5">
+                                        <span class="animate-spin rounded-full h-3.5 w-3.5 border border-slate-300 border-t-ue-brand"></span>
+                                        Đang tải ảnh và xử lý phiên bản tối ưu...
+                                    </div>
                                 </div>
 
                                 <div class="ue-composer__toolbar">
-                                    <div class="ue-composer__actions">
-                                        <span class="ue-composer__counter">
+                                    <div class="ue-composer__actions flex items-center gap-2">
+                                        {{-- Image Upload Trigger Button --}}
+                                        <label class="p-1.5 text-slate-400 hover:text-slate-600 hover:bg-slate-50 border border-slate-200 rounded-lg cursor-pointer transition-colors shadow-2xs flex items-center justify-center">
+                                            <x-ui.icon name="image" size="xs" />
+                                            <input type="file" wire:model="imageFiles" multiple class="hidden" accept="image/*" />
+                                        </label>
+
+                                        <span class="ue-composer__counter text-slate-400 text-xxs font-semibold">
                                             {{ mb_strlen($body) }}/3000
                                         </span>
                                         <div class="relative">
@@ -502,6 +603,8 @@ new #[Layout('layouts.app')] class extends Component
                                         variant="primary"
                                         size="sm"
                                         icon="send"
+                                        wire:loading.attr="disabled"
+                                        wire:target="imageFiles"
                                     >
                                         Đăng bài
                                     </x-ui.button>
