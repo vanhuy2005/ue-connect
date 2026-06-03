@@ -2,6 +2,7 @@
 
 namespace App\Actions\Messaging;
 
+use App\Actions\Media\AttachMediaToModelAction;
 use App\Enums\MessageStatus;
 use App\Enums\MessageType;
 use App\Models\Conversation;
@@ -19,7 +20,7 @@ class ReplyToMessage
     /**
      * Reply to a message inside a conversation.
      *
-     * @param  array{body: string}  $data
+     * @param  array{body?: ?string, media_id?: ?int}  $data
      *
      * @throws AuthorizationException
      * @throws ValidationException
@@ -31,45 +32,51 @@ class ReplyToMessage
 
         // 2. Validate same conversation integrity
         if ((int) $replyToMessage->conversation_id !== (int) $conversation->id) {
-            throw new ValidationException(
-                Validator::make([], [])
-                    ->errors()
-                    ->add('reply_to_message_id', 'Không thể trả lời tin nhắn từ cuộc trò chuyện khác.')
-            );
+            throw ValidationException::withMessages([
+                'reply_to_message_id' => ['Không thể trả lời tin nhắn từ cuộc trò chuyện khác.'],
+            ]);
         }
 
-        // 3. Validate body
+        // 3. Validate body and media_id
         Validator::make($data, [
-            'body' => ['required', 'string', 'max:2000'],
+            'body' => ['nullable', 'string', 'max:2000'],
+            'media_id' => ['nullable', 'integer', 'exists:media,id'],
         ])->validate();
 
-        $trimmedBody = trim($data['body']);
-        if (empty($trimmedBody)) {
-            throw new ValidationException(
-                Validator::make([], [])
-                    ->errors()
-                    ->add('body', 'Nội dung tin nhắn không được để trống.')
-            );
+        $trimmedBody = isset($data['body']) ? trim($data['body']) : '';
+        $mediaId = $data['media_id'] ?? null;
+
+        if (empty($trimmedBody) && ! $mediaId) {
+            throw ValidationException::withMessages([
+                'body' => ['Nội dung tin nhắn không được để trống.'],
+            ]);
         }
 
-        return DB::transaction(function () use ($sender, $conversation, $replyToMessage, $trimmedBody) {
+        $messageType = $mediaId ? MessageType::IMAGE : MessageType::TEXT;
+
+        return DB::transaction(function () use ($sender, $conversation, $replyToMessage, $trimmedBody, $messageType, $mediaId) {
             // 4. Create message
             $message = Message::create([
                 'conversation_id' => $conversation->id,
                 'sender_id' => $sender->id,
-                'body' => $trimmedBody,
-                'message_type' => MessageType::TEXT,
+                'body' => $trimmedBody ?: null,
+                'message_type' => $messageType,
                 'status' => MessageStatus::SENT,
                 'reply_to_message_id' => $replyToMessage->id,
             ]);
 
-            // 5. Update conversation
+            // 5. Attach media if provided
+            if ($mediaId) {
+                app(AttachMediaToModelAction::class)->execute($sender, $message, [$mediaId], 'message_attachment');
+            }
+
+            // 6. Update conversation
             $conversation->update([
                 'last_message_id' => $message->id,
                 'last_message_at' => now(),
             ]);
 
-            // 6. Notify other participants
+            // 7. Notify other participants
             $recipient = $conversation->getRecipientFor($sender);
             if ($recipient) {
                 // If muted/restricted is handled by notification policy, it will suppress it

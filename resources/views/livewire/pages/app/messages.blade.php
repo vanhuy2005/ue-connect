@@ -28,10 +28,16 @@ use Livewire\Volt\Component;
 
 new #[Layout('layouts.app')] class extends Component
 {
+    use \Livewire\WithFileUploads;
+
     public ?int $selectedConversationId = null;
     public string $newMessageBody = '';
     public string $conversationSearch = '';
     public ?string $feedbackMessage = null;
+
+    // Attachment properties
+    public $attachmentFile = null;
+    public ?array $messageAttachment = null;
 
     // Advanced controls properties
     public string $activeInboxTab = 'all'; // all, restricted
@@ -58,6 +64,46 @@ new #[Layout('layouts.app')] class extends Component
     }
 
     /**
+     * Handle temporary message attachment upload.
+     */
+    public function updatedAttachmentFile(): void
+    {
+        $this->validate([
+            'attachmentFile' => 'image|max:10240', // Max 10MB
+        ]);
+
+        $storeAction = app(\App\Actions\Media\StoreTemporaryMediaAction::class);
+
+        try {
+            $media = $storeAction->execute(Auth::user(), $this->attachmentFile, 'message_attachment', ['visibility' => 'private']);
+            
+            $this->messageAttachment = [
+                'id' => $media->id,
+                'uuid' => $media->uuid,
+                'url' => app(\App\Actions\Media\GenerateMediaUrlAction::class)->execute($media, 'thumb', Auth::user()),
+            ];
+        } catch (\Exception $e) {
+            $this->addError('attachmentFile', 'Lỗi tải ảnh đính kèm: ' . $e->getMessage());
+        }
+
+        $this->attachmentFile = null;
+    }
+
+    /**
+     * Remove the current attachment draft.
+     */
+    public function removeAttachment(): void
+    {
+        if ($this->messageAttachment) {
+            $media = \App\Models\Media::find($this->messageAttachment['id']);
+            if ($media) {
+                app(\App\Actions\Media\DeleteMediaAction::class)->execute($media);
+            }
+            $this->messageAttachment = null;
+        }
+    }
+
+    /**
      * Select a conversation and load its thread.
      */
     public function selectConversation(int $convoId): void
@@ -68,6 +114,7 @@ new #[Layout('layouts.app')] class extends Component
         $this->selectedConversationId = $convoId;
         $this->newMessageBody = '';
         $this->replyingToMessageId = null;
+        $this->removeAttachment();
         $this->markAsRead($convoId);
     }
 
@@ -79,14 +126,15 @@ new #[Layout('layouts.app')] class extends Component
         $this->selectedConversationId = null;
         $this->newMessageBody = '';
         $this->replyingToMessageId = null;
+        $this->removeAttachment();
     }
 
     /**
-     * Send a text message inside the selected conversation.
+     * Send a text or image message inside the selected conversation.
      */
     public function submitMessage(SendMessage $sendMessage, ReplyToMessage $replyToMessageAction): void
     {
-        if (empty(trim($this->newMessageBody)) || ! $this->selectedConversationId) {
+        if ((empty(trim($this->newMessageBody)) && !$this->messageAttachment) || ! $this->selectedConversationId) {
             return;
         }
 
@@ -100,19 +148,24 @@ new #[Layout('layouts.app')] class extends Component
                 return;
             }
 
+            $mediaId = $this->messageAttachment ? $this->messageAttachment['id'] : null;
+
             if ($this->replyingToMessageId) {
                 $replyToMsg = Message::findOrFail($this->replyingToMessageId);
                 $replyToMessageAction->execute(Auth::user(), $conversation, $replyToMsg, [
                     'body' => $this->newMessageBody,
+                    'media_id' => $mediaId,
                 ]);
                 $this->replyingToMessageId = null;
             } else {
                 $sendMessage->execute(Auth::user(), $conversation, [
                     'body' => $this->newMessageBody,
+                    'media_id' => $mediaId,
                 ]);
             }
 
             $this->newMessageBody = '';
+            $this->messageAttachment = null;
             $this->markAsRead($conversation->id);
             $this->dispatch('scroll-bottom');
         } catch (\Exception $e) {
@@ -627,7 +680,7 @@ new #[Layout('layouts.app')] class extends Component
 
             $messagesQuery = Message::where('conversation_id', $this->selectedConversationId)
                 ->withTrashed()
-                ->with(['sender.profile', 'sharedPost.user', 'replyTo']);
+                ->with(['sender.profile', 'sharedPost.user', 'replyTo', 'media']);
 
             if ($deletedAt) {
                 $messagesQuery->where('created_at', '>', $deletedAt);
@@ -1074,6 +1127,31 @@ new #[Layout('layouts.app')] class extends Component
                                                 {{ $isMine ? 'bg-ue-brand text-white rounded-br-xs shadow-2xs' : 'bg-white border border-slate-150 text-slate-700 rounded-bl-xs' }}">
                                         {{ $message->body }}
                                     </div>
+                                {{-- Image attachment bubble --}}
+                                @elseif ($message->message_type === MessageType::IMAGE)
+                                    @php
+                                        $mediaItem = $message->media->first();
+                                        $imageUrl = $mediaItem ? app(\App\Actions\Media\GenerateMediaUrlAction::class)->execute($mediaItem, 'original', Auth::user()) : null;
+                                    @endphp
+                                    @if ($imageUrl)
+                                        <div class="flex flex-col gap-2">
+                                            <div class="rounded-2xl overflow-hidden border border-slate-150 max-w-[280px] bg-slate-100 shadow-2xs">
+                                                <a href="{{ $imageUrl }}" target="_blank" class="block cursor-zoom-in">
+                                                    <img src="{{ $imageUrl }}" alt="Attachment" class="w-full h-auto object-cover max-h-64 hover:opacity-95 transition-opacity" />
+                                                </a>
+                                            </div>
+                                            @if ($message->body)
+                                                <div class="px-3.5 py-2 rounded-2xl text-xxs font-medium leading-relaxed
+                                                            {{ $isMine ? 'bg-ue-brand text-white rounded-br-xs shadow-2xs' : 'bg-white border border-slate-150 text-slate-700 rounded-bl-xs' }}">
+                                                    {{ $message->body }}
+                                                </div>
+                                            @endif
+                                        </div>
+                                    @else
+                                        <div class="px-3.5 py-2 rounded-2xl text-xxs font-medium leading-relaxed italic bg-slate-100 border border-slate-200 text-slate-400 {{ $isMine ? 'rounded-br-xs' : 'rounded-bl-xs' }}">
+                                            Lỗi tải ảnh đính kèm.
+                                        </div>
+                                    @endif
                                 {{-- Shared Post preview card bubble --}}
                                 @elseif ($message->message_type === MessageType::SHARED_POST)
                                     <div class="p-3.5 rounded-2xl border border-slate-150 bg-white shadow-2xs {{ $isMine ? 'rounded-br-xs' : 'rounded-bl-xs' }} text-slate-700 flex flex-col gap-3">
@@ -1158,7 +1236,7 @@ new #[Layout('layouts.app')] class extends Component
                             $replyMsg = \App\Models\Message::with('sender')->find($replyingToMessageId);
                         @endphp
                         @if ($replyMsg)
-                            <div class="mb-2 p-2 bg-slate-50 border border-slate-150 border-l-2 border-l-ue-brand rounded-xl flex items-center justify-between gap-3 text-xxs font-medium">
+                            <div class="mb-2 p-2 bg-slate-50 border border-slate-150 border-l-2 border-l-ue-brand rounded-xl flex items-center justify-between gap-3 text-xxs font-medium animate-in fade-in duration-100">
                                 <div class="min-w-0 flex-1">
                                     <span class="block font-bold text-[9px] text-slate-400 uppercase tracking-wider mb-0.5">
                                         Đang trả lời {{ (int)$replyMsg->sender_id === (int)Auth::id() ? 'chính mình' : ($replyMsg->sender ? $replyMsg->sender->name : 'Thành viên') }}
@@ -1172,7 +1250,56 @@ new #[Layout('layouts.app')] class extends Component
                         @endif
                     @endif
 
-                    <form wire:submit.prevent="submitMessage" class="flex gap-2 items-center">
+                    {{-- Attachment Preview Bar --}}
+                    @if ($messageAttachment)
+                        <div class="mb-2 p-2 bg-slate-50 border border-slate-150 rounded-xl flex items-center justify-between gap-3 text-xxs font-medium animate-in fade-in duration-100">
+                            <div class="flex items-center gap-2 min-w-0">
+                                <div class="w-10 h-10 rounded-lg overflow-hidden bg-slate-100 flex-shrink-0 border border-slate-200">
+                                    <img src="{{ $messageAttachment['url'] }}" alt="Attachment Preview" class="w-full h-full object-cover" />
+                                </div>
+                                <div class="min-w-0">
+                                    <span class="block font-bold text-[9px] text-slate-400 uppercase tracking-wider">Hình ảnh đính kèm</span>
+                                    <span class="block text-slate-600 truncate text-[10px]">{{ $messageAttachment['uuid'] }}.png</span>
+                                </div>
+                            </div>
+                            <button type="button" wire:click="removeAttachment" class="text-slate-400 hover:text-slate-600 flex-shrink-0 transition-colors p-1" title="Xóa đính kèm">
+                                <x-ui.icon name="x" size="xs" />
+                            </button>
+                        </div>
+                    @endif
+
+                    @error('attachmentFile')
+                        <div class="mb-2 px-2 text-[10px] text-red-500 font-semibold leading-normal">
+                            {{ $message }}
+                        </div>
+                    @enderror
+
+                    <form wire:submit.prevent="submitMessage" class="flex gap-2 items-center" x-data="{ uploading: false }" x-on:livewire-upload-start="uploading = true" x-on:livewire-upload-finish="uploading = false" x-on:livewire-upload-error="uploading = false">
+                        {{-- Hidden File Input --}}
+                        <input
+                            type="file"
+                            wire:model="attachmentFile"
+                            id="attachment-input"
+                            class="hidden"
+                            accept="image/jpeg,image/png,image/webp"
+                        />
+
+                        {{-- Attachment Button --}}
+                        <button
+                            type="button"
+                            onclick="document.getElementById('attachment-input').click()"
+                            class="text-slate-400 hover:text-slate-650 p-2.5 rounded-xl hover:bg-slate-50 transition-colors flex-shrink-0 flex items-center justify-center"
+                            aria-label="Đính kèm ảnh"
+                            :disabled="uploading"
+                        >
+                            <template x-if="!uploading">
+                                <x-ui.icon name="paperclip" size="sm" />
+                            </template>
+                            <template x-if="uploading">
+                                <span class="block w-4 h-4 border-2 border-ue-brand border-t-transparent rounded-full animate-spin"></span>
+                            </template>
+                        </button>
+
                         <input
                             type="text"
                             wire:model="newMessageBody"
@@ -1183,6 +1310,7 @@ new #[Layout('layouts.app')] class extends Component
                             type="submit"
                             class="bg-ue-brand hover:bg-ue-brand-dark text-white rounded-xl p-2.5 shadow-2xs hover:shadow-sm transition-all"
                             aria-label="Gửi tin nhắn"
+                            :disabled="uploading"
                         >
                             <x-ui.icon name="send" size="sm" />
                         </button>

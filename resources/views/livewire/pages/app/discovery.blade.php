@@ -274,6 +274,7 @@ new #[Layout('layouts.app')] class extends Component
             ->toArray();
 
         $query = Profile::where('user_id', '!=', Auth::id())
+            ->where('discoverable', true)
             ->whereNotIn('user_id', $blockedUserIds)
             ->whereHas('user', function ($q) {
                 $q->where('account_status', \App\Enums\AccountStatus::ACTIVE)

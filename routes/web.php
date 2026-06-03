@@ -2,6 +2,7 @@
 
 use App\Actions\Settings\EnsureUserSettingsExistAction;
 use App\Http\Controllers\Admin\VerificationEvidenceController;
+use App\Http\Controllers\MediaController;
 use App\Models\BlockedUser;
 use App\Models\Conversation;
 use App\Models\Post;
@@ -94,6 +95,12 @@ Route::middleware(['auth', 'active.account', 'verified.identity'])->group(functi
 
         return view('app.messages', ['activeConversation' => $conversation]);
     })->name('messages.index');
+
+    // 4.1 Secure Media Delivery Routes
+    Route::get('app/media/{media}/preview', [MediaController::class, 'preview'])
+        ->name('media.preview');
+    Route::get('app/media/{media}/download', [MediaController::class, 'download'])
+        ->name('media.download');
 });
 
 // 5. Admin Panel (protected by account status and review permission)

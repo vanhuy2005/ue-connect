@@ -8,7 +8,6 @@ use App\Models\User;
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Gate;
-use Illuminate\Support\Facades\Validator;
 use Illuminate\Validation\ValidationException;
 
 class PinMessage
@@ -27,21 +26,17 @@ class PinMessage
 
         // Same conversation integrity
         if ((int) $message->conversation_id !== (int) $conversation->id) {
-            throw new ValidationException(
-                Validator::make([], [])
-                    ->errors()
-                    ->add('message_id', 'Không thể ghim tin nhắn từ cuộc trò chuyện khác.')
-            );
+            throw ValidationException::withMessages([
+                'message_id' => ['Không thể ghim tin nhắn từ cuộc trò chuyện khác.'],
+            ]);
         }
 
         // Limit to max 3 pins per conversation
         $pinnedCount = $conversation->pinnedMessages()->count();
         if ($pinnedCount >= 3) {
-            throw new ValidationException(
-                Validator::make([], [])
-                    ->errors()
-                    ->add('pin_limit', 'Bạn chỉ có thể ghim tối đa 3 tin nhắn trong mỗi cuộc trò chuyện.')
-            );
+            throw ValidationException::withMessages([
+                'pin_limit' => ['Bạn chỉ có thể ghim tối đa 3 tin nhắn trong mỗi cuộc trò chuyện.'],
+            ]);
         }
 
         return DB::transaction(function () use ($conversation, $message, $user) {
