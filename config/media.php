@@ -69,6 +69,15 @@ return [
         'verification_max_files' => env('MEDIA_VERIFICATION_MAX_FILES', 3),
     ],
 
+    'quota' => [
+        'user_daily_upload_count' => (int) env('MEDIA_USER_DAILY_UPLOAD_COUNT', 100),
+        'user_daily_upload_mb' => (int) env('MEDIA_USER_DAILY_UPLOAD_MB', 100),
+        'user_monthly_upload_mb' => (int) env('MEDIA_USER_MONTHLY_UPLOAD_MB', 1000),
+        'global_daily_upload_mb' => (int) env('MEDIA_GLOBAL_DAILY_UPLOAD_MB', 5000),
+        'cloudinary_daily_sync_limit' => (int) env('MEDIA_CLOUDINARY_DAILY_SYNC_LIMIT', 1000),
+        'disable_cloudinary_when_limit_reached' => (bool) env('MEDIA_DISABLE_CLOUDINARY_WHEN_LIMIT_REACHED', true),
+    ],
+
     'processing' => [
         'temp_ttl_minutes' => (int) env('MEDIA_TEMP_TTL_MINUTES', 60),
         'output_format' => env('MEDIA_IMAGE_OUTPUT_FORMAT', 'webp'),

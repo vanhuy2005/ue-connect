@@ -34,6 +34,12 @@ class MediaDebugConfig extends Command
         $this->line('Cloudinary fail-open: <comment>'.$this->bool(config('media.providers.cloudinary.fail_open')).'</comment>');
         $this->line('Cloudinary sync public variants: <comment>'.$this->bool(config('media.providers.cloudinary.sync_public_variants')).'</comment>');
         $this->line('Cloudinary eligible collections: <comment>'.$cloudinaryCollections.'</comment>');
+        $this->line('User daily upload count limit: <comment>'.config('media.quota.user_daily_upload_count').'</comment>');
+        $this->line('User daily upload MB: <comment>'.config('media.quota.user_daily_upload_mb').'</comment>');
+        $this->line('User monthly upload MB: <comment>'.config('media.quota.user_monthly_upload_mb').'</comment>');
+        $this->line('Global daily upload MB: <comment>'.config('media.quota.global_daily_upload_mb').'</comment>');
+        $this->line('Cloudinary daily sync limit: <comment>'.config('media.quota.cloudinary_daily_sync_limit').'</comment>');
+        $this->line('Disable Cloudinary at sync limit: <comment>'.$this->bool(config('media.quota.disable_cloudinary_when_limit_reached')).'</comment>');
 
         return Command::SUCCESS;
     }

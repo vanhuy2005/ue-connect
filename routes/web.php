@@ -8,6 +8,7 @@ use App\Models\Conversation;
 use App\Models\Post;
 use App\Models\Report;
 use App\Models\User;
+use App\Services\Media\MediaQuotaService;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Route;
@@ -125,6 +126,10 @@ Route::middleware(['auth', 'active.account', 'can:manage_reports'])->group(funct
     Route::get('admin/reports/{report}', function (Report $report) {
         return view('admin.report-detail', ['report' => $report]);
     })->name('admin.reports.show');
+
+    Route::get('admin/media-usage', function (MediaQuotaService $quota) {
+        return view('admin.media-usage', ['report' => $quota->report()]);
+    })->name('admin.media-usage');
 });
 
 // 6. Legacy redirects

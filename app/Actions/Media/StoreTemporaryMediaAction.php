@@ -5,6 +5,7 @@ namespace App\Actions\Media;
 use App\Jobs\Media\ProcessImageVariantsJob;
 use App\Models\Media;
 use App\Models\User;
+use App\Services\Media\MediaQuotaService;
 use App\Services\Media\MediaStorageRouter;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Str;
@@ -14,7 +15,8 @@ class StoreTemporaryMediaAction
 {
     public function __construct(
         protected ValidateMediaUploadAction $validateUpload,
-        protected MediaStorageRouter $router
+        protected MediaStorageRouter $router,
+        protected MediaQuotaService $quota
     ) {}
 
     /**
@@ -27,6 +29,7 @@ class StoreTemporaryMediaAction
     {
         // 1. Validate the file
         $this->validateUpload->execute($file, $collection);
+        $this->quota->assertCanUpload($user, (int) $file->getSize());
 
         // 2. Resolve default visibility if none provided
         $visibility = $options['visibility'] ?? match ($collection) {

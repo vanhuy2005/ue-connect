@@ -3,6 +3,7 @@
 namespace App\Console\Commands;
 
 use App\Models\MediaVariant;
+use App\Services\Media\MediaQuotaService;
 use App\Services\Media\MediaStorageRouter;
 use App\Services\Media\Providers\CloudinaryMediaDeliveryProvider;
 use Illuminate\Console\Attributes\Description;
@@ -18,7 +19,7 @@ class SyncCloudinaryMedia extends Command
     /**
      * Execute the console command.
      */
-    public function handle(CloudinaryMediaDeliveryProvider $cloudinary): int
+    public function handle(CloudinaryMediaDeliveryProvider $cloudinary, MediaQuotaService $quota): int
     {
         $query = MediaVariant::query()
             ->with('media')
@@ -45,6 +46,16 @@ class SyncCloudinaryMedia extends Command
 
                 if (! $media || $media->visibility !== 'public' || ! in_array($media->collection, MediaStorageRouter::PUBLIC_CLOUDINARY_COLLECTIONS, true)) {
                     $summary['skipped_private']++;
+
+                    continue;
+                }
+
+                if ($quota->disableCloudinaryWhenLimitReached() && ! $quota->canSyncCloudinary()) {
+                    $variant->update([
+                        'cloudinary_sync_status' => 'skipped',
+                        'cloudinary_error_code' => $quota->cloudinaryLimitReason(),
+                        'cloudinary_error_message' => 'Cloudinary daily sync limit reached; using R2 fallback.',
+                    ]);
 
                     continue;
                 }

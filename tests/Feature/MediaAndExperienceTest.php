@@ -453,6 +453,94 @@ class MediaAndExperienceTest extends TestCase
         $this->assertStringContainsString(route('media.preview', ['media' => $media], false), app(GenerateMediaUrlAction::class)->execute($media, 'detail', $user));
     }
 
+    public function test_upload_quota_fails_closed_before_storage_write(): void
+    {
+        config([
+            'media.quota.user_daily_upload_count' => 0,
+            'media.quota.user_daily_upload_mb' => 100,
+            'media.quota.user_monthly_upload_mb' => 1000,
+            'media.quota.global_daily_upload_mb' => 5000,
+        ]);
+
+        Storage::fake('public');
+        Storage::fake('private');
+
+        try {
+            app(StoreTemporaryMediaAction::class)->execute(
+                User::factory()->create(['account_status' => AccountStatus::ACTIVE]),
+                UploadedFile::fake()->image('blocked.jpg', 200, 200),
+                'avatar',
+                ['visibility' => 'public']
+            );
+
+            $this->fail('Expected quota validation to fail.');
+        } catch (ValidationException) {
+            $this->assertSame([], Storage::disk('private')->allFiles());
+        }
+    }
+
+    public function test_global_upload_budget_fails_closed_before_storage_write(): void
+    {
+        config([
+            'media.quota.user_daily_upload_count' => 100,
+            'media.quota.user_daily_upload_mb' => 100,
+            'media.quota.user_monthly_upload_mb' => 1000,
+            'media.quota.global_daily_upload_mb' => 0,
+        ]);
+
+        Storage::fake('public');
+        Storage::fake('private');
+
+        try {
+            app(StoreTemporaryMediaAction::class)->execute(
+                User::factory()->create(['account_status' => AccountStatus::ACTIVE]),
+                UploadedFile::fake()->image('blocked-global.jpg', 200, 200),
+                'avatar',
+                ['visibility' => 'public']
+            );
+
+            $this->fail('Expected global quota validation to fail.');
+        } catch (ValidationException) {
+            $this->assertSame([], Storage::disk('private')->allFiles());
+        }
+    }
+
+    public function test_cloudinary_daily_sync_cap_skips_sync_and_uses_r2_fallback(): void
+    {
+        config([
+            'media.default_strategy' => 'hybrid_public_cloudinary',
+            'media.storage.strategy' => 'hybrid_public_cloudinary',
+            'media.r2.enabled' => true,
+            'media.providers.r2.enabled' => true,
+            'media.providers.cloudinary.enabled' => true,
+            'media.providers.cloudinary.cloud_name' => 'test-cloud',
+            'media.providers.cloudinary.api_key' => 'test-key',
+            'media.providers.cloudinary.api_secret' => 'test-secret',
+            'media.quota.cloudinary_daily_sync_limit' => 0,
+            'media.quota.disable_cloudinary_when_limit_reached' => true,
+            'filesystems.disks.r2_public.url' => null,
+        ]);
+
+        Storage::fake('r2_public');
+        Storage::fake('r2_private');
+        Http::fake();
+
+        $user = User::factory()->create(['account_status' => AccountStatus::ACTIVE]);
+        $media = app(StoreTemporaryMediaAction::class)->execute(
+            $user,
+            UploadedFile::fake()->image('post-cap.jpg', 300, 300),
+            'post_image',
+            ['visibility' => 'public']
+        )->refresh();
+
+        $variant = $media->variants()->where('variant_name', 'detail')->firstOrFail();
+
+        $this->assertEquals('skipped', $variant->cloudinary_sync_status);
+        $this->assertEquals('cloudinary_daily_sync_limit_reached', $variant->cloudinary_error_code);
+        $this->assertStringContainsString(route('media.preview', ['media' => $media], false), app(GenerateMediaUrlAction::class)->execute($media, 'detail', $user));
+        Http::assertNothingSent();
+    }
+
     /**
      * Test direct messaging attachments flow.
      */

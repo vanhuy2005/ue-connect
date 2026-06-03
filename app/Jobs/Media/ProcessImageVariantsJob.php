@@ -4,6 +4,7 @@ namespace App\Jobs\Media;
 
 use App\Models\Media;
 use App\Models\MediaVariant;
+use App\Services\Media\MediaQuotaService;
 use App\Services\Media\MediaStorageRouter;
 use App\Services\Media\Providers\CloudinaryMediaDeliveryProvider;
 use Illuminate\Bus\Queueable;
@@ -26,7 +27,7 @@ class ProcessImageVariantsJob implements ShouldQueue
 
     public function __construct(public Media $media) {}
 
-    public function handle(MediaStorageRouter $router): void
+    public function handle(MediaStorageRouter $router, MediaQuotaService $quota): void
     {
         if ($this->media->status !== 'temporary') {
             return;
@@ -72,7 +73,14 @@ class ProcessImageVariantsJob implements ShouldQueue
                     'cloudinary_sync_status' => $syncCloudinary ? 'pending' : 'skipped',
                 ];
 
-                if ($syncCloudinary) {
+                if ($syncCloudinary && $quota->disableCloudinaryWhenLimitReached() && ! $quota->canSyncCloudinary()) {
+                    $cloudinaryData = [
+                        'cloudinary_sync_status' => 'skipped',
+                        'cloudinary_public_id' => $deliveryProvider->publicId($this->media->collection, $this->media->uuid, $name),
+                        'cloudinary_error_code' => $quota->cloudinaryLimitReason(),
+                        'cloudinary_error_message' => 'Cloudinary daily sync limit reached; using R2 fallback.',
+                    ];
+                } elseif ($syncCloudinary) {
                     $cloudinaryData = $this->syncVariantToCloudinary($deliveryProvider, $name, $webpContents);
                 }
 

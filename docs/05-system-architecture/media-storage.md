@@ -83,3 +83,27 @@ Before enabling R2 in production-like environments:
 9. Verify R2 public bucket receives avatar/post image variants.
 10. Verify Cloudinary Media Library receives avatar/post image variants only.
 11. Verify message attachments land in R2 private and do not appear in Cloudinary.
+
+## Quotas
+
+Media quota guards run before cloud writes. If an upload would exceed configured user or global limits, the upload fails closed with a validation error and does not write to R2 or local storage.
+
+```env
+MEDIA_USER_DAILY_UPLOAD_COUNT=100
+MEDIA_USER_DAILY_UPLOAD_MB=100
+MEDIA_USER_MONTHLY_UPLOAD_MB=1000
+MEDIA_GLOBAL_DAILY_UPLOAD_MB=5000
+MEDIA_CLOUDINARY_DAILY_SYNC_LIMIT=1000
+MEDIA_DISABLE_CLOUDINARY_WHEN_LIMIT_REACHED=true
+```
+
+Cloudinary sync quota is enforced per synced variant. When the daily Cloudinary cap is reached and `MEDIA_DISABLE_CLOUDINARY_WHEN_LIMIT_REACHED=true`, public variants remain stored in R2 and Cloudinary sync is marked `skipped`, so delivery falls back to R2/controller URLs.
+
+Operators can inspect current usage with:
+
+```bash
+php artisan media:quota-check
+php artisan media:quota-check --user=1
+```
+
+Admin media usage is available at `/admin/media-usage` for users with the report management permission.
