@@ -55,8 +55,18 @@ class GrantMentorAccessAction
                     'approved_by' => $admin->id,
                     'expertise_topics' => $request->expertise_topics ?? [],
                     'career_paths' => $request->career_paths,
+                    'headline' => $request->headline,
+                    'bio' => $request->bio,
+                    'help_topics' => $request->help_topics ?? [],
+                    'preferred_request_types' => $request->preferred_request_types ?? [],
+                    'skills' => $request->skills ?? [],
+                    'response_expectation_text' => $request->response_expectation_text,
+                    'office_hours_text' => $request->office_hours_text,
                 ]
             );
+
+            $mentorProfile->is_public_ready = $mentorProfile->checkIfPublicReady();
+            $mentorProfile->save();
 
             // 3. Notify applicant
             $request->user->notify(new MentorAccessApprovedNotification($request, $mentorProfile));

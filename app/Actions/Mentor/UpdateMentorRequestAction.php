@@ -5,6 +5,7 @@ namespace App\Actions\Mentor;
 use App\Enums\MentorRequestStatus;
 use App\Models\MentorRequest;
 use App\Models\User;
+use App\Notifications\Mentor\MentorRequestUpdatedNotification;
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Support\Facades\Gate;
 
@@ -22,13 +23,13 @@ class UpdateMentorRequestAction
         Gate::forUser($student)->authorize('update', $mentorRequest);
 
         $mentorRequest->update(array_merge($data, [
-            'status' => MentorRequestStatus::Submitted,
+            'status' => MentorRequestStatus::UpdatedByStudent,
             // Keep the previous more_info_question in record or clear it?
             // Clearing it is fine since it is now resolved.
             'more_info_question' => null,
         ]));
 
-        // TODO: Notify mentor that request was updated by student
+        $mentorRequest->mentor->notify(new MentorRequestUpdatedNotification($mentorRequest));
 
         return $mentorRequest->fresh();
     }

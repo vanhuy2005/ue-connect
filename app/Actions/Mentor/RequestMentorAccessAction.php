@@ -35,7 +35,7 @@ class RequestMentorAccessAction
     /**
      * Submit a mentor access request.
      *
-     * @param  array{requested_role_context: string, motivation: string, experience_summary?: ?string, expertise_topics?: array<string>, career_paths?: ?array<string>}  $data
+     * @param  array{requested_role_context: string, motivation: string, experience_summary?: ?string, expertise_topics?: array<string>, career_paths?: ?array<string>, portfolio_link?: ?string, availability_note?: ?string, policy_agreed?: ?bool, headline?: ?string, bio?: ?string, help_topics?: ?array<string>, preferred_request_types?: ?array<string>, skills?: ?array<string>, response_expectation_text?: ?string, office_hours_text?: ?string, evidence_media_id?: ?int}  $data
      *
      * @throws AuthorizationException
      * @throws \Exception
@@ -70,6 +70,17 @@ class RequestMentorAccessAction
             'experience_summary' => $data['experience_summary'] ?? null,
             'expertise_topics' => $data['expertise_topics'] ?? [],
             'career_paths' => $data['career_paths'] ?? null,
+            'portfolio_link' => $data['portfolio_link'] ?? null,
+            'availability_note' => $data['availability_note'] ?? null,
+            'policy_agreed' => $data['policy_agreed'] ?? false,
+            'headline' => $data['headline'] ?? null,
+            'bio' => $data['bio'] ?? null,
+            'help_topics' => $data['help_topics'] ?? [],
+            'preferred_request_types' => $data['preferred_request_types'] ?? [],
+            'skills' => $data['skills'] ?? [],
+            'response_expectation_text' => $data['response_expectation_text'] ?? null,
+            'office_hours_text' => $data['office_hours_text'] ?? null,
+            'evidence_media_id' => $data['evidence_media_id'] ?? null,
         ]);
     }
 }

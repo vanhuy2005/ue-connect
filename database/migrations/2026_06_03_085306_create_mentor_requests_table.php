@@ -27,7 +27,10 @@ return new class extends Migration
             $table->timestamp('accepted_at')->nullable();
             $table->timestamp('declined_at')->nullable();
             $table->timestamp('completed_at')->nullable();
+            $table->softDeletes();
             $table->timestamps();
+
+            $table->foreign('conversation_id')->references('id')->on('conversations')->noActionOnDelete();
 
             $table->index(['student_id', 'status']);
             $table->index(['mentor_id', 'status']);

@@ -16,6 +16,7 @@ return new class extends Migration
             $table->string('helpfulness_level'); // helpful|somewhat_helpful|not_helpful
             $table->text('feedback_text')->nullable();
             $table->boolean('is_private')->default(true);
+            $table->softDeletes();
             $table->timestamps();
 
             $table->unique('mentor_request_id'); // one feedback per request

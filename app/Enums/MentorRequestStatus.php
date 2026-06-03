@@ -8,6 +8,7 @@ enum MentorRequestStatus: string
     case Accepted = 'accepted';
     case Declined = 'declined';
     case NeedMoreInfo = 'need_more_info';
+    case UpdatedByStudent = 'updated_by_student';
     case Cancelled = 'cancelled';
     case Completed = 'completed';
     case Reported = 'reported';
@@ -20,6 +21,7 @@ enum MentorRequestStatus: string
             self::Accepted => 'Đã chấp nhận',
             self::Declined => 'Đã từ chối',
             self::NeedMoreInfo => 'Cần thêm thông tin',
+            self::UpdatedByStudent => 'Đã cập nhật (Sinh viên)',
             self::Cancelled => 'Đã hủy',
             self::Completed => 'Hoàn thành',
             self::Reported => 'Đã báo cáo',
@@ -34,6 +36,7 @@ enum MentorRequestStatus: string
             self::Accepted => 'emerald',
             self::Declined => 'red',
             self::NeedMoreInfo => 'amber',
+            self::UpdatedByStudent => 'blue',
             self::Cancelled => 'slate',
             self::Completed => 'green',
             self::Reported => 'orange',
@@ -43,11 +46,11 @@ enum MentorRequestStatus: string
 
     public function isActive(): bool
     {
-        return in_array($this, [self::Submitted, self::Accepted, self::NeedMoreInfo]);
+        return in_array($this, [self::Submitted, self::Accepted, self::NeedMoreInfo, self::UpdatedByStudent]);
     }
 
     public function isPending(): bool
     {
-        return $this === self::Submitted || $this === self::NeedMoreInfo;
+        return in_array($this, [self::Submitted, self::NeedMoreInfo, self::UpdatedByStudent]);
     }
 }

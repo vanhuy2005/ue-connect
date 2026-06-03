@@ -38,6 +38,9 @@ class UpdateMentorProfileAction
 
         $mentorProfile->update(array_intersect_key($data, array_flip($allowedFields)));
 
+        $mentorProfile->is_public_ready = $mentorProfile->checkIfPublicReady();
+        $mentorProfile->save();
+
         return $mentorProfile->fresh();
     }
 }

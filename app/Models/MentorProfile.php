@@ -7,10 +7,11 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\SoftDeletes;
 
 class MentorProfile extends Model
 {
-    use HasFactory;
+    use HasFactory, SoftDeletes;
 
     protected $fillable = [
         'user_id',
@@ -23,6 +24,7 @@ class MentorProfile extends Model
         'preferred_request_types',
         'availability_status',
         'mentor_visibility',
+        'is_public_ready',
         'max_pending_requests',
         'max_monthly_accepts',
         'response_expectation_text',
@@ -44,6 +46,7 @@ class MentorProfile extends Model
             'preferred_request_types' => 'array',
             'availability_status' => MentorAvailabilityStatus::class,
             'mentor_visibility' => 'boolean',
+            'is_public_ready' => 'boolean',
             'is_active' => 'boolean',
             'approved_at' => 'datetime',
         ];
@@ -80,6 +83,7 @@ class MentorProfile extends Model
     {
         return $query->where('is_active', true)
             ->where('mentor_visibility', true)
+            ->where('is_public_ready', true)
             ->where('availability_status', MentorAvailabilityStatus::Available);
     }
 
@@ -101,6 +105,22 @@ class MentorProfile extends Model
             ->count();
 
         return $pendingCount < $this->max_pending_requests;
+    }
+
+    /**
+     * Check if this mentor profile meets the minimum completeness/trust criteria to be public.
+     */
+    public function checkIfPublicReady(): bool
+    {
+        $hasAvatar = $this->user && $this->user->profile && $this->user->profile->avatar()->exists();
+
+        return $hasAvatar
+            && ! empty($this->headline)
+            && ! empty($this->bio)
+            && is_array($this->expertise_topics) && count($this->expertise_topics) >= 2
+            && is_array($this->help_topics) && count($this->help_topics) >= 2
+            && is_array($this->preferred_request_types) && count($this->preferred_request_types) >= 1
+            && ! empty($this->response_expectation_text);
     }
 
     /**

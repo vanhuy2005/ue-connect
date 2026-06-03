@@ -20,6 +20,7 @@ return new class extends Migration
             $table->json('preferred_request_types')->nullable();
             $table->string('availability_status')->default('available'); // available|paused|full|hidden
             $table->boolean('mentor_visibility')->default(true);
+            $table->boolean('is_public_ready')->default(false); // computed trust indicator
             $table->unsignedSmallInteger('max_pending_requests')->default(5);
             $table->unsignedSmallInteger('max_monthly_accepts')->nullable();
             $table->string('response_expectation_text')->nullable();
@@ -27,9 +28,12 @@ return new class extends Migration
             $table->boolean('is_active')->default(true);
             $table->timestamp('approved_at')->nullable();
             $table->unsignedBigInteger('approved_by')->nullable();
+            $table->softDeletes();
             $table->timestamps();
 
-            $table->index(['availability_status', 'mentor_visibility', 'is_active']);
+            $table->foreign('approved_by')->references('id')->on('users')->noActionOnDelete();
+
+            $table->index(['availability_status', 'mentor_visibility', 'is_active', 'is_public_ready']);
         });
     }
 

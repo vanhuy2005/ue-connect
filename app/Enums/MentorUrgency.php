@@ -7,6 +7,7 @@ enum MentorUrgency: string
     case Low = 'low';
     case Normal = 'normal';
     case High = 'high';
+    case TimeSensitive = 'time_sensitive';
 
     public function label(): string
     {
@@ -14,6 +15,7 @@ enum MentorUrgency: string
             self::Low => 'Không gấp',
             self::Normal => 'Bình thường',
             self::High => 'Gấp',
+            self::TimeSensitive => 'Có hạn định/Gấp',
         };
     }
 
@@ -23,6 +25,7 @@ enum MentorUrgency: string
             self::Low => 'slate',
             self::Normal => 'blue',
             self::High => 'red',
+            self::TimeSensitive => 'rose',
         };
     }
 }

@@ -3,6 +3,7 @@
 namespace App\Policies;
 
 use App\Enums\MentorRequestStatus;
+use App\Models\BlockedUser;
 use App\Models\MentorRequest;
 use App\Models\User;
 
@@ -21,7 +22,8 @@ class MentorRequestPolicy
      */
     public function view(User $user, MentorRequest $request): bool
     {
-        return $request->isParticipant($user);
+        return $request->isParticipant($user)
+            && ! $this->isBlockedBetween($request->student_id, $request->mentor_id);
     }
 
     /**
@@ -31,9 +33,12 @@ class MentorRequestPolicy
     {
         return $user->isActive()
             && $request->mentor_id === $user->id
+            && $user->isActiveMentor()
+            && ! $this->isBlockedBetween($request->student_id, $request->mentor_id)
             && in_array($request->status, [
                 MentorRequestStatus::Submitted,
                 MentorRequestStatus::NeedMoreInfo,
+                MentorRequestStatus::UpdatedByStudent,
             ], true);
     }
 
@@ -44,10 +49,13 @@ class MentorRequestPolicy
     {
         return $user->isActive()
             && $request->mentor_id === $user->id
+            && $user->isActiveMentor()
+            && ! $this->isBlockedBetween($request->student_id, $request->mentor_id)
             && in_array($request->status, [
                 MentorRequestStatus::Submitted,
                 MentorRequestStatus::NeedMoreInfo,
-            ]);
+                MentorRequestStatus::UpdatedByStudent,
+            ], true);
     }
 
     /**
@@ -57,7 +65,12 @@ class MentorRequestPolicy
     {
         return $user->isActive()
             && $request->mentor_id === $user->id
-            && $request->status === MentorRequestStatus::Submitted;
+            && $user->isActiveMentor()
+            && ! $this->isBlockedBetween($request->student_id, $request->mentor_id)
+            && in_array($request->status, [
+                MentorRequestStatus::Submitted,
+                MentorRequestStatus::UpdatedByStudent,
+            ], true);
     }
 
     /**
@@ -67,10 +80,12 @@ class MentorRequestPolicy
     {
         return $user->isActive()
             && $request->student_id === $user->id
+            && ! $this->isBlockedBetween($request->student_id, $request->mentor_id)
             && in_array($request->status, [
                 MentorRequestStatus::Submitted,
                 MentorRequestStatus::NeedMoreInfo,
-            ]);
+                MentorRequestStatus::UpdatedByStudent,
+            ], true);
     }
 
     /**
@@ -80,6 +95,7 @@ class MentorRequestPolicy
     {
         return $user->isActive()
             && $request->isParticipant($user)
+            && ! $this->isBlockedBetween($request->student_id, $request->mentor_id)
             && $request->status === MentorRequestStatus::Accepted;
     }
 
@@ -88,7 +104,9 @@ class MentorRequestPolicy
      */
     public function report(User $user, MentorRequest $request): bool
     {
-        return $user->isActive() && $request->isParticipant($user);
+        return $user->isActive()
+            && $request->isParticipant($user)
+            && ! $this->isBlockedBetween($request->student_id, $request->mentor_id);
     }
 
     /**
@@ -98,6 +116,19 @@ class MentorRequestPolicy
     {
         return $user->isActive()
             && $request->student_id === $user->id
+            && ! $this->isBlockedBetween($request->student_id, $request->mentor_id)
             && $request->status === MentorRequestStatus::NeedMoreInfo;
+    }
+
+    /**
+     * Check if a block exists between student and mentor.
+     */
+    private function isBlockedBetween(int $userOneId, int $userTwoId): bool
+    {
+        return BlockedUser::where(function ($q) use ($userOneId, $userTwoId) {
+            $q->where('blocker_id', $userOneId)->where('blocked_id', $userTwoId);
+        })->orWhere(function ($q) use ($userOneId, $userTwoId) {
+            $q->where('blocker_id', $userTwoId)->where('blocked_id', $userOneId);
+        })->exists();
     }
 }

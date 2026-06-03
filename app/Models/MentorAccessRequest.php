@@ -6,10 +6,11 @@ use App\Enums\MentorAccessStatus;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\SoftDeletes;
 
 class MentorAccessRequest extends Model
 {
-    use HasFactory;
+    use HasFactory, SoftDeletes;
 
     protected $fillable = [
         'user_id',
@@ -19,6 +20,16 @@ class MentorAccessRequest extends Model
         'experience_summary',
         'expertise_topics',
         'career_paths',
+        'portfolio_link',
+        'availability_note',
+        'policy_agreed',
+        'headline',
+        'bio',
+        'help_topics',
+        'preferred_request_types',
+        'skills',
+        'response_expectation_text',
+        'office_hours_text',
         'evidence_media_id',
         'reviewed_by',
         'reviewed_at',
@@ -35,6 +46,10 @@ class MentorAccessRequest extends Model
             'status' => MentorAccessStatus::class,
             'expertise_topics' => 'array',
             'career_paths' => 'array',
+            'help_topics' => 'array',
+            'preferred_request_types' => 'array',
+            'skills' => 'array',
+            'policy_agreed' => 'boolean',
             'reviewed_at' => 'datetime',
         ];
     }
