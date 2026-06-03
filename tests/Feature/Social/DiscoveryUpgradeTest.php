@@ -91,6 +91,7 @@ class DiscoveryUpgradeTest extends TestCase
 
         Volt::test('pages.app.discovery')
             ->assertSee('Visible Student')
+            ->assertSeeHtml(route('profile.show', $visibleUser))
             ->assertDontSee('Suspended Student')
             ->assertDontSee('Private Student');
     }

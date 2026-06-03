@@ -19,6 +19,7 @@ class RoleAndPermissionSeeder extends Seeder
 
         // 1. Create permissions
         $permissions = [
+            'access_admin_console',
             'review_verification',
             'approve_verification',
             'manage_users',
@@ -30,10 +31,12 @@ class RoleAndPermissionSeeder extends Seeder
             'view_audit_log',
             'view_audit_logs',
             'manage_reports',
+            'manage_moderation',
             'manage_system_settings',
             'manage_announcements',
             'moderate_content',
             'view_admin_dashboard',
+            'view_analytics',
             'manage_media',
             'view_media_usage',
             'manage_media_quota',
@@ -55,10 +58,25 @@ class RoleAndPermissionSeeder extends Seeder
             'student' => [],
             'alumni' => [],
             'advisor' => [],
-            'moderator' => [
-                'moderate_content',
-                'manage_reports',
+            'verification_reviewer' => [
+                'access_admin_console',
                 'view_admin_dashboard',
+                'review_verification',
+                'approve_verification',
+            ],
+            'mentor_manager' => [
+                'access_admin_console',
+                'view_admin_dashboard',
+                'manage_mentor_access',
+                'view_audit_logs',
+            ],
+            'moderator' => [
+                'access_admin_console',
+                'view_admin_dashboard',
+                'manage_reports',
+                'manage_moderation',
+                'moderate_content',
+                'view_audit_logs',
             ],
             'admin' => $permissions,
             'super_admin' => $permissions,
@@ -66,9 +84,9 @@ class RoleAndPermissionSeeder extends Seeder
 
         foreach ($roles as $roleName => $rolePermissions) {
             $role = Role::findOrCreate($roleName, 'web');
-            if (! empty($rolePermissions)) {
-                $role->syncPermissions($rolePermissions);
-            }
+            $role->syncPermissions($rolePermissions);
         }
+
+        app()[PermissionRegistrar::class]->forgetCachedPermissions();
     }
 }
