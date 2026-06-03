@@ -388,13 +388,13 @@
     }
 
     /* Link defaults */
-    a {
+    :where(a:not([class])) {
         color: var(--ue-brand);
         text-decoration: none;
         transition: color var(--duration-sm) var(--ease-out);
     }
 
-    a:hover {
+    :where(a:not([class]):hover) {
         color: var(--ue-brand-hover);
         text-decoration: underline;
     }
@@ -612,6 +612,55 @@
         outline: none;
     }
 
+    .ue-admin-nav-link {
+        display: flex;
+        align-items: center;
+        gap: 0.625rem;
+        min-height: 36px;
+        padding: 0.5rem 0.625rem;
+        border-radius: 0.5rem;
+        color: #374151;
+        font-size: var(--text-sm);
+        font-weight: var(--font-semibold);
+        line-height: 1.25;
+        text-decoration: none;
+        transition:
+            background-color var(--duration-sm) var(--ease-out),
+            color var(--duration-sm) var(--ease-out);
+        cursor: pointer;
+    }
+
+    .ue-admin-nav-link svg {
+        color: #4b5563;
+        transition: color var(--duration-sm) var(--ease-out);
+    }
+
+    .ue-admin-nav-link:hover {
+        background-color: #f3f4f6;
+        color: #030712;
+        text-decoration: none;
+    }
+
+    .ue-admin-nav-link:hover svg {
+        color: #030712;
+    }
+
+    .ue-admin-nav-link[aria-current="page"],
+    .ue-admin-nav-link.active {
+        background-color: #eef6ff;
+        color: #03162d;
+    }
+
+    .ue-admin-nav-link[aria-current="page"] svg,
+    .ue-admin-nav-link.active svg {
+        color: var(--ue-brand);
+    }
+
+    .ue-admin-nav-link:focus-visible {
+        box-shadow: var(--focus-ring-brand);
+        outline: none;
+    }
+
     /* -------------------------------------------------------------------------
        Badge/chip primitive base
        ------------------------------------------------------------------------- */
@@ -643,9 +692,87 @@
         border-radius: var(--radius-md);
     }
 
+    .ue-content-loading {
+        cursor: progress;
+    }
+
+    .ue-content-loading .ue-loadable-card {
+        position: relative;
+        overflow: hidden;
+        opacity: 0.62;
+        filter: saturate(0.82);
+        transform: translateZ(0);
+        transition:
+            opacity var(--duration-sm) var(--ease-out),
+            filter var(--duration-sm) var(--ease-out);
+    }
+
+    .ue-content-loading .ue-loadable-card::after {
+        content: '';
+        position: absolute;
+        inset: 0;
+        pointer-events: none;
+        background: linear-gradient(
+            105deg,
+            rgba(255, 255, 255, 0) 18%,
+            rgba(255, 255, 255, 0.72) 42%,
+            rgba(255, 255, 255, 0) 66%
+        );
+        transform: translateX(-115%);
+        animation: ue-card-loading-sweep 1.15s var(--ease-out) infinite;
+    }
+
+    .ue-content-loading .ue-loadable-card a,
+    .ue-content-loading .ue-loadable-card button {
+        pointer-events: none;
+    }
+
     @keyframes ue-shimmer {
         0%   { background-position: 200% 0; }
         100% { background-position: -200% 0; }
+    }
+
+    @keyframes ue-card-loading-sweep {
+        0% { transform: translateX(-115%); }
+        100% { transform: translateX(115%); }
+    }
+
+    /* -------------------------------------------------------------------------
+       Page transition loading state
+       ------------------------------------------------------------------------- */
+    .ue-page-progress {
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        z-index: var(--z-toast);
+        height: 3px;
+        pointer-events: none;
+        opacity: 0;
+        transition: opacity var(--duration-sm) var(--ease-out);
+    }
+
+    .ue-page-progress__bar {
+        width: 45%;
+        height: 100%;
+        border-radius: var(--radius-full);
+        background: linear-gradient(90deg, var(--ue-brand), var(--ue-brand-light));
+        box-shadow: 0 0 18px rgba(18, 72, 116, 0.32);
+        transform: translateX(-100%);
+    }
+
+    .ue-is-navigating .ue-page-progress {
+        opacity: 1;
+    }
+
+    .ue-is-navigating .ue-page-progress__bar {
+        animation: ue-page-progress 1.05s var(--ease-out) infinite;
+    }
+
+    @keyframes ue-page-progress {
+        0% { transform: translateX(-120%); }
+        58% { transform: translateX(120%); }
+        100% { transform: translateX(240%); }
     }
 
     /* -------------------------------------------------------------------------
@@ -1373,6 +1500,17 @@
     .ue-spinner {
         animation: none;
         opacity: 0.5;
+    }
+
+    .ue-page-progress__bar {
+        animation: none !important;
+        transform: none;
+    }
+
+    .ue-content-loading .ue-loadable-card::after {
+        animation: none;
+        background: rgba(255, 255, 255, 0.4);
+        transform: none;
     }
 
     .ue-animate-fade-in,

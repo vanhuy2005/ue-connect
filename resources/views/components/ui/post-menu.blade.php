@@ -9,6 +9,7 @@
 @php
     $menuId = "post-menu-" . $post->id;
     $sheetId = "post-sheet-" . $post->id;
+    $authorProfileUrl = route('profile.show', $post->user);
 @endphp
 
 <div class="relative flex items-center">
@@ -41,6 +42,15 @@
         role="menu"
     >
         <div class="flex flex-col gap-0.5">
+            <a
+                href="{{ $authorProfileUrl }}"
+                class="flex items-center gap-2.5 px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50 hover:text-ue-brand transition-colors text-left rounded-lg"
+                role="menuitem"
+            >
+                <x-ui.icon name="user" size="xs" class="text-slate-400" />
+                <span>Xem trang cá nhân</span>
+            </a>
+
             {{-- Save / Unsave --}}
             <button
                 type="button"
@@ -142,6 +152,14 @@
             <h4 class="text-xs font-bold text-slate-800 text-center">Tùy chọn bài viết</h4>
         </div>
         <div class="ue-bottom-sheet__body">
+            <a
+                href="{{ $authorProfileUrl }}"
+                class="ue-bottom-sheet__item"
+            >
+                <x-ui.icon name="user" size="sm" class="text-slate-400" />
+                <span>Xem trang cá nhân</span>
+            </a>
+
             {{-- Save --}}
             <button
                 type="button"

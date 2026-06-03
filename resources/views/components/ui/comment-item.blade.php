@@ -10,6 +10,7 @@
 @php
     $commentAuthor = $comment->user;
     $commentProfile = $commentAuthor->profile;
+    $commentAuthorProfileUrl = route('profile.show', $commentAuthor);
     $commentLikes = $comment->likes->count();
     $isCommentLiked = $comment->likes->where('user_id', $currentUser->id)->isNotEmpty();
     $isCommentOwner = $comment->user_id === $currentUser->id;
@@ -33,7 +34,9 @@
                 <x-ui.icon name="eye-off" size="xs" />
             </div>
         @else
-            <x-ui.avatar :user="$commentAuthor" size="sm" />
+            <a href="{{ $commentAuthorProfileUrl }}" class="block rounded-full focus:outline-none focus:ring-2 focus:ring-ue-brand/30" aria-label="Xem trang cá nhân của {{ $commentAuthor->name }}">
+                <x-ui.avatar :user="$commentAuthor" size="sm" />
+            </a>
         @endif
     </div>
 
@@ -87,9 +90,9 @@
                 <div class="flex items-start justify-between">
                     <div>
                         <div class="flex items-center gap-1.5">
-                            <span class="text-xs font-bold text-slate-800 leading-tight">
+                            <a href="{{ $commentAuthorProfileUrl }}" class="text-xs font-bold text-slate-800 leading-tight hover:text-ue-brand hover:underline">
                                 {{ $commentAuthor->name }}
-                            </span>
+                            </a>
                             <x-ui.icon name="check-circle" size="xs" class="text-ue-brand flex-shrink-0" />
                             <span class="text-[10px] text-slate-400 font-semibold">
                                 · {{ $comment->created_at->diffForHumans() }}
@@ -128,6 +131,13 @@
                             class="absolute right-0 mt-1 rounded-xl bg-white border border-ue-border shadow-lg py-1 z-30"
                             style="display: none; width: 180px;"
                         >
+                            <a
+                                href="{{ $commentAuthorProfileUrl }}"
+                                class="w-full text-left px-3 py-1.5 text-xxs font-semibold text-slate-700 hover:bg-slate-50 hover:text-ue-brand flex items-center gap-2"
+                            >
+                                <x-ui.icon name="user" size="xs" class="text-slate-400" />
+                                <span>Xem trang cá nhân</span>
+                            </a>
                             @if ($isCommentOwner)
                                 <button
                                     type="button"
