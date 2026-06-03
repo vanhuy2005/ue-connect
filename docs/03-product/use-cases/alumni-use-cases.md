@@ -64,15 +64,15 @@ Mục tiêu: Kết nối lại cộng đồng, mentor sinh viên, chia sẻ kinh
 
 ### 3.3. Alumni Feed & Content
 
-| ID           | Use Case                       | Priority | Page Mapping        | UI States  |
-| ------------ | ------------------------------ | -------- | ------------------- | ---------- |
-| ALU-FEED-001 | Xem home feed                  | P1       | home-feed.md        | loading    |
-| ALU-FEED-002 | Đăng bài chia sẻ kinh nghiệm   | P1       | composer.md         | submitting |
-| ALU-FEED-003 | Đăng bài career insight        | P1       | composer.md         | submitting |
-| ALU-FEED-004 | Bình luận bài viết sinh viên   | P1       | post-detail.md      | submitting |
-| ALU-FEED-005 | Trả lời câu hỏi học tập/career | P1       | post-detail.md      | reply      |
-| ALU-FEED-006 | Lưu bài viết quan tâm          | P2       | saved-posts.md      | saved      |
-| ALU-FEED-007 | Report nội dung không phù hợp  | P0       | safety-reporting.md | submitted  |
+| ID           | Use Case                       | Priority | Page Mapping        | UI States  | Status     |
+| ------------ | ------------------------------ | -------- | ------------------- | ---------- | ---------- |
+| ALU-FEED-001 | Xem home feed                  | P1       | home-feed.md        | loading    | built      |
+| ALU-FEED-002 | Đăng bài chia sẻ kinh nghiệm   | P1       | home-feed.md        | submitting | built      |
+| ALU-FEED-003 | Đăng bài career insight        | P1       | home-feed.md        | submitting | built      |
+| ALU-FEED-004 | Bình luận bài viết sinh viên   | P1       | post-detail.md      | submitting | built      |
+| ALU-FEED-005 | Trả lời câu hỏi học tập/career | P1       | post-detail.md      | reply      | built      |
+| ALU-FEED-006 | Lưu bài viết quan tâm          | P2       | saved-posts.md      | saved      | built      |
+| ALU-FEED-007 | Report nội dung không phù hợp  | P0       | safety-reporting.md | submitted  | built      |
 
 ### 3.4. Alumni Mentoring
 
@@ -102,14 +102,14 @@ Mục tiêu: Kết nối lại cộng đồng, mentor sinh viên, chia sẻ kinh
 
 ### 3.6. Opportunity Sharing
 
-| ID          | Use Case                                 | Priority | Page Mapping              | UI States       |
-| ----------- | ---------------------------------------- | -------- | ------------------------- | --------------- |
-| ALU-OPP-001 | Chia sẻ cơ hội internship/job            | P2       | composer.md               | review required |
-| ALU-OPP-002 | Gắn tag lĩnh vực cho cơ hội              | P2       | composer.md               | selected        |
-| ALU-OPP-003 | Cập nhật cơ hội đã đăng                  | P2       | post-detail.md            | editing         |
-| ALU-OPP-004 | Đánh dấu cơ hội hết hạn                  | P2       | post-detail.md            | expired         |
-| ALU-OPP-005 | Admin duyệt opportunity trước khi public | P2       | admin/moderation-queue.md | pending         |
-| ALU-OPP-006 | Trả lời câu hỏi về cơ hội                | P2       | post-detail.md            | comment         |
+| ID          | Use Case                                 | Priority | Page Mapping              | UI States       | Status      |
+| ----------- | ---------------------------------------- | -------- | ------------------------- | --------------- | ----------- |
+| ALU-OPP-001 | Chia sẻ cơ hội internship/job            | P2       | home-feed.md              | review required | built       |
+| ALU-OPP-002 | Gắn tag lĩnh vực cho cơ hội              | P2       | home-feed.md              | selected        | built       |
+| ALU-OPP-003 | Cập nhật cơ hội đã đăng                  | P2       | post-detail.md            | editing         | future      |
+| ALU-OPP-004 | Đánh dấu cơ hội hết hạn                  | P2       | post-detail.md            | expired         | future      |
+| ALU-OPP-005 | Admin duyệt opportunity trước khi public | P2       | admin/moderation-queue.md | pending         | future      |
+| ALU-OPP-006 | Trả lời câu hỏi về cơ hội                | P2       | post-detail.md            | comment         | built (via post-comment) |
 
 ## 4. Alumni MVP/P1 Use Cases
 
