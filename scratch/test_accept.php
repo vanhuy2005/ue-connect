@@ -6,6 +6,7 @@ use App\Enums\MentorUrgency;
 use App\Models\MentorRequest;
 use App\Models\User;
 use Illuminate\Contracts\Console\Kernel;
+use Illuminate\Support\Facades\Auth;
 
 require __DIR__.'/../vendor/autoload.php';
 $app = require_once __DIR__.'/../bootstrap/app.php';
@@ -34,7 +35,7 @@ try {
     echo 'Mentor ID comparison: '.var_export($request->mentor_id === $mentor->id, true)."\n";
 
     // Authenticate as mentor
-    auth()->login($mentor);
+    Auth::login($mentor);
 
     $action = app(AcceptMentorRequestAction::class);
     $res = $action->execute($mentor, $request, [
