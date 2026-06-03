@@ -57,6 +57,7 @@ new class extends Component {
                 <option value="normal">Bình thường</option>
                 <option value="low">Không gấp</option>
                 <option value="high">Gấp</option>
+                <option value="time_sensitive">Có hạn định / Gấp</option>
             </select>
             <textarea name="context" rows="2" placeholder="Bối cảnh bổ sung (không bắt buộc)" class="w-full rounded-lg border-slate-200 text-sm"></textarea>
             <button class="rounded-lg bg-ue-brand px-4 py-2 text-sm font-semibold text-white hover:bg-ue-brand-dark">Gửi yêu cầu</button>

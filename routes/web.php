@@ -137,10 +137,24 @@ Route::middleware(['auth', 'active.account', 'verified.identity'])->group(functi
             'requested_role_context' => ['required', 'string', Rule::in(array_keys($eligibleRoleContexts))],
             'motivation' => ['required', 'string', 'min:20', 'max:5000'],
             'experience_summary' => ['nullable', 'string', 'max:5000'],
-            'expertise_topics' => ['nullable', 'array'],
+            'expertise_topics' => ['required', 'array', 'min:2'],
             'expertise_topics.*' => ['string', 'max:80'],
             'career_paths' => ['nullable', 'array'],
             'career_paths.*' => ['string', 'max:80'],
+            'skills' => ['nullable', 'array'],
+            'skills.*' => ['string', 'max:80'],
+            'portfolio_link' => ['nullable', 'url', 'max:255'],
+            'availability_note' => ['nullable', 'string', 'max:1000'],
+            'policy_agreed' => ['required', 'accepted'],
+            'headline' => ['required', 'string', 'min:12', 'max:160'],
+            'bio' => ['required', 'string', 'min:40', 'max:5000'],
+            'help_topics' => ['required', 'array', 'min:2'],
+            'help_topics.*' => ['string', 'max:80'],
+            'preferred_request_types' => ['required', 'array', 'min:1'],
+            'preferred_request_types.*' => ['string', 'max:80'],
+            'response_expectation_text' => ['required', 'string', 'max:255'],
+            'office_hours_text' => ['nullable', 'string', 'max:255'],
+            'evidence_media_id' => ['nullable', 'integer', 'exists:media_files,id'],
         ]);
 
         try {
@@ -254,7 +268,7 @@ Route::middleware(['auth', 'active.account', 'verified.identity'])->group(functi
             'topic' => ['required', 'string', 'max:255'],
             'goal' => ['required', 'string', 'max:5000'],
             'question' => ['required', 'string', 'max:5000'],
-            'urgency' => ['required', 'string', 'in:low,normal,high'],
+            'urgency' => ['required', 'string', 'in:low,normal,high,time_sensitive'],
             'context' => ['nullable', 'string', 'max:5000'],
             'expected_outcome' => ['nullable', 'string', 'max:1000'],
         ]);
@@ -278,7 +292,7 @@ Route::middleware(['auth', 'active.account', 'verified.identity'])->group(functi
             'topic' => ['required', 'string', 'max:255'],
             'goal' => ['required', 'string', 'max:5000'],
             'question' => ['required', 'string', 'max:5000'],
-            'urgency' => ['required', 'string', 'in:low,normal,high'],
+            'urgency' => ['required', 'string', 'in:low,normal,high,time_sensitive'],
             'context' => ['nullable', 'string', 'max:5000'],
             'expected_outcome' => ['nullable', 'string', 'max:1000'],
         ]);

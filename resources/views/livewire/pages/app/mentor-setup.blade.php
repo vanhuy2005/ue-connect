@@ -109,7 +109,22 @@ new class extends Component {
             @if ($isDiscoverable)
                 Hồ sơ đang hiển thị trong danh sách mentor
             @elseif ($profile)
-                Hồ sơ chưa public: kiểm tra trạng thái, visibility hoặc quyền mentor
+                @if (! $profile->is_public_ready)
+                    <div class="space-y-1">
+                        <p class="font-bold">Hồ sơ ẩn (Thiếu thông tin bắt buộc):</p>
+                        <ul class="list-disc pl-5 text-xs font-normal space-y-1">
+                            @if (! $hasTrustedAvatar) <li>Thiếu ảnh đại diện rõ mặt.</li> @endif
+                            @if (empty($profile->headline)) <li>Thiếu Headline giới thiệu.</li> @endif
+                            @if (empty($profile->bio)) <li>Thiếu phần Giới thiệu chi tiết (Bio).</li> @endif
+                            @if (!is_array($profile->expertise_topics) || count($profile->expertise_topics) < 2) <li>Cần ít nhất 2 chủ đề chuyên môn.</li> @endif
+                            @if (!is_array($profile->help_topics) || count($profile->help_topics) < 2) <li>Cần ít nhất 2 chủ đề có thể hỗ trợ.</li> @endif
+                            @if (!is_array($profile->preferred_request_types) || count($profile->preferred_request_types) < 1) <li>Chọn ít nhất 1 loại yêu cầu hỗ trợ.</li> @endif
+                            @if (empty($profile->response_expectation_text)) <li>Thiếu thời gian phản hồi dự kiến.</li> @endif
+                        </ul>
+                    </div>
+                @else
+                    Hồ sơ chưa public: kiểm tra trạng thái hoạt động, ẩn/hiện hoặc tình trạng nhận yêu cầu.
+                @endif
             @else
                 Bạn chưa có hồ sơ mentor được duyệt
             @endif

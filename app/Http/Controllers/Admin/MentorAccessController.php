@@ -12,6 +12,7 @@ use App\Models\MentorAccessRequest;
 use App\Models\MentorProfile;
 use App\Models\User;
 use Illuminate\Support\Facades\Gate;
+use Illuminate\Validation\ValidationException;
 
 class MentorAccessController extends Controller
 {
@@ -46,6 +47,10 @@ class MentorAccessController extends Controller
         $data = $request->validated();
         $admin = $request->user();
 
+        if ($data['action'] === 'approve') {
+            $this->checkTrustCompleteness($mentorAccess);
+        }
+
         match ($data['action']) {
             'approve', 'grant' => $grant->execute($admin, $mentorAccess, [
                 'reason' => $data['reason'] ?? null,
@@ -77,6 +82,13 @@ class MentorAccessController extends Controller
 
     public function approve(MentorAccessRequest $mentorAccessRequest, GrantMentorAccessAction $grant)
     {
+        request()->validate([
+            'reason' => ['required', 'string', 'min:10'],
+            'admin_notes' => ['nullable', 'string'],
+        ]);
+
+        $this->checkTrustCompleteness($mentorAccessRequest);
+
         $grant->execute(request()->user(), $mentorAccessRequest, [
             'reason' => request('reason'),
             'admin_notes' => request('admin_notes'),
@@ -87,6 +99,11 @@ class MentorAccessController extends Controller
 
     public function reject(MentorAccessRequest $mentorAccessRequest, ReviewMentorAccessAction $review)
     {
+        request()->validate([
+            'reason' => ['required', 'string', 'min:10'],
+            'admin_notes' => ['nullable', 'string'],
+        ]);
+
         $review->execute(request()->user(), $mentorAccessRequest, [
             'action' => 'reject',
             'reason' => request('reason'),
@@ -98,6 +115,11 @@ class MentorAccessController extends Controller
 
     public function needMoreInfo(MentorAccessRequest $mentorAccessRequest, ReviewMentorAccessAction $review)
     {
+        request()->validate([
+            'reason' => ['required', 'string', 'min:10'],
+            'admin_notes' => ['nullable', 'string'],
+        ]);
+
         $review->execute(request()->user(), $mentorAccessRequest, [
             'action' => 'need_more_info',
             'reason' => request('reason'),
@@ -109,8 +131,13 @@ class MentorAccessController extends Controller
 
     public function revoke(MentorProfile $mentorProfile, RevokeMentorAccessAction $revoke)
     {
+        request()->validate([
+            'reason' => ['required', 'string', 'min:10'],
+            'admin_notes' => ['nullable', 'string'],
+        ]);
+
         $revoke->execute(request()->user(), $mentorProfile, [
-            'reason' => request('reason', 'Revoked by administrator.'),
+            'reason' => request('reason'),
             'admin_notes' => request('admin_notes'),
         ]);
 
@@ -119,6 +146,11 @@ class MentorAccessController extends Controller
 
     public function grant(User $user, GrantMentorAccessAction $grant)
     {
+        request()->validate([
+            'reason' => ['required', 'string', 'min:10'],
+            'admin_notes' => ['nullable', 'string'],
+        ]);
+
         $accessRequest = MentorAccessRequest::firstOrCreate(
             ['user_id' => $user->id, 'status' => MentorAccessStatus::Submitted],
             [
@@ -129,10 +161,32 @@ class MentorAccessController extends Controller
         );
 
         $grant->execute(request()->user(), $accessRequest, [
-            'reason' => request('reason', 'Direct grant by administrator.'),
+            'reason' => request('reason'),
             'admin_notes' => request('admin_notes'),
         ]);
 
         return back()->with('status', 'Mentor access granted.');
+    }
+
+    /**
+     * Check if the mentor registration request meets trust requirements before approval.
+     */
+    private function checkTrustCompleteness(MentorAccessRequest $request): void
+    {
+        $hasAvatar = $request->user && $request->user->profile && $request->user->profile->avatar()->exists();
+
+        $isValid = $hasAvatar
+            && ! empty($request->headline)
+            && ! empty($request->bio)
+            && is_array($request->expertise_topics) && count($request->expertise_topics) >= 2
+            && is_array($request->help_topics) && count($request->help_topics) >= 2
+            && is_array($request->preferred_request_types) && count($request->preferred_request_types) >= 1
+            && ! empty($request->response_expectation_text);
+
+        if (! $isValid) {
+            throw ValidationException::withMessages([
+                'mentor_profile' => 'Hồ sơ đăng ký của Mentor chưa đủ điều kiện tin cậy tối thiểu (ảnh đại diện, headline, tiểu sử, ít nhất 2 chủ đề chuyên môn, ít nhất 2 chủ đề hỗ trợ, ít nhất 1 loại yêu cầu nhận được, kỳ vọng phản hồi).',
+            ]);
+        }
     }
 }
