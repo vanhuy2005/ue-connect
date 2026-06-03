@@ -1,14 +1,17 @@
-{{--
-    Social Shell — Mobile Topbar (Threads-style)
-    Source: docs/04-design/18-responsive-rules.md
-
-    Visible ONLY on mobile (lg:hidden).
-    Desktop navigation is handled by the sidebar.
-
-    Layout:
-        [≡ Xem thêm]  [UEConnect Logo]  [🔍 Tìm kiếm]
-        left           center             right
---}}
+@php
+    $currentUser = auth()->user();
+    $adminRoles = ['admin', 'moderator', 'super_admin'];
+    $adminPermissions = [
+        'view_admin_dashboard',
+        'review_verification',
+        'manage_reports',
+        'manage_media',
+    ];
+    $isAdmin = $currentUser && (
+        $currentUser->roles()->whereIn('name', $adminRoles)->exists()
+        || $currentUser->permissions()->whereIn('name', $adminPermissions)->exists()
+    );
+@endphp
 
 <header
     class="lg:hidden ue-shell__topbar relative px-4 bg-white border-b border-slate-100 flex items-center justify-between"
@@ -62,36 +65,124 @@
         x-transition:leave-end="opacity-0 -translate-y-2"
         @click.outside="moreMenuOpen = false"
         @keydown.escape.window="moreMenuOpen = false"
-        class="absolute top-full left-0 right-0 bg-white border-b border-slate-100 shadow-md z-40 py-2 px-4"
+        class="absolute top-full left-0 right-0 bg-white border-b border-slate-100 shadow-lg z-40 py-2 px-4 max-h-[80vh] overflow-y-auto text-xs font-semibold text-slate-700"
         role="menu"
         aria-label="Menu thêm"
         style="display: none;"
     >
+        {{-- User info summary --}}
+        @if ($currentUser)
+            <div class="px-2 py-2.5 border-b border-slate-100 mb-1.5">
+                <p class="text-slate-800 font-bold text-xxs truncate">{{ $currentUser->name }}</p>
+                <p class="text-[10px] text-slate-400 font-medium truncate mt-0.5">{{ $currentUser->email }}</p>
+            </div>
+        @endif
+
+        {{-- Core Links --}}
         <a
             href="{{ route('profile') }}"
-            class="flex items-center gap-3 px-2 py-3 text-sm font-semibold text-slate-700 hover:text-ue-brand transition-colors"
+            class="flex items-center gap-3 px-2 py-2.5 hover:text-ue-brand transition-colors"
             role="menuitem"
         >
-            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+            <x-ui.icon name="user" size="sm" class="text-slate-400" />
             Hồ sơ của tôi
         </a>
         <a
-            href="{{ route('profile.setup') }}"
-            class="flex items-center gap-3 px-2 py-3 text-sm font-semibold text-slate-700 hover:text-ue-brand transition-colors"
+            href="{{ route('profile.edit') }}"
+            class="flex items-center gap-3 px-2 py-2.5 hover:text-ue-brand transition-colors"
             role="menuitem"
         >
-            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+            <x-ui.icon name="edit" size="sm" class="text-slate-400" />
             Chỉnh sửa hồ sơ
         </a>
-        <div class="border-t border-slate-100 my-1"></div>
+        <button
+            type="button"
+            class="w-full text-left flex items-center gap-3 px-2 py-2.5 hover:text-ue-brand transition-colors"
+            role="menuitem"
+        >
+            <x-ui.icon name="eye" size="sm" class="text-slate-400" />
+            Giao diện
+        </button>
+        <a
+            href="{{ route('settings') }}"
+            class="flex items-center gap-3 px-2 py-2.5 hover:text-ue-brand transition-colors"
+            role="menuitem"
+        >
+            <x-ui.icon name="settings" size="sm" class="text-slate-400" />
+            Cài đặt ứng dụng
+        </a>
+        <a
+            href="{{ route('posts.saved') }}"
+            class="flex items-center gap-3 px-2 py-2.5 hover:text-ue-brand transition-colors"
+            role="menuitem"
+        >
+            <x-ui.icon name="bookmark" size="sm" class="text-slate-400" />
+            Bài viết đã lưu
+        </a>
+        <a
+            href="{{ route('settings', ['section' => 'support']) }}"
+            class="flex items-center gap-3 px-2 py-2.5 hover:text-ue-brand transition-colors"
+            role="menuitem"
+        >
+            <x-ui.icon name="help-circle" size="sm" class="text-slate-400" />
+            Trung tâm hỗ trợ
+        </a>
+        <a
+            href="{{ route('settings', ['section' => 'support']) }}"
+            class="flex items-center gap-3 px-2 py-2.5 hover:text-ue-brand transition-colors"
+            role="menuitem"
+        >
+            <x-ui.icon name="alert-triangle" size="sm" class="text-slate-400" />
+            Báo cáo sự cố
+        </a>
+
+        {{-- Admin options --}}
+        @if ($isAdmin)
+            <div class="border-t border-slate-100 my-1.5"></div>
+            <p class="px-2 py-1 text-[9px] font-bold text-slate-400 uppercase tracking-wider">Quản trị</p>
+            
+            <a
+                href="{{ route('admin.dashboard') }}"
+                class="flex items-center gap-3 px-2 py-2.5 hover:text-ue-brand transition-colors"
+                role="menuitem"
+            >
+                <x-ui.icon name="shield" size="sm" class="text-slate-400" />
+                Tổng quan quản trị
+            </a>
+
+            @can('review_verification')
+                <a
+                    href="{{ route('admin.verifications.queue') }}"
+                    class="flex items-center gap-3 px-2 py-2.5 hover:text-ue-brand transition-colors"
+                    role="menuitem"
+                >
+                    <x-ui.icon name="shield-check" size="sm" class="text-slate-400" />
+                    Duyệt xác thực
+                </a>
+            @endcan
+
+            @can('manage_reports')
+                <a
+                    href="{{ route('admin.reports.index') }}"
+                    class="flex items-center gap-3 px-2 py-2.5 hover:text-ue-brand transition-colors"
+                    role="menuitem"
+                >
+                    <x-ui.icon name="flag" size="sm" class="text-slate-400" />
+                    Báo cáo vi phạm
+                </a>
+            @endcan
+        @endif
+
+        {{-- Logout --}}
+        <div class="border-t border-slate-100 my-1.5"></div>
         <form method="POST" action="{{ route('logout') }}">
             @csrf
             <button
                 type="submit"
-                class="w-full flex items-center gap-3 px-2 py-3 text-sm font-semibold text-red-600 hover:text-red-700 transition-colors text-left"
+                class="w-full flex items-center gap-3 px-2 py-2.5 text-red-650 hover:text-red-700 hover:bg-red-50/60 rounded-lg transition-colors text-left"
                 role="menuitem"
             >
-                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+                <x-ui.icon name="log-out" size="sm" class="text-red-500" />
                 Đăng xuất
             </button>
         </form>

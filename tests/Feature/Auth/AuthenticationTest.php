@@ -7,6 +7,7 @@ use App\Livewire\Actions\Logout;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Livewire\Volt\Volt;
+use Spatie\Permission\PermissionRegistrar;
 use Tests\TestCase;
 
 class AuthenticationTest extends TestCase
@@ -158,12 +159,17 @@ class AuthenticationTest extends TestCase
         $response = $this->actingAs($admin)->get(route('dashboard'));
         $response->assertSee('Quản trị');
         $response->assertSee('Tổng quan quản trị');
+        $response->assertSee('Duyệt xác thực');
+
+        // Detailed admin links are consolidated and only show on the admin console
+        $response->assertDontSee('Người dùng');
+        $response->assertDontSee('Cài đặt hệ thống');
 
         $user = User::factory()->create([
             'account_status' => AccountStatus::ACTIVE,
         ]);
 
-        app(\Spatie\Permission\PermissionRegistrar::class)->forgetCachedPermissions();
+        app(PermissionRegistrar::class)->forgetCachedPermissions();
 
         $response = $this->actingAs($user)->get(route('dashboard'));
         $response->assertDontSee('Quản trị');

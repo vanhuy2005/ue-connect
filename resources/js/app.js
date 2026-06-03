@@ -1,4 +1,7 @@
-//
+// Initialize Alpine.js early so Livewire and UI systems can rely on it.
+import Alpine from "alpinejs";
+window.Alpine = Alpine;
+Alpine.start();
 
 /**
  * Echo exposes an expressive API for subscribing to channels and listening
@@ -6,5 +9,5 @@
  * allow your team to quickly build robust real-time web applications.
  */
 
-import './echo';
-import './ui';
+import "./echo";
+import "./ui";

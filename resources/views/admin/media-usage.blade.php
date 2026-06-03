@@ -1,4 +1,4 @@
-<x-app-layout>
+<x-app-layout shell="admin">
     <div class="mx-auto max-w-6xl px-4 py-8 space-y-6">
         <div>
             <h1 class="text-2xl font-bold text-slate-900">Media usage</h1>

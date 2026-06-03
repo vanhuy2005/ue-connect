@@ -120,7 +120,7 @@ new #[Layout('layouts.app')] class extends Component
                 type="button"
                 wire:click="$set('activeTab', 'all')"
                 class="px-4 py-1.5 rounded-full text-xxs font-bold transition-all border whitespace-nowrap
-                       {{ $activeTab === 'all' ? 'bg-slate-900 text-white border-slate-900' : 'bg-white text-slate-600 border-slate-200 hover:border-slate-350 hover:bg-slate-50' }}"
+                       {{ $activeTab === 'all' ? 'bg-ue-brand-soft text-ue-brand-active border-ue-brand-border' : 'bg-white text-slate-600 border-slate-200 hover:border-slate-350 hover:bg-slate-50' }}"
             >
                 Tất cả
             </button>
@@ -128,7 +128,7 @@ new #[Layout('layouts.app')] class extends Component
                 type="button"
                 wire:click="$set('activeTab', 'requests')"
                 class="px-4 py-1.5 rounded-full text-xxs font-bold transition-all border whitespace-nowrap relative
-                       {{ $activeTab === 'requests' ? 'bg-slate-900 text-white border-slate-900' : 'bg-white text-slate-600 border-slate-200 hover:border-slate-350 hover:bg-slate-50' }}"
+                       {{ $activeTab === 'requests' ? 'bg-ue-brand-soft text-ue-brand-active border-ue-brand-border' : 'bg-white text-slate-600 border-slate-200 hover:border-slate-350 hover:bg-slate-50' }}"
             >
                 Yêu cầu
             </button>
@@ -136,7 +136,7 @@ new #[Layout('layouts.app')] class extends Component
                 type="button"
                 wire:click="$set('activeTab', 'messages')"
                 class="px-4 py-1.5 rounded-full text-xxs font-bold transition-all border whitespace-nowrap
-                       {{ $activeTab === 'messages' ? 'bg-slate-900 text-white border-slate-900' : 'bg-white text-slate-600 border-slate-200 hover:border-slate-350 hover:bg-slate-50' }}"
+                       {{ $activeTab === 'messages' ? 'bg-ue-brand-soft text-ue-brand-active border-ue-brand-border' : 'bg-white text-slate-600 border-slate-200 hover:border-slate-350 hover:bg-slate-50' }}"
             >
                 Tin nhắn
             </button>
@@ -144,7 +144,7 @@ new #[Layout('layouts.app')] class extends Component
                 type="button"
                 wire:click="$set('activeTab', 'system')"
                 class="px-4 py-1.5 rounded-full text-xxs font-bold transition-all border whitespace-nowrap
-                       {{ $activeTab === 'system' ? 'bg-slate-900 text-white border-slate-900' : 'bg-white text-slate-600 border-slate-200 hover:border-slate-350 hover:bg-slate-50' }}"
+                       {{ $activeTab === 'system' ? 'bg-ue-brand-soft text-ue-brand-active border-ue-brand-border' : 'bg-white text-slate-600 border-slate-200 hover:border-slate-350 hover:bg-slate-50' }}"
             >
                 Hệ thống
             </button>
@@ -267,7 +267,7 @@ new #[Layout('layouts.app')] class extends Component
                         <button
                             type="button"
                             wire:click="acceptGreeting({{ $greeting->id }})"
-                            class="bg-slate-900 hover:bg-slate-800 text-white text-[10px] font-bold px-3 py-1.5 rounded-lg shadow-2xs hover:shadow-xs transition-all"
+                            class="bg-ue-brand hover:bg-ue-brand-hover text-white text-[10px] font-bold px-3 py-1.5 rounded-lg shadow-2xs hover:shadow-xs transition-all"
                         >
                             Xác nhận
                         </button>

@@ -521,7 +521,7 @@ new class extends Component
 
         {{-- Modern Profile Tabs --}}
         <div class="flex flex-col space-y-4">
-            <div class="flex border-b border-slate-150 overflow-x-auto pb-px justify-center sm:justify-start gap-4 sm:gap-6 select-none scrollbar-none">
+            <div class="flex border-b border-slate-150 overflow-x-auto pb-px justify-start px-4 sm:px-0 gap-4 sm:gap-6 select-none scrollbar-none">
                 <button 
                     type="button" 
                     wire:click="$set('activeTab', 'posts')" 
