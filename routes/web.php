@@ -5,12 +5,14 @@ use App\Http\Controllers\Admin\AdminSearchController;
 use App\Http\Controllers\Admin\AnnouncementController;
 use App\Http\Controllers\Admin\AuditLogController;
 use App\Http\Controllers\Admin\CommunityController;
+use App\Http\Controllers\Admin\MediaController as AdminMediaController;
 use App\Http\Controllers\Admin\MentorAccessController;
 use App\Http\Controllers\Admin\PermissionGrantController;
 use App\Http\Controllers\Admin\SystemSettingsController;
 use App\Http\Controllers\Admin\UserManagementController;
 use App\Http\Controllers\Admin\VerificationActionController;
 use App\Http\Controllers\Admin\VerificationEvidenceController;
+use App\Http\Controllers\MediaController;
 use App\Http\Middleware\EnsureAdminAccess;
 use App\Models\AuditLog;
 use App\Models\BlockedUser;
@@ -107,158 +109,158 @@ Route::middleware(['auth', 'active.account', 'verified.identity'])->group(functi
 
         return view('app.messages', ['activeConversation' => $conversation]);
     })->name('messages.index');
+
+    // 4.1 Secure Media Delivery Routes
+    Route::get('app/media/{media}/preview', [MediaController::class, 'preview'])
+        ->name('media.preview');
+    Route::get('app/media/{media}/download', [MediaController::class, 'download'])
+        ->name('media.download');
 });
 
 // 5. Admin Panel (protected by account status and any admin permission)
-Route::middleware(['auth', 'active.account', EnsureAdminAccess::class])->group(function () {
-    Route::view('admin/dashboard', 'admin.dashboard')
-        ->name('admin.dashboard');
+Route::prefix('admin')
+    ->name('admin.')
+    ->middleware(['auth', 'active.account', EnsureAdminAccess::class])
+    ->group(function () {
+        Route::view('dashboard', 'admin.dashboard')->name('dashboard');
 
-    Route::get('admin/verification/evidence/{evidence}', [VerificationEvidenceController::class, 'show'])
-        ->name('admin.verification.evidence');
+        // Verification workflow
+        Route::get('verification/evidence/{evidence}', [VerificationEvidenceController::class, 'show'])
+            ->name('verification.evidence');
 
-    Route::view('admin/verifications', 'admin.verification-queue')
-        ->name('admin.verifications.queue');
+        Route::view('verifications', 'admin.verification-queue')
+            ->name('verifications.queue');
 
-    Route::get('admin/verifications/{id}', function ($id) {
-        return view('admin.verification-detail', ['id' => $id]);
-    })->name('admin.verifications.detail');
+        Route::get('verifications/{id}', function ($id) {
+            return view('admin.verification-detail', ['id' => $id]);
+        })->name('verifications.detail');
 
-    // Verification action endpoint
-    Route::post('admin/verifications/{verificationRequest}/action', [VerificationActionController::class, 'handle'])
-        ->name('admin.verifications.action');
+        Route::post('verifications/{verificationRequest}/action', [VerificationActionController::class, 'handle'])
+            ->name('verifications.action');
 
-    Route::get('admin/audit-logs', [AuditLogController::class, 'index'])
-        ->name('admin.audit-logs.index');
+        // Audit logs
+        Route::get('audit-logs', [AuditLogController::class, 'index'])
+            ->name('audit-logs.index');
 
-    Route::get('admin/notifications', function () {
-        $user = Auth::user();
+        // Notifications
+        Route::get('notifications', function () {
+            $user = Auth::user();
 
-        return view('admin.notifications', [
-            'notifications' => $user?->notifications()->latest()->paginate(20),
-            'unreadCount' => $user?->unreadNotifications()->count() ?? 0,
-        ]);
-    })->name('admin.notifications.index');
-});
+            return view('admin.notifications', [
+                'notifications' => $user?->notifications()->latest()->paginate(20),
+                'unreadCount' => $user?->unreadNotifications()->count() ?? 0,
+            ]);
+        })->name('notifications.index');
 
-// Admin user management (protected by account status; authorize inside route)
-Route::middleware(['auth', 'active.account'])->group(function () {
-    Route::get('admin/users', function () {
-        if (! Gate::any(['manage_users', 'manage_permissions', 'review_verification'])) {
-            abort(403);
-        }
+        // Users management
+        Route::get('users', function () {
+            if (! Gate::any(['manage_users', 'manage_permissions', 'review_verification'])) {
+                abort(403);
+            }
 
-        return view('admin.users-list');
-    })->name('admin.users.index');
+            return view('admin.users-list');
+        })->name('users.index');
 
-    Route::get('admin/users/{user}', function (User $user) {
-        if (! Gate::any(['manage_users', 'manage_permissions', 'review_verification'])) {
-            abort(403);
-        }
+        Route::get('users/{user}', function (User $user) {
+            if (! Gate::any(['manage_users', 'manage_permissions', 'review_verification'])) {
+                abort(403);
+            }
 
-        return view('admin.users-detail', ['user' => $user]);
-    })->name('admin.users.show');
-});
+            return view('admin.users-detail', ['user' => $user]);
+        })->name('users.show');
 
-// Admin community management (protected by admin access middleware)
-Route::middleware(['auth', 'active.account', EnsureAdminAccess::class])->group(function () {
-    Route::get('admin/communities', [CommunityController::class, 'index'])->name('admin.communities.index');
-    Route::get('admin/communities/create', [CommunityController::class, 'create'])->name('admin.communities.create');
-    Route::post('admin/communities', [CommunityController::class, 'store'])->name('admin.communities.store');
-    Route::get('admin/communities/{community}', [CommunityController::class, 'show'])->name('admin.communities.show');
-    Route::post('admin/communities/{community}/update', [CommunityController::class, 'update'])->name('admin.communities.update');
-    Route::post('admin/communities/{community}/suspend', [CommunityController::class, 'suspend'])->name('admin.communities.suspend');
-    Route::post('admin/communities/{community}/reactivate', [CommunityController::class, 'reactivate'])->name('admin.communities.reactivate');
+        Route::post('users/{user}/suspend', [UserManagementController::class, 'suspend'])
+            ->name('users.suspend');
 
-    // Member management: add/remove members
-    Route::post('admin/communities/{community}/members', [CommunityController::class, 'addMember'])->name('admin.communities.members.add');
-    Route::delete('admin/communities/{community}/members/{user}', [CommunityController::class, 'removeMember'])->name('admin.communities.members.remove');
-});
+        Route::post('users/{user}/ban', [UserManagementController::class, 'ban'])
+            ->name('users.ban');
 
-// Admin mentor access management (protected by admin access middleware)
-Route::middleware(['auth', 'active.account', EnsureAdminAccess::class])->group(function () {
-    Route::get('admin/mentors', [MentorAccessController::class, 'index'])->name('admin.mentors.index');
-    Route::get('admin/mentors/{id}', [MentorAccessController::class, 'show'])->name('admin.mentors.detail');
-    Route::post('admin/mentors/{mentorAccess}/action', [MentorAccessController::class, 'handle'])->name('admin.mentors.action');
-});
+        Route::post('users/{user}/reactivate', [UserManagementController::class, 'reactivate'])
+            ->name('users.reactivate');
 
-// Admin permissions management (protected by admin access middleware)
-Route::middleware(['auth', 'active.account', EnsureAdminAccess::class])->group(function () {
-    Route::view('admin/permissions', 'admin.permissions-list')->name('admin.permissions.index');
-    Route::get('admin/permission-grants', [PermissionGrantController::class, 'index'])->name('admin.permission-grants.index');
-    Route::post('admin/permission-grants', [PermissionGrantController::class, 'store'])->name('admin.permission-grants.store');
-    Route::post('admin/permission-grants/{grant}/revoke', [PermissionGrantController::class, 'revoke'])->name('admin.permission-grants.revoke');
-    Route::view('admin/permissions/create', 'admin.permissions-create')->name('admin.permissions.create');
-    Route::get('admin/search', [AdminSearchController::class, 'search'])->name('admin.search');
-});
+        // Communities
+        Route::get('communities', [CommunityController::class, 'index'])->name('communities.index');
+        Route::get('communities/create', [CommunityController::class, 'create'])->name('communities.create');
+        Route::post('communities', [CommunityController::class, 'store'])->name('communities.store');
+        Route::get('communities/{community}', [CommunityController::class, 'show'])->name('communities.show');
+        Route::post('communities/{community}/update', [CommunityController::class, 'update'])->name('communities.update');
+        Route::post('communities/{community}/suspend', [CommunityController::class, 'suspend'])->name('communities.suspend');
+        Route::post('communities/{community}/reactivate', [CommunityController::class, 'reactivate'])->name('communities.reactivate');
+        Route::post('communities/{community}/members', [CommunityController::class, 'addMember'])->name('communities.members.add');
+        Route::delete('communities/{community}/members/{user}', [CommunityController::class, 'removeMember'])->name('communities.members.remove');
 
-// Admin announcements management (protected by admin access middleware)
-Route::middleware(['auth', 'active.account', EnsureAdminAccess::class])->group(function () {
-    Route::get('admin/announcements', [AnnouncementController::class, 'index'])->name('admin.announcements.index');
-    Route::get('admin/announcements/create', [AnnouncementController::class, 'create'])->name('admin.announcements.create');
-    Route::post('admin/announcements', [AnnouncementController::class, 'store'])->name('admin.announcements.store');
-    Route::post('admin/announcements/{announcement}/publish', [AnnouncementController::class, 'publish'])->name('admin.announcements.publish');
-    Route::post('admin/announcements/{announcement}/expire', [AnnouncementController::class, 'expire'])->name('admin.announcements.expire');
-    Route::post('admin/announcements/{announcement}/delete', [AnnouncementController::class, 'destroy'])->name('admin.announcements.delete');
-});
+        // Mentor Access
+        Route::get('mentors', [MentorAccessController::class, 'index'])->name('mentors.index');
+        Route::get('mentors/{id}', [MentorAccessController::class, 'show'])->name('mentors.detail');
+        Route::post('mentors/{mentorAccess}/action', [MentorAccessController::class, 'handle'])->name('mentors.action');
 
-// Admin moderation tools (protected by account status and admin access middleware)
-Route::middleware(['auth', 'active.account', EnsureAdminAccess::class])->group(function () {
-    Route::get('admin/moderation', function () {
-        return view('admin.moderation', [
-            'pendingReports' => Report::where('status', 'pending')->count(),
-            'pendingVerifications' => VerificationRequest::where('status', 'pending_review')->count(),
-            'suspendedUsers' => User::where('account_status', 'suspended')->count(),
-            'recentActions' => AuditLog::latest()->limit(5)->get(),
-        ]);
-    })->name('admin.moderation.index');
+        // Permissions management
+        Route::view('permissions', 'admin.permissions-list')->name('permissions.index');
+        Route::get('permission-grants', [PermissionGrantController::class, 'index'])->name('permission-grants.index');
+        Route::post('permission-grants', [PermissionGrantController::class, 'store'])->name('permission-grants.store');
+        Route::post('permission-grants/{grant}/revoke', [PermissionGrantController::class, 'revoke'])->name('permission-grants.revoke');
+        Route::view('permissions/create', 'admin.permissions-create')->name('permissions.create');
+        Route::get('search', [AdminSearchController::class, 'search'])->name('search');
 
-    // Admin user status actions (suspend/ban/reactivate)
-    Route::post('admin/users/{user}/suspend', [UserManagementController::class, 'suspend'])
-        ->name('admin.users.suspend');
+        // Announcements
+        Route::get('announcements', [AnnouncementController::class, 'index'])->name('announcements.index');
+        Route::get('announcements/create', [AnnouncementController::class, 'create'])->name('announcements.create');
+        Route::post('announcements', [AnnouncementController::class, 'store'])->name('announcements.store');
+        Route::post('announcements/{announcement}/publish', [AnnouncementController::class, 'publish'])->name('announcements.publish');
+        Route::post('announcements/{announcement}/expire', [AnnouncementController::class, 'expire'])->name('announcements.expire');
+        Route::post('announcements/{announcement}/delete', [AnnouncementController::class, 'destroy'])->name('announcements.delete');
 
-    Route::post('admin/users/{user}/ban', [UserManagementController::class, 'ban'])
-        ->name('admin.users.ban');
+        // Moderation Tools
+        Route::get('moderation', function () {
+            return view('admin.moderation', [
+                'pendingReports' => Report::where('status', 'pending')->count(),
+                'pendingVerifications' => VerificationRequest::where('status', 'pending_review')->count(),
+                'suspendedUsers' => User::where('account_status', 'suspended')->count(),
+                'recentActions' => AuditLog::latest()->limit(5)->get(),
+            ]);
+        })->name('moderation.index');
 
-    Route::post('admin/users/{user}/reactivate', [UserManagementController::class, 'reactivate'])
-        ->name('admin.users.reactivate');
+        // Analytics
+        Route::get('analytics', function () {
+            return view('admin.analytics', [
+                'totalUsers' => User::count(),
+                'totalCommunities' => Community::count(),
+                'totalReports' => Report::count(),
+                'totalVerifications' => VerificationRequest::count(),
+                'totalPosts' => Post::count(),
+            ]);
+        })->name('analytics.index');
 
-    Route::get('admin/analytics', function () {
-        return view('admin.analytics', [
-            'totalUsers' => User::count(),
-            'totalCommunities' => Community::count(),
-            'totalReports' => Report::count(),
-            'totalVerifications' => VerificationRequest::count(),
-            'totalPosts' => Post::count(),
-        ]);
-    })->name('admin.analytics.index');
-});
+        // System Settings
+        Route::get('system-settings', [SystemSettingsController::class, 'index'])
+            ->name('system-settings.index');
+        Route::post('system-settings', [SystemSettingsController::class, 'update'])
+            ->name('system-settings.update');
+        Route::post('system-settings/snapshot', [SystemSettingsController::class, 'saveSnapshot'])
+            ->name('system-settings.snapshot');
+        Route::post('system-settings/snapshot-restore', [SystemSettingsController::class, 'restoreSnapshot'])
+            ->name('system-settings.snapshot.restore');
+        Route::get('system-settings/snapshot-download/{file}', [SystemSettingsController::class, 'downloadSnapshot'])
+            ->name('system-settings.snapshot.download');
 
-// Admin system settings (protected by admin access middleware)
-Route::middleware(['auth', 'active.account', EnsureAdminAccess::class])->group(function () {
-    Route::get('admin/system-settings', [SystemSettingsController::class, 'index'])
-        ->name('admin.system-settings.index');
+        // Reports Moderation Queue
+        Route::view('reports', 'admin.reports-queue')->name('reports.index');
+        Route::get('reports/{report}', function (Report $report) {
+            return view('admin.report-detail', ['report' => $report]);
+        })->name('reports.show');
 
-    Route::post('admin/system-settings', [SystemSettingsController::class, 'update'])
-        ->name('admin.system-settings.update');
-
-    Route::post('admin/system-settings/snapshot', [SystemSettingsController::class, 'saveSnapshot'])
-        ->name('admin.system-settings.snapshot');
-
-    Route::post('admin/system-settings/snapshot-restore', [SystemSettingsController::class, 'restoreSnapshot'])
-        ->name('admin.system-settings.snapshot.restore');
-
-    Route::get('admin/system-settings/snapshot-download/{file}', [SystemSettingsController::class, 'downloadSnapshot'])
-        ->name('admin.system-settings.snapshot.download');
-});
-
-// Admin reports moderation queue (protected by account status and admin access middleware)
-Route::middleware(['auth', 'active.account', EnsureAdminAccess::class])->group(function () {
-    Route::view('admin/reports', 'admin.reports-queue')->name('admin.reports.index');
-    Route::get('admin/reports/{report}', function (Report $report) {
-        return view('admin.report-detail', ['report' => $report]);
-    })->name('admin.reports.show');
-});
+        // Media Management
+        Route::get('media', [AdminMediaController::class, 'index'])->name('media.index');
+        Route::get('media/usage', [AdminMediaController::class, 'usage'])->name('media.usage');
+        Route::get('media/{media}', [AdminMediaController::class, 'show'])->name('media.show')->where('media', '[0-9]+');
+        Route::post('media/{media}/quarantine', [AdminMediaController::class, 'quarantine'])->name('media.quarantine');
+        Route::post('media/{media}/delete', [AdminMediaController::class, 'delete'])->name('media.delete');
+        Route::post('media/health', [AdminMediaController::class, 'health'])->name('media.health');
+        Route::post('media/quota', [AdminMediaController::class, 'quota'])->name('media.quota');
+        Route::post('media/cloudinary-sync', [AdminMediaController::class, 'cloudinarySync'])->name('media.cloudinary-sync');
+        Route::post('media/cleanup-temporary', [AdminMediaController::class, 'cleanupTemporary'])->name('media.cleanup-temporary');
+        Route::post('media/cleanup-orphaned', [AdminMediaController::class, 'cleanupOrphaned'])->name('media.cleanup-orphaned');
+    });
 
 // 6. Legacy redirects
 Route::redirect('/dashboard', '/app/home')->name('dashboard.legacy');

@@ -2,6 +2,7 @@
 
 namespace App\Http\Middleware;
 
+use App\Models\Announcement;
 use Closure;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Gate;
@@ -22,12 +23,24 @@ class EnsureAdminAccess
 
         $perms = [
             'manage_users',
+            'suspend_users',
+            'ban_users',
             'manage_permissions',
             'review_verification',
+            'approve_verification',
             'manage_communities',
             'manage_mentor_access',
+            'view_audit_log',
+            'view_audit_logs',
             'manage_reports',
             'manage_system_settings',
+            'manage_announcements',
+            'manage_media',
+            'view_media_usage',
+            'manage_media_quota',
+            'quarantine_media',
+            'delete_media',
+            'sync_cloudinary_media',
         ];
 
         // Allow if any simple abilities match
@@ -36,7 +49,7 @@ class EnsureAdminAccess
         }
 
         // Special-case model-based policy for announcements
-        if ($user && $user->can('manage', \App\Models\Announcement::class)) {
+        if ($user && $user->can('manage', Announcement::class)) {
             return $next($request);
         }
 

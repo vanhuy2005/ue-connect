@@ -7,15 +7,26 @@ use App\Models\BlockedUser;
 use App\Enums\ConnectionStatus;
 use App\Actions\Connections\SendGreeting;
 use App\Actions\Connections\BlockUser;
+use App\Actions\Media\StoreTemporaryMediaAction;
+use App\Actions\Media\AttachMediaToModelAction;
+use App\Actions\Media\DeleteMediaAction;
+use App\Actions\Media\GenerateMediaUrlAction;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Gate;
 use Livewire\Volt\Component;
+use Livewire\WithFileUploads;
 
 new class extends Component
 {
+    use WithFileUploads;
+
     public User $user;
-    public string $activeTab = 'posts'; // posts, media, saved, about
+    public string $activeTab = 'posts'; // posts, replies, media, communities
     public ?string $feedbackMessage = null;
+
+    // Files inputs
+    public $avatarFile;
+    public $coverFile;
 
     public function mount(User $user): void
     {
@@ -34,7 +45,7 @@ new class extends Component
             $profile->restore();
         }
         
-        $this->user->load('profile');
+        $this->user->load(['profile.media', 'profile.studentProfile.faculty', 'profile.studentProfile.academicProgram', 'profile.alumniProfile', 'profile.advisorProfile']);
     }
 
     /**
@@ -54,6 +65,84 @@ new class extends Component
     public function getPostsCountProperty(): int
     {
         return $this->user->posts()->count();
+    }
+
+    /**
+     * Handle Avatar photo uploads.
+     */
+    public function updatedAvatarFile(): void
+    {
+        $this->validate([
+            'avatarFile' => 'image|max:5120', // 5MB limit
+        ]);
+
+        try {
+            $storeAction = app(StoreTemporaryMediaAction::class);
+            $attachAction = app(AttachMediaToModelAction::class);
+            $deleteAction = app(DeleteMediaAction::class);
+
+            // Delete old polymorphic avatar if exists
+            if ($this->user->id !== Auth::id()) {
+                $this->feedbackMessage = 'Bạn chỉ có thể cập nhật hồ sơ của chính mình.';
+
+                return;
+            }
+
+            $oldAvatar = $this->user->profile->avatar()->first();
+            if ($oldAvatar) {
+                $deleteAction->execute($oldAvatar);
+            }
+
+            // Store new temporary media (public visibility)
+            $media = $storeAction->execute(Auth::user(), $this->avatarFile, 'avatar', ['visibility' => 'public']);
+
+            // Attach to the Profile
+            $attachAction->execute(Auth::user(), $this->user->profile, [$media->id], 'avatar');
+
+            $this->user->load('profile.media');
+            $this->feedbackMessage = 'Cập nhật ảnh đại diện thành công.';
+        } catch (\Exception $e) {
+            $this->feedbackMessage = 'Lỗi tải ảnh lên: ' . $e->getMessage();
+        }
+    }
+
+    /**
+     * Handle Cover photo uploads.
+     */
+    public function updatedCoverFile(): void
+    {
+        $this->validate([
+            'coverFile' => 'image|max:8192', // 8MB limit
+        ]);
+
+        try {
+            $storeAction = app(StoreTemporaryMediaAction::class);
+            $attachAction = app(AttachMediaToModelAction::class);
+            $deleteAction = app(DeleteMediaAction::class);
+
+            // Delete old polymorphic cover if exists
+            if ($this->user->id !== Auth::id()) {
+                $this->feedbackMessage = 'Bạn chỉ có thể cập nhật hồ sơ của chính mình.';
+
+                return;
+            }
+
+            $oldCover = $this->user->profile->cover()->first();
+            if ($oldCover) {
+                $deleteAction->execute($oldCover);
+            }
+
+            // Store new temporary media (public visibility)
+            $media = $storeAction->execute(Auth::user(), $this->coverFile, 'profile_cover', ['visibility' => 'public']);
+
+            // Attach to the Profile
+            $attachAction->execute(Auth::user(), $this->user->profile, [$media->id], 'profile_cover');
+
+            $this->user->load('profile.media');
+            $this->feedbackMessage = 'Cập nhật ảnh bìa thành công.';
+        } catch (\Exception $e) {
+            $this->feedbackMessage = 'Lỗi tải ảnh lên: ' . $e->getMessage();
+        }
     }
 
     /**
@@ -166,6 +255,30 @@ new class extends Component
     {
         $this->feedbackMessage = 'Báo cáo người dùng thành công. Ban quản trị sẽ sớm xem xét xử lý.';
     }
+
+    /**
+     * Get safe avatar URL.
+     */
+    public function getAvatarUrlProperty(): string
+    {
+        $media = $this->user->profile->avatar()->first();
+        if ($media) {
+            return app(GenerateMediaUrlAction::class)->execute($media, 'display', Auth::user()) ?: asset('images/default-avatar.png');
+        }
+        return asset('images/default-avatar.png');
+    }
+
+    /**
+     * Get safe cover URL.
+     */
+    public function getCoverUrlProperty(): ?string
+    {
+        $media = $this->user->profile->cover()->first();
+        if ($media) {
+            return app(GenerateMediaUrlAction::class)->execute($media, 'desktop', Auth::user());
+        }
+        return null;
+    }
 }; ?>
 
 <div class="py-6 px-4 max-w-4xl mx-auto space-y-8">
@@ -244,113 +357,171 @@ new class extends Component
             $showBio = $isOwn || ($targetPrivacy ? (bool)$targetPrivacy->show_bio : true);
         @endphp
 
-        {{-- Instagram-ready Profile Header --}}
-        <div class="flex flex-col md:flex-row items-center md:items-start gap-6 md:gap-10 border-b border-slate-100 pb-8">
-            {{-- Avatar Section --}}
-            <div class="relative flex-shrink-0">
-                <x-ui.avatar :user="$user" size="2xl" class="w-24 h-24 md:w-28 md:h-28 ring-4 ring-slate-50 border border-slate-200 shadow-sm" />
+        {{-- Interactive Profile Header with Cover Image --}}
+        <div class="relative bg-white border border-slate-150 rounded-3xl overflow-hidden shadow-2xs">
+            {{-- Cover Photo Section --}}
+            <div class="relative h-44 sm:h-64 w-full bg-gradient-to-tr from-slate-200 to-slate-100 overflow-hidden">
+                @if ($this->coverUrl)
+                    <img src="{{ $this->coverUrl }}" alt="Cover picture" class="w-full h-full object-cover" />
+                @else
+                    <div class="w-full h-full bg-slate-900 relative overflow-hidden flex items-center justify-center select-none">
+                        {{-- Futuristic grid overlay --}}
+                        <div class="absolute inset-0 opacity-15 bg-[linear-gradient(to_right,#80808012_1px,transparent_1px),linear-gradient(to_bottom,#80808012_1px,transparent_1px)] bg-[size:24px_24px]"></div>
+                        
+                        {{-- Elegant flowing mesh gradients --}}
+                        <div class="absolute -left-1/4 -top-1/2 w-full h-[200%] rounded-full bg-[radial-gradient(circle,rgba(59,130,246,0.35)_0%,transparent_60%)] filter blur-3xl animate-pulse"></div>
+                        <div class="absolute -right-1/4 -bottom-1/2 w-full h-[200%] rounded-full bg-[radial-gradient(circle,rgba(99,102,241,0.25)_0%,transparent_60%)] filter blur-3xl"></div>
+                        
+                        {{-- Sophisticated tech design overlay --}}
+                        <svg class="absolute w-full h-full text-blue-500/10" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 300" fill="none">
+                            <circle cx="400" cy="150" r="120" stroke="currentColor" stroke-width="1.5" stroke-dasharray="4 8" />
+                            <circle cx="400" cy="150" r="180" stroke="currentColor" stroke-width="0.8" />
+                            <line x1="0" y1="150" x2="800" y2="150" stroke="currentColor" stroke-width="0.8" stroke-dasharray="10 10" />
+                            <line x1="400" y1="0" x2="400" y2="300" stroke="currentColor" stroke-width="0.8" stroke-dasharray="10 10" />
+                            <path d="M 250 80 L 300 150 L 350 150" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" />
+                            <path d="M 550 220 L 500 150 L 450 150" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" />
+                        </svg>
+
+                        {{-- Branding Header --}}
+                        <div class="relative z-10 flex flex-col items-center gap-1.5 text-center">
+                            <span class="text-white/35 font-extrabold tracking-[0.25em] text-[10px] sm:text-xs uppercase">UEConnect</span>
+                            <span class="text-white/15 font-semibold text-[8px] sm:text-[9px] tracking-wide max-w-xs sm:max-w-md px-4 leading-normal">Hệ thống mạng xã hội học thuật tích hợp & kết nối sinh viên</span>
+                        </div>
+                    </div>
+                @endif
+
+                {{-- Change Cover Button (Own Profile) --}}
+                @if ($isOwn)
+                    <label class="absolute bottom-3 right-3 bg-slate-900/60 hover:bg-slate-900/80 text-white p-2 rounded-xl cursor-pointer backdrop-blur-xs transition-colors flex items-center gap-1.5 text-[10px] font-bold">
+                        <x-ui.icon name="camera" size="xs" />
+                        Thay đổi ảnh bìa
+                        <input type="file" wire:model="coverFile" class="hidden" accept="image/*" />
+                    </label>
+                @endif
             </div>
 
-            {{-- Profile Info Section --}}
-            <div class="flex-1 space-y-4 text-center md:text-left min-w-0 w-full">
-                <div class="flex flex-col sm:flex-row sm:items-center gap-3 justify-center md:justify-start">
-                    <h1 class="text-lg font-bold text-slate-800 flex items-center justify-center md:justify-start gap-1.5 truncate">
-                        {{ $user->profile?->display_name ?? $user->name }}
-                        <x-ui.icon name="shield-check" size="xs" class="text-ue-brand fill-ue-brand" />
-                    </h1>
+            {{-- Profile Metadata Area --}}
+            <div class="relative px-6 pb-6 pt-16 flex flex-col md:flex-row items-center md:items-start gap-6 text-center md:text-left">
+                {{-- Round Avatar Photo --}}
+                <div class="absolute -top-16 left-1/2 -translate-x-1/2 md:left-6 md:translate-x-0 w-28 h-28 sm:w-32 sm:h-32 rounded-full overflow-hidden border-4 border-white bg-slate-50 shadow-md group relative">
+                    <x-ui.avatar :user="$user" size="2xl" class="w-full h-full border-none rounded-none shadow-none text-2xl font-bold bg-slate-100 flex items-center justify-center" />
 
-                    {{-- Action Buttons --}}
-                    <div class="flex items-center justify-center md:justify-start gap-2 flex-wrap">
-                        @if ($this->connectionStatus === 'self')
-                            <a href="{{ route('profile.edit') }}" class="bg-white hover:bg-slate-50 border border-slate-200 text-slate-700 text-xxs font-bold px-4 py-1.5 rounded-lg transition-colors flex items-center gap-1.5 shadow-2xs">
-                                <x-ui.icon name="edit" size="xs" />
-                                Chỉnh sửa hồ sơ
-                            </a>
-                        @else
-                            @if ($this->connectionStatus === 'connected')
-                                <a href="{{ route('messages.index', ['conversation' => \App\Models\Conversation::where('conversation_type', \App\Enums\ConversationType::DIRECT)->whereHas('participants', function($q) { $q->where('user_id', $this->user->id); })->first()?->id]) }}" class="bg-ue-brand hover:bg-ue-brand-dark text-white text-xxs font-bold px-4 py-1.5 rounded-lg shadow-2xs hover:shadow-sm transition-all flex items-center gap-1.5">
-                                    <x-ui.icon name="message-square" size="xs" />
-                                    Nhắn tin
-                                </a>
-                                <button type="button" disabled class="bg-slate-50 text-emerald-600 border border-slate-200 text-xxs font-bold px-4 py-1.5 rounded-lg flex items-center gap-1.5">
-                                    <x-ui.icon name="check" size="xs" />
-                                    Bạn bè
-                                </button>
-                            @elseif ($this->connectionStatus === 'pending_sent')
-                                <button type="button" disabled class="bg-slate-100 text-slate-450 text-xxs font-bold px-4 py-1.5 rounded-lg border border-slate-200 cursor-not-allowed">
-                                    Chờ phản hồi
-                                </button>
-                            @elseif ($this->connectionStatus === 'pending_received')
-                                <a href="{{ route('connections.index') }}" class="bg-indigo-650 hover:bg-indigo-750 text-white text-xxs font-bold px-4 py-1.5 rounded-lg shadow-2xs transition-colors">
-                                    Xem lời mời
-                                </a>
-                            @elseif ($this->connectionStatus === 'blocked')
-                                <span class="text-xxs font-bold text-red-500 bg-red-50 border border-red-100 px-3 py-1.5 rounded-lg">Đã chặn</span>
-                            @else
-                                <a href="{{ route('discovery.index') }}" class="bg-ue-brand hover:bg-ue-brand-dark text-white text-xxs font-bold px-4 py-1.5 rounded-lg shadow-2xs transition-colors flex items-center gap-1.5">
-                                    <x-ui.icon name="user-plus" size="xs" />
-                                    Gửi lời chào
-                                </a>
-                            @endif
-
-                            {{-- More Dropdown Safety controls --}}
-                            <div class="relative" x-data="{ openOptions: false }" @click.away="openOptions = false">
-                                <button @click="openOptions = !openOptions" class="p-1.5 text-slate-450 hover:text-slate-600 hover:bg-slate-50 border border-slate-200 rounded-lg transition-colors shadow-2xs">
-                                    <x-ui.icon name="more-horizontal" size="xs" />
-                                </button>
-                                <div x-show="openOptions" x-transition class="absolute right-0 mt-1 bg-white border border-slate-150 rounded-xl shadow-lg py-1 z-30 w-40 text-left" style="display: none;">
-                                    <button type="button" wire:click="blockUser" class="w-full text-left px-3 py-2 text-xxs font-semibold text-red-600 hover:bg-red-50 flex items-center gap-1.5 transition-colors">
-                                        <x-ui.icon name="shield-x" size="xs" class="text-red-400" />
-                                        Chặn thành viên
-                                    </button>
-                                    <button type="button" wire:click="reportUser" class="w-full text-left px-3 py-2 text-xxs font-semibold text-slate-700 hover:bg-slate-50 flex items-center gap-1.5 transition-colors">
-                                        <x-ui.icon name="flag" size="xs" class="text-slate-400" />
-                                        Báo cáo tài khoản
-                                    </button>
-                                </div>
-                            </div>
-                        @endif
-                    </div>
-                </div>
-
-                {{-- Stats --}}
-                <div class="flex items-center justify-center md:justify-start gap-6 py-1 text-slate-700 select-none">
-                    <div class="flex items-baseline gap-1">
-                        <span class="text-xs font-bold">{{ $this->postsCount }}</span>
-                        <span class="text-xxs text-slate-400 font-medium">Bài viết</span>
-                    </div>
-                    <div class="flex items-baseline gap-1">
-                        <span class="text-xs font-bold">{{ $this->connectionsCount }}</span>
-                        <span class="text-xxs text-slate-400 font-medium">Bạn bè</span>
-                    </div>
-                </div>
-
-                {{-- Credentials / Metadata --}}
-                <div class="space-y-1 text-slate-500 text-xxs font-medium max-w-md">
-                    <p class="text-slate-450 tracking-wide uppercase text-[9px] font-bold">
-                        @if (($user->profile?->role_type ?? 'student') === 'student') Sinh viên
-                        @elseif (($user->profile?->role_type ?? '') === 'advisor') Mentor/Giảng viên
-                        @elseif (($user->profile?->role_type ?? '') === 'alumni') Cựu sinh viên
-                        @else Thành viên
-                        @endif
-                        @if ($showFaculty && $user->profile?->faculty)
-                            · {{ $user->profile?->faculty }}
-                        @endif
-                    </p>
-                    @if ($showBio)
-                        @if ($user->profile?->bio)
-                            <p class="leading-relaxed text-slate-650">{{ $user->profile?->bio }}</p>
-                        @else
-                            <p class="italic text-slate-350">Chưa cập nhật giới thiệu cá nhân.</p>
-                        @endif
+                    @if ($isOwn)
+                        <label class="absolute inset-0 bg-slate-900/40 opacity-0 group-hover:opacity-100 cursor-pointer flex flex-col items-center justify-center text-white text-[9px] font-bold transition-opacity">
+                            <x-ui.icon name="camera" size="sm" />
+                            Đổi ảnh
+                            <input type="file" wire:model="avatarFile" class="hidden" accept="image/*" />
+                        </label>
                     @endif
+                </div>
+
+                {{-- Profile Info Section --}}
+                <div class="flex-1 space-y-3.5 w-full mt-4 md:mt-0 min-w-0">
+                    <div class="flex flex-col sm:flex-row sm:items-center gap-3 justify-center md:justify-start">
+                        <h1 class="text-base sm:text-lg font-bold text-slate-800 flex items-center justify-center md:justify-start gap-1.5 truncate">
+                            {{ $user->profile?->display_name ?? $user->name }}
+                            @if ($user->isActive())
+                                <x-ui.icon name="shield-check" size="xs" class="text-ue-brand fill-ue-brand" />
+                            @endif
+                        </h1>
+
+                        {{-- Role Badge --}}
+                        <span class="inline-flex self-center px-2 py-0.5 rounded-full text-[9px] font-bold tracking-wide uppercase bg-slate-100 text-slate-500">
+                            @if (($user->profile?->role_type ?? 'student') === 'student') Sinh viên
+                            @elseif (($user->profile?->role_type ?? '') === 'advisor') Mentor
+                            @elseif (($user->profile?->role_type ?? '') === 'alumni') Cựu sinh viên
+                            @else Thành viên
+                            @endif
+                        </span>
+
+                        {{-- Action Buttons --}}
+                        <div class="flex items-center justify-center md:justify-start gap-2 flex-wrap ml-auto">
+                            @if ($this->connectionStatus === 'self')
+                                <a href="{{ route('profile.edit') }}" class="bg-white hover:bg-slate-50 border border-slate-200 text-slate-700 text-xxs font-bold px-4 py-1.5 rounded-lg transition-colors flex items-center gap-1.5 shadow-2xs">
+                                    <x-ui.icon name="edit" size="xs" />
+                                    Chỉnh sửa hồ sơ
+                                </a>
+                            @else
+                                @if ($this->connectionStatus === 'connected')
+                                    <a href="{{ route('messages.index', ['conversation' => \App\Models\Conversation::where('conversation_type', \App\Enums\ConversationType::DIRECT)->whereHas('participants', function($q) { $q->where('user_id', $this->user->id); })->first()?->id]) }}" class="bg-ue-brand hover:bg-ue-brand-dark text-white text-xxs font-bold px-4 py-1.5 rounded-lg shadow-2xs hover:shadow-sm transition-all flex items-center gap-1.5">
+                                        <x-ui.icon name="message-square" size="xs" />
+                                        Nhắn tin
+                                    </a>
+                                    <button type="button" disabled class="bg-slate-50 text-emerald-600 border border-slate-200 text-xxs font-bold px-4 py-1.5 rounded-lg flex items-center gap-1.5">
+                                        <x-ui.icon name="check" size="xs" />
+                                        Bạn bè
+                                    </button>
+                                @elseif ($this->connectionStatus === 'pending_sent')
+                                    <button type="button" disabled class="bg-slate-100 text-slate-450 text-xxs font-bold px-4 py-1.5 rounded-lg border border-slate-200 cursor-not-allowed">
+                                        Chờ phản hồi
+                                    </button>
+                                @elseif ($this->connectionStatus === 'pending_received')
+                                    <a href="{{ route('connections.index') }}" class="bg-indigo-650 hover:bg-indigo-750 text-white text-xxs font-bold px-4 py-1.5 rounded-lg shadow-2xs transition-colors">
+                                        Xem lời mời
+                                    </a>
+                                @elseif ($this->connectionStatus === 'blocked')
+                                    <span class="text-xxs font-bold text-red-500 bg-red-50 border border-red-100 px-3 py-1.5 rounded-lg">Đã chặn</span>
+                                @else
+                                    <a href="{{ route('discovery.index') }}" class="bg-ue-brand hover:bg-ue-brand-dark text-white text-xxs font-bold px-4 py-1.5 rounded-lg shadow-2xs transition-colors flex items-center gap-1.5">
+                                        <x-ui.icon name="user-plus" size="xs" />
+                                        Gửi lời chào
+                                    </a>
+                                @endif
+
+                                {{-- More Safety controls --}}
+                                <div class="relative" x-data="{ openOptions: false }" @click.away="openOptions = false">
+                                    <button @click="openOptions = !openOptions" class="p-1.5 text-slate-450 hover:text-slate-600 hover:bg-slate-50 border border-slate-200 rounded-lg transition-colors shadow-2xs">
+                                        <x-ui.icon name="more-horizontal" size="xs" />
+                                    </button>
+                                    <div x-show="openOptions" x-transition class="absolute right-0 mt-1 bg-white border border-slate-150 rounded-xl shadow-lg py-1 z-30 w-40 text-left" style="display: none;">
+                                        <button type="button" wire:click="blockUser" class="w-full text-left px-3 py-2 text-xxs font-semibold text-red-600 hover:bg-red-50 flex items-center gap-1.5 transition-colors">
+                                            <x-ui.icon name="shield-x" size="xs" class="text-red-400" />
+                                            Chặn thành viên
+                                        </button>
+                                        <button type="button" wire:click="reportUser" class="w-full text-left px-3 py-2 text-xxs font-semibold text-slate-700 hover:bg-slate-50 flex items-center gap-1.5 transition-colors">
+                                            <x-ui.icon name="flag" size="xs" class="text-slate-400" />
+                                            Báo cáo tài khoản
+                                        </button>
+                                    </div>
+                                </div>
+                            @endif
+                        </div>
+                    </div>
+
+                    {{-- Stats --}}
+                    <div class="flex items-center justify-center md:justify-start gap-6 py-1 text-slate-700 select-none">
+                        <div class="flex items-baseline gap-1">
+                            <span class="text-xs font-bold">{{ $this->postsCount }}</span>
+                            <span class="text-xxs text-slate-400 font-medium">Bài viết</span>
+                        </div>
+                        <div class="flex items-baseline gap-1">
+                            <span class="text-xs font-bold">{{ $this->connectionsCount }}</span>
+                            <span class="text-xxs text-slate-400 font-medium">Bạn bè</span>
+                        </div>
+                    </div>
+
+                    {{-- Credentials & Bio --}}
+                    <div class="space-y-1 text-slate-500 text-xxs font-medium max-w-lg">
+                        <p class="text-slate-450 tracking-wide uppercase text-[9px] font-bold">
+                            @if ($showFaculty && $user->profile?->faculty)
+                                Khoa: {{ $user->profile?->faculty }}
+                            @endif
+                        </p>
+                        @if ($showBio)
+                            @if ($user->profile?->bio)
+                                <p class="leading-relaxed text-slate-655">{{ $user->profile?->bio }}</p>
+                            @else
+                                <p class="italic text-slate-350">Chưa cập nhật giới thiệu cá nhân.</p>
+                            @endif
+                        @endif
+                    </div>
                 </div>
             </div>
         </div>
 
-        {{-- Modern Horizontal Profile Tabs --}}
+        {{-- Modern Profile Tabs --}}
         <div class="flex flex-col space-y-4">
-            <div class="flex border-b border-slate-150 overflow-x-auto pb-px justify-center sm:justify-start gap-4 sm:gap-6 select-none scrollbar-none">
+            <div class="flex border-b border-slate-150 overflow-x-auto pb-px justify-start px-4 sm:px-0 gap-4 sm:gap-6 select-none scrollbar-none">
                 <button 
                     type="button" 
                     wire:click="$set('activeTab', 'posts')" 
@@ -360,10 +531,24 @@ new class extends Component
                 </button>
                 <button 
                     type="button" 
+                    wire:click="$set('activeTab', 'replies')" 
+                    class="pb-3 text-xxs font-bold transition-all border-b-2 whitespace-nowrap {{ $activeTab === 'replies' ? 'border-slate-800 text-slate-800 font-bold' : 'border-transparent text-slate-400 hover:text-slate-600' }}"
+                >
+                    Phản hồi
+                </button>
+                <button 
+                    type="button" 
                     wire:click="$set('activeTab', 'media')" 
                     class="pb-3 text-xxs font-bold transition-all border-b-2 whitespace-nowrap {{ $activeTab === 'media' ? 'border-slate-800 text-slate-800 font-bold' : 'border-transparent text-slate-400 hover:text-slate-600' }}"
                 >
                     Phương tiện
+                </button>
+                <button 
+                    type="button" 
+                    wire:click="$set('activeTab', 'communities')" 
+                    class="pb-3 text-xxs font-bold transition-all border-b-2 whitespace-nowrap {{ $activeTab === 'communities' ? 'border-slate-800 text-slate-800 font-bold' : 'border-transparent text-slate-400 hover:text-slate-600' }}"
+                >
+                    Cộng đồng
                 </button>
                 @if ($user->id === Auth::id())
                     <button 
@@ -383,24 +568,35 @@ new class extends Component
                 </button>
             </div>
 
-            {{-- Tab Content --}}
+            {{-- Tab Content rendering --}}
             <div>
                 @if ($activeTab === 'posts')
-                    {{-- User's Posts list --}}
                     <div class="space-y-4">
                         @forelse ($user->posts()->latest()->take(10)->get() as $post)
                             <div class="bg-white border border-slate-150 rounded-2xl p-4 shadow-2xs">
                                 <div class="flex items-center gap-3">
-                                    <x-ui.avatar :user="$user" size="xs" />
+                                    <img src="{{ $this->avatarUrl }}" alt="Avatar" class="w-8 h-8 rounded-full object-cover" />
                                     <div>
                                         <h4 class="text-xxs font-bold text-slate-800">{{ $user->profile?->display_name ?? $user->name }}</h4>
                                         <span class="text-[9px] text-slate-400">{{ $post->created_at->diffForHumans() }}</span>
                                     </div>
                                 </div>
                                 <p class="text-xxs font-medium text-slate-655 leading-relaxed mt-2.5">{{ $post->body }}</p>
-                                @if ($post->media_url)
+
+                                {{-- Render post image grid polymorphically if active --}}
+                                @if ($post->media()->where('status', 'ready')->exists())
+                                    <div class="mt-3 grid grid-cols-2 gap-2 rounded-xl overflow-hidden border border-slate-100">
+                                        @foreach ($post->media()->where('status', 'ready')->get() as $mediaItem)
+                                            <a href="{{ app(GenerateMediaUrlAction::class)->execute($mediaItem, 'detail', Auth::user()) ?? app(GenerateMediaUrlAction::class)->execute($mediaItem, 'original', Auth::user()) }}" target="_blank" rel="noopener noreferrer" class="aspect-square bg-slate-50 flex items-center justify-center overflow-hidden">
+                                                <img src="{{ app(GenerateMediaUrlAction::class)->execute($mediaItem, 'feed', Auth::user()) }}" alt="Post image" class="object-cover w-full h-full cursor-zoom-in" />
+                                            </a>
+                                        @endforeach
+                                    </div>
+                                @elseif ($post->media_url)
                                     <div class="mt-3 rounded-xl overflow-hidden border border-slate-100 max-h-60 bg-slate-50 flex items-center justify-center">
-                                        <img src="{{ $post->media_url }}" alt="Media post" class="object-contain max-h-60" />
+                                        <a href="{{ $post->media_url }}" target="_blank" rel="noopener noreferrer" class="block w-full">
+                                            <img src="{{ $post->media_url }}" alt="Media post" class="object-contain max-h-60 mx-auto cursor-zoom-in" />
+                                        </a>
                                     </div>
                                 @endif
                             </div>
@@ -413,29 +609,59 @@ new class extends Component
                         @endforelse
                     </div>
 
+                @elseif ($activeTab === 'replies')
+                    <div class="space-y-4">
+                        @forelse ($user->comments()->latest()->take(10)->get() as $comment)
+                            <div class="bg-white border border-slate-150 rounded-2xl p-4 shadow-2xs space-y-2">
+                                <div class="flex items-center gap-2 text-slate-400 text-[10px] font-medium">
+                                    <x-ui.icon name="corner-down-right" size="xs" />
+                                    <span>Đã phản hồi bài viết của {{ $comment->post?->user?->name }}</span>
+                                </div>
+                                <p class="text-xxs font-medium text-slate-655 leading-relaxed">{{ $comment->body }}</p>
+                                <span class="text-[9px] text-slate-400 block">{{ $comment->created_at->diffForHumans() }}</span>
+                            </div>
+                        @empty
+                            <div class="py-12 flex flex-col items-center justify-center text-center space-y-3 bg-slate-50 border border-dashed border-slate-200 rounded-2xl">
+                                <x-ui.icon name="message-square" size="lg" class="text-slate-300" />
+                                <h3 class="text-xs font-bold text-slate-700">Chưa có phản hồi nào</h3>
+                                <p class="text-xxs text-slate-400 max-w-xs">Các câu trả lời, thảo luận của thành viên sẽ xuất hiện tại đây.</p>
+                            </div>
+                        @endforelse
+                    </div>
+
                 @elseif ($activeTab === 'media')
-                    {{-- Media Square Grid --}}
+                    {{-- Load polymorphic post media --}}
                     @php
-                        $mediaPosts = $user->posts()->whereNotNull('media_url')->latest()->get();
+                        $polymorphicMedia = \App\Models\Media::where('user_id', $user->id)
+                            ->where('collection', 'post_image')
+                            ->where('status', 'ready')
+                            ->latest()
+                            ->get();
                     @endphp
-                    @if ($mediaPosts->isNotEmpty())
-                        <div class="grid grid-cols-3 gap-1.5 sm:gap-3">
-                            @foreach ($mediaPosts as $mp)
-                                <a href="{{ route('posts.show', $mp) }}" class="aspect-square bg-slate-100 border border-slate-150 rounded-xl overflow-hidden group relative flex items-center justify-center">
-                                    <img src="{{ $mp->media_url }}" alt="Grid image" class="object-cover w-full h-full group-hover:scale-105 transition-transform duration-300" />
-                                </a>
+                    @if ($polymorphicMedia->isNotEmpty())
+                        <div class="grid grid-cols-3 gap-2">
+                            @foreach ($polymorphicMedia as $mediaItem)
+                                <div class="aspect-square bg-slate-100 border border-slate-150 rounded-xl overflow-hidden group relative flex items-center justify-center">
+                                    <img src="{{ app(GenerateMediaUrlAction::class)->execute($mediaItem, 'thumb', Auth::user()) }}" alt="Grid image" class="object-cover w-full h-full group-hover:scale-105 transition-transform duration-300" />
+                                </div>
                             @endforeach
                         </div>
                     @else
                         <div class="py-12 flex flex-col items-center justify-center text-center space-y-3 bg-slate-50 border border-dashed border-slate-200 rounded-2xl">
-                            <x-ui.icon name="community" size="lg" class="text-slate-300" />
-                            <h3 class="text-xs font-bold text-slate-700">Chưa có ảnh/video chia sẻ</h3>
-                            <p class="text-xxs text-slate-400 max-w-xs">Các hình ảnh, video hoạt động được thành viên chia sẻ sẽ hiển thị tại đây.</p>
+                            <x-ui.icon name="image" size="lg" class="text-slate-300" />
+                            <h3 class="text-xs font-bold text-slate-700">Chưa có ảnh chia sẻ</h3>
+                            <p class="text-xxs text-slate-400 max-w-xs">Các hình ảnh được thành viên chia sẻ sẽ hiển thị tại đây.</p>
                         </div>
                     @endif
 
+                @elseif ($activeTab === 'communities')
+                    <div class="py-12 flex flex-col items-center justify-center text-center space-y-3 bg-slate-50 border border-dashed border-slate-200 rounded-2xl">
+                        <x-ui.icon name="users" size="lg" class="text-slate-300" />
+                        <h3 class="text-xs font-bold text-slate-700">Chưa tham gia cộng đồng nào</h3>
+                        <p class="text-xxs text-slate-400 max-w-xs">Cộng đồng và câu lạc bộ học thuật sẽ hiển thị tại đây khi tham gia.</p>
+                    </div>
+
                 @elseif ($activeTab === 'saved' && $user->id === Auth::id())
-                    {{-- Saved posts list (own only) --}}
                     <div class="space-y-4">
                         @forelse ($user->postSaves()->with('post.user.profile')->latest()->take(10)->get() as $saved)
                             @if ($saved->post)
@@ -460,11 +686,10 @@ new class extends Component
                     </div>
 
                 @elseif ($activeTab === 'about')
-                    {{-- Public Information details --}}
                     <div class="bg-white border border-slate-150 rounded-2xl p-5 space-y-4 shadow-2xs">
                         <h3 class="text-xs font-bold text-slate-800 border-b border-slate-100 pb-2 flex items-center gap-1.5">
                             <x-ui.icon name="user" size="xs" class="text-slate-400" />
-                            Thông tin xác thực học đường
+                            Thông tin học đường xác thực
                         </h3>
 
                         <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xxs text-slate-600 font-medium">
@@ -473,7 +698,6 @@ new class extends Component
                                 <span class="text-slate-850 font-bold">{{ $user->name }}</span>
                             </div>
 
-                            {{-- Email: Hidden by default for other users, only own profile sees full email --}}
                             @if ($isOwn)
                                 <div class="space-y-1">
                                     <span class="text-slate-400 block font-semibold uppercase tracking-wider text-[9px]">Địa chỉ email học đường</span>
@@ -485,7 +709,6 @@ new class extends Component
                                 <div class="space-y-1">
                                     <span class="text-slate-400 block font-semibold uppercase tracking-wider text-[9px]">Mã số sinh viên</span>
                                     <span class="text-slate-850 font-bold">
-                                        {{-- Full MSSV never public! Mask it if not own profile --}}
                                         @if ($isOwn)
                                             {{ $user->profile?->studentProfile?->student_code }}
                                         @else
@@ -493,56 +716,42 @@ new class extends Component
                                         @endif
                                     </span>
                                 </div>
-                                @if ($showMajor)
+                                @if ($showMajor && $user->profile?->studentProfile?->academicProgram)
                                     <div class="space-y-1">
-                                        <span class="text-slate-400 block font-semibold uppercase tracking-wider text-[9px]">Chương trình đào tạo</span>
-                                        <span class="text-slate-850 font-bold">
-                                            {{ $user->profile?->studentProfile?->academicProgram ? $user->profile?->studentProfile?->academicProgram?->name : 'N/A' }}
-                                        </span>
+                                        <span class="text-slate-400 block font-semibold uppercase tracking-wider text-[9px]">Ngành học</span>
+                                        <span class="text-slate-850 font-bold">{{ $user->profile?->studentProfile?->academicProgram->name }}</span>
                                     </div>
                                 @endif
-                                @if ($showFaculty)
+                                @if ($showFaculty && $user->profile?->studentProfile?->faculty)
                                     <div class="space-y-1">
                                         <span class="text-slate-400 block font-semibold uppercase tracking-wider text-[9px]">Khoa</span>
-                                        <span class="text-slate-850 font-bold">
-                                            {{ $user->profile?->studentProfile?->faculty ? $user->profile?->studentProfile?->faculty?->name : 'N/A' }}
-                                        </span>
+                                        <span class="text-slate-850 font-bold">{{ $user->profile?->studentProfile?->faculty->name }}</span>
                                     </div>
                                 @endif
-                                @if ($showCohort)
+                                @if ($showCohort && $user->profile?->studentProfile?->cohort)
                                     <div class="space-y-1">
-                                        <span class="text-slate-400 block font-semibold uppercase tracking-wider text-[9px]">Khóa tuyển sinh (Cohort)</span>
-                                        <span class="text-slate-850 font-bold">{{ $user->profile?->studentProfile?->cohort ?: 'N/A' }}</span>
+                                        <span class="text-slate-400 block font-semibold uppercase tracking-wider text-[9px]">Khóa tuyển sinh</span>
+                                        <span class="text-slate-850 font-bold">{{ $user->profile?->studentProfile?->cohort }}</span>
                                     </div>
                                 @endif
                             @elseif (($user->profile?->role_type ?? '') === 'alumni' && $user->profile?->alumniProfile)
-                                @if ($showCohort)
+                                @if ($showCohort && $user->profile?->alumniProfile?->cohort)
                                     <div class="space-y-1">
-                                        <span class="text-slate-400 block font-semibold uppercase tracking-wider text-[9px]">Khóa (Cohort) / Năm tốt nghiệp</span>
+                                        <span class="text-slate-400 block font-semibold uppercase tracking-wider text-[9px]">Khóa tuyển sinh / Năm tốt nghiệp</span>
                                         <span class="text-slate-850 font-bold">
-                                            {{ $user->profile?->alumniProfile?->cohort ?: 'N/A' }} / {{ $user->profile?->alumniProfile?->graduation_year ?: 'N/A' }}
-                                        </span>
-                                    </div>
-                                @endif
-                                @if ($showMajor)
-                                    <div class="space-y-1">
-                                        <span class="text-slate-400 block font-semibold uppercase tracking-wider text-[9px]">Đơn vị công tác hiện tại</span>
-                                        <span class="text-slate-850 font-bold">
-                                            {{ $user->profile?->alumniProfile?->current_position ?: 'N/A' }} tại {{ $user->profile?->alumniProfile?->current_organization ?: 'N/A' }}
+                                            {{ $user->profile?->alumniProfile?->cohort }} / {{ $user->profile?->alumniProfile?->graduation_year }}
                                         </span>
                                     </div>
                                 @endif
                             @elseif (($user->profile?->role_type ?? '') === 'advisor' && $user->profile?->advisorProfile)
                                 <div class="space-y-1">
-                                    <span class="text-slate-400 block font-semibold uppercase tracking-wider text-[9px]">Chức danh / Khoa</span>
-                                    <span class="text-slate-850 font-bold">
-                                        {{ $user->profile?->advisorProfile?->title ?: 'N/A' }} tại {{ $user->profile?->advisorProfile?->faculty ? $user->profile?->advisorProfile?->faculty?->name : 'N/A' }}
-                                    </span>
+                                    <span class="text-slate-400 block font-semibold uppercase tracking-wider text-[9px]">Chức vụ / Học vị</span>
+                                    <span class="text-slate-850 font-bold">{{ $user->profile?->advisorProfile?->title ?: 'Giảng viên' }}</span>
                                 </div>
                             @endif
 
                             <div class="space-y-1">
-                                <span class="text-slate-400 block font-semibold uppercase tracking-wider text-[9px]">Ngày tham gia UEConnect</span>
+                                <span class="text-slate-400 block font-semibold uppercase tracking-wider text-[9px]">Ngày tham gia</span>
                                 <span class="text-slate-850 font-bold">{{ $user->created_at->format('d/m/Y') }}</span>
                             </div>
                         </div>

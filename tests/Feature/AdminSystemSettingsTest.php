@@ -67,18 +67,18 @@ class AdminSystemSettingsTest extends TestCase
         $this->assertSame('testing', $restored['app_env']);
 
         $this->assertDatabaseHas('audit_logs', [
-            'action' => 'update_system_settings',
+            'action_key' => 'update_system_settings',
             'target_type' => 'system_settings',
         ]);
 
         $this->assertDatabaseHas('audit_logs', [
-            'action' => 'create_system_settings_snapshot',
+            'action_key' => 'create_system_settings_snapshot',
             'target_type' => 'system_settings_snapshot',
             'target_id' => 'baseline.json',
         ]);
 
         $this->assertDatabaseHas('audit_logs', [
-            'action' => 'restore_system_settings_snapshot',
+            'action_key' => 'restore_system_settings_snapshot',
             'target_type' => 'system_settings_snapshot',
             'target_id' => 'baseline.json',
         ]);

@@ -14,6 +14,7 @@
     $profile = $author->profile;
     $isOwner = $post->user_id === $currentUser->id;
     $isAdmin = $currentUser && ($currentUser->can('review_verification') || $currentUser->can('manage_reports'));
+    $mediaUrlAction = app(\App\Actions\Media\GenerateMediaUrlAction::class);
 @endphp
 
 <div
@@ -39,7 +40,7 @@
                         
                         {{-- Relative timestamp --}}
                         <span class="ue-post-card__meta flex-shrink-0 whitespace-nowrap">
-                            · {{ $post->published_at->diffForHumans() }}
+                            · {{ ($post->published_at ?? $post->created_at)->diffForHumans() }}
                         </span>
                     </div>
                     
@@ -119,15 +120,89 @@
             @else
                 <div class="ue-post-card__content mt-1">{{ $post->body }}</div>
                 
-                {{-- Media Attachment (Threads-like premium rounded border container) --}}
-                @if (!empty($post->media_url))
+                {{-- Polymorphic Media Grid --}}
+                @if ($post->media()->where('status', 'ready')->exists())
+                    @php
+                        $mediaItems = $post->media()->where('status', 'ready')->get();
+                        $mediaCount = $mediaItems->count();
+                    @endphp
+                    <div class="mt-2.5 max-w-lg select-none">
+                        @if ($mediaCount === 1)
+                            {{-- 1 image: full width, smart ratio --}}
+                            <div class="overflow-hidden rounded-2xl border border-slate-150 bg-slate-50">
+                                <a href="{{ $mediaUrlAction->execute($mediaItems[0], 'detail', $currentUser) ?? $mediaUrlAction->execute($mediaItems[0], 'original', $currentUser) }}" target="_blank" rel="noopener noreferrer" class="block">
+                                    <img
+                                        src="{{ $mediaUrlAction->execute($mediaItems[0], 'feed', $currentUser) }}"
+                                        alt="Hình ảnh đính kèm"
+                                        class="w-full h-auto object-cover max-h-[360px] hover:scale-[1.01] transition-transform duration-300 cursor-zoom-in"
+                                        loading="lazy"
+                                    />
+                                </a>
+                            </div>
+                        @elseif ($mediaCount === 2)
+                            {{-- 2 images: two columns --}}
+                            <div class="grid grid-cols-2 gap-2 overflow-hidden rounded-2xl border border-slate-150 bg-slate-50">
+                                @foreach ($mediaItems as $mediaItem)
+                                    <a href="{{ $mediaUrlAction->execute($mediaItem, 'detail', $currentUser) ?? $mediaUrlAction->execute($mediaItem, 'original', $currentUser) }}" target="_blank" rel="noopener noreferrer" class="aspect-[4/3] overflow-hidden block">
+                                        <img 
+                                            src="{{ $mediaUrlAction->execute($mediaItem, 'feed', $currentUser) }}" 
+                                            alt="Hình ảnh đính kèm" 
+                                            class="w-full h-full object-cover hover:scale-[1.02] transition-transform duration-300 cursor-zoom-in"
+                                            loading="lazy"
+                                        />
+                                    </a>
+                                @endforeach
+                            </div>
+                        @elseif ($mediaCount === 3)
+                            {{-- 3 images: one large + two stacked --}}
+                            <div class="grid grid-cols-3 gap-2 overflow-hidden rounded-2xl border border-slate-150 bg-slate-50">
+                                <a href="{{ $mediaUrlAction->execute($mediaItems[0], 'detail', $currentUser) ?? $mediaUrlAction->execute($mediaItems[0], 'original', $currentUser) }}" target="_blank" rel="noopener noreferrer" class="col-span-2 aspect-[4/3] overflow-hidden block">
+                                    <img 
+                                        src="{{ $mediaUrlAction->execute($mediaItems[0], 'feed', $currentUser) }}" 
+                                        alt="Hình ảnh" 
+                                        class="w-full h-full object-cover hover:scale-[1.02] transition-transform duration-300 cursor-zoom-in"
+                                        loading="lazy"
+                                    />
+                                </a>
+                                <div class="grid grid-rows-2 gap-2">
+                                    @foreach ($mediaItems->slice(1, 2) as $mediaItem)
+                                        <a href="{{ $mediaUrlAction->execute($mediaItem, 'detail', $currentUser) ?? $mediaUrlAction->execute($mediaItem, 'original', $currentUser) }}" target="_blank" rel="noopener noreferrer" class="aspect-square overflow-hidden block">
+                                            <img 
+                                                src="{{ $mediaUrlAction->execute($mediaItem, 'feed', $currentUser) }}" 
+                                                alt="Hình ảnh" 
+                                                class="w-full h-full object-cover hover:scale-[1.02] transition-transform duration-300 cursor-zoom-in"
+                                                loading="lazy"
+                                            />
+                                        </a>
+                                    @endforeach
+                                </div>
+                            </div>
+                        @elseif ($mediaCount >= 4)
+                            {{-- 4 images: 2x2 grid --}}
+                            <div class="grid grid-cols-2 gap-2 overflow-hidden rounded-2xl border border-slate-150 bg-slate-50">
+                                @foreach ($mediaItems->take(4) as $mediaItem)
+                                    <a href="{{ $mediaUrlAction->execute($mediaItem, 'detail', $currentUser) ?? $mediaUrlAction->execute($mediaItem, 'original', $currentUser) }}" target="_blank" rel="noopener noreferrer" class="aspect-[4/3] overflow-hidden block">
+                                        <img 
+                                            src="{{ $mediaUrlAction->execute($mediaItem, 'feed', $currentUser) }}" 
+                                            alt="Hình ảnh" 
+                                            class="w-full h-full object-cover hover:scale-[1.02] transition-transform duration-300 cursor-zoom-in"
+                                            loading="lazy"
+                                        />
+                                    </a>
+                                @endforeach
+                            </div>
+                        @endif
+                    </div>
+                @elseif (!empty($post->media_url))
                     <div class="ue-post-card__media mt-2.5 overflow-hidden rounded-xl border border-slate-150 max-w-lg select-none bg-slate-50">
-                        <img 
-                            src="{{ $post->media_url }}" 
-                            alt="Hình ảnh đính kèm" 
-                            class="w-full h-auto object-cover max-h-[360px] hover:scale-[1.01] transition-transform duration-300 cursor-pointer"
-                            loading="lazy"
-                        />
+                        <a href="{{ $post->media_url }}" target="_blank" rel="noopener noreferrer" class="block">
+                            <img
+                                src="{{ $post->media_url }}"
+                                alt="Hình ảnh đính kèm"
+                                class="w-full h-auto object-cover max-h-[360px] hover:scale-[1.01] transition-transform duration-300 cursor-zoom-in"
+                                loading="lazy"
+                            />
+                        </a>
                     </div>
                 @endif
                 

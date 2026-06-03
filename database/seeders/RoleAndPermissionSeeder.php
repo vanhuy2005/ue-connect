@@ -20,11 +20,27 @@ class RoleAndPermissionSeeder extends Seeder
         // 1. Create permissions
         $permissions = [
             'review_verification',
+            'approve_verification',
             'manage_users',
-            'manage_reports',
-            'moderate_content',
+            'suspend_users',
+            'ban_users',
+            'manage_permissions',
+            'manage_communities',
+            'manage_mentor_access',
             'view_audit_log',
+            'view_audit_logs',
+            'manage_reports',
+            'manage_system_settings',
+            'manage_announcements',
+            'moderate_content',
             'view_admin_dashboard',
+            'manage_media',
+            'view_media_usage',
+            'manage_media_quota',
+            'quarantine_media',
+            'delete_media',
+            'sync_cloudinary_media',
+            'view_private_media',
         ];
 
         foreach ($permissions as $permissionName) {

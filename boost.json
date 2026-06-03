@@ -1,8 +1,7 @@
 {
     "agents": [
         "gemini",
-        "copilot",
-        "claude_code"
+        "copilot"
     ],
     "cloud": true,
     "guidelines": true,
@@ -14,7 +13,6 @@
     "sail": false,
     "skills": [
         "laravel-best-practices",
-        "socialite-development",
         "livewire-development",
         "volt-development",
         "echo-development",

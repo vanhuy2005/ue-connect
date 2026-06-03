@@ -160,25 +160,10 @@ class AuthenticationTest extends TestCase
         $response->assertSee('Quản trị');
         $response->assertSee('Tổng quan quản trị');
         $response->assertSee('Duyệt xác thực');
-        $response->assertSee('Người dùng');
-        $response->assertSee('Kiểm duyệt');
-        $response->assertSee('Báo cáo');
-        $response->assertSee('Cộng đồng');
-        $response->assertSee('Quản lý Mentor');
-        $response->assertSee('Thông báo');
-        $response->assertSee('Vai trò & Quyền');
-        $response->assertSee('Nhật ký thao tác');
-        $response->assertSee('Phân tích');
-        $response->assertSee('Cài đặt hệ thống');
-        $response->assertSee(route('admin.dashboard'));
-        $response->assertSee(route('admin.verifications.queue'));
-        $response->assertSee(route('admin.users.index'));
-        $response->assertSee(route('admin.reports.index'));
-        $response->assertSee(route('admin.communities.index'));
-        $response->assertSee(route('admin.mentors.index'));
-        $response->assertSee(route('admin.announcements.index'));
-        $response->assertSee(route('admin.permissions.index'));
-        $response->assertSee(route('admin.audit-logs.index'));
+
+        // Detailed admin links are consolidated and only show on the admin console
+        $response->assertDontSee('Người dùng');
+        $response->assertDontSee('Cài đặt hệ thống');
 
         $user = User::factory()->create([
             'account_status' => AccountStatus::ACTIVE,

@@ -8,11 +8,11 @@ class AnnouncementPolicy
 {
     public function manage(User $user): bool
     {
-        return $user->hasRole('admin') || method_exists($user, 'hasPermissionTo') && $user->hasPermissionTo('manage_announcements');
+        return $user->hasRole('admin') || $user->can('manage_announcements');
     }
 
     public function create(User $user): bool
     {
-        return $user->hasRole('admin') || method_exists($user, 'hasPermissionTo') && $user->hasPermissionTo('create_announcement');
+        return $user->hasRole('admin') || $user->can('create_announcement');
     }
 }

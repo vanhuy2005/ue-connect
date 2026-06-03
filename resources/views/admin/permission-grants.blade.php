@@ -1,6 +1,5 @@
-@extends('layouts.app')
-
-@section('content')
+<x-app-layout shell="admin">
+    <x-slot name="title">Cấp quyền</x-slot>
 <div class="container mx-auto py-8">
     <h1 class="text-2xl font-semibold mb-4">Cấp quyền</h1>
 
@@ -89,4 +88,4 @@
         </div>
     </div>
 </div>
-@endsection
+</x-app-layout>

@@ -8,7 +8,12 @@
 
 @php
     $currentUser = auth()->user();
-    $isAdmin = $currentUser && ($currentUser->can('review_verification') || $currentUser->can('manage_reports'));
+    $adminRoles = ['admin', 'moderator', 'super_admin'];
+    $adminPermissions = ['view_admin_dashboard', 'review_verification', 'manage_reports'];
+    $isAdmin = $currentUser && (
+        $currentUser->roles()->whereIn('name', $adminRoles)->exists()
+        || $currentUser->permissions()->whereIn('name', $adminPermissions)->exists()
+    );
 @endphp
 
 <header
@@ -116,7 +121,7 @@
                     {{-- Admin Links --}}
                     @if ($isAdmin)
                         <div class="border-t border-slate-100 my-1"></div>
-                        <p class="px-4 py-1 text-[9px] font-bold text-slate-400 uppercase tracking-wider">Quản lý hệ thống</p>
+                        <p class="px-4 py-1 text-[9px] font-bold text-slate-400 uppercase tracking-wider">Quản trị</p>
                         
                         <a href="{{ route('admin.dashboard') }}" class="flex items-center gap-2 px-4 py-2 hover:bg-slate-50 hover:text-ue-brand transition-colors">
                             <x-ui.icon name="grid" size="xs" class="text-slate-400" />

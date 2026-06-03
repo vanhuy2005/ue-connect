@@ -61,7 +61,7 @@
         /* -----------------------------------------------------------------------
            Surface Colors — neutral-first, white/near-white default
            ----------------------------------------------------------------------- */
-        --ue-bg:               #FAFAFA;      /* App background */
+        --ue-bg:               #FFFFFF;      /* App background */
         --ue-surface:          #FFFFFF;      /* Card, modal, post, input */
         --ue-surface-subtle:   #F8FAFC;      /* Sidebar, right panel */
         --ue-surface-hover:    #F1F5F9;      /* Hover state */
@@ -301,11 +301,11 @@
         --layout-bottom-nav-h:     64px;
         --layout-sidebar-w:        280px;
         --layout-sidebar-w-collapsed: 72px;
-        --layout-feed-w:           720px;
+        --layout-feed-w:           760px;
 
         --layout-mobile-safe-x: 16px;
         --layout-mobile-safe-bottom: calc(var(--layout-bottom-nav-h) + env(safe-area-inset-bottom) + 16px);
-        --layout-feed-max-w: 720px;
+        --layout-feed-max-w: 760px;
         --layout-readable-w: 720px;
         --layout-admin-max-w: 1280px;
 
@@ -346,7 +346,7 @@
         font-weight: var(--font-regular);
         line-height: var(--leading-relaxed);
         color: var(--ue-text);
-        background-color: var(--ue-bg);
+        background-color: #fff;
         -webkit-font-smoothing: antialiased;
         -moz-osx-font-smoothing: grayscale;
     }
@@ -510,14 +510,14 @@
     .ue-shell {
         display: flex;
         min-height: 100dvh;
-        background-color: var(--ue-bg);
+        background-color: #fff;
     }
 
     .ue-shell__sidebar {
         width: var(--layout-sidebar-w);
         flex-shrink: 0;
-        background-color: var(--ue-surface);
-        border-right: 1px solid var(--ue-border);
+        background-color: #fff;
+        border-right: 0;
         position: sticky;
         top: 0;
         height: 100dvh;
@@ -534,8 +534,8 @@
         top: 0;
         z-index: var(--z-header);
         height: var(--layout-topbar-h-mobile);
-        background-color: var(--ue-surface);
-        border-bottom: 1px solid var(--ue-border);
+        background-color: #fff;
+        border-bottom: 0;
         display: flex;
         align-items: center;
     }
@@ -553,8 +553,8 @@
         right: 0;
         z-index: var(--z-bottom-nav);
         height: var(--layout-bottom-nav-h);
-        background-color: var(--ue-surface);
-        border-top: 1px solid var(--ue-border);
+        background-color: #fff;
+        border-top: 0;
         padding-bottom: env(safe-area-inset-bottom);
         overflow: hidden;
     }
@@ -565,45 +565,46 @@
     .ue-nav-link {
         display: flex;
         align-items: center;
-        gap: 0.75rem;
-        padding: 0.625rem 0.875rem;
-        border-radius: var(--radius-lg);
+        gap: 0.875rem;
+        padding: 0.625rem 0.75rem;
+        border-radius: 0.625rem;
         font-size: var(--text-base);
         font-weight: var(--font-medium);
-        color: var(--ue-text-secondary); /* slate-600 */
+        color: #111827;
         text-decoration: none;
         transition:
             background-color var(--duration-sm) var(--ease-out),
-            color var(--duration-sm) var(--ease-out);
+            color var(--duration-sm) var(--ease-out),
+            transform var(--duration-sm) var(--ease-out);
         min-height: 44px;
         cursor: pointer;
     }
 
     .ue-nav-link svg {
-        color: var(--ue-text-muted); /* slate-500 */
+        color: #111827;
         transition: color var(--duration-sm) var(--ease-out);
     }
 
     .ue-nav-link:hover {
-        background-color: var(--ue-brand-soft); /* blue-50 */
-        color: var(--ue-brand-active); /* blue-800 */
+        background-color: #f3f4f6;
+        color: #030712;
         text-decoration: none;
     }
 
     .ue-nav-link:hover svg {
-        color: var(--ue-brand); /* blue-600 */
+        color: #030712;
     }
 
     .ue-nav-link[aria-current="page"],
     .ue-nav-link.active {
-        background-color: var(--ue-brand-soft); /* blue-50 */
-        color: var(--ue-brand-active); /* blue-800 */
+        background-color: #eef6ff;
+        color: #03162d;
         font-weight: var(--font-semibold);
     }
 
     .ue-nav-link[aria-current="page"] svg,
     .ue-nav-link.active svg {
-        color: var(--ue-brand); /* blue-600 */
+        color: var(--ue-brand);
     }
 
     .ue-nav-link:focus-visible {
@@ -686,8 +687,8 @@
        ------------------------------------------------------------------------- */
     .ue-shell--social .ue-shell__sidebar {
         width: var(--layout-sidebar-w);
-        border-right: 1px solid var(--ue-border);
-        background-color: var(--ue-surface);
+        border-right: 0;
+        background-color: #fff;
     }
 
     .ue-shell--social .ue-shell__main {
@@ -695,7 +696,7 @@
         display: flex;
         flex-direction: column;
         align-items: stretch;
-        background-color: var(--ue-bg);
+        background-color: #fff;
     }
 
     .ue-shell--social #main-content {

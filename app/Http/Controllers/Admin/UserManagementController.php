@@ -21,6 +21,15 @@ class UserManagementController extends Controller
             abort(403);
         }
 
+        $currentUser = auth()->user();
+        if ($currentUser->id === $user->id) {
+            return back()->withErrors(['error' => 'Bạn không thể thay đổi trạng thái tài khoản của chính mình.']);
+        }
+
+        if ($user->hasRole('super_admin') && ! $currentUser->hasRole('super_admin')) {
+            return back()->withErrors(['error' => 'Chỉ có Super Admin mới có thể thay đổi trạng thái của tài khoản Super Admin khác.']);
+        }
+
         $before = $user->toArray();
 
         DB::beginTransaction();
@@ -63,6 +72,15 @@ class UserManagementController extends Controller
             abort(403);
         }
 
+        $currentUser = auth()->user();
+        if ($currentUser->id === $user->id) {
+            return back()->withErrors(['error' => 'Bạn không thể thay đổi trạng thái tài khoản của chính mình.']);
+        }
+
+        if ($user->hasRole('super_admin') && ! $currentUser->hasRole('super_admin')) {
+            return back()->withErrors(['error' => 'Chỉ có Super Admin mới có thể thay đổi trạng thái của tài khoản Super Admin khác.']);
+        }
+
         $before = $user->toArray();
 
         DB::beginTransaction();
@@ -103,6 +121,15 @@ class UserManagementController extends Controller
     {
         if (! auth()->user() || ! auth()->user()->can('manage_users')) {
             abort(403);
+        }
+
+        $currentUser = auth()->user();
+        if ($currentUser->id === $user->id) {
+            return back()->withErrors(['error' => 'Bạn không thể thay đổi trạng thái tài khoản của chính mình.']);
+        }
+
+        if ($user->hasRole('super_admin') && ! $currentUser->hasRole('super_admin')) {
+            return back()->withErrors(['error' => 'Chỉ có Super Admin mới có thể thay đổi trạng thái của tài khoản Super Admin khác.']);
         }
 
         $before = $user->toArray();

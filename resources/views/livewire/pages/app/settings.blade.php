@@ -306,7 +306,7 @@ new class extends Component
                     <li>
                         <a 
                             href="{{ route('settings', ['section' => 'account']) }}"
-                            class="flex items-center justify-between px-3 py-2.5 rounded-xl text-xxs font-bold transition-all {{ $section === 'account' ? 'bg-slate-900 text-white hover:bg-slate-800 hover:!text-white' : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900' }}"
+                            class="flex items-center justify-between px-3 py-2.5 rounded-xl text-xxs font-bold transition-all {{ $section === 'account' ? 'bg-ue-brand-soft text-ue-brand-active hover:bg-ue-brand-soft-hover hover:!text-ue-brand-active' : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900' }}"
                         >
                             <span class="flex items-center gap-2.5">
                                 <x-ui.icon name="user" size="xs" />
@@ -318,7 +318,7 @@ new class extends Component
                     <li>
                         <a 
                             href="{{ route('settings', ['section' => 'privacy']) }}"
-                            class="flex items-center justify-between px-3 py-2.5 rounded-xl text-xxs font-bold transition-all {{ $section === 'privacy' ? 'bg-slate-900 text-white hover:bg-slate-800 hover:!text-white' : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900' }}"
+                            class="flex items-center justify-between px-3 py-2.5 rounded-xl text-xxs font-bold transition-all {{ $section === 'privacy' ? 'bg-ue-brand-soft text-ue-brand-active hover:bg-ue-brand-soft-hover hover:!text-ue-brand-active' : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900' }}"
                         >
                             <span class="flex items-center gap-2.5">
                                 <x-ui.icon name="shield" size="xs" />
@@ -330,7 +330,7 @@ new class extends Component
                     <li>
                         <a 
                             href="{{ route('settings', ['section' => 'notifications']) }}"
-                            class="flex items-center justify-between px-3 py-2.5 rounded-xl text-xxs font-bold transition-all {{ $section === 'notifications' ? 'bg-slate-900 text-white hover:bg-slate-800 hover:!text-white' : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900' }}"
+                            class="flex items-center justify-between px-3 py-2.5 rounded-xl text-xxs font-bold transition-all {{ $section === 'notifications' ? 'bg-ue-brand-soft text-ue-brand-active hover:bg-ue-brand-soft-hover hover:!text-ue-brand-active' : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900' }}"
                         >
                             <span class="flex items-center gap-2.5">
                                 <x-ui.icon name="heart" size="xs" />
@@ -342,7 +342,7 @@ new class extends Component
                     <li>
                         <a 
                             href="{{ route('settings', ['section' => 'content']) }}"
-                            class="flex items-center justify-between px-3 py-2.5 rounded-xl text-xxs font-bold transition-all {{ $section === 'content' ? 'bg-slate-900 text-white hover:bg-slate-800 hover:!text-white' : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900' }}"
+                            class="flex items-center justify-between px-3 py-2.5 rounded-xl text-xxs font-bold transition-all {{ $section === 'content' ? 'bg-ue-brand-soft text-ue-brand-active hover:bg-ue-brand-soft-hover hover:!text-ue-brand-active' : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900' }}"
                         >
                             <span class="flex items-center gap-2.5">
                                 <x-ui.icon name="menu" size="xs" />
@@ -354,7 +354,7 @@ new class extends Component
                     <li>
                         <a 
                             href="{{ route('settings', ['section' => 'data-privacy']) }}"
-                            class="flex items-center justify-between px-3 py-2.5 rounded-xl text-xxs font-bold transition-all {{ $section === 'data-privacy' ? 'bg-slate-900 text-white hover:bg-slate-800 hover:!text-white' : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900' }}"
+                            class="flex items-center justify-between px-3 py-2.5 rounded-xl text-xxs font-bold transition-all {{ $section === 'data-privacy' ? 'bg-ue-brand-soft text-ue-brand-active hover:bg-ue-brand-soft-hover hover:!text-ue-brand-active' : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900' }}"
                         >
                             <span class="flex items-center gap-2.5">
                                 <x-ui.icon name="shield-check" size="xs" />
@@ -366,7 +366,7 @@ new class extends Component
                     <li>
                         <a 
                             href="{{ route('settings', ['section' => 'support']) }}"
-                            class="flex items-center justify-between px-3 py-2.5 rounded-xl text-xxs font-bold transition-all {{ $section === 'support' ? 'bg-slate-900 text-white hover:bg-slate-800 hover:!text-white' : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900' }}"
+                            class="flex items-center justify-between px-3 py-2.5 rounded-xl text-xxs font-bold transition-all {{ $section === 'support' ? 'bg-ue-brand-soft text-ue-brand-active hover:bg-ue-brand-soft-hover hover:!text-ue-brand-active' : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900' }}"
                         >
                             <span class="flex items-center gap-2.5">
                                 <x-ui.icon name="help-circle" size="xs" />
@@ -378,7 +378,7 @@ new class extends Component
                     <li>
                         <a 
                             href="{{ route('settings', ['section' => 'security']) }}"
-                            class="flex items-center justify-between px-3 py-2.5 rounded-xl text-xxs font-bold transition-all {{ $section === 'security' ? 'bg-slate-900 text-white hover:bg-slate-800 hover:!text-white' : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900' }}"
+                            class="flex items-center justify-between px-3 py-2.5 rounded-xl text-xxs font-bold transition-all {{ $section === 'security' ? 'bg-ue-brand-soft text-ue-brand-active hover:bg-ue-brand-soft-hover hover:!text-ue-brand-active' : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900' }}"
                         >
                             <span class="flex items-center gap-2.5">
                                 <x-ui.icon name="log-in" size="xs" />
@@ -390,7 +390,7 @@ new class extends Component
                     <li>
                         <a 
                             href="{{ route('settings', ['section' => 'language']) }}"
-                            class="flex items-center justify-between px-3 py-2.5 rounded-xl text-xxs font-bold transition-all {{ $section === 'language' ? 'bg-slate-900 text-white hover:bg-slate-800 hover:!text-white' : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900' }}"
+                            class="flex items-center justify-between px-3 py-2.5 rounded-xl text-xxs font-bold transition-all {{ $section === 'language' ? 'bg-ue-brand-soft text-ue-brand-active hover:bg-ue-brand-soft-hover hover:!text-ue-brand-active' : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900' }}"
                         >
                             <span class="flex items-center gap-2.5">
                                 <x-ui.icon name="eye" size="xs" />
@@ -551,7 +551,7 @@ new class extends Component
                                 <div class="flex justify-end">
                                     <button 
                                         type="submit" 
-                                        class="bg-slate-900 hover:bg-slate-850 text-white text-xxs font-bold px-4 py-2 rounded-xl shadow-xs transition-colors"
+                                        class="bg-ue-brand hover:bg-ue-brand-hover text-white text-xxs font-bold px-4 py-2 rounded-xl shadow-xs transition-all"
                                     >
                                         Lưu thay đổi
                                     </button>
@@ -631,7 +631,7 @@ new class extends Component
                                             <button 
                                                 type="button" 
                                                 wire:click="executeUnblock"
-                                                class="bg-slate-900 hover:bg-slate-850 text-white text-xxs font-bold px-4 py-2 rounded-xl transition-colors shadow-2xs"
+                                                class="bg-ue-brand hover:bg-ue-brand-hover text-white text-xxs font-bold px-4 py-2 rounded-xl transition-all shadow-2xs"
                                             >
                                                 Xác nhận bỏ chặn
                                             </button>
@@ -782,7 +782,7 @@ new class extends Component
                             <div class="flex justify-end">
                                 <button 
                                     type="submit" 
-                                    class="bg-slate-900 hover:bg-slate-850 text-white text-xxs font-bold px-4 py-2 rounded-xl shadow-xs transition-colors"
+                                    class="bg-ue-brand hover:bg-ue-brand-hover text-white text-xxs font-bold px-4 py-2 rounded-xl shadow-xs transition-all"
                                 >
                                     Lưu cấu hình
                                 </button>
@@ -908,7 +908,7 @@ new class extends Component
                             <div class="flex justify-end pt-2 border-t border-slate-100">
                                 <button 
                                     type="submit"
-                                    class="bg-slate-900 hover:bg-slate-850 text-white text-xxs font-bold px-4 py-2 rounded-xl shadow-xs transition-all flex items-center gap-1.5"
+                                    class="bg-ue-brand hover:bg-ue-brand-hover text-white text-xxs font-bold px-4 py-2 rounded-xl shadow-xs transition-all flex items-center gap-1.5"
                                 >
                                     <x-ui.icon name="send" size="xs" />
                                     Gửi yêu cầu hỗ trợ

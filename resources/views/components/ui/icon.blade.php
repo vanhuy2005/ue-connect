@@ -74,6 +74,7 @@ $sizeClass = match($size) {
         {{-- ⚠ alert / alert-triangle --}}
         @case('alert')
         @case('alert-triangle')
+        @case('reports')
             <path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"></path>
             <line x1="12" y1="9" x2="12" y2="13"></line>
             <line x1="12" y1="17" x2="12.01" y2="17"></line>
@@ -89,13 +90,21 @@ $sizeClass = match($size) {
 
         {{-- 🛡 shield --}}
         @case('shield')
+        @case('admin-dashboard')
             <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
             @break
 
         {{-- 🛡 shield-check --}}
         @case('shield-check')
+        @case('verification')
             <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
             <polyline points="9 12 11 14 15 10"></polyline>
+            @break
+
+        @case('shield-alert')
+            <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
+            <line x1="12" y1="8" x2="12" y2="12"></line>
+            <line x1="12" y1="16" x2="12.01" y2="16"></line>
             @break
 
         {{-- 👤 user --}}
@@ -109,6 +118,12 @@ $sizeClass = match($size) {
             <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"></path>
             <circle cx="9" cy="7" r="4"></circle>
             <line x1="19" y1="8" x2="19" y2="14"></line>
+            <line x1="16" y1="11" x2="22" y2="11"></line>
+            @break
+
+        @case('user-minus')
+            <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"></path>
+            <circle cx="9" cy="7" r="4"></circle>
             <line x1="16" y1="11" x2="22" y2="11"></line>
             @break
 
@@ -128,6 +143,7 @@ $sizeClass = match($size) {
 
         {{-- 🔔 bell --}}
         @case('bell')
+        @case('system-notifications')
             <path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9"></path>
             <path d="M13.73 21a2 2 0 01-3.46 0"></path>
             @break
@@ -152,6 +168,7 @@ $sizeClass = match($size) {
 
         {{-- ❓ help-circle --}}
         @case('help-circle')
+        @case('help')
             <circle cx="12" cy="12" r="10"></circle>
             <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"></path>
             <line x1="12" y1="17" x2="12.01" y2="17"></line>
@@ -221,6 +238,7 @@ $sizeClass = match($size) {
 
         {{-- 🗑 trash --}}
         @case('trash')
+        @case('trash-2')
             <polyline points="3 6 5 6 21 6"></polyline>
             <path d="M19 6l-1 14H6L5 6"></path>
             <path d="M10 11v6"></path>
@@ -230,8 +248,9 @@ $sizeClass = match($size) {
 
         {{-- 👁 eye --}}
         @case('eye')
-            <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+        @case('appearance')
             <circle cx="12" cy="12" r="3"></circle>
+            <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
             @break
 
         {{-- ✈ send --}}
@@ -311,6 +330,7 @@ $sizeClass = match($size) {
 
         {{-- 🔗 link --}}
         @case('link')
+        @case('link-2')
             <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path>
             <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path>
             @break
@@ -331,15 +351,42 @@ $sizeClass = match($size) {
 
         {{-- ⬆ upload --}}
         @case('upload')
+        @case('upload-cloud')
             <polyline points="16 16 12 12 8 16"></polyline>
             <line x1="12" y1="12" x2="12" y2="21"></line>
             <path d="M20.39 18.39A5 5 0 0018 9h-1.26A8 8 0 103 16.3"></path>
+            @break
+
+        @case('download')
+            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+            <polyline points="7 10 12 15 17 10"></polyline>
+            <line x1="12" y1="15" x2="12" y2="3"></line>
+            @break
+
+        @case('image')
+        @case('file-image')
+        @case('media')
+            <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
+            <circle cx="8.5" cy="8.5" r="1.5"></circle>
+            <polyline points="21 15 16 10 5 21"></polyline>
+            @break
+
+        {{-- 📷 camera --}}
+        @case('camera')
+            <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"></path>
+            <circle cx="12" cy="13" r="4"></circle>
+            @break
+
+        {{-- 📎 paperclip --}}
+        @case('paperclip')
+            <path d="m21.44 11.05-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"></path>
             @break
 
         {{-- 🏘 community --}}
         @case('community')
         @case('building-2')
         @case('grid')
+        @case('communities')
             <rect x="3" y="3" width="7" height="7"></rect>
             <rect x="14" y="3" width="7" height="7"></rect>
             <rect x="14" y="14" width="7" height="7"></rect>
@@ -348,6 +395,8 @@ $sizeClass = match($size) {
 
         {{-- 📊 bar-chart-3 --}}
         @case('bar-chart-3')
+        @case('analytics')
+        @case('bar-chart')
             <line x1="5" y1="20" x2="19" y2="20"></line>
             <rect x="6" y="12" width="3" height="8" rx="1"></rect>
             <rect x="11" y="8" width="3" height="12" rx="1"></rect>
@@ -357,6 +406,7 @@ $sizeClass = match($size) {
         {{-- 🎓 graduation-cap / mentor --}}
         @case('graduation-cap')
         @case('award')
+        @case('mentor')
             <circle cx="12" cy="8" r="6"></circle>
             <path d="M15.477 12.89L17 22l-5-3-5 3 1.523-9.11"></path>
             @break
@@ -364,12 +414,14 @@ $sizeClass = match($size) {
         {{-- 🗝 key-round --}}
         @case('key-round')
         @case('key')
+        @case('permissions')
             <path d="m21 2-2 2m-7.61 7.61a5.5 5.5 0 1 1-7.778 7.778 5.5 5.5 0 0 1 7.778-7.778zm0 0L15.5 7.5m0 0 1.5 1.5M15.5 7.5 14 6"></path>
             @break
 
         {{-- 🕒 history --}}
         @case('history')
         @case('clock')
+        @case('audit-logs')
             <circle cx="12" cy="12" r="10"></circle>
             <path d="M12 6v6l4 2"></path>
             @break
@@ -377,6 +429,7 @@ $sizeClass = match($size) {
         {{-- ⚙ settings-2 --}}
         @case('settings-2')
         @case('settings')
+        @case('system-settings')
             <circle cx="12" cy="12" r="3"></circle>
             <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
             @break
@@ -397,6 +450,7 @@ $sizeClass = match($size) {
 
         {{-- 📢 megaphone --}}
         @case('megaphone')
+        @case('announcements')
             <path d="m3 11 18-5v12L3 14v-3z"></path>
             <path d="M11.6 16.8a3 3 0 1 1-5.8-1.6"></path>
             @break
@@ -432,6 +486,7 @@ $sizeClass = match($size) {
 
         {{-- 🚪 log-out --}}
         @case('log-out')
+        @case('logout')
             <path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4"></path>
             <polyline points="16 17 21 12 16 7"></polyline>
             <line x1="21" y1="12" x2="9" y2="12"></line>
@@ -469,8 +524,14 @@ $sizeClass = match($size) {
             <line x1="14.5" y1="9.5" x2="9.5" y2="14.5"></line>
             @break
 
+        @case('slash')
+            <circle cx="12" cy="12" r="10"></circle>
+            <line x1="4.93" y1="4.93" x2="19.07" y2="19.07"></line>
+            @break
+
         {{-- 🚩 flag --}}
         @case('flag')
+        @case('moderation')
             <path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"></path>
             <line x1="4" y1="22" x2="4" y2="15"></line>
             @break
@@ -489,6 +550,7 @@ $sizeClass = match($size) {
 
         {{-- 🔖 bookmark --}}
         @case('bookmark')
+        @case('saved')
             <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"></path>
             @break
 
@@ -516,6 +578,11 @@ $sizeClass = match($size) {
             @break
 
         {{-- 📄 file-text --}}
+        @case('file')
+            <path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"></path>
+            <path d="M14 2v4a2 2 0 0 0 2 2h4"></path>
+            @break
+
         @case('file-text')
             <path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"></path>
             <path d="M14 2v4a2 2 0 0 0 2 2h4"></path>
@@ -529,6 +596,52 @@ $sizeClass = match($size) {
             <path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275Z"></path>
             <path d="m5 3 1 2.5L8.5 6 6 7 5 9.5 4 7 1.5 6 4 5z"></path>
             <path d="m19 17 1 2.5 2.5.5-2.5 1-1 2.5-1-2.5-2.5-1 2.5-1z"></path>
+            @break
+
+        @case('inbox')
+            <polyline points="22 12 16 12 14 15 10 15 8 12 2 12"></polyline>
+            <path d="M5.45 5.11 2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11z"></path>
+            @break
+
+        @case('corner-down-right')
+            <polyline points="15 10 20 15 15 20"></polyline>
+            <path d="M4 4v7a4 4 0 0 0 4 4h12"></path>
+            @break
+
+        @case('circle')
+            <circle cx="12" cy="12" r="10"></circle>
+            @break
+
+        @case('circle-alert')
+        @case('alert-octagon')
+            <circle cx="12" cy="12" r="10"></circle>
+            <line x1="12" y1="8" x2="12" y2="12"></line>
+            <line x1="12" y1="16" x2="12.01" y2="16"></line>
+            @break
+
+        @case('refresh-cw')
+            <path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"></path>
+            <polyline points="21 3 21 8 16 8"></polyline>
+            <path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"></path>
+            <polyline points="3 21 3 16 8 16"></polyline>
+            @break
+
+        @case('database')
+            <ellipse cx="12" cy="5" rx="9" ry="3"></ellipse>
+            <path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"></path>
+            <path d="M3 12c0 1.66 4 3 9 3s9-1.34 9-3"></path>
+            @break
+
+        @case('clipboard-check')
+            <path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"></path>
+            <rect x="8" y="2" width="8" height="4" rx="1" ry="1"></rect>
+            <polyline points="9 14 11 16 15 12"></polyline>
+            @break
+
+        @case('user-check')
+            <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"></path>
+            <circle cx="9" cy="7" r="4"></circle>
+            <polyline points="16 11 18 13 22 9"></polyline>
             @break
 
         {{-- Default fallback circle with warnings in local --}}

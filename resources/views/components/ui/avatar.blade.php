@@ -28,9 +28,9 @@
 // When a User model is provided, resolve src and fallback automatically.
 if ($user) {
     $profile = $user->profile;
-    $avatarMedia = $profile?->avatar ?? null;
-    if ($avatarMedia && $avatarMedia->path) {
-        $src = \Illuminate\Support\Facades\Storage::url($avatarMedia->path);
+    $avatarMedia = $profile?->avatar()->first();
+    if ($avatarMedia) {
+        $src = app(\App\Actions\Media\GenerateMediaUrlAction::class)->execute($avatarMedia, 'thumb', auth()->user());
     }
     if (! $fallback) {
         $displayName = $profile?->display_name ?? $user->name ?? '';

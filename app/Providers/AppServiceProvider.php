@@ -3,11 +3,13 @@
 namespace App\Providers;
 
 use App\Models\Announcement;
+use App\Models\AuditLog;
 use App\Models\BlockedUser;
 use App\Models\Comment;
 use App\Models\Community;
 use App\Models\Connection;
 use App\Models\Conversation;
+use App\Models\Media;
 use App\Models\Message;
 use App\Models\Post;
 use App\Models\Profile;
@@ -19,6 +21,7 @@ use App\Policies\CommentPolicy;
 use App\Policies\CommunityPolicy;
 use App\Policies\ConnectionPolicy;
 use App\Policies\ConversationPolicy;
+use App\Policies\MediaPolicy;
 use App\Policies\MessagePolicy;
 use App\Policies\PostPolicy;
 use App\Policies\ProfilePolicy;
@@ -55,6 +58,9 @@ class AppServiceProvider extends ServiceProvider
         Relation::morphMap([
             'post' => Post::class,
             'comment' => Comment::class,
+            'media' => Media::class,
+            'profile' => Profile::class,
+            'message' => Message::class,
         ]);
 
         Gate::policy(Connection::class, ConnectionPolicy::class);
@@ -67,7 +73,8 @@ class AppServiceProvider extends ServiceProvider
         Gate::policy(User::class, SettingsPolicy::class);
         Gate::policy(VerificationRequest::class, VerificationReviewPolicy::class);
         Gate::policy(Announcement::class, AnnouncementPolicy::class);
-        Gate::policy(\App\Models\AuditLog::class, AuditLogPolicy::class);
+        Gate::policy(AuditLog::class, AuditLogPolicy::class);
         Gate::policy(Community::class, CommunityPolicy::class);
+        Gate::policy(Media::class, MediaPolicy::class);
     }
 }

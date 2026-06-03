@@ -5,7 +5,7 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\AuditLog;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Gate;
+use Illuminate\Support\Facades\Schema;
 
 class AuditLogController extends Controller
 {
@@ -20,7 +20,8 @@ class AuditLogController extends Controller
         }
 
         if ($request->filled('action')) {
-            $query->where('action', $request->input('action'));
+            $actionField = Schema::hasColumn('audit_logs', 'action_key') ? 'action_key' : 'action';
+            $query->where($actionField, $request->input('action'));
         }
 
         $logs = $query->paginate(25)->withQueryString();
