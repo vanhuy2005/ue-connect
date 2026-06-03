@@ -464,6 +464,14 @@ Route::prefix('admin')
         Route::view('verifications', 'admin.verification-queue')
             ->name('verifications.queue');
 
+        // Opportunities
+        Route::view('opportunities', 'admin.opportunity-queue')
+            ->name('opportunities.queue');
+
+        Route::get('opportunities/{post}', function (Post $post) {
+            return view('admin.opportunity-detail', ['post' => $post]);
+        })->name('opportunities.detail');
+
         Route::get('verifications/{id}', function ($id) {
             return view('admin.verification-detail', ['id' => $id]);
         })->name('verifications.detail');
