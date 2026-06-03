@@ -1,7 +1,7 @@
 <?php
 
-use App\Models\MentorAccess;
-use App\Models\User;
+use App\Enums\MentorAccessStatus;
+use App\Models\MentorAccessRequest;
 use Livewire\Volt\Component;
 use Livewire\WithPagination;
 
@@ -9,11 +9,11 @@ new class extends Component {
     use WithPagination;
 
     public string $search = '';
-    public string $status = 'requested';
+    public string $status = 'submitted';
 
-    protected $queryString = [
+    protected array $queryString = [
         'search' => ['except' => ''],
-        'status' => ['except' => 'requested'],
+        'status' => ['except' => 'submitted'],
     ];
 
     public function updatingSearch(): void
@@ -26,79 +26,81 @@ new class extends Component {
         $this->resetPage();
     }
 
-    public function getRequestsProperty()
+    public function with(): array
     {
-        $query = MentorAccess::with('user')->latest('created_at');
+        $query = MentorAccessRequest::query()->with(['user.profile', 'reviewer'])->latest();
 
-        if ($this->search) {
-            $query->whereHas('user', function ($q) {
-                $q->where('name', 'like', '%' . $this->search . '%')
-                  ->orWhere('email', 'like', '%' . $this->search . '%');
-            });
+        if ($this->search !== '') {
+            $term = '%'.$this->search.'%';
+            $query->whereHas('user', fn ($userQuery) => $userQuery->where('name', 'like', $term)->orWhere('email', 'like', $term));
         }
 
-        if ($this->status) {
+        if ($this->status !== 'all') {
             $query->where('status', $this->status);
         }
 
-        return $query->paginate(15);
+        return [
+            'requests' => $query->paginate(15),
+            'statuses' => MentorAccessStatus::cases(),
+        ];
     }
 };
 ?>
 
-<div class="max-w-7xl mx-auto py-8 px-4 sm:px-6 lg:px-8">
+<div class="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
     <div class="mb-6 flex items-center justify-between">
         <div>
-            <h1 class="text-2xl font-bold text-ue-text">Yêu cầu Mentor</h1>
-            <p class="text-sm text-ue-text-secondary mt-1">Duyệt các yêu cầu xin làm Mentor.</p>
+            <h1 class="text-2xl font-bold text-ue-text">Quản lý Mentor</h1>
+            <p class="mt-1 text-sm text-ue-text-secondary">Duyệt, theo dõi và quản trị vòng đời mentor.</p>
         </div>
     </div>
 
-    <x-ui.card class="mb-6">
-        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <input type="text" wire:model.live="search" placeholder="Tìm kiếm tên hoặc email" class="w-full px-3 py-2 border rounded-lg">
-            <select wire:model.live="status" class="w-full px-3 py-2 border rounded-lg">
-                <option value="requested">Đã yêu cầu</option>
-                <option value="under_review">Đang kiểm duyệt</option>
-                <option value="approved">Đã duyệt</option>
-                <option value="rejected">Từ chối</option>
+    <div class="mb-6 rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
+        <div class="grid gap-4 sm:grid-cols-2">
+            <input type="search" wire:model.live.debounce.250ms="search" placeholder="Tìm kiếm tên hoặc email" class="w-full rounded-lg border-slate-200 text-sm">
+            <select wire:model.live="status" class="w-full rounded-lg border-slate-200 text-sm">
+                <option value="all">Tất cả trạng thái</option>
+                @foreach ($statuses as $statusCase)
+                    <option value="{{ $statusCase->value }}">{{ $statusCase->label() }}</option>
+                @endforeach
             </select>
         </div>
-    </x-ui.card>
+    </div>
 
-    <x-ui.card padding="none" class="overflow-hidden">
-        <div class="overflow-x-auto">
-            <table class="min-w-full divide-y divide-ue-border">
-                <thead class="bg-ue-surface-subtle">
-                    <tr>
-                        <th class="px-6 py-3 text-left text-xs font-semibold text-ue-text-muted uppercase">Người yêu cầu</th>
-                        <th class="px-6 py-3 text-left text-xs font-semibold text-ue-text-muted uppercase">Email</th>
-                        <th class="px-6 py-3 text-left text-xs font-semibold text-ue-text-muted uppercase">Lí do</th>
-                        <th class="px-6 py-3 text-left text-xs font-semibold text-ue-text-muted uppercase">Trạng thái</th>
-                        <th class="px-6 py-3 text-right text-xs font-semibold text-ue-text-muted uppercase">Hành động</th>
+    <div class="overflow-hidden rounded-lg border border-slate-200 bg-white shadow-sm">
+        <table class="min-w-full divide-y divide-slate-200 text-sm">
+            <thead class="bg-slate-50">
+                <tr>
+                    <th class="px-4 py-3 text-left font-semibold text-slate-600">Người yêu cầu</th>
+                    <th class="px-4 py-3 text-left font-semibold text-slate-600">Vai trò</th>
+                    <th class="px-4 py-3 text-left font-semibold text-slate-600">Trạng thái</th>
+                    <th class="px-4 py-3 text-left font-semibold text-slate-600">Gửi lúc</th>
+                    <th class="px-4 py-3 text-right font-semibold text-slate-600">Hành động</th>
+                </tr>
+            </thead>
+            <tbody class="divide-y divide-slate-100">
+                @forelse ($requests as $request)
+                    <tr class="hover:bg-slate-50">
+                        <td class="px-4 py-3">
+                            <div class="font-semibold text-slate-900">{{ $request->user?->name ?? 'N/A' }}</div>
+                            <div class="text-xs text-slate-500">{{ $request->user?->email }}</div>
+                        </td>
+                        <td class="px-4 py-3 text-slate-600">{{ $request->requested_role_context }}</td>
+                        <td class="px-4 py-3">
+                            <span class="rounded-full bg-slate-100 px-2 py-1 text-xs font-semibold text-slate-700">{{ $request->status->label() }}</span>
+                        </td>
+                        <td class="px-4 py-3 text-slate-500">{{ $request->created_at?->format('d/m/Y H:i') }}</td>
+                        <td class="px-4 py-3 text-right">
+                            <a href="{{ route('admin.mentors.detail', $request->id) }}" class="font-semibold text-ue-brand hover:underline">Chi tiết</a>
+                        </td>
                     </tr>
-                </thead>
-                <tbody class="bg-ue-surface divide-y divide-ue-border text-sm">
-                    @forelse ($this->requests as $r)
-                        <tr class="hover:bg-ue-surface-hover transition-colors">
-                            <td class="px-6 py-3">{{ $r->user?->name ?? 'N/A' }}</td>
-                            <td class="px-6 py-3">{{ $r->user?->email ?? 'N/A' }}</td>
-                            <td class="px-6 py-3">{{ Str::limit($r->note, 80) }}</td>
-                            <td class="px-6 py-3">{{ ucfirst($r->status) }}</td>
-                            <td class="px-6 py-3 text-right">
-                                <a href="{{ route('admin.mentors.detail', $r->id) }}" class="text-ue-brand hover:underline text-xs font-semibold">Chi tiết</a>
-                            </td>
-                        </tr>
-                    @empty
-                        <tr>
-                            <td colspan="5" class="px-6 py-8 text-center text-ue-text-muted">Không có yêu cầu</td>
-                        </tr>
-                    @endforelse
-                </tbody>
-            </table>
-        </div>
-        <div class="px-6 py-4 bg-ue-surface-subtle border-t border-ue-border">
-            {{ $this->requests->links('pagination::simple-tailwind') }}
-        </div>
-    </x-ui.card>
+                @empty
+                    <tr>
+                        <td colspan="5" class="px-4 py-8 text-center text-slate-500">Không có yêu cầu mentor phù hợp.</td>
+                    </tr>
+                @endforelse
+            </tbody>
+        </table>
+        <div class="border-t border-slate-100 px-4 py-3">{{ $requests->links() }}</div>
+    </div>
 </div>
