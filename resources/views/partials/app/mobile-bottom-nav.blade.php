@@ -73,6 +73,7 @@ $mobileNavItems = [
     @foreach($mobileNavItems as $item)
         <a
             href="{{ $item['href'] }}"
+            wire:navigate
             class="flex-1 flex flex-col items-center justify-center gap-1 min-h-touch px-1 pt-2 pb-1
                    text-ue-text-muted text-2xs font-semibold leading-none
                    transition-colors duration-sm ease-out

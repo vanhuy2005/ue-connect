@@ -9,9 +9,11 @@ class AdminNavigation
     public static function getGroups(): array
     {
         return [
-            'Overview' => [
+            'overview' => [
                 'label' => 'Overview',
                 'vn_label' => 'Tổng quan',
+                'icon' => 'layout-dashboard',
+                'description' => 'Sức khỏe hệ thống, analytics và các chỉ báo vận hành.',
                 'items' => [
                     [
                         'key' => 'dashboard',
@@ -31,9 +33,11 @@ class AdminNavigation
                     ],
                 ],
             ],
-            'Identity & Access' => [
-                'label' => 'Identity & Access',
-                'vn_label' => 'Danh tính & Quyền hạn',
+            'people-access' => [
+                'label' => 'People & Access',
+                'vn_label' => 'Người dùng & Quyền',
+                'icon' => 'users',
+                'description' => 'Xác thực, người dùng, mentor access và phân quyền.',
                 'items' => [
                     [
                         'key' => 'verification',
@@ -52,6 +56,14 @@ class AdminNavigation
                         'description' => 'Quản lý tài khoản người dùng, đình chỉ hoặc mở khoá',
                     ],
                     [
+                        'key' => 'mentors',
+                        'label' => 'Quản lý Mentor',
+                        'route' => 'admin.mentors.index',
+                        'icon' => 'graduation-cap',
+                        'permission' => 'manage_mentor_access',
+                        'description' => 'Duyệt và quản lý quyền cố vấn học tập',
+                    ],
+                    [
                         'key' => 'permissions',
                         'label' => 'Vai trò & Quyền',
                         'route' => 'admin.permissions.index',
@@ -61,9 +73,11 @@ class AdminNavigation
                     ],
                 ],
             ],
-            'Trust & Safety' => [
-                'label' => 'Trust & Safety',
-                'vn_label' => 'Tin cậy & An toàn',
+            'content-safety' => [
+                'label' => 'Content & Safety',
+                'vn_label' => 'An toàn & Nội dung',
+                'icon' => 'shield-check',
+                'description' => 'Kiểm duyệt, báo cáo, cộng đồng và thông báo cộng đồng.',
                 'items' => [
                     [
                         'key' => 'moderation',
@@ -82,20 +96,6 @@ class AdminNavigation
                         'description' => 'Danh sách các báo cáo vi phạm từ người dùng',
                     ],
                     [
-                        'key' => 'audit-logs',
-                        'label' => 'Nhật ký thao tác',
-                        'route' => 'admin.audit-logs.index',
-                        'icon' => 'history',
-                        'permission' => 'view_audit_logs',
-                        'description' => 'Xem nhật ký hoạt động của ban quản trị',
-                    ],
-                ],
-            ],
-            'Community Operations' => [
-                'label' => 'Community Operations',
-                'vn_label' => 'Vận hành cộng đồng',
-                'items' => [
-                    [
                         'key' => 'communities',
                         'label' => 'Quản lý cộng đồng',
                         'route' => 'admin.communities.index',
@@ -104,16 +104,8 @@ class AdminNavigation
                         'description' => 'Quản lý danh sách các cộng đồng/nhóm sinh viên',
                     ],
                     [
-                        'key' => 'mentors',
-                        'label' => 'Quản lý Mentor',
-                        'route' => 'admin.mentors.index',
-                        'icon' => 'graduation-cap',
-                        'permission' => 'manage_mentor_access',
-                        'description' => 'Duyệt và quản lý quyền cố vấn học tập',
-                    ],
-                    [
                         'key' => 'announcements',
-                        'label' => 'Thông báo',
+                        'label' => 'Thông báo cộng đồng',
                         'route' => 'admin.announcements.index',
                         'icon' => 'megaphone',
                         'permission' => 'manage_announcements',
@@ -121,10 +113,20 @@ class AdminNavigation
                     ],
                 ],
             ],
-            'Platform Operations' => [
+            'system' => [
                 'label' => 'Platform Operations',
-                'vn_label' => 'Vận hành hệ thống',
+                'vn_label' => 'Hệ thống',
+                'icon' => 'settings-2',
+                'description' => 'Audit, thông báo vận hành, media và cấu hình hệ thống.',
                 'items' => [
+                    [
+                        'key' => 'audit-logs',
+                        'label' => 'Nhật ký thao tác',
+                        'route' => 'admin.audit-logs.index',
+                        'icon' => 'history',
+                        'permission' => 'view_audit_logs',
+                        'description' => 'Xem nhật ký hoạt động của ban quản trị',
+                    ],
                     [
                         'key' => 'notifications',
                         'label' => 'Thông báo hệ thống',

@@ -1,113 +1,80 @@
 <?php
 
-use App\Models\MentorAccess;
-use App\Models\User;
+use App\Models\MentorAccessRequest;
 use Livewire\Volt\Component;
-use Illuminate\Support\Facades\DB;
-use App\Services\AuditLogService;
 
 new class extends Component {
     public int $id;
-    public ?MentorAccess $request = null;
-    public string $action = 'approve';
-    public string $reason = '';
 
-    public function mount(int $id): void
+    public function with(): array
     {
-        $this->id = $id;
-        $this->load();
-    }
-
-    public function load(): void
-    {
-        $this->request = MentorAccess::with('user')->findOrFail($this->id);
-    }
-
-    public function process(): void
-    {
-        if (!$this->request) return;
-
-        $this->validate([
-            'reason' => ['required', 'string', 'min:5', 'max:1000'],
-        ]);
-
-        DB::transaction(function () {
-            $before = $this->request->toArray();
-
-            if ($this->action === 'approve') {
-                $this->request->status = 'approved';
-                $this->request->reviewed_by = auth()->id();
-                $this->request->reviewed_at = now();
-                $this->request->save();
-
-                // grant mentor role or flag
-                $user = $this->request->user;
-                if ($user) {
-                    $user->assignRole('mentor');
-                }
-
-                AuditLogService::log(
-                    actorId: auth()->id(),
-                    actorType: 'admin',
-                    actionKey: 'mentor.approve',
-                    targetType: 'mentor_access',
-                    targetId: $this->request->id,
-                    beforeSnapshot: $before,
-                    afterSnapshot: $this->request->toArray(),
-                    reason: $this->reason
-                );
-            } else {
-                $this->request->status = 'rejected';
-                $this->request->reviewed_by = auth()->id();
-                $this->request->reviewed_at = now();
-                $this->request->save();
-
-                AuditLogService::log(
-                    actorId: auth()->id(),
-                    actorType: 'admin',
-                    actionKey: 'mentor.reject',
-                    targetType: 'mentor_access',
-                    targetId: $this->request->id,
-                    beforeSnapshot: $before,
-                    afterSnapshot: $this->request->toArray(),
-                    reason: $this->reason
-                );
-            }
-
-            session()->flash('success', 'Đã xử lý yêu cầu.');
-            $this->load();
-        });
+        return [
+            'request' => MentorAccessRequest::with(['user.profile', 'reviewer'])->findOrFail($this->id),
+        ];
     }
 };
 ?>
 
-<div class="max-w-4xl mx-auto py-8 px-4 sm:px-6 lg:px-8">
-    <h1 class="text-2xl font-bold text-ue-text">Yêu cầu Mentor #{{ $this->id }}</h1>
-    <p class="text-sm text-ue-text-secondary mt-1">Người yêu cầu: {{ $this->request->user?->name ?? 'N/A' }} — {{ $this->request->user?->email ?? '' }}</p>
+<div class="mx-auto max-w-5xl px-4 py-8 sm:px-6 lg:px-8">
+    <a href="{{ route('admin.mentors.index') }}" class="text-sm font-semibold text-ue-brand hover:underline">← Quay lại hàng đợi</a>
 
-    <x-ui.card class="mt-6">
-        <div>
-            <h3 class="font-semibold">Lý do / Ghi chú</h3>
-            <p class="mt-2 text-ue-text-muted">{{ $this->request->note }}</p>
-        </div>
-
-        <form wire:submit.prevent="process" class="mt-4 grid grid-cols-1 gap-4">
-            <div>
-                <label class="block text-sm font-semibold text-ue-text mb-1">Hành động</label>
-                <select wire:model.live="action" class="w-full px-3 py-2 border rounded-lg">
-                    <option value="approve">Phê duyệt</option>
-                    <option value="reject">Từ chối</option>
-                </select>
+    <div class="mt-4 grid gap-6 lg:grid-cols-[1fr_320px]">
+        <section class="rounded-lg border border-slate-200 bg-white p-6 shadow-sm">
+            <div class="flex items-start justify-between gap-4">
+                <div>
+                    <h1 class="text-2xl font-bold text-slate-900">Yêu cầu Mentor #{{ $request->id }}</h1>
+                    <p class="mt-1 text-sm text-slate-500">{{ $request->user?->name }} · {{ $request->user?->email }}</p>
+                </div>
+                <span class="rounded-full bg-slate-100 px-3 py-1 text-xs font-bold text-slate-700">{{ $request->status->label() }}</span>
             </div>
 
-            <div>
-                <label class="block text-sm font-semibold text-ue-text mb-1">Lý do (bắt buộc)</label>
-                <textarea wire:model.live="reason" class="w-full px-3 py-2 border rounded-lg" rows="4"></textarea>
+            <dl class="mt-6 space-y-5 text-sm">
+                <div>
+                    <dt class="font-bold text-slate-900">Vai trò đăng ký</dt>
+                    <dd class="mt-1 text-slate-600">{{ $request->requested_role_context }}</dd>
+                </div>
+                <div>
+                    <dt class="font-bold text-slate-900">Động lực</dt>
+                    <dd class="mt-1 whitespace-pre-line text-slate-600">{{ $request->motivation }}</dd>
+                </div>
+                <div>
+                    <dt class="font-bold text-slate-900">Kinh nghiệm</dt>
+                    <dd class="mt-1 whitespace-pre-line text-slate-600">{{ $request->experience_summary ?: 'Chưa cung cấp' }}</dd>
+                </div>
+                <div>
+                    <dt class="font-bold text-slate-900">Chủ đề chuyên môn</dt>
+                    <dd class="mt-2 flex flex-wrap gap-2">
+                        @foreach ($request->expertise_topics ?? [] as $topic)
+                            <span class="rounded-full bg-slate-100 px-2 py-1 text-xs font-semibold text-slate-600">{{ $topic }}</span>
+                        @endforeach
+                    </dd>
+                </div>
+            </dl>
+        </section>
+
+        <aside class="space-y-4">
+            <div class="rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
+                <h2 class="text-sm font-bold text-slate-900">Xử lý</h2>
+                <form method="POST" action="{{ route('admin.mentors.action', $request) }}" class="mt-4 space-y-3">
+                    @csrf
+                    <select name="action" class="w-full rounded-lg border-slate-200 text-sm">
+                        <option value="approve">Phê duyệt</option>
+                        <option value="reject">Từ chối</option>
+                        <option value="request_more_info">Cần thêm thông tin</option>
+                        <option value="revoke">Thu hồi</option>
+                    </select>
+                    <textarea name="reason" required rows="3" placeholder="Lý do xử lý" class="w-full rounded-lg border-slate-200 text-sm"></textarea>
+                    <textarea name="instruction" rows="3" placeholder="Ghi chú nội bộ hoặc hướng dẫn bổ sung" class="w-full rounded-lg border-slate-200 text-sm"></textarea>
+                    <button class="w-full rounded-lg bg-ue-brand px-4 py-2 text-sm font-semibold text-white hover:bg-ue-brand-dark">Xác nhận</button>
+                </form>
             </div>
 
-            <div class="flex justify-end">
-                <button type="submit" class="px-4 py-2 bg-ue-brand text-white rounded-lg">Xác nhận</button>
+            <div class="rounded-lg border border-slate-200 bg-white p-4 text-sm shadow-sm">
+                <h2 class="font-bold text-slate-900">Review</h2>
+                <p class="mt-2 text-slate-500">Người duyệt: {{ $request->reviewer?->name ?? 'Chưa duyệt' }}</p>
+                <p class="mt-1 text-slate-500">Thời điểm: {{ $request->reviewed_at?->format('d/m/Y H:i') ?? 'N/A' }}</p>
+                <p class="mt-1 text-slate-500">Lý do: {{ $request->review_reason ?? 'N/A' }}</p>
             </div>
-        </form>
-    </x-ui.card>
+        </aside>
+    </div>
 </div>

@@ -190,6 +190,24 @@ class MessagingTest extends TestCase
         $this->assertNotNull($conversation->last_message_at);
     }
 
+    public function test_active_conversation_exposes_profile_links_for_recipient_and_shared_post_author(): void
+    {
+        $conversation = resolve(FindOrCreateDirectConversation::class)->execute($this->user, $this->otherUser);
+        $post = Post::factory()->create([
+            'user_id' => $this->otherUser->id,
+            'status' => PostStatus::PUBLISHED,
+            'visibility' => PostVisibility::COMMUNITY,
+            'published_at' => now(),
+        ]);
+
+        resolve(SendSharedPostMessage::class)->execute($this->otherUser, $conversation, $post);
+
+        $this->actingAs($this->user);
+
+        Volt::test('pages.app.messages', ['activeConversation' => $conversation])
+            ->assertSeeHtml(route('profile.show', $this->otherUser));
+    }
+
     public function test_cannot_send_empty_or_whitespace_message(): void
     {
         $convoAction = resolve(FindOrCreateDirectConversation::class);

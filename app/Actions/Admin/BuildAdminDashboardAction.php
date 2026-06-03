@@ -114,7 +114,10 @@ class BuildAdminDashboardAction
 
         foreach ($pendingReports as $report) {
             $severity = 'warning';
-            $title = "Báo cáo nội dung vi phạm: {$report->reason}";
+            $reason = $report->reason instanceof \BackedEnum
+                ? $report->reason->value
+                : (string) $report->reason;
+            $title = "Báo cáo nội dung vi phạm: {$reason}";
 
             $priorityItems[] = [
                 'type' => 'Báo cáo',

@@ -218,4 +218,51 @@ class User extends Authenticatable
     {
         return $this->hasMany(EvidenceCaptureSession::class);
     }
+
+    /**
+     * Get mentor access requests submitted by this user.
+     *
+     * @return HasMany<MentorAccessRequest, $this>
+     */
+    public function mentorAccessRequests(): HasMany
+    {
+        return $this->hasMany(MentorAccessRequest::class);
+    }
+
+    /**
+     * Get the user's approved mentor profile.
+     */
+    public function mentorProfile(): HasOne
+    {
+        return $this->hasOne(MentorProfile::class);
+    }
+
+    /**
+     * Check if this user is an approved active mentor.
+     */
+    public function isActiveMentor(): bool
+    {
+        return $this->mentorProfile !== null
+            && $this->mentorProfile->is_active;
+    }
+
+    /**
+     * Get mentor requests sent by this user (as student).
+     *
+     * @return HasMany<MentorRequest, $this>
+     */
+    public function sentMentorRequests(): HasMany
+    {
+        return $this->hasMany(MentorRequest::class, 'student_id');
+    }
+
+    /**
+     * Get mentor requests received by this user (as mentor).
+     *
+     * @return HasMany<MentorRequest, $this>
+     */
+    public function receivedMentorRequests(): HasMany
+    {
+        return $this->hasMany(MentorRequest::class, 'mentor_id');
+    }
 }

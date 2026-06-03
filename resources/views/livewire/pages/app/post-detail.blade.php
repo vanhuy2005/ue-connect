@@ -558,6 +558,7 @@ new #[Layout('layouts.app')] class extends Component
             @php
                 $author = $post->user;
                 $profile = $author->profile;
+                $authorProfileUrl = route('profile.show', $author);
                 $isLiked = $post->likes->where('user_id', $currentUser->id)->isNotEmpty();
                 $isSaved = $post->saves->where('user_id', $currentUser->id)->isNotEmpty();
                 $likeCount = $post->likes->count();
@@ -570,7 +571,9 @@ new #[Layout('layouts.app')] class extends Component
                     <div class="ue-post-card__body">
                         {{-- Left Avatar Column --}}
                         <div class="flex-shrink-0 flex justify-start">
-                            <x-ui.avatar :user="$author" size="md" />
+                            <a href="{{ $authorProfileUrl }}" class="block rounded-full focus:outline-none focus:ring-2 focus:ring-ue-brand/30" aria-label="Xem trang cá nhân của {{ $author->name }}">
+                                <x-ui.avatar :user="$author" size="md" />
+                            </a>
                         </div>
 
                         {{-- Right Content Column --}}
@@ -579,9 +582,9 @@ new #[Layout('layouts.app')] class extends Component
                             <div class="ue-post-card__header">
                                 <div>
                                     <div class="flex items-center gap-1.5">
-                                        <span class="text-sm font-bold text-slate-800 leading-tight">
+                                        <a href="{{ $authorProfileUrl }}" class="text-sm font-bold text-slate-800 leading-tight hover:text-ue-brand hover:underline">
                                             {{ $author->name }}
-                                        </span>
+                                        </a>
                                         <x-ui.icon name="check-circle" size="xs" class="text-ue-brand flex-shrink-0" />
                                         <span class="ue-post-card__meta" title="{{ $post->published_at->format('H:i d/m/Y') }}">
                                             · {{ $post->published_at->diffForHumans() }}
@@ -618,6 +621,13 @@ new #[Layout('layouts.app')] class extends Component
                                         class="absolute right-0 mt-1 rounded-xl bg-white border border-ue-border shadow-lg py-1 z-10"
                                         style="display: none; width: 180px;"
                                     >
+                                        <a
+                                            href="{{ $authorProfileUrl }}"
+                                            class="w-full text-left px-3 py-1.5 text-xxs font-semibold text-slate-700 hover:bg-slate-50 hover:text-ue-brand flex items-center gap-2"
+                                        >
+                                            <x-ui.icon name="user" size="xs" class="text-slate-400" />
+                                            <span>Xem trang cá nhân</span>
+                                        </a>
                                         @if ($isOwner)
                                             @if (! $isEditingPost)
                                                 <button

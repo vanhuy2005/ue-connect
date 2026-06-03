@@ -73,7 +73,8 @@ class PostDetailTest extends TestCase
 
         Volt::test('pages.app.post-detail', ['post' => $this->post])
             ->assertSee('Post detail body content.')
-            ->assertSee('Visible comment.');
+            ->assertSee('Visible comment.')
+            ->assertSeeHtml(route('profile.show', $this->otherUser));
     }
 
     public function test_post_detail_like_affects_post_like_not_comment_like(): void

@@ -24,7 +24,7 @@
     {{-- Left Section --}}
     <div class="flex items-center gap-3">
         {{-- Mobile only: brand logo mark --}}
-        <a href="{{ route('dashboard') }}" class="lg:hidden flex items-center ue-focus-ring rounded-lg" aria-label="UEConnect - Trang chủ">
+        <a href="{{ route('dashboard') }}" wire:navigate class="lg:hidden flex items-center ue-focus-ring rounded-lg" aria-label="UEConnect - Trang chủ">
             <x-brand.logo variant="mark" size="sm" />
         </a>
         
@@ -103,17 +103,17 @@
                     </div>
 
                     {{-- Core Links --}}
-                    <a href="{{ route('profile') }}" class="flex items-center gap-2 px-4 py-2 hover:bg-slate-50 hover:text-ue-brand transition-colors">
+                    <a href="{{ route('profile') }}" wire:navigate class="flex items-center gap-2 px-4 py-2 hover:bg-slate-50 hover:text-ue-brand transition-colors">
                         <x-ui.icon name="user" size="xs" class="text-slate-400" />
                         <span>Hồ sơ</span>
                     </a>
                     
-                    <a href="{{ route('posts.saved') }}" class="flex items-center gap-2 px-4 py-2 hover:bg-slate-50 hover:text-ue-brand transition-colors">
+                    <a href="{{ route('posts.saved') }}" wire:navigate class="flex items-center gap-2 px-4 py-2 hover:bg-slate-50 hover:text-ue-brand transition-colors">
                         <x-ui.icon name="bookmark" size="xs" class="text-slate-400" />
                         <span>Bài viết đã lưu</span>
                     </a>
 
-                    <a href="{{ route('profile') }}" class="flex items-center gap-2 px-4 py-2 hover:bg-slate-50 hover:text-ue-brand transition-colors">
+                    <a href="{{ route('profile') }}" wire:navigate class="flex items-center gap-2 px-4 py-2 hover:bg-slate-50 hover:text-ue-brand transition-colors">
                         <x-ui.icon name="shield" size="xs" class="text-slate-400" />
                         <span>Cài đặt tài khoản</span>
                     </a>
@@ -123,20 +123,20 @@
                         <div class="border-t border-slate-100 my-1"></div>
                         <p class="px-4 py-1 text-[9px] font-bold text-slate-400 uppercase tracking-wider">Quản trị</p>
                         
-                        <a href="{{ route('admin.dashboard') }}" class="flex items-center gap-2 px-4 py-2 hover:bg-slate-50 hover:text-ue-brand transition-colors">
+                        <a href="{{ route('admin.dashboard') }}" wire:navigate class="flex items-center gap-2 px-4 py-2 hover:bg-slate-50 hover:text-ue-brand transition-colors">
                             <x-ui.icon name="grid" size="xs" class="text-slate-400" />
                             <span>Tổng quan quản trị</span>
                         </a>
 
                         @can('review_verification')
-                            <a href="{{ route('admin.verifications.queue') }}" class="flex items-center gap-2 px-4 py-2 hover:bg-slate-50 hover:text-ue-brand transition-colors">
+                            <a href="{{ route('admin.verifications.queue') }}" wire:navigate class="flex items-center gap-2 px-4 py-2 hover:bg-slate-50 hover:text-ue-brand transition-colors">
                                 <x-ui.icon name="shield-check" size="xs" class="text-slate-400" />
                                 <span>Duyệt xác thực</span>
                             </a>
                         @endcan
 
                         @can('manage_reports')
-                            <a href="{{ route('admin.reports.index') }}" class="flex items-center gap-2 px-4 py-2 hover:bg-slate-50 hover:text-ue-brand transition-colors">
+                            <a href="{{ route('admin.reports.index') }}" wire:navigate class="flex items-center gap-2 px-4 py-2 hover:bg-slate-50 hover:text-ue-brand transition-colors">
                                 <x-ui.icon name="flag" size="xs" class="text-slate-400" />
                                 <span>Báo cáo vi phạm</span>
                             </a>

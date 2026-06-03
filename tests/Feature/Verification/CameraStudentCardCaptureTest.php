@@ -85,6 +85,35 @@ class CameraStudentCardCaptureTest extends TestCase
         ]);
     }
 
+    public function test_camera_capture_action_stores_confirmed_image_data(): void
+    {
+        $validBase64 = $this->generateValidImageBase64();
+
+        Volt::actingAs($this->user)
+            ->test('pages.verification.start')
+            ->call('setCapturedImage', $validBase64)
+            ->assertSet('capturedImageData', $validBase64);
+    }
+
+    public function test_camera_capture_ui_uses_named_alpine_component_scope(): void
+    {
+        Volt::actingAs($this->user)
+            ->test('pages.verification.start')
+            ->set('role_requested', 'student')
+            ->call('nextStep')
+            ->set('submitted_name', 'Nguyen Van A')
+            ->set('submitted_student_code', '48.01.103.001')
+            ->set('submitted_faculty_id', $this->faculty->id)
+            ->set('submitted_academic_program_id', $this->program->id)
+            ->set('submitted_cohort', 'K48')
+            ->call('nextStep')
+            ->set('evidenceMethod', 'camera')
+            ->assertSee('x-data="identityCameraUpload()"', false)
+            ->assertSee('wire:ignore', false)
+            ->assertDontSee('cameraCapture', false)
+            ->assertDontSee('x-model="capturedData"', false);
+    }
+
     public function test_expired_session_rejects_submission(): void
     {
         Storage::fake('private');

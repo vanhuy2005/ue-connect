@@ -898,18 +898,20 @@ new #[Layout('layouts.app')] class extends Component
                     </button>
 
                     @if ($recipient)
-                        <x-ui.avatar :user="$recipient" size="sm" />
+                        <a href="{{ route('profile.show', $recipient) }}" class="block rounded-full focus:outline-none focus:ring-2 focus:ring-ue-brand/30" aria-label="Xem trang cá nhân của {{ $recipient->name }}">
+                            <x-ui.avatar :user="$recipient" size="sm" />
+                        </a>
                         <div class="min-w-0">
                             @if ($recipientNickname)
-                                <h2 class="text-xs font-bold text-slate-800 truncate flex items-center gap-1 leading-tight">
+                                <a href="{{ route('profile.show', $recipient) }}" class="text-xs font-bold text-slate-800 truncate flex items-center gap-1 leading-tight hover:text-ue-brand hover:underline">
                                     {{ $recipientNickname }} <span class="text-[9px] text-slate-400 font-normal">({{ $recipient->name }})</span>
                                     <x-ui.icon name="shield-check" size="xs" class="text-ue-brand fill-ue-brand" />
-                                </h2>
+                                </a>
                             @else
-                                <h2 class="text-xs font-bold text-slate-800 truncate flex items-center gap-1 leading-tight">
+                                <a href="{{ route('profile.show', $recipient) }}" class="text-xs font-bold text-slate-800 truncate flex items-center gap-1 leading-tight hover:text-ue-brand hover:underline">
                                     {{ $recipient->name }}
                                     <x-ui.icon name="shield-check" size="xs" class="text-ue-brand fill-ue-brand" />
-                                </h2>
+                                </a>
                             @endif
                             @if ($recipient->profile && $recipient->profile->faculty)
                                 <p class="text-[9px] text-slate-400 font-semibold truncate leading-none mt-0.5">{{ $recipient->profile->faculty }}</p>
@@ -1077,7 +1079,9 @@ new #[Layout('layouts.app')] class extends Component
                         class="flex {{ $isMine ? 'justify-end' : 'justify-start' }} items-center gap-2 group w-full"
                     >
                         @if (! $isMine && $message->sender)
-                            <x-ui.avatar :user="$message->sender" size="xs" class="self-end flex-shrink-0" />
+                            <a href="{{ route('profile.show', $message->sender) }}" class="self-end flex-shrink-0 rounded-full focus:outline-none focus:ring-2 focus:ring-ue-brand/30" aria-label="Xem trang cá nhân của {{ $message->sender->name }}">
+                                <x-ui.avatar :user="$message->sender" size="xs" />
+                            </a>
                         @endif
 
                         {{-- Hover Actions - Left for own message --}}
@@ -1163,8 +1167,10 @@ new #[Layout('layouts.app')] class extends Component
                                         @if ($this->canViewPost($message->sharedPost))
                                             <div class="bg-slate-50 border border-slate-100 p-2.5 rounded-xl flex flex-col gap-1.5">
                                                 <div class="flex items-center gap-1.5">
-                                                    <x-ui.avatar :user="$message->sharedPost->user" size="xs" />
-                                                    <p class="text-xxs font-bold text-slate-800">{{ $message->sharedPost->user->name }}</p>
+                                                    <a href="{{ route('profile.show', $message->sharedPost->user) }}" class="block rounded-full focus:outline-none focus:ring-2 focus:ring-ue-brand/30" aria-label="Xem trang cá nhân của {{ $message->sharedPost->user->name }}">
+                                                        <x-ui.avatar :user="$message->sharedPost->user" size="xs" />
+                                                    </a>
+                                                    <a href="{{ route('profile.show', $message->sharedPost->user) }}" class="text-xxs font-bold text-slate-800 hover:text-ue-brand hover:underline">{{ $message->sharedPost->user->name }}</a>
                                                 </div>
                                                 <p class="text-xxs font-medium text-slate-600 line-clamp-2 leading-relaxed">
                                                     {{ $message->sharedPost->body }}

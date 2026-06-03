@@ -12,6 +12,7 @@
 @php
     $author = $post->user;
     $profile = $author->profile;
+    $authorProfileUrl = route('profile.show', $author);
     $isOwner = $post->user_id === $currentUser->id;
     $isAdmin = $currentUser && ($currentUser->can('review_verification') || $currentUser->can('manage_reports'));
     $mediaUrlAction = app(\App\Actions\Media\GenerateMediaUrlAction::class);
@@ -24,7 +25,9 @@
     <div class="ue-post-card__body">
         {{-- Left Avatar Column --}}
         <div class="flex-shrink-0">
-            <x-ui.avatar :user="$author" size="md" />
+            <a href="{{ $authorProfileUrl }}" class="block rounded-full focus:outline-none focus:ring-2 focus:ring-ue-brand/30" aria-label="Xem trang cá nhân của {{ $author->name }}">
+                <x-ui.avatar :user="$author" size="md" />
+            </a>
         </div>
 
         {{-- Right Content Column --}}
@@ -33,9 +36,9 @@
             <div class="ue-post-card__header">
                 <div>
                     <div class="flex items-center gap-1.5 flex-nowrap min-w-0">
-                        <span class="text-sm font-bold text-slate-800 leading-tight truncate min-w-0">
+                        <a href="{{ $authorProfileUrl }}" class="text-sm font-bold text-slate-800 leading-tight truncate min-w-0 hover:text-ue-brand hover:underline">
                             {{ $author->name }}
-                        </span>
+                        </a>
                         <x-ui.icon name="check-circle" size="xs" class="text-ue-brand flex-shrink-0" aria-label="Đã xác thực" />
                         
                         {{-- Relative timestamp --}}

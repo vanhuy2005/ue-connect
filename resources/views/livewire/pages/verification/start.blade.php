@@ -16,6 +16,7 @@ use Illuminate\Support\Str;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\ValidationException;
 use Livewire\Attributes\Layout;
+use Livewire\Attributes\Renderless;
 use Livewire\Volt\Component;
 use Livewire\WithFileUploads;
 
@@ -212,7 +213,8 @@ new #[Layout('layouts.app')] class extends Component
         ]);
     }
 
-    /** Called from Alpine cameraCapture via $wire.call() to push base64 image data. */
+    /** Store confirmed camera image data from the client-side camera UI. */
+    #[Renderless]
     public function setCapturedImage(string $base64Data): void
     {
         $this->capturedImageData = $base64Data;
@@ -811,9 +813,9 @@ new #[Layout('layouts.app')] class extends Component
                     {{-- Camera Capture UI (student + camera method selected) --}}
                     @if($role_requested === 'student' && $evidenceMethod === 'camera')
                     <div
-                        x-data="cameraCapture"
-                        x-init="init()"
+                        x-data="identityCameraUpload()"
                         class="space-y-4"
+                        x-cloak
                     >
                         {{-- Back button --}}
                         <button type="button" wire:click="$set('evidenceMethod', '')" class="text-sm text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 flex items-center gap-1">
@@ -827,7 +829,7 @@ new #[Layout('layouts.app')] class extends Component
                         </div>
 
                         {{-- HTTPS warning (only on non-localhost HTTP) --}}
-                        <div x-show="!isSecureContext" class="rounded-lg bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 p-3">
+                        <div x-show="!isCameraContextAllowed" class="rounded-lg bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 p-3">
                             <p class="text-xs text-yellow-700 dark:text-yellow-300">⚠️ Camera yêu cầu kết nối HTTPS. Trên môi trường phát triển localhost, camera vẫn hoạt động.</p>
                         </div>
 
@@ -861,7 +863,7 @@ new #[Layout('layouts.app')] class extends Component
 
                         {{-- State: camera ready / capture preview --}}
                         <div x-show="state === 'camera_ready' || state === 'capture_preview'" class="space-y-3">
-                            <div class="relative rounded-xl overflow-hidden bg-black aspect-video">
+                            <div wire:ignore class="relative rounded-xl overflow-hidden bg-black aspect-video">
                                 {{-- Live video feed --}}
                                 <video
                                     x-ref="videoEl"
@@ -948,11 +950,8 @@ new #[Layout('layouts.app')] class extends Component
                                     <p class="text-xs text-green-600 dark:text-green-400 mt-0.5">Ảnh thẻ sinh viên đã được chụp thành công. Nhấn "Gửi hồ sơ" để tiếp tục.</p>
                                 </div>
                             </div>
-                            <button type="button" @click="retakeAll()" class="mt-3 text-xs text-green-600 dark:text-green-400 underline">Chụp lại từ đầu</button>
+                            <button type="button" @click="retakePhoto()" class="mt-3 text-xs text-green-600 dark:text-green-400 underline">Chụp lại từ đầu</button>
                         </div>
-
-                        {{-- Hidden input: passes base64 to Livewire --}}
-                        <input type="hidden" x-model="capturedData" wire:model="capturedImageData" />
                     </div>
                     @endif
 
@@ -1059,118 +1058,3 @@ new #[Layout('layouts.app')] class extends Component
         @endif
     </div>
 </div>
-
-@script
-<script>
-    // Register cameraCapture outside Livewire conditionals so Alpine always finds it
-    // after any Livewire DOM morph / re-render.
-    Alpine.data('cameraCapture', () => ({
-        state: 'idle',
-        errorMessage: '',
-        capturedData: '',
-        stream: null,
-        isSecureContext: window.isSecureContext
-            || window.location.hostname === 'localhost'
-            || window.location.hostname === '127.0.0.1',
-
-        init() {
-            this.$watch('state', val => {
-                if (val !== 'camera_ready' && val !== 'capture_preview') {
-                    this.stopStream();
-                }
-            });
-        },
-
-        async startCamera() {
-            if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-                this.state = 'error';
-                this.errorMessage = 'Trình duyệt của bạn không hỗ trợ camera. Hãy thử dùng Chrome/Firefox phiên bản mới nhất hoặc chọn upload file.';
-                return;
-            }
-
-            this.state = 'loading';
-
-            try {
-                this.stream = await navigator.mediaDevices.getUserMedia({
-                    video: {
-                        facingMode: { ideal: 'environment' },
-                        width: { ideal: 1280 },
-                        height: { ideal: 720 },
-                    },
-                    audio: false,
-                });
-
-                await this.$nextTick();
-                const video = this.$refs.videoEl;
-                video.srcObject = this.stream;
-
-                // Wait for metadata + first frame before declaring camera ready
-                await new Promise((resolve, reject) => {
-                    video.onloadedmetadata = () => {
-                        video.play().then(resolve).catch(reject);
-                    };
-                    video.onerror = reject;
-                    // Fallback: declare ready after 3 s if events don't fire
-                    setTimeout(resolve, 3000);
-                });
-
-                this.state = 'camera_ready';
-            } catch (err) {
-                this.state = 'error';
-                if (err.name === 'NotAllowedError') {
-                    this.errorMessage = 'Bạn đã từ chối quyền truy cập camera. Hãy cấp quyền trong cài đặt trình duyệt rồi thử lại.';
-                } else if (err.name === 'NotFoundError') {
-                    this.errorMessage = 'Không tìm thấy camera. Hãy kết nối camera và thử lại, hoặc dùng upload file.';
-                } else {
-                    this.errorMessage = 'Không thể khởi động camera: ' + err.message + '. Hãy thử upload file thay thế.';
-                }
-            }
-        },
-
-        capturePhoto() {
-            const video = this.$refs.videoEl;
-            const canvas = this.$refs.canvasEl;
-
-            if (!video.videoWidth || !video.videoHeight) {
-                this.state = 'error';
-                this.errorMessage = 'Camera chưa sẵn sàng. Vui lòng thử bật lại camera.';
-                return;
-            }
-
-            canvas.width = video.videoWidth;
-            canvas.height = video.videoHeight;
-            const ctx = canvas.getContext('2d');
-            ctx.drawImage(video, 0, 0);
-            const dataUrl = canvas.toDataURL('image/jpeg', 0.9);
-            this.capturedData = dataUrl;
-            this.state = 'capture_preview';
-            this.stopStream();
-        },
-
-        retakePhoto() {
-            this.capturedData = '';
-            this.startCamera();
-        },
-
-        confirmPhoto() {
-            // Only push base64 to Livewire when user confirms the photo
-            this.$wire.call('setCapturedImage', this.capturedData);
-            this.state = 'confirmed';
-        },
-
-        retakeAll() {
-            this.capturedData = '';
-            this.$wire.call('setCapturedImage', '');
-            this.state = 'idle';
-        },
-
-
-        stopStream() {
-            if (this.stream) {
-                this.stream.getTracks().forEach(t => t.stop());
-                this.stream = null;
-            }
-        },
-    }));
-</script>
-@endscript

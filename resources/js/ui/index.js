@@ -10,6 +10,7 @@ import { initToastSystem } from './toast';
 import { initOptimisticActions } from './optimistic-actions';
 import { initLayoutGuards } from './layout-guards';
 import { initReducedMotion } from './reduced-motion';
+import { initPageLoading } from './page-loading';
 
 function initAllUI() {
     if (window.__ue_ui_initialized) {
@@ -31,6 +32,7 @@ function initAllUI() {
     initBottomSheets();
     initToastSystem();
     initOptimisticActions();
+    initPageLoading();
     initLayoutGuards();
 
     // Trigger dev scanner automatically in development

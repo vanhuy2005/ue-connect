@@ -22,9 +22,13 @@ class DatabaseSeeder extends Seeder
 
         // 2. UAT test accounts (admin + unverified student)
         if (app()->environment(['local', 'testing'])) {
-            $this->call(UatSeeder::class);
+            $this->call([
+                UatSeeder::class,
+                UatFeedSeeder::class,
+                DemoMentorSeeder::class,
+            ]);
         } else {
-            $this->command->warn('Skipped UatSeeder: Not in local/testing environment.');
+            $this->command->warn('Skipped UAT/demo seeders: Not in local/testing environment.');
         }
     }
 }

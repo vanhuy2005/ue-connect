@@ -29,6 +29,7 @@
     </head>
 
     <body class="font-sans antialiased h-full">
+        <x-ui.page-transition />
 
         {{-- Default shell when not provided by caller --}}
         @php $shell = $shell ?? 'guest'; @endphp
@@ -76,11 +77,20 @@
                                         <x-ui.icon name="menu" size="md" />
                                     </button>
                                     @php
-                                        $currentTitle = 'Dashboard';
-                                        foreach(\App\Support\Navigation\AdminNavigation::getGroups() as $g) {
+                                        $currentTitle = 'Tổng quan';
+                                        foreach(\App\Support\Navigation\AdminNavigation::getGroups() as $groupKey => $g) {
+                                            if (request()->routeIs('admin.console') && (request()->route('group') ?? 'overview') === $groupKey) {
+                                                $currentTitle = $g['vn_label'];
+                                            }
+
                                             foreach($g['items'] as $i) {
-                                                if(request()->routeIs($i['route']) || (str_contains($i['route'], '.') && request()->routeIs(explode('.', $i['route'])[0] . '.*'))) {
-                                                    $currentTitle = $i['label'];
+                                                $routeParts = explode('.', $i['route']);
+                                                $baseRouteName = count($routeParts) >= 2
+                                                    ? $routeParts[0] . '.' . $routeParts[1]
+                                                    : $i['route'];
+
+                                                if(request()->routeIs($i['route']) || request()->routeIs($baseRouteName . '.*')) {
+                                                    $currentTitle = $g['vn_label'];
                                                 }
                                             }
                                         }
@@ -133,31 +143,35 @@
                                         </div>
 
                                         <div class="flex-1 overflow-y-auto pr-1">
-                                            <nav class="flex flex-col gap-5 text-sm">
+                                            <nav class="flex flex-col gap-1 text-sm">
                                                 @foreach(\App\Support\Navigation\AdminNavigation::getVisibleGroups() as $groupKey => $group)
-                                                    <div class="flex flex-col gap-1.5">
-                                                        <h3 class="text-3xs font-bold uppercase tracking-wider text-ue-text-muted/60">
-                                                            {{ $group['vn_label'] }}
-                                                        </h3>
-                                                        <ul class="flex flex-col gap-0.5" role="list">
-                                                            @foreach($group['items'] as $item)
-                                                                @php
-                                                                    $active = request()->routeIs($item['route']) || ($item['route'] === 'admin.dashboard' && request()->routeIs('admin.dashboard'));
-                                                                    $active = $active || (str_contains($item['route'], '.') && request()->routeIs(explode('.', $item['route'])[0] . '.*'));
-                                                                @endphp
-                                                                <li role="listitem">
-                                                                    <a
-                                                                        href="{{ route($item['route']) }}"
-                                                                        @click="adminDrawerOpen = false"
-                                                                        class="flex items-center gap-2.5 px-2 py-1.5 rounded-lg font-semibold transition-colors duration-150 {{ $active ? 'bg-ue-brand-soft text-ue-brand-active' : 'text-ue-text-secondary hover:bg-ue-surface-hover hover:text-ue-brand-active' }}"
-                                                                    >
-                                                                        <x-ui.icon :name="$item['icon']" size="sm" class="{{ $active ? 'text-ue-brand-active' : 'text-ue-text-muted' }}" />
-                                                                        <span class="text-xs">{{ $item['label'] }}</span>
-                                                                    </a>
-                                                                </li>
-                                                            @endforeach
-                                                        </ul>
-                                                    </div>
+                                                    @php
+                                                        $active = request()->routeIs('admin.console') && (request()->route('group') ?? 'overview') === $groupKey;
+
+                                                        if (! $active) {
+                                                            foreach ($group['items'] as $item) {
+                                                                $routeParts = explode('.', $item['route']);
+                                                                $baseRouteName = count($routeParts) >= 2
+                                                                    ? $routeParts[0] . '.' . $routeParts[1]
+                                                                    : $item['route'];
+
+                                                                if (request()->routeIs($item['route']) || request()->routeIs($baseRouteName . '.*')) {
+                                                                    $active = true;
+                                                                    break;
+                                                                }
+                                                            }
+                                                        }
+                                                    @endphp
+                                                    <a
+                                                        href="{{ route('admin.console', ['group' => $groupKey]) }}"
+                                                        @click="adminDrawerOpen = false"
+                                                        class="ue-admin-nav-link {{ $active ? 'active' : '' }}"
+                                                        @if($active) aria-current="page" @endif
+                                                    >
+                                                        <x-ui.icon :name="$group['icon']" size="sm" class="flex-shrink-0" />
+                                                        <span class="min-w-0 flex-1 truncate">{{ $group['vn_label'] }}</span>
+                                                        <span class="rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-bold text-slate-500">{{ count($group['items']) }}</span>
+                                                    </a>
                                                 @endforeach
                                             </nav>
                                         </div>

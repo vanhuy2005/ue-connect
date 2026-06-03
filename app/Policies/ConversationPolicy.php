@@ -54,7 +54,11 @@ class ConversationPolicy
             return false;
         }
 
-        // 3. Connection check (Must be currently connected to SEND new messages)
+        if ($conversation->mentor_request_id) {
+            return true;
+        }
+
+        // 3. Connection check (must be currently connected unless this is a mentor conversation)
         $hasConnection = Connection::where(function ($q) use ($user, $recipient) {
             $q->where('user_one_id', min($user->id, $recipient->id))
                 ->where('user_two_id', max($user->id, $recipient->id));

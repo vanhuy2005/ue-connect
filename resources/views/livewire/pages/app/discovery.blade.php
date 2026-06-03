@@ -402,22 +402,31 @@ new #[Layout('layouts.app')] class extends Component
     @endif
 
     {{-- Grid List --}}
-    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-        @forelse ($profiles as $profile)
-            @php
-                $status = $this->getConnectionStatus($profile->user_id);
-            @endphp
-            <div class="bg-white border border-slate-150 rounded-2xl p-4 flex flex-col justify-between hover:shadow-sm hover:border-slate-300 transition-all duration-sm">
+    <div>
+        <div
+            class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3"
+            wire:loading.delay.class="ue-content-loading"
+            wire:target="search,roleFilter,nextPage,previousPage,gotoPage"
+            aria-busy="false"
+        >
+            @forelse ($profiles as $profile)
+                @php
+                    $status = $this->getConnectionStatus($profile->user_id);
+                    $profileUrl = route('profile.show', $profile->user);
+                @endphp
+                <div class="ue-loadable-card bg-white border border-slate-150 rounded-2xl p-4 flex flex-col justify-between hover:shadow-sm hover:border-slate-300 transition-all duration-sm">
                 <div>
                     {{-- Profile identity info --}}
                     <div class="flex items-start justify-between gap-3">
                         <div class="flex items-center gap-3">
-                            <x-ui.avatar :user="$profile->user" size="md" class="border border-slate-100" />
+                            <a href="{{ $profileUrl }}" wire:navigate class="block rounded-full focus:outline-none focus:ring-2 focus:ring-ue-brand/30" aria-label="Xem trang cá nhân của {{ $profile->display_name }}">
+                                <x-ui.avatar :user="$profile->user" size="md" class="border border-slate-100" />
+                            </a>
                             <div>
-                                <h3 class="text-xs font-bold text-slate-800 flex items-center gap-1 leading-snug">
+                                <a href="{{ $profileUrl }}" wire:navigate class="text-xs font-bold text-slate-800 flex items-center gap-1 leading-snug hover:text-ue-brand hover:underline">
                                     {{ $profile->display_name }}
                                     <x-ui.icon name="shield-check" size="xs" class="text-ue-brand fill-ue-brand" />
-                                </h3>
+                                </a>
                                 <p class="text-[10px] text-slate-400 font-semibold tracking-wide uppercase mt-0.5">
                                     @if ($profile->role_type === 'student') Sinh viên
                                     @elseif ($profile->role_type === 'advisor') Mentor/Giảng viên
@@ -493,6 +502,7 @@ new #[Layout('layouts.app')] class extends Component
                     @elseif ($status === 'connected')
                         <a
                             href="{{ route('messages.index', ['conversation' => \App\Models\Conversation::where('conversation_type', \App\Enums\ConversationType::DIRECT)->whereHas('participants', function($q) use ($profile) { $q->where('user_id', $profile->user_id); })->first()?->id]) }}"
+                            wire:navigate
                             class="bg-slate-50 hover:bg-slate-100 text-slate-700 text-xxs font-bold px-3 py-1.5 rounded-lg border border-slate-200 transition-colors flex items-center gap-1.5"
                         >
                             <x-ui.icon name="message-square" size="xs" /> Nhắn tin
@@ -500,6 +510,7 @@ new #[Layout('layouts.app')] class extends Component
                     @elseif ($status === 'pending_received')
                         <a
                             href="{{ route('connections.index') }}"
+                            wire:navigate
                             class="bg-indigo-50 hover:bg-indigo-100 text-indigo-700 text-xxs font-bold px-3 py-1.5 rounded-lg transition-colors"
                         >
                             Xem lời mời
@@ -516,14 +527,15 @@ new #[Layout('layouts.app')] class extends Component
                         </button>
                     @endif
                 </div>
-            </div>
-        @empty
-            <div class="col-span-full py-12 flex flex-col items-center justify-center text-center space-y-3 bg-slate-50 rounded-2xl border border-dashed border-slate-250">
-                <x-ui.icon name="users" size="lg" class="text-slate-300" />
-                <h3 class="text-sm font-bold text-slate-700">Chưa tìm thấy UEers phù hợp</h3>
-                <p class="text-xxs text-slate-400 max-w-sm">Hãy thử thay đổi từ khóa tìm kiếm hoặc lọc theo các đối tượng khác để kết nối nhé.</p>
-            </div>
-        @endforelse
+                </div>
+            @empty
+                <div class="col-span-full py-12 flex flex-col items-center justify-center text-center space-y-3 bg-slate-50 rounded-2xl border border-dashed border-slate-250">
+                    <x-ui.icon name="users" size="lg" class="text-slate-300" />
+                    <h3 class="text-sm font-bold text-slate-700">Chưa tìm thấy UEers phù hợp</h3>
+                    <p class="text-xxs text-slate-400 max-w-sm">Hãy thử thay đổi từ khóa tìm kiếm hoặc lọc theo các đối tượng khác để kết nối nhé.</p>
+                </div>
+            @endforelse
+        </div>
     </div>
 
     {{-- Pagination --}}
@@ -548,9 +560,11 @@ new #[Layout('layouts.app')] class extends Component
 
                 {{-- Recipient info summary --}}
                 <div class="bg-slate-50 border border-slate-100 p-3 rounded-xl flex items-center gap-3">
-                    <x-ui.avatar :user="$targetUser" size="sm" />
+                    <a href="{{ route('profile.show', $targetUser) }}" class="block rounded-full focus:outline-none focus:ring-2 focus:ring-ue-brand/30" aria-label="Xem trang cá nhân của {{ $targetUser->name }}">
+                        <x-ui.avatar :user="$targetUser" size="sm" />
+                    </a>
                     <div>
-                        <p class="text-xxs font-bold text-slate-800 leading-tight">{{ $targetUser->name }}</p>
+                        <a href="{{ route('profile.show', $targetUser) }}" class="text-xxs font-bold text-slate-800 leading-tight hover:text-ue-brand hover:underline">{{ $targetUser->name }}</a>
                         @if ($targetUser->profile && $targetUser->profile->faculty)
                             <p class="text-[10px] font-semibold text-slate-400 mt-0.5">{{ $targetUser->profile->faculty }}</p>
                         @endif

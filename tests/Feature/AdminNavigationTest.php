@@ -62,36 +62,65 @@ class AdminNavigationTest extends TestCase
         $response->assertDontSee('Cài đặt hệ thống');
     }
 
-    public function test_admin_console_layout_shows_grouped_modules(): void
+    public function test_admin_console_layout_shows_category_tabs_and_group_modules(): void
     {
         $admin = User::factory()->create([
             'account_status' => AccountStatus::ACTIVE,
         ]);
         $admin->assignRole('admin');
 
-        $response = $this->actingAs($admin)->get(route('admin.dashboard'));
+        $response = $this->actingAs($admin)->get(route('admin.console', ['group' => 'people-access']));
 
         $response->assertStatus(200);
 
         $response->assertSee('Tổng quan');
-        $response->assertSee('Danh tính & Quyền hạn');
-        $response->assertSee('Tin cậy & An toàn');
-        $response->assertSee('Vận hành cộng đồng');
-        $response->assertSee('Vận hành hệ thống');
+        $response->assertSee('Người dùng & Quyền');
+        $response->assertSee('An toàn & Nội dung');
+        $response->assertSee('Hệ thống');
+        $response->assertSee('Admin console');
+        $response->assertSee('Xác thực, người dùng, mentor access và phân quyền.');
 
-        $response->assertSee('Tổng quan quản trị');
-        $response->assertSee('Phân tích');
+        $response->assertDontSee('Danh tính & Quyền hạn');
+        $response->assertDontSee('Tin cậy & An toàn');
+        $response->assertDontSee('Vận hành cộng đồng');
+        $response->assertDontSee('Vận hành hệ thống');
+
         $response->assertSee('Duyệt xác thực');
         $response->assertSee('Người dùng');
         $response->assertSee('Vai trò & Quyền');
-        $response->assertSee('Kiểm duyệt');
-        $response->assertSee('Báo cáo');
-        $response->assertSee('Nhật ký thao tác');
-        $response->assertSee('Quản lý cộng đồng');
         $response->assertSee('Quản lý Mentor');
-        $response->assertSee('Thông báo');
-        $response->assertSee('Thông báo hệ thống');
-        $response->assertSee('Quản lý Media');
-        $response->assertSee('Cài đặt hệ thống');
+
+        $response->assertDontSee('Cài đặt hệ thống');
+    }
+
+    public function test_admin_sidebar_marks_current_category_only_in_sidebar_variants(): void
+    {
+        $admin = User::factory()->create([
+            'account_status' => AccountStatus::ACTIVE,
+        ]);
+        $admin->assignRole('admin');
+
+        $response = $this->actingAs($admin)->get(route('admin.mentors.index'));
+
+        $response->assertStatus(200);
+        $response->assertSee('Quản lý Mentor');
+        $response->assertSee(route('admin.console', ['group' => 'people-access']));
+
+        $this->assertSame(2, substr_count($response->getContent(), 'aria-current="page"'));
+    }
+
+    public function test_admin_console_defaults_to_first_visible_category(): void
+    {
+        $admin = User::factory()->create([
+            'account_status' => AccountStatus::ACTIVE,
+        ]);
+        $admin->assignRole('admin');
+
+        $response = $this->actingAs($admin)->get(route('admin.console'));
+
+        $response->assertStatus(200);
+        $response->assertSee('Sức khỏe hệ thống, analytics và các chỉ báo vận hành.');
+        $response->assertSee('Tổng quan quản trị');
+        $response->assertSee('Phân tích');
     }
 }

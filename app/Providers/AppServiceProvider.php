@@ -10,6 +10,10 @@ use App\Models\Community;
 use App\Models\Connection;
 use App\Models\Conversation;
 use App\Models\Media;
+use App\Models\MentorAccessRequest;
+use App\Models\MentorFeedback;
+use App\Models\MentorProfile;
+use App\Models\MentorRequest;
 use App\Models\Message;
 use App\Models\Post;
 use App\Models\Profile;
@@ -22,6 +26,10 @@ use App\Policies\CommunityPolicy;
 use App\Policies\ConnectionPolicy;
 use App\Policies\ConversationPolicy;
 use App\Policies\MediaPolicy;
+use App\Policies\MentorAccessRequestPolicy;
+use App\Policies\MentorFeedbackPolicy;
+use App\Policies\MentorProfilePolicy;
+use App\Policies\MentorRequestPolicy;
 use App\Policies\MessagePolicy;
 use App\Policies\PostPolicy;
 use App\Policies\ProfilePolicy;
@@ -76,5 +84,9 @@ class AppServiceProvider extends ServiceProvider
         Gate::policy(AuditLog::class, AuditLogPolicy::class);
         Gate::policy(Community::class, CommunityPolicy::class);
         Gate::policy(Media::class, MediaPolicy::class);
+        Gate::policy(MentorAccessRequest::class, MentorAccessRequestPolicy::class);
+        Gate::policy(MentorProfile::class, MentorProfilePolicy::class);
+        Gate::policy(MentorRequest::class, MentorRequestPolicy::class);
+        Gate::policy(MentorFeedback::class, MentorFeedbackPolicy::class);
     }
 }

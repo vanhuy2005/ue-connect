@@ -22,6 +22,7 @@ class Conversation extends Model
         'direct_user_high_id',
         'last_message_id',
         'last_message_at',
+        'mentor_request_id',
     ];
 
     protected function casts(): array
@@ -113,5 +114,13 @@ class Conversation extends Model
             'is_restricted' => false,
             'deleted_at' => null,
         ]);
+    }
+
+    /**
+     * Get the mentor request that originated this conversation, if any.
+     */
+    public function mentorRequest(): BelongsTo
+    {
+        return $this->belongsTo(MentorRequest::class);
     }
 }
