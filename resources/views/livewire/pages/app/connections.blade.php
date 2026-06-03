@@ -281,14 +281,19 @@ new #[Layout('layouts.app')] class extends Component
 
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                     @forelse ($connections as $item)
+                        @php
+                            $connectedUserProfileUrl = route('profile.show', $item['user']);
+                        @endphp
                         <div class="bg-white border border-slate-150 rounded-2xl p-4 flex items-center justify-between hover:border-slate-350 hover:shadow-2xs transition-all duration-sm">
                             <div class="flex items-center gap-3">
-                                <x-ui.avatar :user="$item['user']" size="md" />
+                                <a href="{{ $connectedUserProfileUrl }}" class="block rounded-full focus:outline-none focus:ring-2 focus:ring-ue-brand/30" aria-label="Xem trang cá nhân của {{ $item['user']->name }}">
+                                    <x-ui.avatar :user="$item['user']" size="md" />
+                                </a>
                                 <div>
-                                    <h3 class="text-xs font-bold text-slate-800 flex items-center gap-1">
+                                    <a href="{{ $connectedUserProfileUrl }}" class="text-xs font-bold text-slate-800 flex items-center gap-1 hover:text-ue-brand hover:underline">
                                         {{ $item['user']->name }}
                                         <x-ui.icon name="shield-check" size="xs" class="text-ue-brand fill-ue-brand" />
-                                    </h3>
+                                    </a>
                                     @if ($item['user']->profile && $item['user']->profile->faculty)
                                         <p class="text-[10px] text-slate-400 font-semibold mt-0.5">{{ $item['user']->profile->faculty }}</p>
                                     @endif
@@ -325,6 +330,13 @@ new #[Layout('layouts.app')] class extends Component
                                         class="absolute right-0 mt-1 rounded-xl bg-white border border-slate-150 shadow-lg py-1 z-30 w-40"
                                         style="display: none;"
                                     >
+                                        <a
+                                            href="{{ $connectedUserProfileUrl }}"
+                                            class="w-full text-left px-3 py-2 text-xxs font-semibold text-slate-700 hover:bg-slate-50 hover:text-ue-brand flex items-center gap-1.5 transition-colors"
+                                        >
+                                            <x-ui.icon name="user" size="xs" class="text-slate-400" />
+                                            Xem trang cá nhân
+                                        </a>
                                         <button
                                             type="button"
                                             wire:click="removeConnection({{ $item['id'] }})"
@@ -374,14 +386,19 @@ new #[Layout('layouts.app')] class extends Component
         @if ($activeTab === 'received')
             <div class="space-y-3">
                 @forelse ($received as $greeting)
+                    @php
+                        $senderProfileUrl = route('profile.show', $greeting->sender);
+                    @endphp
                     <div class="bg-white border border-slate-150 rounded-2xl p-4 flex flex-col md:flex-row md:items-center justify-between gap-4 hover:border-slate-350 hover:shadow-2xs transition-all duration-sm">
                         <div class="flex items-start gap-3">
-                            <x-ui.avatar :user="$greeting->sender" size="md" />
+                            <a href="{{ $senderProfileUrl }}" class="block rounded-full focus:outline-none focus:ring-2 focus:ring-ue-brand/30" aria-label="Xem trang cá nhân của {{ $greeting->sender->name }}">
+                                <x-ui.avatar :user="$greeting->sender" size="md" />
+                            </a>
                             <div class="space-y-1.5">
-                                <h3 class="text-xs font-bold text-slate-800 flex items-center gap-1">
+                                <a href="{{ $senderProfileUrl }}" class="text-xs font-bold text-slate-800 flex items-center gap-1 hover:text-ue-brand hover:underline">
                                     {{ $greeting->sender->name }}
                                     <x-ui.icon name="shield-check" size="xs" class="text-ue-brand fill-ue-brand" />
-                                </h3>
+                                </a>
                                 @if ($greeting->sender->profile && $greeting->sender->profile->faculty)
                                     <p class="text-[10px] text-slate-400 font-semibold leading-none">{{ $greeting->sender->profile->faculty }}</p>
                                 @endif
@@ -423,14 +440,19 @@ new #[Layout('layouts.app')] class extends Component
         @if ($activeTab === 'sent')
             <div class="space-y-3">
                 @forelse ($sent as $greeting)
+                    @php
+                        $receiverProfileUrl = route('profile.show', $greeting->receiver);
+                    @endphp
                     <div class="bg-white border border-slate-150 rounded-2xl p-4 flex flex-col md:flex-row md:items-center justify-between gap-4 hover:border-slate-350 hover:shadow-2xs transition-all duration-sm">
                         <div class="flex items-center gap-3">
-                            <x-ui.avatar :user="$greeting->receiver" size="md" />
+                            <a href="{{ $receiverProfileUrl }}" class="block rounded-full focus:outline-none focus:ring-2 focus:ring-ue-brand/30" aria-label="Xem trang cá nhân của {{ $greeting->receiver->name }}">
+                                <x-ui.avatar :user="$greeting->receiver" size="md" />
+                            </a>
                             <div>
-                                <h3 class="text-xs font-bold text-slate-800 flex items-center gap-1">
+                                <a href="{{ $receiverProfileUrl }}" class="text-xs font-bold text-slate-800 flex items-center gap-1 hover:text-ue-brand hover:underline">
                                     {{ $greeting->receiver->name }}
                                     <x-ui.icon name="shield-check" size="xs" class="text-ue-brand fill-ue-brand" />
-                                </h3>
+                                </a>
                                 @if ($greeting->receiver->profile && $greeting->receiver->profile->faculty)
                                     <p class="text-[10px] text-slate-400 font-semibold mt-0.5">{{ $greeting->receiver->profile->faculty }}</p>
                                 @endif
@@ -461,13 +483,18 @@ new #[Layout('layouts.app')] class extends Component
         @if ($activeTab === 'blocked')
             <div class="space-y-3">
                 @forelse ($blocked as $item)
+                    @php
+                        $blockedUserProfileUrl = route('profile.show', $item->blocked);
+                    @endphp
                     <div class="bg-white border border-slate-150 rounded-2xl p-4 flex items-center justify-between hover:border-slate-350 hover:shadow-2xs transition-all duration-sm">
                         <div class="flex items-center gap-3">
-                            <x-ui.avatar :user="$item->blocked" size="md" />
+                            <a href="{{ $blockedUserProfileUrl }}" class="block rounded-full focus:outline-none focus:ring-2 focus:ring-ue-brand/30" aria-label="Xem trang cá nhân của {{ $item->blocked->name }}">
+                                <x-ui.avatar :user="$item->blocked" size="md" />
+                            </a>
                             <div>
-                                <h3 class="text-xs font-bold text-slate-800">
+                                <a href="{{ $blockedUserProfileUrl }}" class="text-xs font-bold text-slate-800 hover:text-ue-brand hover:underline">
                                     {{ $item->blocked->name }}
-                                </h3>
+                                </a>
                                 @if ($item->blocked->profile && $item->blocked->profile->faculty)
                                     <p class="text-[10px] text-slate-400 font-semibold mt-0.5">{{ $item->blocked->profile->faculty }}</p>
                                 @endif

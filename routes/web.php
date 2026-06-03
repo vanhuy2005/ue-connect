@@ -1,6 +1,19 @@
 <?php
 
+use App\Actions\Mentor\AcceptMentorRequestAction;
+use App\Actions\Mentor\AskMentorRequestMoreInfoAction;
+use App\Actions\Mentor\CancelMentorRequestAction;
+use App\Actions\Mentor\CompleteMentorRequestAction;
+use App\Actions\Mentor\CreateMentorRequestAction;
+use App\Actions\Mentor\DeclineMentorRequestAction;
+use App\Actions\Mentor\ReportMentorRequestAction;
+use App\Actions\Mentor\RequestMentorAccessAction;
+use App\Actions\Mentor\SubmitMentorFeedbackAction;
+use App\Actions\Mentor\ToggleMentorAvailabilityAction;
+use App\Actions\Mentor\UpdateMentorProfileAction;
+use App\Actions\Mentor\UpdateMentorRequestAction;
 use App\Actions\Settings\EnsureUserSettingsExistAction;
+use App\Enums\MentorAvailabilityStatus;
 use App\Http\Controllers\Admin\AdminSearchController;
 use App\Http\Controllers\Admin\AnnouncementController;
 use App\Http\Controllers\Admin\AuditLogController;
@@ -18,14 +31,19 @@ use App\Models\AuditLog;
 use App\Models\BlockedUser;
 use App\Models\Community;
 use App\Models\Conversation;
+use App\Models\MentorProfile;
+use App\Models\MentorRequest;
 use App\Models\Post;
 use App\Models\Report;
 use App\Models\User;
 use App\Models\VerificationRequest;
-use App\Services\Media\MediaQuotaService;
+use App\Support\Navigation\AdminNavigation;
+use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Route;
+use Illuminate\Validation\Rule;
+use Illuminate\Validation\ValidationException;
 
 // 1. Public & Guest Routes
 Route::view('/', 'welcome')->name('landing');
@@ -97,6 +115,292 @@ Route::middleware(['auth', 'active.account', 'verified.identity'])->group(functi
     Route::view('app/discovery', 'app.discovery')
         ->name('discovery.index');
 
+    Route::get('app/mentors', fn () => view('app.mentors'))
+        ->name('mentor.discovery');
+
+    Route::get('app/mentors/{mentorProfile}', fn (MentorProfile $mentorProfile) => view('app.mentor-show', ['mentorProfile' => $mentorProfile]))
+        ->name('mentor.show');
+
+    Route::get('app/mentor/apply', fn () => view('app.mentor-apply'))
+        ->name('mentor.apply');
+
+    Route::post('app/mentor/apply', function (RequestMentorAccessAction $action) {
+        $eligibleRoleContexts = RequestMentorAccessAction::eligibleRoleContextsFor(Auth::user());
+
+        if (empty($eligibleRoleContexts)) {
+            throw ValidationException::withMessages([
+                'requested_role_context' => 'Hồ sơ hiện tại của bạn chưa đủ điều kiện đăng ký mentor.',
+            ]);
+        }
+
+        $data = request()->validate([
+            'requested_role_context' => ['required', 'string', Rule::in(array_keys($eligibleRoleContexts))],
+            'motivation' => ['required', 'string', 'min:20', 'max:5000'],
+            'experience_summary' => ['nullable', 'string', 'max:5000'],
+            'expertise_topics' => ['nullable', 'array'],
+            'expertise_topics.*' => ['string', 'max:80'],
+            'career_paths' => ['nullable', 'array'],
+            'career_paths.*' => ['string', 'max:80'],
+        ]);
+
+        try {
+            $action->execute(Auth::user(), $data);
+        } catch (Exception $exception) {
+            throw ValidationException::withMessages([
+                'requested_role_context' => $exception->getMessage(),
+            ]);
+        }
+
+        return to_route('mentor.dashboard')->with('status', 'Yêu cầu trở thành mentor đã được gửi.');
+    })->name('mentor.apply.store');
+
+    Route::get('app/mentor/setup', fn () => view('app.mentor-setup'))
+        ->name('mentor.setup');
+
+    Route::patch('app/mentor/setup', function (UpdateMentorProfileAction $action) {
+        $profile = Auth::user()->mentorProfile()->first();
+
+        if (! $profile) {
+            return back()
+                ->withErrors(['mentor_profile' => 'Bạn chưa có hồ sơ mentor được duyệt. Hãy gửi đăng ký mentor hoặc chờ ban quản trị xét duyệt trước khi thiết lập hồ sơ.'])
+                ->withInput();
+        }
+
+        $profileRecord = Auth::user()->profile;
+        $hasTrustedAvatar = (bool) ($profileRecord?->avatar()->where('status', 'ready')->exists() || $profileRecord?->avatar_media_file_id);
+
+        if (! $hasTrustedAvatar) {
+            return back()
+                ->withErrors(['avatar' => 'Vui lòng tải lên ảnh đại diện rõ mặt trước khi lưu hồ sơ mentor.'])
+                ->withInput();
+        }
+
+        $data = request()->validate([
+            'headline' => ['required', 'string', 'min:12', 'max:160'],
+            'bio' => ['required', 'string', 'min:40', 'max:5000'],
+            'expertise_topics_text' => ['required', 'string', 'max:1000'],
+            'help_topics_text' => ['required', 'string', 'max:1000'],
+            'career_paths_text' => ['nullable', 'string', 'max:1000'],
+            'skills_text' => ['nullable', 'string', 'max:1000'],
+            'preferred_request_types' => ['required', 'array', 'min:1'],
+            'preferred_request_types.*' => ['string', 'max:80'],
+            'availability_status' => ['required', 'string', 'in:available,paused,full,hidden'],
+            'mentor_visibility' => ['required', 'boolean'],
+            'max_pending_requests' => ['required', 'integer', 'min:1', 'max:50'],
+            'response_expectation_text' => ['required', 'string', 'max:255'],
+            'office_hours_text' => ['nullable', 'string', 'max:255'],
+        ]);
+
+        $normalizeList = function (?string $value, int $limit): array {
+            return collect(preg_split('/[\r\n,]+/', (string) $value))
+                ->map(fn (string $item) => trim($item))
+                ->filter()
+                ->unique()
+                ->take($limit)
+                ->values()
+                ->all();
+        };
+
+        $data['expertise_topics'] = $normalizeList($data['expertise_topics_text'], 10);
+        $data['help_topics'] = $normalizeList($data['help_topics_text'], 8);
+        $data['career_paths'] = $normalizeList($data['career_paths_text'] ?? null, 8);
+        $data['skills'] = $normalizeList($data['skills_text'] ?? null, 12);
+
+        unset(
+            $data['expertise_topics_text'],
+            $data['help_topics_text'],
+            $data['career_paths_text'],
+            $data['skills_text'],
+        );
+
+        if (count($data['expertise_topics']) < 2) {
+            return back()
+                ->withErrors(['expertise_topics_text' => 'Vui lòng nhập ít nhất 2 chủ đề chuyên môn, ngăn cách bằng dấu phẩy hoặc xuống dòng.'])
+                ->withInput();
+        }
+
+        if (count($data['help_topics']) < 2) {
+            return back()
+                ->withErrors(['help_topics_text' => 'Vui lòng nhập ít nhất 2 nội dung bạn có thể hỗ trợ.'])
+                ->withInput();
+        }
+
+        try {
+            $action->execute(Auth::user(), $profile, $data);
+        } catch (AuthorizationException) {
+            return back()
+                ->withErrors(['mentor_profile' => 'Không thể lưu hồ sơ mentor vì hồ sơ này không thuộc tài khoản hiện tại hoặc tài khoản chưa đủ điều kiện cập nhật. Vui lòng đăng xuất và đăng nhập lại đúng tài khoản mentor.'])
+                ->withInput();
+        }
+
+        return back()->with('status', 'Hồ sơ mentor đã được cập nhật.');
+    })->name('mentor.setup.update');
+
+    Route::view('app/mentor/dashboard', 'app.mentor-dashboard')
+        ->name('mentor.dashboard');
+
+    Route::view('app/mentor/requests', 'app.mentor-requests')
+        ->name('mentor.requests.index');
+
+    Route::get('app/mentor/requests/{mentorRequest}', function (MentorRequest $mentorRequest) {
+        Gate::authorize('view', $mentorRequest);
+
+        return view('app.mentor-request-show', ['mentorRequest' => $mentorRequest]);
+    })->name('mentor.requests.show');
+
+    Route::post('app/mentor/requests', function (CreateMentorRequestAction $action) {
+        $data = request()->validate([
+            'mentor_profile_id' => ['required', 'exists:mentor_profiles,id'],
+            'topic' => ['required', 'string', 'max:255'],
+            'goal' => ['required', 'string', 'max:5000'],
+            'question' => ['required', 'string', 'max:5000'],
+            'urgency' => ['required', 'string', 'in:low,normal,high'],
+            'context' => ['nullable', 'string', 'max:5000'],
+            'expected_outcome' => ['nullable', 'string', 'max:1000'],
+        ]);
+
+        $mentorProfile = MentorProfile::findOrFail($data['mentor_profile_id']);
+        unset($data['mentor_profile_id']);
+
+        try {
+            $mentorRequest = $action->execute(Auth::user(), $mentorProfile, $data);
+        } catch (Exception $exception) {
+            throw ValidationException::withMessages([
+                'mentor_profile_id' => $exception->getMessage(),
+            ]);
+        }
+
+        return to_route('mentor.requests.show', $mentorRequest)->with('status', 'Yêu cầu cố vấn đã được gửi.');
+    })->name('mentor.requests.store');
+
+    Route::patch('app/mentor/requests/{mentorRequest}', function (MentorRequest $mentorRequest, UpdateMentorRequestAction $action) {
+        $data = request()->validate([
+            'topic' => ['required', 'string', 'max:255'],
+            'goal' => ['required', 'string', 'max:5000'],
+            'question' => ['required', 'string', 'max:5000'],
+            'urgency' => ['required', 'string', 'in:low,normal,high'],
+            'context' => ['nullable', 'string', 'max:5000'],
+            'expected_outcome' => ['nullable', 'string', 'max:1000'],
+        ]);
+
+        try {
+            $action->execute(Auth::user(), $mentorRequest, $data);
+        } catch (Exception $exception) {
+            throw ValidationException::withMessages([
+                'mentor_request' => $exception->getMessage(),
+            ]);
+        }
+
+        return to_route('mentor.requests.show', $mentorRequest)->with('status', 'Yêu cầu cố vấn đã được cập nhật thành công.');
+    })->name('mentor.requests.update');
+
+    Route::post('app/mentor/requests/{mentorRequest}/accept', function (MentorRequest $mentorRequest, AcceptMentorRequestAction $action) {
+        try {
+            $action->execute(Auth::user(), $mentorRequest, request()->only('mentor_response'));
+        } catch (Exception $exception) {
+            throw ValidationException::withMessages([
+                'mentor_request' => $exception->getMessage(),
+            ]);
+        }
+
+        return back()->with('status', 'Yêu cầu cố vấn đã được chấp nhận.');
+    })->name('mentor.requests.accept');
+
+    Route::post('app/mentor/requests/{mentorRequest}/decline', function (MentorRequest $mentorRequest, DeclineMentorRequestAction $action) {
+        request()->validate(['decline_reason' => ['nullable', 'string', 'max:1000']]);
+        try {
+            $action->execute(Auth::user(), $mentorRequest, request()->only('decline_reason'));
+        } catch (Exception $exception) {
+            throw ValidationException::withMessages([
+                'mentor_request' => $exception->getMessage(),
+            ]);
+        }
+
+        return back()->with('status', 'Yêu cầu cố vấn đã bị từ chối.');
+    })->name('mentor.requests.decline');
+
+    Route::post('app/mentor/requests/{mentorRequest}/ask-more-info', function (MentorRequest $mentorRequest, AskMentorRequestMoreInfoAction $action) {
+        $data = request()->validate(['more_info_question' => ['required', 'string', 'max:1000']]);
+        try {
+            $action->execute(Auth::user(), $mentorRequest, $data);
+        } catch (Exception $exception) {
+            throw ValidationException::withMessages([
+                'mentor_request' => $exception->getMessage(),
+            ]);
+        }
+
+        return back()->with('status', 'Đã yêu cầu thêm thông tin.');
+    })->name('mentor.requests.ask-more-info');
+
+    Route::post('app/mentor/requests/{mentorRequest}/cancel', function (MentorRequest $mentorRequest, CancelMentorRequestAction $action) {
+        try {
+            $action->execute(Auth::user(), $mentorRequest);
+        } catch (Exception $exception) {
+            throw ValidationException::withMessages([
+                'mentor_request' => $exception->getMessage(),
+            ]);
+        }
+
+        return back()->with('status', 'Yêu cầu cố vấn đã được hủy.');
+    })->name('mentor.requests.cancel');
+
+    Route::post('app/mentor/requests/{mentorRequest}/complete', function (MentorRequest $mentorRequest, CompleteMentorRequestAction $action) {
+        try {
+            $action->execute(Auth::user(), $mentorRequest);
+        } catch (Exception $exception) {
+            throw ValidationException::withMessages([
+                'mentor_request' => $exception->getMessage(),
+            ]);
+        }
+
+        return back()->with('status', 'Yêu cầu cố vấn đã hoàn thành.');
+    })->name('mentor.requests.complete');
+
+    Route::post('app/mentor/requests/{mentorRequest}/feedback', function (MentorRequest $mentorRequest, SubmitMentorFeedbackAction $action) {
+        $data = request()->validate([
+            'helpfulness_level' => ['required', 'string', 'in:helpful,somewhat_helpful,not_helpful'],
+            'feedback_text' => ['nullable', 'string', 'max:2000'],
+        ]);
+        try {
+            $action->execute(Auth::user(), $mentorRequest, $data);
+        } catch (Exception $exception) {
+            throw ValidationException::withMessages([
+                'mentor_request' => $exception->getMessage(),
+            ]);
+        }
+
+        return back()->with('status', 'Cảm ơn bạn đã gửi phản hồi.');
+    })->name('mentor.requests.feedback');
+
+    Route::post('app/mentor/requests/{mentorRequest}/report', function (MentorRequest $mentorRequest, ReportMentorRequestAction $action) {
+        $data = request()->validate([
+            'reason' => ['required', 'string', Rule::in(['spam', 'harassment', 'inappropriate_content', 'misinformation', 'privacy_violation', 'other'])],
+            'description' => ['nullable', 'string', 'max:2000'],
+        ]);
+
+        try {
+            $action->execute(Auth::user(), $mentorRequest, $data);
+        } catch (Exception $exception) {
+            throw ValidationException::withMessages([
+                'mentor_request' => $exception->getMessage(),
+            ]);
+        }
+
+        return back()->with('status', 'Báo cáo mentor request đã được gửi.');
+    })->name('mentor.requests.report');
+
+    Route::post('app/mentor/availability', function (ToggleMentorAvailabilityAction $action) {
+        $profile = Auth::user()->mentorProfile;
+        abort_unless($profile, 403);
+        $data = request()->validate([
+            'availability_status' => ['required', 'string', 'in:available,paused,full,hidden'],
+        ]);
+
+        $action->execute(Auth::user(), $profile, MentorAvailabilityStatus::from($data['availability_status']));
+
+        return back()->with('status', 'Trạng thái mentor đã được cập nhật.');
+    })->name('mentor.availability');
+
     Route::view('app/connections', 'app.connections')
         ->name('connections.index');
 
@@ -123,6 +427,20 @@ Route::prefix('admin')
     ->name('admin.')
     ->middleware(['auth', 'active.account', EnsureAdminAccess::class])
     ->group(function () {
+        Route::get('console/{group?}', function (?string $group = null) {
+            $groups = AdminNavigation::getVisibleGroups();
+            abort_if(empty($groups), 403);
+
+            $selectedGroupKey = $group && array_key_exists($group, $groups)
+                ? $group
+                : array_key_first($groups);
+
+            return view('admin.console', [
+                'groups' => $groups,
+                'selectedGroupKey' => $selectedGroupKey,
+            ]);
+        })->name('console');
+
         Route::view('dashboard', 'admin.dashboard')->name('dashboard');
 
         // Verification workflow
@@ -194,6 +512,11 @@ Route::prefix('admin')
         Route::get('mentors', [MentorAccessController::class, 'index'])->name('mentors.index');
         Route::get('mentors/{id}', [MentorAccessController::class, 'show'])->name('mentors.detail');
         Route::post('mentors/{mentorAccess}/action', [MentorAccessController::class, 'handle'])->name('mentors.action');
+        Route::post('mentors/{mentorAccessRequest}/approve', [MentorAccessController::class, 'approve'])->name('mentors.approve');
+        Route::post('mentors/{mentorAccessRequest}/reject', [MentorAccessController::class, 'reject'])->name('mentors.reject');
+        Route::post('mentors/{mentorAccessRequest}/need-more-info', [MentorAccessController::class, 'needMoreInfo'])->name('mentors.need-more-info');
+        Route::post('mentors/{mentorProfile}/revoke', [MentorAccessController::class, 'revoke'])->name('mentors.revoke');
+        Route::post('mentors/{user}/grant', [MentorAccessController::class, 'grant'])->name('mentors.grant');
 
         // Permissions management
         Route::view('permissions', 'admin.permissions-list')->name('permissions.index');
