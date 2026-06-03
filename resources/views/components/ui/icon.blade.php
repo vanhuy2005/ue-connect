@@ -643,7 +643,6 @@ $sizeClass = match($size) {
             <circle cx="9" cy="7" r="4"></circle>
             <polyline points="16 11 18 13 22 9"></polyline>
             @break
-
         {{-- Default fallback circle with warnings in local --}}
         @default
             @if(app()->environment('local', 'testing'))

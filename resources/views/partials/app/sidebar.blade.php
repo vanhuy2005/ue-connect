@@ -210,6 +210,7 @@ $adminNavItems = [
 
 @if(isset($shell) && $shell === 'admin')
 <nav
+<<<<<<< HEAD
     class="ue-shell__sidebar hidden lg:flex flex-col py-5 px-5 justify-between h-100dvh sticky top-0 border-r border-ue-border/80"
     aria-label="Điều hướng quản trị"
     role="navigation"
