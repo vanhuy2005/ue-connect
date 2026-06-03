@@ -52,13 +52,20 @@ class MentorAccessRequestTest extends TestCase
         config(['mentor.enable_student_exceptional_mentors' => true]);
 
         $student = $this->activeUser('student');
+        $this->attachAvatar($student);
 
         $response = $this->actingAs($student)->post(route('mentor.apply.store'), [
             'requested_role_context' => 'exceptional_student',
             'motivation' => 'I want to mentor classmates with study planning and internship preparation.',
             'experience_summary' => 'I have supported first-year students in study groups.',
-            'expertise_topics' => ['study planning'],
+            'expertise_topics' => ['study planning', 'exam prep'],
             'career_paths' => ['education technology'],
+            'headline' => 'Exceptional student mentor for academic guidance',
+            'bio' => 'I help junior students manage their study plans and prepare for exams.',
+            'help_topics' => ['study planning', 'exam prep'],
+            'preferred_request_types' => ['academic_guidance', 'subject_support'],
+            'response_expectation_text' => 'Within 2 days',
+            'policy_agreed' => true,
         ]);
 
         $response->assertRedirect(route('mentor.dashboard'));
@@ -78,6 +85,15 @@ class MentorAccessRequestTest extends TestCase
         $response = $this->actingAs($alumni)->from(route('mentor.apply'))->post(route('mentor.apply.store'), [
             'requested_role_context' => 'advisor',
             'motivation' => 'I want to help students prepare for internships and early career choices.',
+            'experience_summary' => 'Five years in student career support.',
+            'expertise_topics' => ['career', 'cv'],
+            'career_paths' => ['HR'],
+            'headline' => 'Career planning mentor',
+            'bio' => 'I help students prepare for internships and early career choices.',
+            'help_topics' => ['career_advice', 'cv_review'],
+            'preferred_request_types' => ['cv_review', 'career_advice'],
+            'response_expectation_text' => 'Within 3 days',
+            'policy_agreed' => true,
         ]);
 
         $response->assertRedirect(route('mentor.apply'));
@@ -102,6 +118,15 @@ class MentorAccessRequestTest extends TestCase
         $response = $this->actingAs($user)->from(route('mentor.apply'))->post(route('mentor.apply.store'), [
             'requested_role_context' => 'alumni',
             'motivation' => 'I want to help students prepare for internships and early career choices.',
+            'experience_summary' => 'Five years in student career support.',
+            'expertise_topics' => ['career', 'cv'],
+            'career_paths' => ['HR'],
+            'headline' => 'Career planning mentor',
+            'bio' => 'I help students prepare for internships and early career choices.',
+            'help_topics' => ['career_advice', 'cv_review'],
+            'preferred_request_types' => ['cv_review', 'career_advice'],
+            'response_expectation_text' => 'Within 3 days',
+            'policy_agreed' => true,
         ]);
 
         $response->assertRedirect(route('mentor.apply'));

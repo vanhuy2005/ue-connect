@@ -38,6 +38,8 @@ class MentorRealFlowUatTest extends TestCase
             ->assertSee('Đăng ký trở thành mentor')
             ->assertSee('Cựu sinh viên');
 
+        $this->attachAvatar($mentor);
+
         $this->actingAs($mentor)
             ->from(route('mentor.apply'))
             ->post(route('mentor.apply.store'), [
@@ -46,6 +48,12 @@ class MentorRealFlowUatTest extends TestCase
                 'experience_summary' => 'Tôi có nhiều năm làm frontend và từng hướng dẫn sinh viên thực tập.',
                 'expertise_topics' => ['Frontend', 'CV Review'],
                 'career_paths' => ['Software Engineering'],
+                'headline' => 'Frontend mentor cho sinh viên chuẩn bị thực tập',
+                'bio' => 'Tôi giúp sinh viên định hướng frontend, CV, portfolio và chuẩn bị phỏng vấn intern.',
+                'help_topics' => ['Review CV', 'Phỏng vấn intern'],
+                'preferred_request_types' => ['cv_review', 'interview_prep'],
+                'response_expectation_text' => 'Thường phản hồi trong vài ngày.',
+                'policy_agreed' => true,
             ])
             ->assertRedirect(route('mentor.dashboard'))
             ->assertSessionHas('status', 'Yêu cầu trở thành mentor đã được gửi.');
@@ -72,8 +80,6 @@ class MentorRealFlowUatTest extends TestCase
             ->where('target_id', $accessRequest->id)
             ->exists());
         $this->assertNotificationTypeExists($mentor, 'mentor_access_approved');
-
-        $this->attachAvatar($mentor);
 
         $this->actingAs($mentor)
             ->from(route('mentor.setup'))
