@@ -2,6 +2,10 @@
 
 namespace Database\Seeders;
 
+use Database\Seeders\Reference\AcademicStructureSeeder;
+use Database\Seeders\Reference\AccessControlReferenceSeeder;
+use Database\Seeders\Testing\MinimalTestingSeeder;
+use Database\Seeders\Uat\UatScenarioSeeder;
 use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 use Illuminate\Database\Seeder;
 
@@ -14,21 +18,21 @@ class DatabaseSeeder extends Seeder
      */
     public function run(): void
     {
-        // 1. Reference data (roles, permissions, faculties, programs)
+        if (app()->environment('testing')) {
+            $this->call(MinimalTestingSeeder::class);
+
+            return;
+        }
+
         $this->call([
-            RoleAndPermissionSeeder::class,
-            FacultyAndAcademicProgramSeeder::class,
+            AccessControlReferenceSeeder::class,
+            AcademicStructureSeeder::class,
         ]);
 
-        // 2. UAT test accounts (admin + unverified student)
-        if (app()->environment(['local', 'testing'])) {
-            $this->call([
-                UatSeeder::class,
-                UatFeedSeeder::class,
-                DemoMentorSeeder::class,
-            ]);
+        if (app()->environment(['local', 'staging'])) {
+            $this->call(UatScenarioSeeder::class);
         } else {
-            $this->command->warn('Skipped UAT/demo seeders: Not in local/testing environment.');
+            $this->command->warn('Skipped UAT seeders outside local/staging. Reference data only was seeded.');
         }
     }
 }

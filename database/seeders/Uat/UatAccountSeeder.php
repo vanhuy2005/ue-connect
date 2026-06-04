@@ -1,6 +1,6 @@
 <?php
 
-namespace Database\Seeders;
+namespace Database\Seeders\Uat;
 
 use App\Enums\AccountStatus;
 use App\Enums\IdentityType;
@@ -21,7 +21,7 @@ use Spatie\Permission\PermissionRegistrar;
  *
  * Password for every UAT account: password
  */
-class UatSeeder extends Seeder
+class UatAccountSeeder extends Seeder
 {
     private const PASSWORD = 'password';
 
@@ -43,11 +43,11 @@ class UatSeeder extends Seeder
     private function seedAdminUsers(): void
     {
         foreach ([
-            ['UEConnect Super Admin', 'superadmin@hcmue.edu.vn', ['super_admin']],
+            ['UEConnect Super Admin', 'superadmin@hcmue.edu.vn', ['admin']],
             ['UEConnect Admin', 'admin@hcmue.edu.vn', ['admin']],
-            ['Mentor Manager', 'mentor.manager@hcmue.edu.vn', ['mentor_manager']],
-            ['Community Moderator', 'moderator@hcmue.edu.vn', ['moderator']],
-            ['Verification Reviewer', 'verification.reviewer@hcmue.edu.vn', ['verification_reviewer']],
+            ['Mentor Manager', 'mentor.manager@hcmue.edu.vn', ['admin']],
+            ['Community Moderator', 'moderator@hcmue.edu.vn', ['admin']],
+            ['Verification Reviewer', 'verification.reviewer@hcmue.edu.vn', ['admin']],
         ] as [$name, $email, $roles]) {
             $user = $this->user($name, $email, 'advisor', AccountStatus::ACTIVE, $roles, IdentityType::TEACHER_ADVISOR);
             $this->advisorProfile($user, 'cntt', 'Quản trị UEConnect', 'Nhân sự vận hành UAT', 'Admin console, moderation, verification');

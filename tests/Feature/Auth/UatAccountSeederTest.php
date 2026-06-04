@@ -4,14 +4,14 @@ namespace Tests\Feature\Auth;
 
 use App\Enums\AccountStatus;
 use App\Models\User;
-use Database\Seeders\FacultyAndAcademicProgramSeeder;
-use Database\Seeders\RoleAndPermissionSeeder;
-use Database\Seeders\UatSeeder;
+use Database\Seeders\Reference\AcademicStructureSeeder;
+use Database\Seeders\Reference\AccessControlReferenceSeeder;
+use Database\Seeders\Uat\UatAccountSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Hash;
 use Tests\TestCase;
 
-class UatSeederTest extends TestCase
+class UatAccountSeederTest extends TestCase
 {
     use RefreshDatabase;
 
@@ -19,20 +19,17 @@ class UatSeederTest extends TestCase
     {
         parent::setUp();
 
-        // 1. Run prerequisite RoleAndPermissionSeeder
-        $this->artisan('db:seed', ['--class' => RoleAndPermissionSeeder::class]);
-        $this->artisan('db:seed', ['--class' => FacultyAndAcademicProgramSeeder::class]);
+        $this->artisan('db:seed', ['--class' => AccessControlReferenceSeeder::class]);
+        $this->artisan('db:seed', ['--class' => AcademicStructureSeeder::class]);
     }
 
     /**
-     * Test that UatSeeder populates correct users, roles, and credentials.
+     * Test that UatAccountSeeder populates correct users, roles, and credentials.
      */
     public function test_uat_seeder_creates_expected_users_roles_and_permissions(): void
     {
-        // 2. Run the UatSeeder
-        $this->artisan('db:seed', ['--class' => UatSeeder::class]);
+        $this->artisan('db:seed', ['--class' => UatAccountSeeder::class]);
 
-        // 3. Verify Admin User
         $admin = User::where('email', 'admin@hcmue.edu.vn')->first();
         $this->assertNotNull($admin);
         $this->assertEquals(AccountStatus::ACTIVE, $admin->account_status);
@@ -45,7 +42,6 @@ class UatSeederTest extends TestCase
         $this->assertNotNull(User::where('email', 'moderator@hcmue.edu.vn')->first());
         $this->assertNotNull(User::where('email', 'verification.reviewer@hcmue.edu.vn')->first());
 
-        // 4. Verify legacy unverified student user
         $student = User::where('email', 'student.test@hcmue.edu.vn')->first();
         $this->assertNotNull($student);
         $this->assertEquals(AccountStatus::REGISTERED, $student->account_status);

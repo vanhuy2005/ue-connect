@@ -1,6 +1,6 @@
 <?php
 
-namespace Database\Seeders;
+namespace Database\Seeders\Uat;
 
 use App\Enums\ConversationStatus;
 use App\Enums\ConversationType;
@@ -27,7 +27,7 @@ use App\Models\User;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\DB;
 
-class DemoMentorSeeder extends Seeder
+class UatMentorSeeder extends Seeder
 {
     /** @var array<string, User> */
     private array $users = [];
@@ -102,7 +102,13 @@ class DemoMentorSeeder extends Seeder
             ['advisor_hidden', 'advisor', MentorAccessStatus::Approved, ['Psychology']],
             ['student_peermentor', 'exceptional_student', config('mentor.enable_student_exceptional_mentors') ? MentorAccessStatus::Approved : MentorAccessStatus::Rejected, ['Kinh nghiệm học tập']],
         ] as [$userKey, $roleContext, $status, $expertise]) {
-            $this->mentorAccess($this->users[$userKey], $roleContext, $status, $expertise);
+            $request = $this->mentorAccess($this->users[$userKey], $roleContext, $status, $expertise);
+
+            if ($request->status === MentorAccessStatus::Approved) {
+                $this->users[$userKey]->givePermissionTo('mentor_access');
+            } elseif ($this->users[$userKey]->hasDirectPermission('mentor_access')) {
+                $this->users[$userKey]->revokePermissionTo('mentor_access');
+            }
         }
     }
 
@@ -346,6 +352,7 @@ class DemoMentorSeeder extends Seeder
                 'preferred_request_types' => ['CV review', 'Career direction', 'Academic guidance'],
                 'availability_status' => $availability,
                 'mentor_visibility' => $visible,
+                'is_public_ready' => $visible && $active && $availability === MentorAvailabilityStatus::Available,
                 'max_pending_requests' => $availability === MentorAvailabilityStatus::Full ? 1 : 5,
                 'max_monthly_accepts' => 8,
                 'response_expectation_text' => 'Phản hồi trong 2-3 ngày làm việc.',

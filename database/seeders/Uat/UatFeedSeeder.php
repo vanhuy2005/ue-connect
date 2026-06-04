@@ -1,6 +1,6 @@
 <?php
 
-namespace Database\Seeders;
+namespace Database\Seeders\Uat;
 
 use App\Enums\CommentStatus;
 use App\Enums\PostStatus;
