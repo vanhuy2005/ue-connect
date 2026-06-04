@@ -16,6 +16,9 @@ class Conversation extends Model
 
     protected $fillable = [
         'conversation_type',
+        'source_type',
+        'source_id',
+        'title',
         'status',
         'created_by',
         'direct_user_low_id',
