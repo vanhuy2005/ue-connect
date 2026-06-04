@@ -32,10 +32,10 @@ new #[Layout('layouts.guest')] class extends Component
     }
 }; ?>
 
-<div class="space-y-6">
+<div class="space-y-4">
     {{-- Header / Welcome --}}
-    <div class="text-center">
-        <h1 class="text-2xl font-bold text-ue-text tracking-snug">Đăng nhập</h1>
+    <div class="text-center mb-1">
+        <h1 class="text-xl font-extrabold text-ue-text tracking-snug">Đăng nhập</h1>
         <p class="text-xs text-ue-text-muted mt-1.5 leading-relaxed">
             Kết nối cộng đồng Sư phạm HCMUE
         </p>
@@ -60,9 +60,9 @@ new #[Layout('layouts.guest')] class extends Component
     @endforeach
 
     {{-- Credentials Form --}}
-    <form wire:submit="login" class="space-y-4">
+    <form wire:submit="login" class="space-y-3.5">
         {{-- Email Address --}}
-        <div class="space-y-1.5">
+        <div class="space-y-1">
             <x-ui.label for="email" :required="true">Email HCMUE</x-ui.label>
             <x-ui.input 
                 id="email" 
@@ -74,12 +74,13 @@ new #[Layout('layouts.guest')] class extends Component
                 autofocus 
                 autocomplete="username"
                 :hasError="$errors->has('form.email')"
+                size="sm"
             />
             <x-ui.field-error name="form.email" />
         </div>
 
         {{-- Password --}}
-        <div class="space-y-1.5">
+        <div class="space-y-1">
             <div class="flex items-center justify-between">
                 <x-ui.label for="password" :required="true">Mật khẩu</x-ui.label>
                 @if (Route::has('password.request'))
@@ -97,12 +98,13 @@ new #[Layout('layouts.guest')] class extends Component
                 required 
                 autocomplete="current-password"
                 :hasError="$errors->has('form.password')"
+                size="sm"
             />
             <x-ui.field-error name="form.password" />
         </div>
 
         {{-- Remember Me & Submit --}}
-        <div class="flex items-center justify-between pt-1">
+        <div class="flex items-center justify-between pt-0.5">
             <label for="remember" class="inline-flex items-center cursor-pointer select-none">
                 <input 
                     wire:model="form.remember" 
@@ -111,16 +113,16 @@ new #[Layout('layouts.guest')] class extends Component
                     class="rounded border-ue-border text-ue-brand focus:ring-ue-brand/20 transition duration-sm cursor-pointer" 
                     name="remember"
                 >
-                <span class="ml-2 text-sm font-medium text-ue-text-secondary">Duy trì đăng nhập</span>
+                <span class="ml-2 text-xs font-medium text-ue-text-secondary">Duy trì đăng nhập</span>
             </label>
         </div>
 
-        <div class="pt-2">
+        <div class="pt-1">
             <x-ui.button 
                 type="submit" 
                 variant="primary" 
-                class="w-full justify-center shadow-sm" 
-                size="lg" 
+                class="w-full justify-center shadow-sm font-bold" 
+                size="md" 
                 wire:loading.attr="disabled"
                 wire:target="login"
             >
@@ -142,10 +144,10 @@ new #[Layout('layouts.guest')] class extends Component
             && !empty(config('services.microsoft.tenant'));
     @endphp
 
-    <div class="space-y-4">
-        <div class="relative w-full flex items-center justify-center py-2">
+    <div class="space-y-3.5">
+        <div class="relative w-full flex items-center justify-center py-1">
             <div class="border-t border-ue-border w-full"></div>
-            <div class="absolute bg-ue-surface px-4 text-2xs font-bold uppercase tracking-widest text-ue-text-muted">
+            <div class="absolute bg-white px-4 text-[10px] font-bold uppercase tracking-widest text-ue-text-muted">
                 Hoặc
             </div>
         </div>
@@ -154,8 +156,8 @@ new #[Layout('layouts.guest')] class extends Component
             <x-ui.button 
                 wire:click="redirectToMicrosoft" 
                 variant="outline" 
-                class="w-full justify-center shadow-sm hover:border-ue-border-strong" 
-                size="lg" 
+                class="w-full justify-center shadow-sm hover:border-ue-border-strong font-bold" 
+                size="md" 
                 icon="microsoft"
                 wire:loading.attr="disabled"
                 wire:target="redirectToMicrosoft"
@@ -167,23 +169,20 @@ new #[Layout('layouts.guest')] class extends Component
                 </span>
             </x-ui.button>
         @else
-            <div class="p-3.5 bg-ue-surface-subtle border border-ue-border rounded-xl flex items-start gap-3 opacity-60">
-                <x-ui.icon name="microsoft" size="md" class="text-ue-text-disabled mt-0.5 flex-shrink-0" />
+            <div class="p-2.5 bg-ue-surface-subtle border border-ue-border rounded-xl flex items-start gap-2.5 opacity-60">
+                <x-ui.icon name="microsoft" size="sm" class="text-ue-text-disabled mt-0.5 flex-shrink-0" />
                 <div class="space-y-0.5">
                     <p class="text-xs font-semibold text-ue-text-secondary">Đăng nhập Microsoft SSO chưa sẵn sàng</p>
-                    <p class="text-2xs text-ue-text-muted leading-relaxed">
-                        Hệ thống xác thực nhanh bằng tài khoản trường hiện chưa được cấu hình.
-                    </p>
                 </div>
             </div>
         @endif
     </div>
 
     {{-- Footer Registration Link --}}
-    <div class="text-center pt-2">
-        <p class="text-sm text-ue-text-secondary">
+    <div class="text-center pt-1">
+        <p class="text-xs text-ue-text-secondary">
             Bạn là thành viên mới? 
-            <a class="font-semibold text-ue-brand hover:text-ue-brand-hover hover:underline transition-colors ml-1" href="{{ route('register') }}" wire:navigate>
+            <a class="font-bold text-ue-brand hover:text-ue-brand-hover hover:underline transition-colors ml-1" href="{{ route('register') }}" wire:navigate>
                 Đăng ký tài khoản
             </a>
         </p>
