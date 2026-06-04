@@ -7,6 +7,7 @@ use App\Enums\AccountStatus;
 use App\Enums\GreetingStatus;
 use App\Models\Greeting;
 use App\Models\User;
+use Database\Seeders\Reference\AccessControlReferenceSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Livewire\Volt\Volt;
 use Tests\TestCase;
@@ -22,7 +23,7 @@ class GreetingInboxTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
-        $this->artisan('db:seed', ['--class' => 'RoleAndPermissionSeeder']);
+        $this->artisan('db:seed', ['--class' => AccessControlReferenceSeeder::class]);
 
         // Main User
         $this->user = User::factory()->create(['account_status' => AccountStatus::ACTIVE]);

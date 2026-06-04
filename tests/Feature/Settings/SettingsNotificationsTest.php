@@ -5,6 +5,7 @@ namespace Tests\Feature\Settings;
 use App\Actions\Settings\EnsureUserSettingsExistAction;
 use App\Enums\AccountStatus;
 use App\Models\User;
+use Database\Seeders\Reference\AccessControlReferenceSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Livewire\Volt\Volt;
 use Tests\TestCase;
@@ -19,7 +20,7 @@ class SettingsNotificationsTest extends TestCase
     {
         parent::setUp();
 
-        $this->artisan('db:seed', ['--class' => 'RoleAndPermissionSeeder']);
+        $this->artisan('db:seed', ['--class' => AccessControlReferenceSeeder::class]);
 
         $this->user = User::factory()->create([
             'account_status' => AccountStatus::ACTIVE,

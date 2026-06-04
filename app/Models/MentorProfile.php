@@ -2,6 +2,8 @@
 
 namespace App\Models;
 
+use App\Enums\AccountStatus;
+use App\Enums\MentorAccessStatus;
 use App\Enums\MentorAvailabilityStatus;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -84,7 +86,13 @@ class MentorProfile extends Model
         return $query->where('is_active', true)
             ->where('mentor_visibility', true)
             ->where('is_public_ready', true)
-            ->where('availability_status', MentorAvailabilityStatus::Available);
+            ->where('availability_status', MentorAvailabilityStatus::Available)
+            ->whereHas('user', function ($query) {
+                $query->where('account_status', AccountStatus::ACTIVE)
+                    ->whereHas('mentorAccessRequests', function ($query) {
+                        $query->where('status', MentorAccessStatus::Approved);
+                    });
+            });
     }
 
     /**
@@ -93,6 +101,10 @@ class MentorProfile extends Model
     public function isAvailableForRequests(): bool
     {
         if (! $this->is_active || ! $this->mentor_visibility) {
+            return false;
+        }
+
+        if (! $this->user || ! $this->user->isActive() || ! $this->user->hasApprovedMentorAccess()) {
             return false;
         }
 

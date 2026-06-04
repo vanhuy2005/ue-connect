@@ -18,6 +18,7 @@ use App\Models\MediaFile;
 use App\Models\User;
 use App\Models\VerificationEvidence;
 use App\Models\VerificationRequest;
+use Database\Seeders\Reference\AccessControlReferenceSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
@@ -41,7 +42,7 @@ class StudentCardAiVerificationTest extends TestCase
     {
         parent::setUp();
 
-        $this->artisan('db:seed', ['--class' => 'RoleAndPermissionSeeder']);
+        $this->artisan('db:seed', ['--class' => AccessControlReferenceSeeder::class]);
 
         $this->faculty = Faculty::create([
             'name' => 'Khoa Công nghệ Thông tin',
@@ -65,6 +66,7 @@ class StudentCardAiVerificationTest extends TestCase
 
         $this->admin = User::factory()->create([
             'email' => 'admin@hcmue.edu.vn',
+            'account_status' => AccountStatus::ACTIVE,
         ]);
         $this->admin->assignRole('admin');
 

@@ -7,6 +7,8 @@ use App\Models\AcademicProgram;
 use App\Models\BlockedUser;
 use App\Models\Faculty;
 use App\Models\User;
+use Database\Seeders\Reference\AcademicStructureSeeder;
+use Database\Seeders\Reference\AccessControlReferenceSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Livewire\Volt\Volt;
 use Tests\TestCase;
@@ -24,8 +26,8 @@ class DiscoveryUpgradeTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
-        $this->artisan('db:seed', ['--class' => 'RoleAndPermissionSeeder']);
-        $this->artisan('db:seed', ['--class' => 'FacultyAndAcademicProgramSeeder']);
+        $this->artisan('db:seed', ['--class' => AccessControlReferenceSeeder::class]);
+        $this->artisan('db:seed', ['--class' => AcademicStructureSeeder::class]);
 
         $this->facultyCs = Faculty::where('slug', 'cntt')->first();
         $this->programCs = AcademicProgram::where('slug', 'cong-nghe-thong-tin')->first();

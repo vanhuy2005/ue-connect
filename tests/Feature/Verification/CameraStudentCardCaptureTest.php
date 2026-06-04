@@ -10,6 +10,7 @@ use App\Models\AcademicProgram;
 use App\Models\EvidenceCaptureSession;
 use App\Models\Faculty;
 use App\Models\User;
+use Database\Seeders\Reference\AccessControlReferenceSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Bus;
 use Illuminate\Support\Facades\Storage;
@@ -30,7 +31,7 @@ class CameraStudentCardCaptureTest extends TestCase
     {
         parent::setUp();
 
-        $this->artisan('db:seed', ['--class' => 'RoleAndPermissionSeeder']);
+        $this->artisan('db:seed', ['--class' => AccessControlReferenceSeeder::class]);
 
         $this->faculty = Faculty::create([
             'name' => 'Khoa Công nghệ Thông tin',

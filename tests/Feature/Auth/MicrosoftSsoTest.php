@@ -5,6 +5,7 @@ namespace Tests\Feature\Auth;
 use App\Enums\AccountStatus;
 use App\Models\User;
 use App\Models\UserIdentityProvider;
+use Database\Seeders\Reference\AccessControlReferenceSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Laravel\Socialite\Facades\Socialite;
 use Laravel\Socialite\Two\AbstractProvider;
@@ -19,7 +20,7 @@ class MicrosoftSsoTest extends TestCase
         parent::setUp();
 
         // Seed roles and permissions
-        $this->artisan('db:seed', ['--class' => 'RoleAndPermissionSeeder']);
+        $this->artisan('db:seed', ['--class' => AccessControlReferenceSeeder::class]);
 
         // Enable SSO for tests that need it
         config(['services.microsoft.enabled' => true]);

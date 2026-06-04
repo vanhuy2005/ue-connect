@@ -5,6 +5,7 @@ namespace App\Models;
 // use Illuminate\Contracts\Auth\MustVerifyEmail;
 use App\Enums\AccountStatus;
 use App\Enums\IdentityType;
+use App\Enums\MentorAccessStatus;
 use Database\Factories\UserFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Attributes\Hidden;
@@ -230,6 +231,17 @@ class User extends Authenticatable
     }
 
     /**
+     * Check if the user has an approved mentor access grant.
+     */
+    public function hasApprovedMentorAccess(): bool
+    {
+        return $this->can('mentor_access')
+            && $this->mentorAccessRequests()
+                ->where('status', MentorAccessStatus::Approved)
+                ->exists();
+    }
+
+    /**
      * Get the user's approved mentor profile.
      */
     public function mentorProfile(): HasOne
@@ -242,8 +254,10 @@ class User extends Authenticatable
      */
     public function isActiveMentor(): bool
     {
-        return $this->mentorProfile !== null
-            && $this->mentorProfile->is_active;
+        return $this->isActive()
+            && $this->mentorProfile !== null
+            && $this->mentorProfile->is_active
+            && $this->hasApprovedMentorAccess();
     }
 
     /**

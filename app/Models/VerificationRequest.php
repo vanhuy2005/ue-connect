@@ -32,6 +32,9 @@ class VerificationRequest extends Model
         'assigned_admin_id',
         'submitted_at',
         'reviewed_at',
+        'reviewed_by',
+        'review_reason',
+        'review_instruction',
         'expires_at',
     ];
 

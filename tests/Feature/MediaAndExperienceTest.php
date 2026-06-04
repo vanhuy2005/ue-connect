@@ -19,6 +19,7 @@ use App\Models\Message;
 use App\Models\Post;
 use App\Models\Profile;
 use App\Models\User;
+use Database\Seeders\Reference\AccessControlReferenceSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\DB;
@@ -37,7 +38,7 @@ class MediaAndExperienceTest extends TestCase
         parent::setUp();
 
         // Seed roles and permissions
-        $this->artisan('db:seed', ['--class' => 'RoleAndPermissionSeeder']);
+        $this->artisan('db:seed', ['--class' => AccessControlReferenceSeeder::class]);
 
         // Disable Cloudinary and S3 Compatible disks in config for testing fallback to local
         config([

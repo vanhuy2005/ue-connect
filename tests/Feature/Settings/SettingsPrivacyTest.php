@@ -7,6 +7,8 @@ use App\Enums\AccountStatus;
 use App\Models\AcademicProgram;
 use App\Models\Faculty;
 use App\Models\User;
+use Database\Seeders\Reference\AcademicStructureSeeder;
+use Database\Seeders\Reference\AccessControlReferenceSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Livewire\Volt\Volt;
 use Tests\TestCase;
@@ -25,8 +27,8 @@ class SettingsPrivacyTest extends TestCase
     {
         parent::setUp();
 
-        $this->artisan('db:seed', ['--class' => 'RoleAndPermissionSeeder']);
-        $this->artisan('db:seed', ['--class' => 'FacultyAndAcademicProgramSeeder']);
+        $this->artisan('db:seed', ['--class' => AccessControlReferenceSeeder::class]);
+        $this->artisan('db:seed', ['--class' => AcademicStructureSeeder::class]);
 
         $this->faculty = Faculty::first();
         $this->program = AcademicProgram::first();
