@@ -76,7 +76,7 @@
                         variant="ghost"
                         size="xs"
                         wire:click="hidePost({{ $post->id }})"
-                        class="ue-post-card__quick-hide text-slate-400 hover:text-slate-650 focus:ring-1 focus:ring-slate-200 focus:outline-none"
+                        class="ue-post-card__quick-hide text-slate-400 hover:text-slate-700 focus:ring-1 focus:ring-slate-200 focus:outline-none"
                     />
                 </div>
             </div>

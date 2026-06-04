@@ -115,6 +115,16 @@ Route::middleware(['auth', 'active.account', 'verified.identity'])->group(functi
     Route::view('app/discovery', 'app.discovery')
         ->name('discovery.index');
 
+    // Community app routes
+    Route::get('app/communities', fn () => view('app.communities'))
+        ->name('community.index');
+
+    Route::get('app/communities/{community}', function (Community $community) {
+        Gate::authorize('view', $community);
+
+        return view('app.community-show', ['community' => $community]);
+    })->name('community.show');
+
     Route::get('app/mentors', fn () => view('app.mentors'))
         ->name('mentor.discovery');
 
@@ -480,7 +490,7 @@ Route::prefix('admin')
             $user = Auth::user();
 
             return view('admin.notifications', [
-                'notifications' => $user?->notifications()->latest()->paginate(20),
+                'notifications' => $user?->notifications()->reorder('created_at', 'desc')->paginate(20),
                 'unreadCount' => $user?->unreadNotifications()->count() ?? 0,
             ]);
         })->name('notifications.index');
@@ -511,7 +521,7 @@ Route::prefix('admin')
         Route::post('users/{user}/reactivate', [UserManagementController::class, 'reactivate'])
             ->name('users.reactivate');
 
-        // Communities
+        // Communities — core management
         Route::get('communities', [CommunityController::class, 'index'])->name('communities.index');
         Route::get('communities/create', [CommunityController::class, 'create'])->name('communities.create');
         Route::post('communities', [CommunityController::class, 'store'])->name('communities.store');
@@ -519,8 +529,23 @@ Route::prefix('admin')
         Route::post('communities/{community}/update', [CommunityController::class, 'update'])->name('communities.update');
         Route::post('communities/{community}/suspend', [CommunityController::class, 'suspend'])->name('communities.suspend');
         Route::post('communities/{community}/reactivate', [CommunityController::class, 'reactivate'])->name('communities.reactivate');
+        Route::post('communities/{community}/archive', [CommunityController::class, 'archive'])->name('communities.archive');
         Route::post('communities/{community}/members', [CommunityController::class, 'addMember'])->name('communities.members.add');
         Route::delete('communities/{community}/members/{user}', [CommunityController::class, 'removeMember'])->name('communities.members.remove');
+        Route::post('communities/{community}/managers/{user}/grant', [CommunityController::class, 'grantManager'])->name('communities.managers.grant');
+        Route::post('communities/{community}/managers/{user}/revoke', [CommunityController::class, 'revokeManager'])->name('communities.managers.revoke');
+
+        // Community join requests
+        Route::get('communities/{community}/join-requests', [CommunityController::class, 'joinRequests'])->name('communities.join-requests.index');
+        Route::post('community-join-requests/{joinRequest}/approve', [CommunityController::class, 'approveJoinRequest'])->name('community-join-requests.approve');
+        Route::post('community-join-requests/{joinRequest}/reject', [CommunityController::class, 'rejectJoinRequest'])->name('community-join-requests.reject');
+
+        // Community resources review
+        Route::post('community-resources/{resource}/review', [CommunityController::class, 'reviewResource'])->name('community-resources.review');
+
+        // Community suggestions
+        Route::get('community-suggestions', [CommunityController::class, 'suggestions'])->name('community-suggestions.index');
+        Route::post('community-suggestions/{suggestion}/review', [CommunityController::class, 'reviewSuggestion'])->name('community-suggestions.review');
 
         // Mentor Access
         Route::get('mentors', [MentorAccessController::class, 'index'])->name('mentors.index');
