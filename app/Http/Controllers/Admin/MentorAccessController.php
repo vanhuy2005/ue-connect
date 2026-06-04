@@ -20,7 +20,7 @@ class MentorAccessController extends Controller
     {
         $user = request()->user();
 
-        if (! $user || (! $user->hasRole('admin') && ! $user->hasRole('super_admin') && ! Gate::any(['manage_mentor_access', 'manage_permissions']))) {
+        if (! $user || ! Gate::any(['manage_mentor_access', 'manage_permissions'])) {
             abort(403);
         }
 
@@ -33,7 +33,7 @@ class MentorAccessController extends Controller
     {
         $user = request()->user();
 
-        if (! $user || (! $user->hasRole('admin') && ! $user->hasRole('super_admin') && ! Gate::any(['manage_mentor_access', 'manage_permissions']))) {
+        if (! $user || ! Gate::any(['manage_mentor_access', 'manage_permissions'])) {
             abort(403);
         }
 

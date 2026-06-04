@@ -2,8 +2,9 @@
 
 namespace Tests\Feature;
 
+use App\Enums\AccountStatus;
 use App\Models\User;
-use Database\Seeders\RoleAndPermissionSeeder;
+use Database\Seeders\Reference\AccessControlReferenceSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
@@ -13,9 +14,9 @@ class AdminNotificationsTest extends TestCase
 
     public function test_admin_can_view_notification_center(): void
     {
-        $this->seed(RoleAndPermissionSeeder::class);
+        $this->seed(AccessControlReferenceSeeder::class);
 
-        $admin = User::factory()->create();
+        $admin = User::factory()->create(['account_status' => AccountStatus::ACTIVE]);
         $admin->assignRole('admin');
 
         $this->actingAs($admin)

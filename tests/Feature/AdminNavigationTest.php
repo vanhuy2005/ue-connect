@@ -4,7 +4,7 @@ namespace Tests\Feature;
 
 use App\Enums\AccountStatus;
 use App\Models\User;
-use Database\Seeders\RoleAndPermissionSeeder;
+use Database\Seeders\Reference\AccessControlReferenceSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
@@ -15,7 +15,7 @@ class AdminNavigationTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
-        $this->seed(RoleAndPermissionSeeder::class);
+        $this->seed(AccessControlReferenceSeeder::class);
     }
 
     public function test_normal_user_does_not_see_admin_console_link(): void

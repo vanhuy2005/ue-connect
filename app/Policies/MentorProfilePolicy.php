@@ -29,8 +29,6 @@ class MentorProfilePolicy
      */
     public function revoke(User $user, MentorProfile $mentorProfile): bool
     {
-        return $user->can('manage_mentor_access')
-            || $user->hasRole('admin')
-            || $user->hasRole('super_admin');
+        return $user->isActive() && $user->can('manage_mentor_access');
     }
 }

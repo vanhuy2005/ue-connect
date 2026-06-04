@@ -2,9 +2,10 @@
 
 namespace Tests\Feature;
 
+use App\Enums\AccountStatus;
 use App\Models\Media;
 use App\Models\User;
-use Database\Seeders\RoleAndPermissionSeeder;
+use Database\Seeders\Reference\AccessControlReferenceSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Str;
@@ -17,7 +18,7 @@ class AdminMediaManagementTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
-        $this->seed(RoleAndPermissionSeeder::class);
+        $this->seed(AccessControlReferenceSeeder::class);
     }
 
     public function test_admin_can_view_media_usage()
@@ -26,7 +27,7 @@ class AdminMediaManagementTest extends TestCase
             $this->markTestSkipped('Media table does not exist.');
         }
 
-        $admin = User::factory()->create();
+        $admin = User::factory()->create(['account_status' => AccountStatus::ACTIVE]);
         $admin->assignRole('admin');
 
         $response = $this->actingAs($admin)->get(route('admin.media.usage'));
@@ -52,7 +53,7 @@ class AdminMediaManagementTest extends TestCase
             $this->markTestSkipped('Media table does not exist.');
         }
 
-        $admin = User::factory()->create();
+        $admin = User::factory()->create(['account_status' => AccountStatus::ACTIVE]);
         $admin->assignRole('admin');
 
         $media = Media::create([

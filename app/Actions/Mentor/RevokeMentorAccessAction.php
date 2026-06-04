@@ -48,6 +48,10 @@ class RevokeMentorAccessAction
                     'admin_notes' => $data['admin_notes'] ?? null,
                 ]);
 
+            if ($mentorProfile->user?->hasDirectPermission('mentor_access')) {
+                $mentorProfile->user->revokePermissionTo('mentor_access');
+            }
+
             // 3. Audit log
             $this->audit->log([
                 'action' => 'mentor_access_revoked',

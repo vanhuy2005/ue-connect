@@ -10,6 +10,7 @@ use App\Models\Profile;
 use App\Models\StudentProfile;
 use App\Models\User;
 use App\Models\VerificationRequest;
+use Database\Seeders\Reference\AccessControlReferenceSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Livewire\Volt\Volt;
 use Tests\TestCase;
@@ -32,7 +33,7 @@ class AdminVerificationReviewTest extends TestCase
     {
         parent::setUp();
 
-        $this->artisan('db:seed', ['--class' => 'RoleAndPermissionSeeder']);
+        $this->artisan('db:seed', ['--class' => AccessControlReferenceSeeder::class]);
 
         // Create reference data
         $this->faculty = Faculty::create([
@@ -191,6 +192,30 @@ class AdminVerificationReviewTest extends TestCase
             'verification_request_id' => $this->request->id,
             'action_key' => 'need_more_information',
             'instruction' => 'Vui lòng tải lại ảnh thẻ SV rõ hơn.',
+        ]);
+    }
+
+    public function test_admin_can_mark_request_suspicious_with_state_machine_status(): void
+    {
+        $this->actingAs($this->admin);
+
+        Volt::test('pages.admin.verification-detail', ['id' => $this->request->id])
+            ->set('action', 'suspicious')
+            ->set('reason', 'Minh chứng có dấu hiệu chỉnh sửa nghiêm trọng.')
+            ->call('processReview')
+            ->assertHasNoErrors()
+            ->assertRedirect(route('admin.verifications.queue'));
+
+        $this->request->refresh();
+        $this->assertEquals(VerificationStatus::SUSPICIOUS, $this->request->status);
+        $this->assertNotSame('suspended_by_admin', $this->request->status->value);
+
+        $this->studentUser->refresh();
+        $this->assertEquals(AccountStatus::SUSPENDED, $this->studentUser->account_status);
+
+        $this->assertDatabaseHas('verification_review_actions', [
+            'verification_request_id' => $this->request->id,
+            'action_key' => 'suspend_suspicious',
         ]);
     }
 

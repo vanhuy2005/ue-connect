@@ -2,8 +2,9 @@
 
 namespace Tests\Feature;
 
+use App\Enums\AccountStatus;
 use App\Models\User;
-use Database\Seeders\RoleAndPermissionSeeder;
+use Database\Seeders\Reference\AccessControlReferenceSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Storage;
 use Tests\TestCase;
@@ -16,9 +17,9 @@ class AdminSystemSettingsTest extends TestCase
     {
         Storage::fake('local');
 
-        $this->seed(RoleAndPermissionSeeder::class);
+        $this->seed(AccessControlReferenceSeeder::class);
 
-        $admin = User::factory()->create();
+        $admin = User::factory()->create(['account_status' => AccountStatus::ACTIVE]);
         $admin->assignRole('admin');
 
         $updatePayload = [

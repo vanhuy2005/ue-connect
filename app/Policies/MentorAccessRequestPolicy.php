@@ -38,9 +38,7 @@ class MentorAccessRequestPolicy
             return true;
         }
 
-        return $user->can('manage_mentor_access')
-            || $user->hasRole('admin')
-            || $user->hasRole('super_admin');
+        return $user->isActive() && $user->can('manage_mentor_access');
     }
 
     /**
@@ -48,9 +46,7 @@ class MentorAccessRequestPolicy
      */
     public function review(User $user, MentorAccessRequest $request): bool
     {
-        return $user->can('manage_mentor_access')
-            || $user->hasRole('admin')
-            || $user->hasRole('super_admin');
+        return $user->isActive() && $user->can('manage_mentor_access');
     }
 
     /**
@@ -58,9 +54,7 @@ class MentorAccessRequestPolicy
      */
     public function grant(User $user): bool
     {
-        return $user->can('manage_mentor_access')
-            || $user->hasRole('admin')
-            || $user->hasRole('super_admin');
+        return $user->isActive() && $user->can('manage_mentor_access');
     }
 
     /**
@@ -68,8 +62,6 @@ class MentorAccessRequestPolicy
      */
     public function revoke(User $user): bool
     {
-        return $user->can('manage_mentor_access')
-            || $user->hasRole('admin')
-            || $user->hasRole('super_admin');
+        return $user->isActive() && $user->can('manage_mentor_access');
     }
 }

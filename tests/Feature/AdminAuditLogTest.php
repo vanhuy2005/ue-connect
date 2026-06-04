@@ -2,9 +2,10 @@
 
 namespace Tests\Feature;
 
+use App\Enums\AccountStatus;
 use App\Models\AuditLog;
 use App\Models\User;
-use Database\Seeders\RoleAndPermissionSeeder;
+use Database\Seeders\Reference\AccessControlReferenceSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Spatie\Permission\Models\Permission;
 use Spatie\Permission\Models\Role;
@@ -16,14 +17,14 @@ class AdminAuditLogTest extends TestCase
 
     public function test_admin_can_view_audit_logs()
     {
-        $this->seed(RoleAndPermissionSeeder::class);
+        $this->seed(AccessControlReferenceSeeder::class);
 
         Permission::findOrCreate('manage_permissions', 'web');
         Permission::findOrCreate('view_audit_log', 'web');
         $adminRole = Role::findOrCreate('admin', 'web');
         $adminRole->givePermissionTo(['manage_permissions', 'view_audit_log']);
 
-        $user = User::factory()->create();
+        $user = User::factory()->create(['account_status' => AccountStatus::ACTIVE]);
         $user->assignRole('admin');
 
         AuditLog::create([

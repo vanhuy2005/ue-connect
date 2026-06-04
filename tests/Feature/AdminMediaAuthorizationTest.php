@@ -5,7 +5,7 @@ namespace Tests\Feature;
 use App\Enums\AccountStatus;
 use App\Models\Media;
 use App\Models\User;
-use Database\Seeders\RoleAndPermissionSeeder;
+use Database\Seeders\Reference\AccessControlReferenceSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Str;
@@ -18,7 +18,7 @@ class AdminMediaAuthorizationTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
-        $this->seed(RoleAndPermissionSeeder::class);
+        $this->seed(AccessControlReferenceSeeder::class);
     }
 
     public function test_private_media_download_requires_authorization()
