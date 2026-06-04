@@ -1,17 +1,10 @@
 <?php
 
-use App\Models\VerificationRequest;
-use App\Models\VerificationEvidence;
-use App\Models\VerificationReviewAction;
-use App\Models\Profile;
-use App\Models\StudentProfile;
-use App\Models\AlumniProfile;
-use App\Models\AdvisorProfile;
+use App\Actions\Admin\ReviewVerificationAction;
 use App\Enums\VerificationStatus;
-use App\Enums\AccountStatus;
+use App\Models\VerificationRequest;
+use App\Services\AuditService;
 use Livewire\Volt\Component;
-use Illuminate\Support\Facades\DB;
-use App\Services\AuditLogService;
 
 new class extends Component {
     public int $requestId;
@@ -24,6 +17,8 @@ new class extends Component {
 
     public function mount(int $id): void
     {
+        $this->authorize('view', VerificationRequest::class);
+
         $this->requestId = $id;
         $this->loadRequest();
     }
@@ -40,65 +35,28 @@ new class extends Component {
             'reviewActions.admin'
         ])->findOrFail($this->requestId);
 
-        // Auto transition PENDING_REVIEW / RESUBMITTED to UNDER_REVIEW
-        if ($this->request->status === VerificationStatus::PENDING_REVIEW || $this->request->status === VerificationStatus::RESUBMITTED) {
-            DB::transaction(function () {
-                $beforeSnapshot = $this->request->toArray();
+        app(ReviewVerificationAction::class)->startReview($this->request, auth()->user());
 
-                $this->request->update([
-                    'status' => VerificationStatus::UNDER_REVIEW,
-                    'assigned_admin_id' => auth()->id(),
-                ]);
-
-                $afterSnapshot = $this->request->toArray();
-
-                // Create Action record
-                VerificationReviewAction::create([
-                    'verification_request_id' => $this->request->id,
-                    'admin_id' => auth()->id(),
-                    'action_key' => 'start_review',
-                    'reason' => 'Bắt đầu kiểm duyệt hồ sơ.',
-                    'before_snapshot_json' => $beforeSnapshot,
-                    'after_snapshot_json' => $afterSnapshot,
-                ]);
-
-                // Create Audit record
-                AuditLogService::log(
-                    actorId: auth()->id(),
-                    actorType: 'admin',
-                    actionKey: 'verification.start_review',
-                    targetType: 'verification_requests',
-                    targetId: $this->request->id,
-                    beforeSnapshot: $beforeSnapshot,
-                    afterSnapshot: $afterSnapshot,
-                    reason: 'Admin bắt đầu kiểm duyệt.'
-                );
-            });
-        }
+        $this->request = VerificationRequest::with([
+            'user.roles',
+            'submittedFaculty',
+            'submittedAcademicProgram',
+            'evidences.mediaFile',
+            'evidences.latestAnalysisResult.analysisJob',
+            'evidences.captureSession',
+            'reviewActions.admin'
+        ])->findOrFail($this->requestId);
     }
 
     public function processReview(): void
     {
-        $user = $this->request->user;
-        if (!$user) {
-            $this->addError('general', 'Không tìm thấy tài khoản người dùng liên quan.');
-            return;
-        }
+        $this->authorize('act', VerificationRequest::class);
 
-        // Validate based on chosen action
         if ($this->action === 'approve') {
             $this->validate([
                 'reason' => ['nullable', 'string', 'max:1000'],
             ]);
 
-            // If Student or Alumni, check unique MSSV/Student code in student_profiles
-            if ($this->request->role_requested === 'student') {
-                $exists = StudentProfile::where('student_code', $this->request->submitted_student_code)->exists();
-                if ($exists) {
-                    $this->addError('general', 'Mã số sinh viên (MSSV) này đã được sử dụng bởi một tài khoản khác.');
-                    return;
-                }
-            }
         } elseif ($this->action === 'reject') {
             $this->validate([
                 'reason' => ['required', 'string', 'min:5', 'max:1000'],
@@ -129,254 +87,12 @@ new class extends Component {
             ]);
         }
 
-        DB::transaction(function () use ($user) {
-            $beforeSnapshot = $this->request->toArray();
-            $userBeforeSnapshot = $user->toArray();
-
-            if ($this->action === 'approve') {
-                // 1. Create or Update Profile
-                $profile = Profile::updateOrCreate(
-                    ['user_id' => $user->id],
-                    [
-                        'display_name' => $this->request->submitted_name,
-                        'role_type' => $this->request->role_requested,
-                        'profile_status' => 'incomplete',
-                    ]
-                );
-
-                // 2. Create specific subprofile
-                if ($this->request->role_requested === 'student') {
-                    StudentProfile::updateOrCreate(
-                        ['profile_id' => $profile->id],
-                        [
-                            'student_code' => $this->request->submitted_student_code,
-                            'faculty_id' => $this->request->submitted_faculty_id,
-                            'academic_program_id' => $this->request->submitted_academic_program_id,
-                            'cohort' => $this->request->submitted_cohort,
-                        ]
-                    );
-                } elseif ($this->request->role_requested === 'alumni') {
-                    AlumniProfile::updateOrCreate(
-                        ['profile_id' => $profile->id],
-                        [
-                            'faculty_id' => $this->request->submitted_faculty_id,
-                            'academic_program_id' => $this->request->submitted_academic_program_id,
-                            'cohort' => $this->request->submitted_cohort,
-                        ]
-                    );
-                } elseif ($this->request->role_requested === 'advisor') {
-                    AdvisorProfile::updateOrCreate(
-                        ['profile_id' => $profile->id],
-                        [
-                            'faculty_id' => $this->request->submitted_faculty_id,
-                        ]
-                    );
-                }
-
-                // 3. Assign role via Spatie Permission
-                $user->syncRoles([$this->request->role_requested]);
-
-                // 4. Update request and user status
-                $this->request->update([
-                    'status' => VerificationStatus::APPROVED,
-                    'reviewed_at' => now(),
-                ]);
-
-                $user->update([
-                    'account_status' => AccountStatus::PROFILE_INCOMPLETE,
-                ]);
-
-                $reviewReason = $this->reason ?: 'Đã kiểm duyệt và phê duyệt thông tin hợp lệ.';
-
-                // Log Action & Audit
-                VerificationReviewAction::create([
-                    'verification_request_id' => $this->request->id,
-                    'admin_id' => auth()->id(),
-                    'action_key' => 'approve',
-                    'reason' => $reviewReason,
-                    'before_snapshot_json' => $beforeSnapshot,
-                    'after_snapshot_json' => $this->request->fresh()->toArray(),
-                ]);
-
-                AuditLogService::log(
-                    actorId: auth()->id(),
-                    actorType: 'admin',
-                    actionKey: 'verification.approve',
-                    targetType: 'verification_requests',
-                    targetId: $this->request->id,
-                    beforeSnapshot: $beforeSnapshot,
-                    afterSnapshot: $this->request->fresh()->toArray(),
-                    reason: $reviewReason
-                );
-
-                AuditLogService::log(
-                    actorId: auth()->id(),
-                    actorType: 'admin',
-                    actionKey: 'user.update_status',
-                    targetType: 'users',
-                    targetId: $user->id,
-                    beforeSnapshot: $userBeforeSnapshot,
-                    afterSnapshot: $user->fresh()->toArray(),
-                    reason: 'Tài khoản được phê duyệt định danh thành công.'
-                );
-
-            } elseif ($this->action === 'reject') {
-                $this->request->update([
-                    'status' => VerificationStatus::REJECTED,
-                    'reviewed_at' => now(),
-                ]);
-
-                $user->update([
-                    'account_status' => AccountStatus::REGISTERED,
-                ]);
-
-                VerificationReviewAction::create([
-                    'verification_request_id' => $this->request->id,
-                    'admin_id' => auth()->id(),
-                    'action_key' => 'reject',
-                    'reason' => $this->reason,
-                    'before_snapshot_json' => $beforeSnapshot,
-                    'after_snapshot_json' => $this->request->fresh()->toArray(),
-                ]);
-
-                AuditLogService::log(
-                    actorId: auth()->id(),
-                    actorType: 'admin',
-                    actionKey: 'verification.reject',
-                    targetType: 'verification_requests',
-                    targetId: $this->request->id,
-                    beforeSnapshot: $beforeSnapshot,
-                    afterSnapshot: $this->request->fresh()->toArray(),
-                    reason: $this->reason
-                );
-
-                AuditLogService::log(
-                    actorId: auth()->id(),
-                    actorType: 'admin',
-                    actionKey: 'user.update_status',
-                    targetType: 'users',
-                    targetId: $user->id,
-                    beforeSnapshot: $userBeforeSnapshot,
-                    afterSnapshot: $user->fresh()->toArray(),
-                    reason: 'Tài khoản bị từ chối hồ sơ xác thực. Lý do: ' . $this->reason
-                );
-
-            } elseif ($this->action === 'need_more_information') {
-                $this->request->update([
-                    'status' => VerificationStatus::NEEDS_MORE_INFORMATION,
-                    'reviewed_at' => now(),
-                ]);
-
-                $user->update([
-                    'account_status' => AccountStatus::REGISTERED,
-                ]);
-
-                VerificationReviewAction::create([
-                    'verification_request_id' => $this->request->id,
-                    'admin_id' => auth()->id(),
-                    'action_key' => 'need_more_information',
-                    'instruction' => $this->instruction,
-                    'reason' => 'Yêu cầu bổ sung thêm thông tin.',
-                    'before_snapshot_json' => $beforeSnapshot,
-                    'after_snapshot_json' => $this->request->fresh()->toArray(),
-                ]);
-
-                AuditLogService::log(
-                    actorId: auth()->id(),
-                    actorType: 'admin',
-                    actionKey: 'verification.need_more_information',
-                    targetType: 'verification_requests',
-                    targetId: $this->request->id,
-                    beforeSnapshot: $beforeSnapshot,
-                    afterSnapshot: $this->request->fresh()->toArray(),
-                    reason: $this->instruction
-                );
-
-            } elseif ($this->action === 'conflict') {
-                $this->request->update([
-                    'status' => VerificationStatus::CONFLICT,
-                    'reviewed_at' => now(),
-                ]);
-
-                $user->update([
-                    'account_status' => AccountStatus::RESTRICTED,
-                    'account_status_reason' => 'Xung đột mã số định danh hoặc thông tin hồ sơ.',
-                ]);
-
-                VerificationReviewAction::create([
-                    'verification_request_id' => $this->request->id,
-                    'admin_id' => auth()->id(),
-                    'action_key' => 'mark_conflict',
-                    'reason' => $this->reason,
-                    'before_snapshot_json' => $beforeSnapshot,
-                    'after_snapshot_json' => $this->request->fresh()->toArray(),
-                ]);
-
-                AuditLogService::log(
-                    actorId: auth()->id(),
-                    actorType: 'admin',
-                    actionKey: 'verification.mark_conflict',
-                    targetType: 'verification_requests',
-                    targetId: $this->request->id,
-                    beforeSnapshot: $beforeSnapshot,
-                    afterSnapshot: $this->request->fresh()->toArray(),
-                    reason: $this->reason
-                );
-
-                AuditLogService::log(
-                    actorId: auth()->id(),
-                    actorType: 'admin',
-                    actionKey: 'user.update_status',
-                    targetType: 'users',
-                    targetId: $user->id,
-                    beforeSnapshot: $userBeforeSnapshot,
-                    afterSnapshot: $user->fresh()->toArray(),
-                    reason: 'Đánh dấu tài khoản bị hạn chế do xung đột mã định danh. Chi tiết: ' . $this->reason
-                );
-
-            } elseif ($this->action === 'suspicious') {
-                $this->request->update([
-                    'status' => VerificationStatus::SUSPICIOUS,
-                    'reviewed_at' => now(),
-                ]);
-
-                $user->update([
-                    'account_status' => AccountStatus::SUSPENDED,
-                    'account_status_reason' => 'Tài khoản có dấu hiệu giả mạo thông tin minh chứng.',
-                ]);
-
-                VerificationReviewAction::create([
-                    'verification_request_id' => $this->request->id,
-                    'admin_id' => auth()->id(),
-                    'action_key' => 'suspend_suspicious',
-                    'reason' => $this->reason,
-                    'before_snapshot_json' => $beforeSnapshot,
-                    'after_snapshot_json' => $this->request->fresh()->toArray(),
-                ]);
-
-                AuditLogService::log(
-                    actorId: auth()->id(),
-                    actorType: 'admin',
-                    actionKey: 'verification.suspend_suspicious',
-                    targetType: 'verification_requests',
-                    targetId: $this->request->id,
-                    beforeSnapshot: $beforeSnapshot,
-                    afterSnapshot: $this->request->fresh()->toArray(),
-                    reason: $this->reason
-                );
-
-                AuditLogService::log(
-                    actorId: auth()->id(),
-                    actorType: 'admin',
-                    actionKey: 'user.update_status',
-                    targetType: 'users',
-                    targetId: $user->id,
-                    beforeSnapshot: $userBeforeSnapshot,
-                    afterSnapshot: $user->fresh()->toArray(),
-                    reason: 'Đình chỉ hoạt động tài khoản do hồ sơ minh chứng giả mạo. Lý do: ' . $this->reason
-                );
-            }
-        });
+        app(ReviewVerificationAction::class)->execute($this->request, [
+            'action' => $this->action,
+            'reason' => $this->reason,
+            'instruction' => $this->instruction,
+            'notify_user' => true,
+        ], app(AuditService::class), auth()->user());
 
         session()->flash('message', 'Hồ sơ đã được xử lý và cập nhật thành công.');
         $this->redirect(route('admin.verifications.queue'), navigate: true);

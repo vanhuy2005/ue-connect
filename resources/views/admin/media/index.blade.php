@@ -9,10 +9,9 @@
                 <p class="mt-2 text-sm text-ue-text-secondary">Quản lý tất cả tệp tin đa phương tiện tải lên bởi người dùng.</p>
             </div>
             <div class="flex flex-wrap gap-2">
-                <a href="{{ route('admin.media.usage') }}" class="px-4 py-2 rounded-lg bg-white border border-ue-border hover:bg-ue-surface-hover text-ue-text font-semibold text-sm transition-colors flex items-center gap-2">
-                    <x-ui.icon name="bar-chart-3" size="sm" />
-                    <span>Dung lượng sử dụng</span>
-                </a>
+                <x-ui.button variant="secondary" size="sm" href="{{ route('admin.media.usage') }}" icon="bar-chart-3">
+                    Dung lượng sử dụng
+                </x-ui.button>
             </div>
         </div>
 
@@ -41,42 +40,42 @@
             <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-5 gap-3">
                 <form action="{{ route('admin.media.health') }}" method="POST">
                     @csrf
-                    <button type="submit" class="w-full px-4 py-2.5 rounded-lg border border-ue-border bg-white text-ue-text hover:bg-ue-surface-hover text-xs font-bold transition-all duration-150 flex items-center justify-center gap-2">
-                        <x-ui.icon name="heart" size="sm" class="text-red-500" />
-                        Kiểm tra lưu trữ
-                    </button>
+                    <x-ui.button type="submit" variant="secondary" size="sm" class="w-full">
+                        <x-ui.icon name="heart" size="sm" class="text-red-500 mr-2" />
+                        <span>Kiểm tra lưu trữ</span>
+                    </x-ui.button>
                 </form>
 
                 <form action="{{ route('admin.media.quota') }}" method="POST">
                     @csrf
-                    <button type="submit" class="w-full px-4 py-2.5 rounded-lg border border-ue-border bg-white text-ue-text hover:bg-ue-surface-hover text-xs font-bold transition-all duration-150 flex items-center justify-center gap-2">
-                        <x-ui.icon name="bar-chart" size="sm" class="text-blue-500" />
-                        Cập nhật hạn mức
-                    </button>
+                    <x-ui.button type="submit" variant="secondary" size="sm" class="w-full">
+                        <x-ui.icon name="bar-chart" size="sm" class="text-blue-500 mr-2" />
+                        <span>Cập nhật hạn mức</span>
+                    </x-ui.button>
                 </form>
 
                 <form action="{{ route('admin.media.cloudinary-sync') }}" method="POST">
                     @csrf
-                    <button type="submit" class="w-full px-4 py-2.5 rounded-lg border border-ue-border bg-white text-ue-text hover:bg-ue-surface-hover text-xs font-bold transition-all duration-150 flex items-center justify-center gap-2">
-                        <x-ui.icon name="refresh-cw" size="sm" class="text-indigo-500" />
-                        Đồng bộ Cloudinary
-                    </button>
+                    <x-ui.button type="submit" variant="secondary" size="sm" class="w-full">
+                        <x-ui.icon name="refresh-cw" size="sm" class="text-indigo-500 mr-2" />
+                        <span>Đồng bộ Cloudinary</span>
+                    </x-ui.button>
                 </form>
 
                 <form action="{{ route('admin.media.cleanup-temporary') }}" method="POST">
                     @csrf
-                    <button type="submit" class="w-full px-4 py-2.5 rounded-lg border border-ue-border bg-white text-ue-text hover:bg-ue-surface-hover text-xs font-bold transition-all duration-150 flex items-center justify-center gap-2">
-                        <x-ui.icon name="trash" size="sm" class="text-orange-500" />
-                        Dọn tệp tạm
-                    </button>
+                    <x-ui.button type="submit" variant="secondary" size="sm" class="w-full">
+                        <x-ui.icon name="trash" size="sm" class="text-orange-500 mr-2" />
+                        <span>Dọn tệp tạm</span>
+                    </x-ui.button>
                 </form>
 
                 <form action="{{ route('admin.media.cleanup-orphaned') }}" method="POST">
                     @csrf
-                    <button type="submit" class="w-full px-4 py-2.5 rounded-lg border border-ue-border bg-white text-ue-text hover:bg-ue-surface-hover text-xs font-bold transition-all duration-150 flex items-center justify-center gap-2">
-                        <x-ui.icon name="shield-alert" size="sm" class="text-yellow-600" />
-                        Dọn tệp mồ côi
-                    </button>
+                    <x-ui.button type="submit" variant="secondary" size="sm" class="w-full">
+                        <x-ui.icon name="shield-alert" size="sm" class="text-yellow-600 mr-2" />
+                        <span>Dọn tệp mồ côi</span>
+                    </x-ui.button>
                 </form>
             </div>
         </x-ui.card>
@@ -117,8 +116,8 @@
                     </x-ui.select>
                 </div>
                 <div class="flex items-end gap-2">
-                    <button type="submit" class="px-4 py-2 rounded-lg bg-ue-brand text-white font-semibold text-xs h-9 flex-1">Lọc</button>
-                    <a href="{{ route('admin.media.index') }}" class="px-4 py-2 rounded-lg border border-ue-border text-ue-text text-xs h-9 flex items-center justify-center">Xóa</a>
+                    <x-ui.button type="submit" size="sm" class="flex-1">Lọc</x-ui.button>
+                    <x-ui.button variant="secondary" size="sm" href="{{ route('admin.media.index') }}">Xóa</x-ui.button>
                 </div>
             </form>
         </x-ui.card>
@@ -173,22 +172,22 @@
                                 </td>
                                 <td class="px-6 py-4 whitespace-nowrap text-right text-xs font-semibold">
                                     <div class="flex justify-end gap-2">
-                                        <a href="{{ route('admin.media.show', $item) }}" class="px-2.5 py-1.5 rounded-lg border border-ue-border hover:bg-ue-surface-hover text-ue-text transition-colors">
+                                        <x-ui.button href="{{ route('admin.media.show', $item) }}" variant="secondary" size="xs">
                                             Chi tiết
-                                        </a>
+                                        </x-ui.button>
                                         @if ($item->status !== 'quarantined')
                                             <form action="{{ route('admin.media.quarantine', $item) }}" method="POST" onsubmit="return confirm('Bạn có chắc chắn muốn chuyển file này vào khu vực cách ly?');">
                                                 @csrf
-                                                <button type="submit" class="px-2.5 py-1.5 rounded-lg border border-red-200 bg-red-50 text-red-600 hover:bg-red-100 transition-colors">
+                                                <x-ui.button type="submit" variant="danger-outline" size="xs">
                                                     Cách ly
-                                                </button>
+                                                </x-ui.button>
                                             </form>
                                         @endif
                                         <form action="{{ route('admin.media.delete', $item) }}" method="POST" onsubmit="return confirm('Bạn có chắc chắn muốn xóa file này?');">
                                             @csrf
-                                            <button type="submit" class="px-2.5 py-1.5 rounded-lg border border-ue-border hover:bg-red-50 hover:text-red-600 transition-colors">
+                                            <x-ui.button type="submit" variant="ghost" size="xs" class="hover:text-ue-danger hover:border-ue-danger">
                                                 Xóa
-                                            </button>
+                                            </x-ui.button>
                                         </form>
                                     </div>
                                 </td>

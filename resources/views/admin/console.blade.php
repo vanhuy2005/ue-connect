@@ -13,27 +13,7 @@
                     <h1 class="mt-2 text-2xl font-bold tracking-tight text-slate-950">{{ $selectedGroup['vn_label'] }}</h1>
                     <p class="mt-1 max-w-2xl text-sm leading-6 text-slate-600">{{ $selectedGroup['description'] }}</p>
                 </div>
-
-                <a href="{{ route('dashboard') }}" class="inline-flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-700 hover:border-slate-300 hover:bg-slate-50">
-                    <x-ui.icon name="arrow-left" size="sm" />
-                    Quay lại ứng dụng
-                </a>
             </div>
-
-            <nav class="mt-5 flex gap-2 overflow-x-auto pb-1" aria-label="Danh mục quản trị">
-                @foreach($groups as $groupKey => $group)
-                    @php $isSelected = $groupKey === $selectedGroupKey; @endphp
-                    <a
-                        href="{{ route('admin.console', ['group' => $groupKey]) }}"
-                        class="inline-flex shrink-0 items-center gap-2 rounded-lg border px-3 py-2 text-sm font-semibold transition-colors {{ $isSelected ? 'border-ue-brand bg-white text-ue-brand-active shadow-sm' : 'border-slate-200 bg-white text-slate-600 hover:border-slate-300 hover:text-slate-950' }}"
-                        @if($isSelected) aria-current="page" @endif
-                    >
-                        <x-ui.icon :name="$group['icon']" size="sm" />
-                        {{ $group['vn_label'] }}
-                        <span class="rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-bold text-slate-500">{{ count($group['items']) }}</span>
-                    </a>
-                @endforeach
-            </nav>
 
             <section class="mt-6 grid gap-3 sm:grid-cols-2 xl:grid-cols-4" aria-label="Module trong {{ $selectedGroup['vn_label'] }}">
                 @foreach($selectedGroup['items'] as $item)

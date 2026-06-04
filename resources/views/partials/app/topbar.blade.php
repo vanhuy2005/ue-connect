@@ -8,7 +8,7 @@
 
 @php
     $currentUser = auth()->user();
-    $adminRoles = ['admin', 'moderator', 'super_admin'];
+    $adminRoles = ['admin'];
     $adminPermissions = ['view_admin_dashboard', 'review_verification', 'manage_reports'];
     $isAdmin = $currentUser && (
         $currentUser->roles()->whereIn('name', $adminRoles)->exists()

@@ -523,28 +523,28 @@ new #[Layout('layouts.app')] class extends Component
                         <button
                             type="button"
                             wire:click="$set('roleFilter', 'all')"
-                            class="px-3 py-1.5 rounded-lg text-xxs font-bold transition-all {{ $roleFilter === 'all' ? 'bg-ue-brand-soft text-ue-brand border border-ue-brand-border shadow-3xs' : 'bg-slate-50 text-slate-500 hover:bg-slate-100 border border-transparent' }}"
+                            class="px-3 py-1.5 rounded-lg text-xxs font-bold transition-all shrink-0 whitespace-nowrap {{ $roleFilter === 'all' ? 'bg-ue-brand-soft text-ue-brand border border-ue-brand-border shadow-3xs' : 'bg-slate-50 text-slate-500 hover:bg-slate-100 border border-transparent' }}"
                         >
                             Tất cả
                         </button>
                         <button
                             type="button"
                             wire:click="$set('roleFilter', 'student')"
-                            class="px-3 py-1.5 rounded-lg text-xxs font-bold transition-all {{ $roleFilter === 'student' ? 'bg-ue-brand-soft text-ue-brand border border-ue-brand-border shadow-3xs' : 'bg-slate-50 text-slate-500 hover:bg-slate-100 border border-transparent' }}"
+                            class="px-3 py-1.5 rounded-lg text-xxs font-bold transition-all shrink-0 whitespace-nowrap {{ $roleFilter === 'student' ? 'bg-ue-brand-soft text-ue-brand border border-ue-brand-border shadow-3xs' : 'bg-slate-50 text-slate-500 hover:bg-slate-100 border border-transparent' }}"
                         >
                             Sinh viên
                         </button>
                         <button
                             type="button"
                             wire:click="$set('roleFilter', 'advisor')"
-                            class="px-3 py-1.5 rounded-lg text-xxs font-bold transition-all {{ $roleFilter === 'advisor' ? 'bg-ue-brand-soft text-ue-brand border border-ue-brand-border shadow-3xs' : 'bg-slate-50 text-slate-500 hover:bg-slate-100 border border-transparent' }}"
+                            class="px-3 py-1.5 rounded-lg text-xxs font-bold transition-all shrink-0 whitespace-nowrap {{ $roleFilter === 'advisor' ? 'bg-ue-brand-soft text-ue-brand border border-ue-brand-border shadow-3xs' : 'bg-slate-50 text-slate-500 hover:bg-slate-100 border border-transparent' }}"
                         >
                             Mentor / Giảng viên
                         </button>
                         <button
                             type="button"
                             wire:click="$set('roleFilter', 'alumni')"
-                            class="px-3 py-1.5 rounded-lg text-xxs font-bold transition-all {{ $roleFilter === 'alumni' ? 'bg-ue-brand-soft text-ue-brand border border-ue-brand-border shadow-3xs' : 'bg-slate-50 text-slate-500 hover:bg-slate-100 border border-transparent' }}"
+                            class="px-3 py-1.5 rounded-lg text-xxs font-bold transition-all shrink-0 whitespace-nowrap {{ $roleFilter === 'alumni' ? 'bg-ue-brand-soft text-ue-brand border border-ue-brand-border shadow-3xs' : 'bg-slate-50 text-slate-500 hover:bg-slate-100 border border-transparent' }}"
                         >
                             Cựu sinh viên
                         </button>

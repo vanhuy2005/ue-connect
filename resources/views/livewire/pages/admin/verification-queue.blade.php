@@ -24,6 +24,11 @@ new #[Layout('layouts.app', ['shell' => 'admin'])] class extends Component {
         'cohort' => ['except' => ''],
     ];
 
+    public function mount(): void
+    {
+        $this->authorize('view', VerificationRequest::class);
+    }
+
     public function updatingSearch(): void
     {
         $this->resetPage();

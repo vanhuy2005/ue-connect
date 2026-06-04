@@ -160,6 +160,53 @@ new class extends Component
         $this->settingsRules = $community->rules ?? '';
     }
 
+    public function setActiveTab(string $tab): void
+    {
+        if (! in_array($tab, $this->availableTabs(), true)) {
+            return;
+        }
+
+        $this->activeTab = $tab;
+        $this->closeTransientUi();
+
+        match ($tab) {
+            'feed' => $this->resetPage('feedPage'),
+            'resources' => $this->resetPage('resourcesPage'),
+            'members' => $this->resetPage('membersPage'),
+            default => null,
+        };
+    }
+
+    /**
+     * @return list<string>
+     */
+    private function availableTabs(): array
+    {
+        return ['feed', 'resources', 'events', 'members', 'about', 'settings'];
+    }
+
+    public function closeTransientUi(): void
+    {
+        $this->showPostComposer = false;
+        $this->showResourceModal = false;
+        $this->showLeaveModal = false;
+        $this->showEventModal = false;
+        $this->showJoinModal = false;
+        $this->showShareModal = false;
+        $this->showInviteModal = false;
+        $this->rejectionRequestId = null;
+
+        $this->reset([
+            'joinReason',
+            'rejectionReason',
+            'shareSearch',
+            'selectedShareUserId',
+            'shareOptionalMessage',
+            'inviteSearch',
+            'selectedInviteUserIds',
+        ]);
+    }
+
     public function getMembershipProperty(): ?CommunityMember
     {
         return CommunityMember::where('community_id', $this->community->id)
@@ -197,6 +244,7 @@ new class extends Component
     {
         $query = CommunityEvent::where('community_id', $this->community->id)
             ->upcoming()
+            ->with(['rsvps' => fn ($query) => $query->where('user_id', auth()->id())])
             ->orderBy('starts_at')
             ->take(10);
 
@@ -220,13 +268,6 @@ new class extends Component
         return $this->community->activeMembers()
             ->with('user.profile')
             ->paginate(15, pageName: 'membersPage');
-    }
-
-    public function getUserRsvpStatus(int $eventId): ?string
-    {
-        return CommunityEventRsvp::where('event_id', $eventId)
-            ->where('user_id', auth()->id())
-            ->value('status');
     }
 
     public function getCanCreateEventsProperty(): bool
@@ -261,6 +302,12 @@ new class extends Component
         $this->showLeaveModal = true;
     }
 
+    public function openResourceModal(): void
+    {
+        $this->authorize('create', [App\Models\CommunityResource::class, $this->community]);
+        $this->showResourceModal = true;
+    }
+
     public function confirmLeave(LeaveCommunityAction $action): void
     {
         $action->execute(auth()->user(), $this->community);
@@ -269,6 +316,11 @@ new class extends Component
     }
 
     // ─── Post ─────────────────────────────────────────────────────────────────
+
+    public function openPostComposer(): void
+    {
+        $this->showPostComposer = true;
+    }
 
     public function createPost(CreateCommunityPostAction $action): void
     {
@@ -1097,7 +1149,7 @@ new class extends Component
                         }
                     @endphp
                     @foreach ($tabs as $tab)
-                        <button wire:click="$set('activeTab', '{{ $tab['key'] }}')"
+                        <button wire:click="setActiveTab('{{ $tab['key'] }}')"
                             class="px-4 py-3.5 text-xs font-bold border-b-3 transition whitespace-nowrap {{ $activeTab === $tab['key'] ? 'border-ue-brand text-ue-brand' : 'border-transparent text-slate-600 hover:text-slate-900' }}">
                             {{ $tab['label'] }}
                         </button>
@@ -1119,7 +1171,7 @@ new class extends Component
                         @if ($this->isActiveMember && $community->isActive())
                             <div class="bg-white border border-slate-200 rounded-2xl p-4 shadow-2xs flex gap-3">
                                 <x-ui.avatar :user="auth()->user()" size="md" />
-                                <button wire:click="$set('showPostComposer', true)"
+                                <button wire:click="openPostComposer"
                                     class="flex-1 text-left px-4 py-3 bg-slate-100 rounded-2xl text-slate-500 text-xs font-semibold hover:bg-slate-150 transition">
                                     Chia sẻ điều gì đó với mọi người trong cộng đồng...
                                 </button>
@@ -1157,7 +1209,7 @@ new class extends Component
                             <div class="flex items-center justify-between border-b border-slate-200 pb-3">
                                 <h3 class="text-sm font-extrabold text-slate-800">Kho tài liệu, liên kết & học liệu</h3>
                                 @if ($this->isActiveMember)
-                                    <button wire:click="$set('showResourceModal', true)"
+                                    <button wire:click="openResourceModal"
                                         class="px-4 py-2 bg-ue-brand hover:bg-opacity-95 text-white rounded-xl text-xs font-bold transition shadow-2xs">
                                         + Đăng tài nguyên
                                     </button>
@@ -1235,7 +1287,7 @@ new class extends Component
 
                             <div class="space-y-4">
                                 @forelse ($this->upcomingEvents as $evt)
-                                    @php $rsvpStatus = $this->getUserRsvpStatus($evt->id); @endphp
+                                    @php $rsvpStatus = $evt->rsvps->first()?->status?->value; @endphp
                                     <div class="bg-white border border-slate-200 rounded-2xl p-4 sm:p-5 flex flex-col md:flex-row gap-4 hover:shadow-2xs transition">
                                         
                                         {{-- Calendar Block --}}
@@ -1315,7 +1367,7 @@ new class extends Component
                                 <div class="bg-slate-50 border border-slate-200 rounded-2xl p-4 flex flex-col md:flex-row items-end gap-3 shadow-2xs">
                                     <div class="flex-1 w-full">
                                         <label class="block text-xs font-bold text-slate-600 mb-1">Thêm nhanh thành viên bằng email</label>
-                                        <input type="email" wire:model.live="memberEmailToAdd" placeholder="email@hcmue.edu.vn"
+                                        <input type="email" wire:model.blur="memberEmailToAdd" placeholder="email@hcmue.edu.vn"
                                             class="w-full px-3 py-2 text-xs border rounded-xl focus:outline-none focus:ring-2 focus:ring-ue-brand border-slate-200 bg-white" />
                                         @error('memberEmailToAdd') <p class="text-red-500 text-[10px] mt-1 font-semibold">{{ $message }}</p> @enderror
                                     </div>
@@ -1392,14 +1444,14 @@ new class extends Component
                                     <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                                         <div class="md:col-span-2">
                                             <label class="block text-xs font-bold text-slate-600 mb-1">Tên cộng đồng <span class="text-red-500">*</span></label>
-                                            <input type="text" wire:model.live="settingsName"
+                                            <input type="text" wire:model.blur="settingsName"
                                                 class="w-full px-3 py-2 text-xs border rounded-xl focus:outline-none focus:ring-2 focus:ring-ue-brand border-slate-200">
                                             @error('settingsName') <p class="text-red-500 text-[10px] mt-1 font-semibold">{{ $message }}</p> @enderror
                                         </div>
 
                                         <div>
                                             <label class="block text-xs font-bold text-slate-600 mb-1">Phân loại <span class="text-red-500">*</span></label>
-                                            <select wire:model.live="settingsType" class="w-full px-3 py-2 text-xs border rounded-xl focus:outline-none focus:ring-2 focus:ring-ue-brand border-slate-200">
+                                            <select wire:model="settingsType" class="w-full px-3 py-2 text-xs border rounded-xl focus:outline-none focus:ring-2 focus:ring-ue-brand border-slate-200">
                                                 @foreach (CommunityType::cases() as $t)
                                                     <option value="{{ $t->value }}">{{ $t->label() }}</option>
                                                 @endforeach
@@ -1408,7 +1460,7 @@ new class extends Component
 
                                         <div>
                                             <label class="block text-xs font-bold text-slate-600 mb-1">Chính sách tham gia <span class="text-red-500">*</span></label>
-                                            <select wire:model.live="settingsJoinPolicy" class="w-full px-3 py-2 text-xs border rounded-xl focus:outline-none focus:ring-2 focus:ring-ue-brand border-slate-200">
+                                            <select wire:model="settingsJoinPolicy" class="w-full px-3 py-2 text-xs border rounded-xl focus:outline-none focus:ring-2 focus:ring-ue-brand border-slate-200">
                                                 @foreach (CommunityJoinPolicy::cases() as $policy)
                                                     <option value="{{ $policy->value }}">{{ $policy->label() }}</option>
                                                 @endforeach
@@ -1417,7 +1469,7 @@ new class extends Component
 
                                         <div>
                                             <label class="block text-xs font-bold text-slate-600 mb-1">Hiển thị <span class="text-red-500">*</span></label>
-                                            <select wire:model.live="settingsVisibility" class="w-full px-3 py-2 text-xs border rounded-xl focus:outline-none focus:ring-2 focus:ring-ue-brand border-slate-200">
+                                            <select wire:model="settingsVisibility" class="w-full px-3 py-2 text-xs border rounded-xl focus:outline-none focus:ring-2 focus:ring-ue-brand border-slate-200">
                                                 @foreach (CommunityVisibility::cases() as $vis)
                                                     <option value="{{ $vis->value }}">{{ $vis->label() }}</option>
                                                 @endforeach
@@ -1426,7 +1478,7 @@ new class extends Component
 
                                         <div>
                                             <label class="block text-xs font-bold text-slate-600 mb-1">Trạng thái vận hành <span class="text-red-500">*</span></label>
-                                            <select wire:model.live="settingsStatus" class="w-full px-3 py-2 text-xs border rounded-xl focus:outline-none focus:ring-2 focus:ring-ue-brand border-slate-200">
+                                            <select wire:model="settingsStatus" class="w-full px-3 py-2 text-xs border rounded-xl focus:outline-none focus:ring-2 focus:ring-ue-brand border-slate-200">
                                                 <option value="draft">Bản nháp</option>
                                                 <option value="active">Hoạt động</option>
                                                 <option value="inactive">Ngưng hoạt động</option>
@@ -1435,25 +1487,25 @@ new class extends Component
 
                                         <div class="md:col-span-2">
                                             <label class="block text-xs font-bold text-slate-600 mb-1">Khoa phụ trách</label>
-                                            <input type="text" wire:model.live="settingsRelatedFaculty"
+                                            <input type="text" wire:model.blur="settingsRelatedFaculty"
                                                 class="w-full px-3 py-2 text-xs border rounded-xl focus:outline-none focus:ring-2 focus:ring-ue-brand border-slate-200">
                                         </div>
 
                                         <div class="md:col-span-2">
                                             <label class="block text-xs font-bold text-slate-600 mb-1">Mô tả ngắn</label>
-                                            <input type="text" wire:model.live="settingsShortDescription"
+                                            <input type="text" wire:model.blur="settingsShortDescription"
                                                 class="w-full px-3 py-2 text-xs border rounded-xl focus:outline-none focus:ring-2 focus:ring-ue-brand border-slate-200">
                                         </div>
 
                                         <div class="md:col-span-2">
                                             <label class="block text-xs font-bold text-slate-600 mb-1">Mô tả chi tiết</label>
-                                            <textarea wire:model.live="settingsDescription" rows="3"
+                                            <textarea wire:model.blur="settingsDescription" rows="3"
                                                 class="w-full px-3 py-2 text-xs border rounded-xl focus:outline-none focus:ring-2 focus:ring-ue-brand border-slate-200 resize-none"></textarea>
                                         </div>
 
                                         <div class="md:col-span-2">
                                             <label class="block text-xs font-bold text-slate-600 mb-1">Nội quy nhóm</label>
-                                            <textarea wire:model.live="settingsRules" rows="3"
+                                            <textarea wire:model.blur="settingsRules" rows="3"
                                                 class="w-full px-3 py-2 text-xs border rounded-xl focus:outline-none focus:ring-2 focus:ring-ue-brand border-slate-200 resize-none"></textarea>
                                         </div>
                                     </div>
@@ -1576,7 +1628,7 @@ new class extends Component
                     </div>
                 @endif
                 <div class="flex justify-end gap-2 pt-2">
-                    <button wire:click="$set('showJoinModal', false)"
+                    <button wire:click="closeTransientUi"
                         class="px-4 py-2 border border-slate-250 text-slate-600 hover:bg-slate-50 text-xs font-bold rounded-xl transition">Hủy</button>
                     <button wire:click="confirmJoin"
                         class="px-5 py-2 bg-ue-brand text-white text-xs font-bold rounded-xl hover:bg-opacity-95 transition shadow-sm">
@@ -1595,7 +1647,7 @@ new class extends Component
                 <p class="text-xs text-slate-500 leading-relaxed">Bạn sẽ không còn nhìn thấy các bài thảo luận, tài nguyên hoặc sự kiện nội bộ của nhóm này trên Bảng feed của mình nữa.</p>
                 
                 <div class="flex justify-end gap-2 pt-2">
-                    <button wire:click="$set('showLeaveModal', false)"
+                    <button wire:click="closeTransientUi"
                         class="px-4 py-2 border border-slate-200 text-slate-700 hover:bg-slate-50 text-xs font-bold rounded-xl transition">Quay lại</button>
                     <button wire:click="confirmLeave"
                         class="px-5 py-2 bg-red-600 hover:bg-red-700 text-white text-xs font-bold rounded-xl transition shadow-sm">
@@ -1623,7 +1675,7 @@ new class extends Component
                     <div class="grid grid-cols-2 gap-3">
                         <div>
                             <label class="block text-xs font-bold text-slate-600 mb-1">Loại tài nguyên <span class="text-red-500">*</span></label>
-                            <select wire:model.live="resourceType" class="w-full px-3 py-2 text-xs border rounded-xl focus:outline-none focus:ring-2 focus:ring-ue-brand border-slate-200">
+                            <select wire:model="resourceType" class="w-full px-3 py-2 text-xs border rounded-xl focus:outline-none focus:ring-2 focus:ring-ue-brand border-slate-200">
                                 @foreach (CommunityResourceType::cases() as $rType)
                                     <option value="{{ $rType->value }}">{{ $rType->label() }}</option>
                                 @endforeach
@@ -1665,7 +1717,7 @@ new class extends Component
                 </div>
 
                 <div class="flex justify-end gap-2 pt-3 border-t border-slate-100">
-                    <button type="button" wire:click="$set('showResourceModal', false)"
+                    <button type="button" wire:click="closeTransientUi"
                         class="px-4 py-2 border border-slate-250 text-slate-600 hover:bg-slate-50 text-xs font-bold rounded-xl transition">Hủy</button>
                     <button type="button" wire:click="submitResource" wire:loading.attr="disabled" wire:target="resourceFile"
                         class="px-5 py-2 bg-ue-brand text-white text-xs font-bold rounded-xl hover:bg-opacity-95 transition shadow-sm">
@@ -1688,7 +1740,7 @@ new class extends Component
                 <div class="space-y-3">
                     <div>
                         <label class="block text-xs font-bold text-slate-600 mb-1">Tên sự kiện <span class="text-red-500">*</span></label>
-                        <input type="text" wire:model.live="eventTitle" placeholder="VD: Workshop chia sẻ kinh nghiệm học tập"
+                        <input type="text" wire:model.blur="eventTitle" placeholder="VD: Workshop chia sẻ kinh nghiệm học tập"
                             class="w-full px-3 py-2 text-xs border rounded-xl focus:outline-none focus:ring-2 focus:ring-ue-brand border-slate-200">
                         @error('eventTitle') <p class="text-red-500 text-[10px] mt-1 font-semibold">{{ $message }}</p> @enderror
                     </div>
@@ -1696,7 +1748,7 @@ new class extends Component
                     <div class="grid grid-cols-2 gap-3">
                         <div>
                             <label class="block text-xs font-bold text-slate-600 mb-1">Hình thức <span class="text-red-500">*</span></label>
-                            <select wire:model.live="eventType" class="w-full px-3 py-2 text-xs border rounded-xl focus:outline-none focus:ring-2 focus:ring-ue-brand border-slate-200">
+                            <select wire:model="eventType" class="w-full px-3 py-2 text-xs border rounded-xl focus:outline-none focus:ring-2 focus:ring-ue-brand border-slate-200">
                                 <option value="in_person">Trực tiếp</option>
                                 <option value="online">Trực tuyến (Online)</option>
                                 <option value="hybrid">Kết hợp (Hybrid)</option>
@@ -1704,7 +1756,7 @@ new class extends Component
                         </div>
                         <div>
                             <label class="block text-xs font-bold text-slate-600 mb-1">Chế độ xuất bản <span class="text-red-500">*</span></label>
-                            <select wire:model.live="eventStatus" class="w-full px-3 py-2 text-xs border rounded-xl focus:outline-none focus:ring-2 focus:ring-ue-brand border-slate-200">
+                            <select wire:model="eventStatus" class="w-full px-3 py-2 text-xs border rounded-xl focus:outline-none focus:ring-2 focus:ring-ue-brand border-slate-200">
                                 <option value="published">Công bố công khai</option>
                                 <option value="draft">Lưu nháp</option>
                             </select>
@@ -1714,13 +1766,13 @@ new class extends Component
                     <div class="grid grid-cols-2 gap-3">
                         <div>
                             <label class="block text-xs font-bold text-slate-600 mb-1">Thời gian bắt đầu <span class="text-red-500">*</span></label>
-                            <input type="datetime-local" wire:model.live="eventStartsAt"
+                            <input type="datetime-local" wire:model.blur="eventStartsAt"
                                 class="w-full px-3 py-2 text-xs border rounded-xl focus:outline-none focus:ring-2 focus:ring-ue-brand border-slate-200">
                             @error('eventStartsAt') <p class="text-red-500 text-[10px] mt-1 font-semibold">{{ $message }}</p> @enderror
                         </div>
                         <div>
                             <label class="block text-xs font-bold text-slate-600 mb-1">Thời gian kết thúc</label>
-                            <input type="datetime-local" wire:model.live="eventEndsAt"
+                            <input type="datetime-local" wire:model.blur="eventEndsAt"
                                 class="w-full px-3 py-2 text-xs border rounded-xl focus:outline-none focus:ring-2 focus:ring-ue-brand border-slate-200">
                             @error('eventEndsAt') <p class="text-red-500 text-[10px] mt-1 font-semibold">{{ $message }}</p> @enderror
                         </div>
@@ -1729,7 +1781,7 @@ new class extends Component
                     @if ($eventType !== 'online')
                         <div>
                             <label class="block text-xs font-bold text-slate-600 mb-1">Địa điểm cụ thể <span class="text-red-500">*</span></label>
-                            <input type="text" wire:model.live="eventLocation" placeholder="VD: Hội trường A, HCMUE"
+                            <input type="text" wire:model.blur="eventLocation" placeholder="VD: Hội trường A, HCMUE"
                                 class="w-full px-3 py-2 text-xs border rounded-xl focus:outline-none focus:ring-2 focus:ring-ue-brand border-slate-200">
                             @error('eventLocation') <p class="text-red-500 text-[10px] mt-1 font-semibold">{{ $message }}</p> @enderror
                         </div>
@@ -1738,7 +1790,7 @@ new class extends Component
                     @if ($eventType !== 'in_person')
                         <div>
                             <label class="block text-xs font-bold text-slate-600 mb-1">Link phòng họp trực tuyến <span class="text-red-500">*</span></label>
-                            <input type="url" wire:model.live="eventOnlineLink" placeholder="https://meet.google.com/..."
+                            <input type="url" wire:model.blur="eventOnlineLink" placeholder="https://meet.google.com/..."
                                 class="w-full px-3 py-2 text-xs border rounded-xl focus:outline-none focus:ring-2 focus:ring-ue-brand border-slate-200">
                             @error('eventOnlineLink') <p class="text-red-500 text-[10px] mt-1 font-semibold">{{ $message }}</p> @enderror
                         </div>
@@ -1746,7 +1798,7 @@ new class extends Component
 
                     <div>
                         <label class="block text-xs font-bold text-slate-600 mb-1">Mô tả sự kiện</label>
-                        <textarea wire:model.live="eventDescription" rows="3" maxlength="5000"
+                        <textarea wire:model.blur="eventDescription" rows="3" maxlength="5000"
                             class="w-full px-3 py-2 text-xs border rounded-xl focus:outline-none focus:ring-2 focus:ring-ue-brand border-slate-200 resize-none"
                             placeholder="Mục đích, thông tin diễn giả & quyền lợi tham gia..."></textarea>
                     </div>
@@ -1754,12 +1806,12 @@ new class extends Component
                     <div class="grid grid-cols-2 gap-3">
                         <div>
                             <label class="block text-xs font-bold text-slate-600 mb-1">Giới hạn số chỗ tham dự</label>
-                            <input type="number" min="1" wire:model.live="eventCapacity" placeholder="Không giới hạn nếu trống"
+                            <input type="number" min="1" wire:model.blur="eventCapacity" placeholder="Không giới hạn nếu trống"
                                 class="w-full px-3 py-2 text-xs border rounded-xl focus:outline-none focus:ring-2 focus:ring-ue-brand border-slate-200">
                         </div>
                         <div>
                             <label class="block text-xs font-bold text-slate-600 mb-1">Hạn đăng ký RSVP</label>
-                            <input type="datetime-local" wire:model.live="eventRsvpDeadline"
+                            <input type="datetime-local" wire:model.blur="eventRsvpDeadline"
                                 class="w-full px-3 py-2 text-xs border rounded-xl focus:outline-none focus:ring-2 focus:ring-ue-brand border-slate-200">
                             @error('eventRsvpDeadline') <p class="text-red-500 text-[10px] mt-1 font-semibold">{{ $message }}</p> @enderror
                         </div>
@@ -1767,18 +1819,18 @@ new class extends Component
 
                     <div class="flex gap-4 pt-1.5 text-xs text-slate-600 font-semibold select-none">
                         <label class="flex items-center gap-1.5">
-                            <input type="checkbox" wire:model.live="eventRsvpRequired" class="text-ue-brand focus:ring-ue-brand">
+                            <input type="checkbox" wire:model="eventRsvpRequired" class="text-ue-brand focus:ring-ue-brand">
                             <span>Bắt buộc đăng ký trước</span>
                         </label>
                         <label class="flex items-center gap-1.5">
-                            <input type="checkbox" wire:model.live="eventWaitlistEnabled" class="text-ue-brand focus:ring-ue-brand">
+                            <input type="checkbox" wire:model="eventWaitlistEnabled" class="text-ue-brand focus:ring-ue-brand">
                             <span>Bật danh sách chờ khi đầy chỗ</span>
                         </label>
                     </div>
                 </div>
 
                 <div class="flex justify-end gap-2 pt-3 border-t border-slate-100">
-                    <button type="button" wire:click="$set('showEventModal', false)"
+                    <button type="button" wire:click="closeTransientUi"
                         class="px-4 py-2 border border-slate-250 text-slate-600 hover:bg-slate-50 text-xs font-bold rounded-xl transition">Hủy</button>
                     <button type="button" wire:click="submitEvent"
                         class="px-5 py-2 bg-ue-brand text-white text-xs font-bold rounded-xl hover:bg-opacity-95 transition shadow-sm">
@@ -1797,7 +1849,7 @@ new class extends Component
                 
                 <div class="space-y-1">
                     <label class="text-xs font-bold text-slate-600">Lý do từ chối (gửi tới tài khoản) <span class="text-red-500">*</span></label>
-                    <textarea wire:model.live="rejectionReason" rows="3" maxlength="255"
+                    <textarea wire:model.blur="rejectionReason" rows="3" maxlength="255"
                         class="w-full px-3 py-2 text-xs border border-slate-200 focus:outline-none focus:ring-2 focus:ring-ue-brand rounded-xl resize-none"
                         placeholder="VD: Thông tin đăng ký không khớp..."></textarea>
                     @error('rejectionReason') <p class="text-red-500 text-[10px] mt-1 font-semibold">{{ $message }}</p> @enderror
@@ -1824,7 +1876,7 @@ new class extends Component
                         <x-ui.icon name="user-plus" size="xs" class="text-ue-brand" />
                         Mời bạn bè tham gia
                     </h3>
-                    <button type="button" wire:click="$set('showInviteModal', false)" class="text-slate-400 hover:text-slate-700 transition">
+                    <button type="button" wire:click="closeTransientUi" class="text-slate-400 hover:text-slate-700 transition">
                         <x-ui.icon name="x" size="xs" />
                     </button>
                 </div>
@@ -1869,7 +1921,7 @@ new class extends Component
                 </div>
 
                 <div class="flex items-center justify-end gap-2 px-5 py-3.5 bg-slate-50 border-t border-slate-100">
-                    <button type="button" wire:click="$set('showInviteModal', false)" class="px-4 py-2 text-xs font-bold text-slate-500 hover:text-slate-700 transition">
+                    <button type="button" wire:click="closeTransientUi" class="px-4 py-2 text-xs font-bold text-slate-500 hover:text-slate-700 transition">
                         Hủy
                     </button>
                     <button type="button" wire:click="sendInvites" @disabled(empty($selectedInviteUserIds))
@@ -1890,7 +1942,7 @@ new class extends Component
                         <x-ui.icon name="send" size="xs" class="text-ue-brand" />
                         Chia sẻ nhóm
                     </h3>
-                    <button type="button" wire:click="$set('showShareModal', false)" class="text-slate-400 hover:text-slate-650 transition">
+                    <button type="button" wire:click="closeTransientUi" class="text-slate-400 hover:text-slate-650 transition">
                         <x-ui.icon name="x" size="xs" />
                     </button>
                 </div>
@@ -1942,7 +1994,7 @@ new class extends Component
                 </div>
 
                 <div class="flex items-center justify-end gap-2 px-5 py-3.5 bg-slate-50 border-t border-slate-100">
-                    <button type="button" wire:click="$set('showShareModal', false)" class="px-4 py-2 text-xs font-bold text-slate-500 hover:text-slate-700 transition">
+                    <button type="button" wire:click="closeTransientUi" class="px-4 py-2 text-xs font-bold text-slate-500 hover:text-slate-700 transition">
                         Hủy
                     </button>
                     <button type="button" wire:click="executeShareCommunity" @disabled(!$selectedShareUserId)

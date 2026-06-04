@@ -74,17 +74,16 @@ new class extends Component {
     <x-ui.card class="mb-6">
         <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
             <div>
-                <label for="search" class="block text-sm font-semibold text-ue-text mb-2">Tìm kiếm</label>
-                <input type="text" id="search" wire:model.live="search" placeholder="Tên cộng đồng..." 
-                    class="w-full px-3 py-2 border border-ue-border rounded-lg focus:outline-none focus:ring-2 focus:ring-ue-brand">
+                <x-ui.label for="search" class="text-xs">Tìm kiếm</x-ui.label>
+                <x-ui.input type="text" id="search" wire:model.live="search" placeholder="Tên cộng đồng..." class="mt-1 h-9 text-xs" />
             </div>
             <div>
-                <label for="status" class="block text-sm font-semibold text-ue-text mb-2">Trạng thái</label>
-                <select id="status" wire:model.live="status" class="w-full px-3 py-2 border border-ue-border rounded-lg focus:outline-none focus:ring-2 focus:ring-ue-brand">
+                <x-ui.label for="status" class="text-xs">Trạng thái</x-ui.label>
+                <x-ui.select id="status" wire:model.live="status" class="mt-1 h-9 text-xs py-1">
                     @foreach ($this->statuses as $stat)
                         <option value="{{ $stat['value'] }}">{{ $stat['label'] }}</option>
                     @endforeach
-                </select>
+                </x-ui.select>
             </div>
         </div>
     </x-ui.card>
@@ -92,37 +91,49 @@ new class extends Component {
     {{-- Communities Table --}}
     <x-ui.card padding="none" class="overflow-hidden">
         <div class="overflow-x-auto">
-            <table class="min-w-full divide-y divide-ue-border">
-                <thead class="bg-ue-surface-subtle">
+            <table class="min-w-full divide-y divide-ue-border text-left">
+                <thead class="bg-ue-surface-subtle text-ue-text-muted text-xs font-bold uppercase tracking-wider">
                     <tr>
-                        <th scope="col" class="px-6 py-3 text-left text-xs font-semibold text-ue-text-muted uppercase">ID</th>
-                        <th scope="col" class="px-6 py-3 text-left text-xs font-semibold text-ue-text-muted uppercase">Tên cộng đồng</th>
-                        <th scope="col" class="px-6 py-3 text-left text-xs font-semibold text-ue-text-muted uppercase">Người tạo</th>
-                        <th scope="col" class="px-6 py-3 text-left text-xs font-semibold text-ue-text-muted uppercase">Trạng thái</th>
-                        <th scope="col" class="px-6 py-3 text-left text-xs font-semibold text-ue-text-muted uppercase">Ngày tạo</th>
-                        <th scope="col" class="px-6 py-3 text-right text-xs font-semibold text-ue-text-muted uppercase">Hành động</th>
+                        <th scope="col" class="px-6 py-4">ID</th>
+                        <th scope="col" class="px-6 py-4">Tên cộng đồng</th>
+                        <th scope="col" class="px-6 py-4">Người tạo</th>
+                        <th scope="col" class="px-6 py-4">Trạng thái</th>
+                        <th scope="col" class="px-6 py-4">Ngày tạo</th>
+                        <th scope="col" class="px-6 py-4 text-right">Hành động</th>
                     </tr>
                 </thead>
-                <tbody class="bg-ue-surface divide-y divide-ue-border text-sm">
+                <tbody class="bg-ue-surface divide-y divide-ue-border text-sm text-ue-text font-medium">
                     @forelse ($this->communities as $community)
+                        @php
+                            $badgeVariant = match($community->status->value) {
+                                'active' => 'success',
+                                'inactive' => 'neutral',
+                                'suspended' => 'danger',
+                                'archived' => 'neutral',
+                                'draft' => 'warning',
+                                'pending_review' => 'info',
+                                'hidden_by_moderation' => 'warning',
+                                default => 'neutral',
+                            };
+                        @endphp
                         <tr class="hover:bg-ue-surface-hover transition-colors">
-                            <td class="px-6 py-3 text-ue-text-muted text-xs font-semibold">{{ $community->id }}</td>
-                            <td class="px-6 py-3 font-semibold text-ue-text">
-                                <a href="{{ route('admin.communities.show', $community->id) }}" class="hover:text-ue-brand">
+                            <td class="px-6 py-4 text-ue-text-muted text-xs font-semibold">#{{ $community->id }}</td>
+                            <td class="px-6 py-4 font-bold">
+                                <a href="{{ route('admin.communities.show', $community->id) }}" class="hover:text-ue-brand-active">
                                     {{ $community->name }}
                                 </a>
                             </td>
-                            <td class="px-6 py-3 text-ue-text">{{ $community->creator?->name ?? 'N/A' }}</td>
-                            <td class="px-6 py-3">
-                                <span class="px-2 py-1 rounded-full text-xs font-semibold bg-{{ $community->status->color() }}-100 text-{{ $community->status->color() }}-800">
+                            <td class="px-6 py-4">{{ $community->creator?->name ?? 'N/A' }}</td>
+                            <td class="px-6 py-4 whitespace-nowrap">
+                                <x-ui.badge :variant="$badgeVariant">
                                     {{ $community->status->label() }}
-                                </span>
+                                </x-ui.badge>
                             </td>
-                            <td class="px-6 py-3 text-ue-text-muted">{{ $community->created_at->format('d/m/Y') }}</td>
-                            <td class="px-6 py-3 text-right">
-                                <a href="{{ route('admin.communities.show', $community->id) }}" class="text-ue-brand hover:underline text-xs font-semibold">
+                            <td class="px-6 py-4 text-xs text-ue-text-muted whitespace-nowrap">{{ $community->created_at->format('d/m/Y') }}</td>
+                            <td class="px-6 py-4 text-right whitespace-nowrap">
+                                <x-ui.button href="{{ route('admin.communities.show', $community->id) }}" variant="secondary" size="sm" icon="eye">
                                     Chi tiết
-                                </a>
+                                </x-ui.button>
                             </td>
                         </tr>
                     @empty

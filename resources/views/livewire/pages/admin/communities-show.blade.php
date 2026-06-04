@@ -99,6 +99,8 @@ new class extends Component {
 
     public function confirmSuspend(SuspendCommunityAction $action): void
     {
+        $this->authorize('manage_communities');
+
         $this->validate([
             'suspendReason' => ['required', 'string', 'min:10'],
             'suspendSafeReason' => ['required', 'string', 'min:5'],
@@ -125,6 +127,8 @@ new class extends Component {
 
     public function confirmReactivate(ReactivateCommunityAction $action): void
     {
+        $this->authorize('manage_communities');
+
         $action->execute(auth()->user(), $this->community, $this->reactivateReason ?: null);
         $this->community->refresh();
         $this->showReactivateModal = false;
@@ -141,6 +145,8 @@ new class extends Component {
 
     public function confirmArchive(ArchiveCommunityAction $action): void
     {
+        $this->authorize('manage_communities');
+
         $this->validate(['archiveReason' => ['required', 'string', 'min:5']]);
 
         $action->execute(auth()->user(), $this->community, $this->archiveReason);
@@ -160,6 +166,8 @@ new class extends Component {
 
     public function confirmRemoveMember(RemoveCommunityMemberAction $action): void
     {
+        $this->authorize('manage_communities');
+
         $this->validate(['removeMemberReason' => ['required', 'string', 'min:5']]);
 
         $member = CommunityMember::findOrFail($this->removeMemberId);
@@ -181,6 +189,8 @@ new class extends Component {
 
     public function confirmAddMember(): void
     {
+        $this->authorize('manage_communities');
+
         $this->validate([
             'addMemberUserId' => ['required', 'integer', 'exists:users,id'],
             'addMemberRole' => ['required', 'in:member,moderator,manager'],
@@ -218,6 +228,8 @@ new class extends Component {
 
     public function confirmApproveJoinRequest(ApproveJoinRequestAction $action): void
     {
+        $this->authorize('manage_communities');
+
         $joinRequest = CommunityJoinRequest::findOrFail($this->reviewJoinRequestId);
         $action->execute(auth()->user(), $joinRequest);
         $this->community->refresh();
@@ -234,6 +246,8 @@ new class extends Component {
 
     public function confirmRejectJoinRequest(RejectJoinRequestAction $action): void
     {
+        $this->authorize('manage_communities');
+
         $this->validate(['joinRequestRejectReason' => ['required', 'string', 'min:5']]);
 
         $joinRequest = CommunityJoinRequest::findOrFail($this->reviewJoinRequestId);
@@ -248,6 +262,8 @@ new class extends Component {
 
     public function approveResource(int $resourceId, ReviewCommunityResourceAction $action): void
     {
+        $this->authorize('manage_communities');
+
         $resource = CommunityResource::findOrFail($resourceId);
         $action->execute(auth()->user(), $resource, ['action' => 'approve']);
         $this->dispatch('notify', type: 'success', message: 'Tài nguyên đã được phê duyệt.');
@@ -255,6 +271,8 @@ new class extends Component {
 
     public function rejectResource(int $resourceId, ReviewCommunityResourceAction $action): void
     {
+        $this->authorize('manage_communities');
+
         $resource = CommunityResource::findOrFail($resourceId);
         $action->execute(auth()->user(), $resource, [
             'action' => 'reject',

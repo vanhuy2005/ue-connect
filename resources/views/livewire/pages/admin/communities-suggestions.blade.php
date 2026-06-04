@@ -50,6 +50,8 @@ new class extends Component {
 
     public function openReview(int $id, string $action): void
     {
+        $this->authorize('manage_communities');
+
         $this->reviewId = $id;
         $this->reviewAction = $action;
         $this->showReviewModal = true;
@@ -57,6 +59,8 @@ new class extends Component {
 
     public function confirmReview(ReviewCommunitySuggestionAction $action): void
     {
+        $this->authorize('manage_communities');
+
         $this->validate([
             'reviewReason' => $this->reviewAction === 'reject' ? ['required', 'string', 'min:5'] : ['nullable', 'string'],
         ]);

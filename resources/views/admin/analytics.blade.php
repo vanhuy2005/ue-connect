@@ -38,17 +38,26 @@
             <x-slot name="header">Gợi ý hành động</x-slot>
 
             <div class="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
-                <a href="{{ route('admin.verifications.queue') }}" class="rounded-lg border border-ue-border p-4 hover:bg-ue-surface-subtle transition-colors">
-                    <p class="font-semibold text-ue-text">Mở xác thực</p>
-                    <p class="mt-1 text-ue-text-muted">Xử lý hồ sơ chờ duyệt.</p>
+                <a href="{{ route('admin.verifications.queue') }}" class="group block rounded-lg border border-ue-border p-5 bg-ue-surface hover:bg-ue-surface-hover hover:border-ue-border-strong transition-all duration-sm">
+                    <div class="flex items-center justify-between">
+                        <p class="font-semibold text-ue-text group-hover:text-ue-brand-active">Mở xác thực</p>
+                        <x-ui.icon name="arrow-right" size="sm" class="text-ue-text-muted group-hover:text-ue-brand-active transform group-hover:translate-x-1 transition-transform" />
+                    </div>
+                    <p class="mt-1.5 text-xs text-ue-text-muted">Xử lý hồ sơ chờ duyệt.</p>
                 </a>
-                <a href="{{ route('admin.reports.index') }}" class="rounded-lg border border-ue-border p-4 hover:bg-ue-surface-subtle transition-colors">
-                    <p class="font-semibold text-ue-text">Xem báo cáo</p>
-                    <p class="mt-1 text-ue-text-muted">Kiểm tra nội dung bị gắn cờ.</p>
+                <a href="{{ route('admin.reports.index') }}" class="group block rounded-lg border border-ue-border p-5 bg-ue-surface hover:bg-ue-surface-hover hover:border-ue-border-strong transition-all duration-sm">
+                    <div class="flex items-center justify-between">
+                        <p class="font-semibold text-ue-text group-hover:text-ue-brand-active">Xem báo cáo</p>
+                        <x-ui.icon name="arrow-right" size="sm" class="text-ue-text-muted group-hover:text-ue-brand-active transform group-hover:translate-x-1 transition-transform" />
+                    </div>
+                    <p class="mt-1.5 text-xs text-ue-text-muted">Kiểm tra nội dung bị gắn cờ.</p>
                 </a>
-                <a href="{{ route('admin.audit-logs.index') }}" class="rounded-lg border border-ue-border p-4 hover:bg-ue-surface-subtle transition-colors">
-                    <p class="font-semibold text-ue-text">Nhật ký thao tác</p>
-                    <p class="mt-1 text-ue-text-muted">Theo dõi hoạt động quản trị gần đây.</p>
+                <a href="{{ route('admin.audit-logs.index') }}" class="group block rounded-lg border border-ue-border p-5 bg-ue-surface hover:bg-ue-surface-hover hover:border-ue-border-strong transition-all duration-sm">
+                    <div class="flex items-center justify-between">
+                        <p class="font-semibold text-ue-text group-hover:text-ue-brand-active">Nhật ký thao tác</p>
+                        <x-ui.icon name="arrow-right" size="sm" class="text-ue-text-muted group-hover:text-ue-brand-active transform group-hover:translate-x-1 transition-transform" />
+                    </div>
+                    <p class="mt-1.5 text-xs text-ue-text-muted">Theo dõi hoạt động quản trị gần đây.</p>
                 </a>
             </div>
         </x-ui.card>
