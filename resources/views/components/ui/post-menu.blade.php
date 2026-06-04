@@ -200,7 +200,7 @@
                     type="button"
                     wire:click="openDeleteModal({{ $post->id }})"
                     onclick="if (window.closeActiveBottomSheet) window.closeActiveBottomSheet();"
-                    class="ue-bottom-sheet__item text-red-650"
+                    class="ue-bottom-sheet__item text-red-600"
                 >
                     <x-ui.icon name="trash" size="sm" class="text-red-500" />
                     <span>Xóa bài viết</span>
@@ -224,7 +224,7 @@
                     onclick="if (window.closeActiveBottomSheet) window.closeActiveBottomSheet();"
                     class="ue-bottom-sheet__item text-yellow-700 hover:bg-yellow-50/50"
                 >
-                    <x-ui.icon name="flag" size="sm" class="text-yellow-650" />
+                    <x-ui.icon name="flag" size="sm" class="text-amber-600" />
                     <span>Báo cáo bài viết</span>
                 </button>
             @endif

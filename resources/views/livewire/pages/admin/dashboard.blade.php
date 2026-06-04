@@ -138,7 +138,7 @@ new class extends Component {
                 </div>
                 @if($snapshot['critical_reports'] > 0)
                     <div class="mt-5 pt-3 border-t border-ue-border/60 flex justify-end">
-                        <a href="{{ route('admin.verifications.queue') }}?status=conflict" class="text-xs font-bold text-red-650 dark:text-red-400 hover:underline flex items-center gap-1">
+                        <a href="{{ route('admin.verifications.queue') }}?status=conflict" class="text-xs font-bold text-red-600 dark:text-red-400 hover:underline flex items-center gap-1">
                             Giải quyết xung đột
                             <x-ui.icon name="arrow-right" size="xs" />
                         </a>

@@ -265,4 +265,34 @@ class User extends Authenticatable
     {
         return $this->hasMany(MentorRequest::class, 'mentor_id');
     }
+
+    /**
+     * Get all community memberships for this user.
+     *
+     * @return HasMany<CommunityMember, $this>
+     */
+    public function communityMemberships(): HasMany
+    {
+        return $this->hasMany(CommunityMember::class);
+    }
+
+    /**
+     * Get the active community memberships.
+     *
+     * @return HasMany<CommunityMember, $this>
+     */
+    public function activeCommunityMemberships(): HasMany
+    {
+        return $this->communityMemberships()->where('status', 'active');
+    }
+
+    /**
+     * Get pending community join requests submitted by this user.
+     *
+     * @return HasMany<CommunityJoinRequest, $this>
+     */
+    public function communityJoinRequests(): HasMany
+    {
+        return $this->hasMany(CommunityJoinRequest::class);
+    }
 }

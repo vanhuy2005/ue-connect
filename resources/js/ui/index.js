@@ -11,9 +11,12 @@ import { initOptimisticActions } from './optimistic-actions';
 import { initLayoutGuards } from './layout-guards';
 import { initReducedMotion } from './reduced-motion';
 import { initPageLoading } from './page-loading';
+import { initCustomSelects } from './custom-select';
 
 function initAllUI() {
     if (window.__ue_ui_initialized) {
+        initCustomSelects();
+
         // Scan layouts in development on navigation
         if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
             setTimeout(() => {
@@ -33,6 +36,7 @@ function initAllUI() {
     initToastSystem();
     initOptimisticActions();
     initPageLoading();
+    initCustomSelects();
     initLayoutGuards();
 
     // Trigger dev scanner automatically in development

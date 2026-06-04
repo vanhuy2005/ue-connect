@@ -114,17 +114,8 @@ new class extends Component {
                             </td>
                             <td class="px-6 py-3 text-ue-text">{{ $community->creator?->name ?? 'N/A' }}</td>
                             <td class="px-6 py-3">
-                                @php
-                                    $statusColors = [
-                                        'active' => 'green',
-                                        'inactive' => 'gray',
-                                        'suspended' => 'red',
-                                        'archived' => 'slate',
-                                    ];
-                                    $color = $statusColors[$community->status] ?? 'gray';
-                                @endphp
-                                <span class="px-2 py-1 rounded-full text-xs font-semibold bg-{{ $color }}-100 text-{{ $color }}-800">
-                                    {{ ucfirst($community->status) }}
+                                <span class="px-2 py-1 rounded-full text-xs font-semibold bg-{{ $community->status->color() }}-100 text-{{ $community->status->color() }}-800">
+                                    {{ $community->status->label() }}
                                 </span>
                             </td>
                             <td class="px-6 py-3 text-ue-text-muted">{{ $community->created_at->format('d/m/Y') }}</td>

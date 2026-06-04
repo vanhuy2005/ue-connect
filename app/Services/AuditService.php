@@ -37,6 +37,7 @@ class AuditService
 
             if (in_array($field, $logicalFields, true)) {
                 $payload[$field] = $value;
+
                 continue;
             }
 

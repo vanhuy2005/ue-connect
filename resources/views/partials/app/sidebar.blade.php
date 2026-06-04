@@ -75,8 +75,8 @@ $secondaryNav = [
     [
         'icon'   => 'community',
         'label'  => 'Cộng đồng',
-        'href'   => '#',
-        'active' => false,
+        'href'   => route('community.index'),
+        'active' => request()->routeIs('community.*'),
     ],
     [
         'icon'   => 'graduation-cap',

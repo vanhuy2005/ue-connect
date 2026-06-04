@@ -88,11 +88,11 @@ new #[Layout('layouts.guest')] class extends Component
     }
 }; ?>
 
-<div class="space-y-6">
+<div class="space-y-4">
     {{-- Header / Welcome --}}
-    <div class="text-center">
-        <h1 class="text-2xl font-bold text-ue-text tracking-snug">Đăng ký tài khoản</h1>
-        <p class="text-xs text-ue-text-muted mt-1.5 leading-relaxed">
+    <div class="text-center mb-1">
+        <h1 class="text-xl font-extrabold text-ue-text tracking-snug">Đăng ký tài khoản</h1>
+        <p class="text-xs text-ue-text-muted mt-1 leading-relaxed">
             Tham gia cộng đồng Sư phạm HCMUE
         </p>
     </div>
@@ -109,57 +109,47 @@ new #[Layout('layouts.guest')] class extends Component
     @endforeach
 
     {{-- Registration Form --}}
-    <form wire:submit="register" class="space-y-4">
-        {{-- Vai trò / Identity Type Selector --}}
-        <div class="space-y-2">
-            <x-ui.label :required="true">Bạn là ai trong cộng đồng HCMUE?</x-ui.label>
-            <div class="grid grid-cols-2 gap-3.5">
-                <label class="relative flex flex-col p-4 bg-ue-surface border rounded-2xl cursor-pointer hover:bg-ue-surface-hover focus-within:ring-2 focus-within:ring-ue-brand transition-all duration-sm {{ $identity_type === 'current_student' ? 'border-ue-brand ring-1 ring-ue-brand bg-ue-brand-soft/20' : 'border-ue-border' }}">
-                    <input type="radio" wire:model.live="identity_type" value="current_student" class="sr-only" />
-                    <span class="text-xs font-bold text-ue-text mb-0.5">Sinh viên hiện tại</span>
-                    <span class="text-[10px] text-ue-text-muted leading-tight">Dành cho sinh viên đang theo học</span>
-                </label>
-                
-                <label class="relative flex flex-col p-4 bg-ue-surface border rounded-2xl cursor-pointer hover:bg-ue-surface-hover focus-within:ring-2 focus-within:ring-ue-brand transition-all duration-sm {{ $identity_type === 'teacher_advisor' ? 'border-ue-brand ring-1 ring-ue-brand bg-ue-brand-soft/20' : 'border-ue-border' }}">
-                    <input type="radio" wire:model.live="identity_type" value="teacher_advisor" class="sr-only" />
-                    <span class="text-xs font-bold text-ue-text mb-0.5">Giảng viên / Cố vấn</span>
-                    <span class="text-[10px] text-ue-text-muted leading-tight">Dành cho giảng viên, cán bộ trường</span>
-                </label>
-
-                <label class="relative flex flex-col p-4 bg-ue-surface border rounded-2xl cursor-pointer hover:bg-ue-surface-hover focus-within:ring-2 focus-within:ring-ue-brand transition-all duration-sm {{ $identity_type === 'alumni' ? 'border-ue-brand ring-1 ring-ue-brand bg-ue-brand-soft/20' : 'border-ue-border' }}">
-                    <input type="radio" wire:model.live="identity_type" value="alumni" class="sr-only" />
-                    <span class="text-xs font-bold text-ue-text mb-0.5">Cựu sinh viên</span>
-                    <span class="text-[10px] text-ue-text-muted leading-tight">Dùng email cá nhân & gửi minh chứng</span>
-                </label>
-
-                <label class="relative flex flex-col p-4 bg-ue-surface border rounded-2xl cursor-pointer hover:bg-ue-surface-hover focus-within:ring-2 focus-within:ring-ue-brand transition-all duration-sm {{ $identity_type === 'external_mentor' ? 'border-ue-brand ring-1 ring-ue-brand bg-ue-brand-soft/20' : 'border-ue-border' }}">
-                    <input type="radio" wire:model.live="identity_type" value="external_mentor" class="sr-only" />
-                    <span class="text-xs font-bold text-ue-text mb-0.5">Mentor khách mời</span>
-                    <span class="text-[10px] text-ue-text-muted leading-tight">Tính năng mở theo lời mời đặc biệt</span>
-                </label>
+    <form wire:submit="register" class="space-y-3">
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+            {{-- Vai trò / Identity Type Selector --}}
+            <div class="space-y-1">
+                <x-ui.label for="identity_type" :required="true">Bạn là ai?</x-ui.label>
+                <x-ui.select 
+                    id="identity_type" 
+                    name="identity_type" 
+                    wire:model.live="identity_type"
+                    :hasError="$errors->has('identity_type')"
+                    size="sm"
+                >
+                    <option value="current_student">Sinh viên hiện tại</option>
+                    <option value="teacher_advisor">Giảng viên / Cố vấn</option>
+                    <option value="alumni">Cựu sinh viên</option>
+                    <option value="external_mentor">Mentor khách mời</option>
+                </x-ui.select>
+                <x-ui.field-error name="identity_type" />
             </div>
-            <x-ui.field-error name="identity_type" />
-        </div>
 
-        {{-- Họ và tên --}}
-        <div class="space-y-1.5">
-            <x-ui.label for="name" :required="true">Họ và tên</x-ui.label>
-            <x-ui.input 
-                id="name" 
-                name="name" 
-                type="text" 
-                wire:model="name" 
-                placeholder="Nguyễn Văn A" 
-                required 
-                autofocus 
-                autocomplete="name"
-                :hasError="$errors->has('name')"
-            />
-            <x-ui.field-error name="name" />
+            {{-- Họ và tên --}}
+            <div class="space-y-1">
+                <x-ui.label for="name" :required="true">Họ và tên</x-ui.label>
+                <x-ui.input 
+                    id="name" 
+                    name="name" 
+                    type="text" 
+                    wire:model="name" 
+                    placeholder="Nguyễn Văn A" 
+                    required 
+                    autofocus 
+                    autocomplete="name"
+                    :hasError="$errors->has('name')"
+                    size="sm"
+                />
+                <x-ui.field-error name="name" />
+            </div>
         </div>
 
         {{-- Email Address --}}
-        <div class="space-y-1.5">
+        <div class="space-y-1">
             <x-ui.label for="email" :required="true">Email</x-ui.label>
             <x-ui.input 
                 id="email" 
@@ -170,59 +160,64 @@ new #[Layout('layouts.guest')] class extends Component
                 required 
                 autocomplete="username"
                 :hasError="$errors->has('email')"
+                size="sm"
             />
             <x-ui.field-error name="email" />
-            <p class="text-2xs text-ue-text-muted mt-1 leading-normal">
+            <p class="text-[10px] text-ue-text-muted mt-0.5 leading-normal">
                 @if ($identity_type === 'current_student')
-                    Chỉ chấp nhận email sinh viên HCMUE (ví dụ: mssv@student.hcmue.edu.vn).
+                    Chỉ chấp nhận email sinh viên HCMUE (mssv@student.hcmue.edu.vn).
                 @elseif ($identity_type === 'teacher_advisor')
-                    Chỉ chấp nhận email công vụ HCMUE (ví dụ: @teacher.hcmue.edu.vn hoặc @hcmue.edu.vn).
+                    Chỉ chấp nhận email công vụ HCMUE (@teacher.hcmue.edu.vn hoặc @hcmue.edu.vn).
                 @elseif ($identity_type === 'alumni')
-                    Cho phép sử dụng email cá nhân (Gmail, Outlook...). Cần cung cấp minh chứng cựu sinh viên sau đó.
+                    Cho phép sử dụng email cá nhân. Cần cung cấp minh chứng sau.
                 @else
                     Đăng ký mentor khách mời hiện chỉ áp dụng theo lời mời đặc biệt.
                 @endif
             </p>
         </div>
 
-        {{-- Mật khẩu --}}
-        <div class="space-y-1.5">
-            <x-ui.label for="password" :required="true">Mật khẩu</x-ui.label>
-            <x-ui.input 
-                id="password" 
-                name="password" 
-                type="password" 
-                wire:model="password" 
-                placeholder="Tối thiểu 8 ký tự" 
-                required 
-                autocomplete="new-password"
-                :hasError="$errors->has('password')"
-            />
-            <x-ui.field-error name="password" />
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+            {{-- Mật khẩu --}}
+            <div class="space-y-1">
+                <x-ui.label for="password" :required="true">Mật khẩu</x-ui.label>
+                <x-ui.input 
+                    id="password" 
+                    name="password" 
+                    type="password" 
+                    wire:model="password" 
+                    placeholder="Tối thiểu 8 ký tự" 
+                    required 
+                    autocomplete="new-password"
+                    :hasError="$errors->has('password')"
+                    size="sm"
+                />
+                <x-ui.field-error name="password" />
+            </div>
+
+            {{-- Xác nhận mật khẩu --}}
+            <div class="space-y-1">
+                <x-ui.label for="password_confirmation" :required="true">Xác nhận mật khẩu</x-ui.label>
+                <x-ui.input 
+                    id="password_confirmation" 
+                    name="password_confirmation" 
+                    type="password" 
+                    wire:model="password_confirmation" 
+                    placeholder="Nhập lại mật khẩu" 
+                    required 
+                    autocomplete="new-password"
+                    :hasError="$errors->has('password_confirmation')"
+                    size="sm"
+                />
+                <x-ui.field-error name="password_confirmation" />
+            </div>
         </div>
 
-        {{-- Xác nhận mật khẩu --}}
-        <div class="space-y-1.5">
-            <x-ui.label for="password_confirmation" :required="true">Xác nhận mật khẩu</x-ui.label>
-            <x-ui.input 
-                id="password_confirmation" 
-                name="password_confirmation" 
-                type="password" 
-                wire:model="password_confirmation" 
-                placeholder="Nhập lại mật khẩu" 
-                required 
-                autocomplete="new-password"
-                :hasError="$errors->has('password_confirmation')"
-            />
-            <x-ui.field-error name="password_confirmation" />
-        </div>
-
-        <div class="pt-3">
+        <div class="pt-1.5">
             <x-ui.button 
                 type="submit" 
                 variant="primary" 
-                class="w-full justify-center shadow-sm" 
-                size="lg" 
+                class="w-full justify-center shadow-sm font-bold" 
+                size="md" 
                 wire:loading.attr="disabled"
                 wire:target="register"
             >
@@ -244,10 +239,10 @@ new #[Layout('layouts.guest')] class extends Component
             && !empty(config('services.microsoft.tenant'));
     @endphp
 
-    <div class="space-y-4">
-        <div class="relative w-full flex items-center justify-center py-2">
+    <div class="space-y-3.5">
+        <div class="relative w-full flex items-center justify-center py-1">
             <div class="border-t border-ue-border w-full"></div>
-            <div class="absolute bg-ue-surface px-4 text-2xs font-bold uppercase tracking-widest text-ue-text-muted">
+            <div class="absolute bg-white px-4 text-[10px] font-bold uppercase tracking-widest text-ue-text-muted">
                 Hoặc
             </div>
         </div>
@@ -256,8 +251,8 @@ new #[Layout('layouts.guest')] class extends Component
             <x-ui.button 
                 wire:click="redirectToMicrosoft" 
                 variant="outline" 
-                class="w-full justify-center shadow-sm hover:border-ue-border-strong" 
-                size="lg" 
+                class="w-full justify-center shadow-sm hover:border-ue-border-strong font-bold" 
+                size="md" 
                 icon="microsoft"
                 wire:loading.attr="disabled"
                 wire:target="redirectToMicrosoft"
@@ -269,23 +264,20 @@ new #[Layout('layouts.guest')] class extends Component
                 </span>
             </x-ui.button>
         @else
-            <div class="p-3.5 bg-ue-surface-subtle border border-ue-border rounded-xl flex items-start gap-3 opacity-60">
-                <x-ui.icon name="microsoft" size="md" class="text-ue-text-disabled mt-0.5 flex-shrink-0" />
+            <div class="p-2.5 bg-ue-surface-subtle border border-ue-border rounded-xl flex items-start gap-2.5 opacity-60">
+                <x-ui.icon name="microsoft" size="sm" class="text-ue-text-disabled mt-0.5 flex-shrink-0" />
                 <div class="space-y-0.5">
                     <p class="text-xs font-semibold text-ue-text-secondary">Đăng ký nhanh chưa sẵn sàng</p>
-                    <p class="text-2xs text-ue-text-muted leading-relaxed">
-                        Hệ thống xác thực nhanh bằng tài khoản trường hiện chưa được cấu hình.
-                    </p>
                 </div>
             </div>
         @endif
     </div>
 
     {{-- Footer Login Link --}}
-    <div class="text-center pt-2">
-        <p class="text-sm text-ue-text-secondary">
+    <div class="text-center pt-1">
+        <p class="text-xs text-ue-text-secondary">
             Đã có tài khoản? 
-            <a class="font-semibold text-ue-brand hover:text-ue-brand-hover hover:underline transition-colors ml-1" href="{{ route('login') }}" wire:navigate>
+            <a class="font-bold text-ue-brand hover:text-ue-brand-hover hover:underline transition-colors ml-1" href="{{ route('login') }}" wire:navigate>
                 Đăng nhập ngay
             </a>
         </p>

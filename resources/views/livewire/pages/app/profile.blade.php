@@ -368,9 +368,8 @@ new class extends Component
                         {{-- Futuristic grid overlay --}}
                         <div class="absolute inset-0 opacity-15 bg-[linear-gradient(to_right,#80808012_1px,transparent_1px),linear-gradient(to_bottom,#80808012_1px,transparent_1px)] bg-[size:24px_24px]"></div>
                         
-                        {{-- Elegant flowing mesh gradients --}}
-                        <div class="absolute -left-1/4 -top-1/2 w-full h-[200%] rounded-full bg-[radial-gradient(circle,rgba(59,130,246,0.35)_0%,transparent_60%)] filter blur-3xl animate-pulse"></div>
-                        <div class="absolute -right-1/4 -bottom-1/2 w-full h-[200%] rounded-full bg-[radial-gradient(circle,rgba(99,102,241,0.25)_0%,transparent_60%)] filter blur-3xl"></div>
+                        {{-- Contained ambient color layer. Keep it inside the cover to avoid mobile overflow. --}}
+                        <div class="absolute inset-0 bg-[radial-gradient(circle_at_24%_20%,rgba(59,130,246,0.28)_0%,transparent_34%),radial-gradient(circle_at_78%_88%,rgba(99,102,241,0.2)_0%,transparent_38%)]"></div>
                         
                         {{-- Sophisticated tech design overlay --}}
                         <svg class="absolute w-full h-full text-blue-500/10" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 300" fill="none">
@@ -401,9 +400,9 @@ new class extends Component
             </div>
 
             {{-- Profile Metadata Area --}}
-            <div class="relative px-6 pb-6 pt-16 flex flex-col md:flex-row items-center md:items-start gap-6 text-center md:text-left">
+            <div class="relative px-4 sm:px-6 pb-6 pt-0 md:pt-6 text-center md:text-left">
                 {{-- Round Avatar Photo --}}
-                <div class="absolute -top-16 left-1/2 -translate-x-1/2 md:left-6 md:translate-x-0 w-28 h-28 sm:w-32 sm:h-32 rounded-full overflow-hidden border-4 border-white bg-slate-50 shadow-md group relative">
+                <div class="relative -mt-14 mx-auto md:absolute md:-top-16 md:left-6 md:mt-0 md:mx-0 w-28 h-28 sm:w-32 sm:h-32 rounded-full overflow-hidden border-4 border-white bg-slate-50 shadow-md group">
                     <x-ui.avatar :user="$user" size="2xl" class="w-full h-full border-none rounded-none shadow-none text-2xl font-bold bg-slate-100 flex items-center justify-center" />
 
                     @if ($isOwn)
@@ -416,10 +415,10 @@ new class extends Component
                 </div>
 
                 {{-- Profile Info Section --}}
-                <div class="flex-1 space-y-3.5 w-full mt-4 md:mt-0 min-w-0">
+                <div class="space-y-3.5 w-full mt-4 md:mt-0 md:pl-40 min-w-0">
                     <div class="flex flex-col sm:flex-row sm:items-center gap-3 justify-center md:justify-start">
-                        <h1 class="text-base sm:text-lg font-bold text-slate-800 flex items-center justify-center md:justify-start gap-1.5 truncate">
-                            {{ $user->profile?->display_name ?? $user->name }}
+                        <h1 class="text-base sm:text-lg font-bold text-slate-800 flex items-center justify-center md:justify-start gap-1.5 min-w-0">
+                            <span class="truncate">{{ $user->profile?->display_name ?? $user->name }}</span>
                             @if ($user->isActive())
                                 <x-ui.icon name="shield-check" size="xs" class="text-ue-brand fill-ue-brand" />
                             @endif
@@ -435,7 +434,7 @@ new class extends Component
                         </span>
 
                         {{-- Action Buttons --}}
-                        <div class="flex items-center justify-center md:justify-start gap-2 flex-wrap ml-auto">
+                        <div class="flex w-full sm:w-auto items-center justify-center md:justify-start gap-2 flex-wrap sm:ml-auto">
                             @if ($this->connectionStatus === 'self')
                                 <a href="{{ route('profile.edit') }}" class="bg-white hover:bg-slate-50 border border-slate-200 text-slate-700 text-xxs font-bold px-4 py-1.5 rounded-lg transition-colors flex items-center gap-1.5 shadow-2xs">
                                     <x-ui.icon name="edit" size="xs" />
@@ -501,7 +500,7 @@ new class extends Component
                     </div>
 
                     {{-- Credentials & Bio --}}
-                    <div class="space-y-1 text-slate-500 text-xxs font-medium max-w-lg">
+                    <div class="space-y-1 text-slate-500 text-xxs font-medium max-w-lg mx-auto md:mx-0">
                         <p class="text-slate-450 tracking-wide uppercase text-[9px] font-bold">
                             @if ($showFaculty && $user->profile?->faculty)
                                 Khoa: {{ $user->profile?->faculty }}

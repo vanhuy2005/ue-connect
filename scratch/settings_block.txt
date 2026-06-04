@@ -1,0 +1,39 @@
+activeTab === 'settings' && $this->canManage)
+                        <div class="space-y-6">
+                            <div class="bg-white border border-slate-200 rounded-2xl p-5 shadow-2xs">
+                                <h3 class="font-extrabold text-slate-800 mb-4">Thiết lập chung</h3>
+                                
+                                <form wire:submit.prevent="saveSettings" class="space-y-4">
+                                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                        <div class="md:col-span-2">
+                                            <label class="block text-xs font-bold text-slate-600 mb-1">Tên cộng đồng <span class="text-red-500">*</span></label>
+                                            <input type="text" wire:model.live="settingsName"
+                                                class="w-full px-3 py-2 text-xs border rounded-xl focus:outline-none focus:ring-2 focus:ring-ue-brand border-slate-200">
+                                            @error('settingsName') <p class="text-red-500 text-[10px] mt-1 font-semibold">{{ $message }}</p> @enderror
+                                        </div>
+
+                                        <div>
+                                            <label class="block text-xs font-bold text-slate-600 mb-1">Phân loại <span class="text-red-500">*</span></label>
+                                            <select wire:model.live="settingsType" class="w-full px-3 py-2 text-xs border rounded-xl focus:outline-none focus:ring-2 focus:ring-ue-brand border-slate-200">
+                                                @foreach (CommunityType::cases() as $t)
+                                                    <option value="{{ $t->value }}">{{ $t->label() }}</option>
+                                                @endforeach
+                                            </select>
+                                        </div>
+
+                                        <div>
+                                            <label class="block text-xs font-bold text-slate-600 mb-1">Chính sách tham gia <span class="text-red-500">*</span></label>
+                                            <select wire:model.live="settingsJoinPolicy" class="w-full px-3 py-2 text-xs border rounded-xl focus:outline-none focus:ring-2 focus:ring-ue-brand border-slate-200">
+                                                @foreach (CommunityJoinPolicy::cases() as $policy)
+                                                    <option value="{{ $policy->value }}">{{ $policy->label() }}</option>
+                                                @endforeach
+                                            </select>
+                                        </div>
+
+                                        <div>
+                                            <label class="block text-xs font-bold text-slate-600 mb-1">Hiển thị <span class="text-red-500">*</span></label>
+                                            <select wire:model.live="settingsVisibility" class="w-full px-3 py-2 text-xs border rounded-xl focus:outline-none focus:ring-2 focus:ring-ue-brand border-slate-200">
+                                                @foreach (CommunityVisibility::cases() as $vis)
+                                                    <option value="{{ $vis->value }}">{{ $vis->label() }}</option>
+                                                @endforeach
+                                            

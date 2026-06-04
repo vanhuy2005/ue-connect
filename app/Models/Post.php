@@ -4,6 +4,7 @@ namespace App\Models;
 
 use App\Enums\PostStatus;
 use App\Enums\PostVisibility;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -22,6 +23,11 @@ class Post extends Model
      */
     protected $fillable = [
         'user_id',
+        'scope_type',
+        'scope_id',
+        'community_post_type',
+        'pinned_at',
+        'pinned_by',
         'body',
         'media_url',
         'visibility',
@@ -42,7 +48,32 @@ class Post extends Model
             'status' => PostStatus::class,
             'edited_at' => 'datetime',
             'published_at' => 'datetime',
+            'pinned_at' => 'datetime',
         ];
+    }
+
+    /**
+     * Scope posts for a specific community feed.
+     */
+    public function scopeInCommunity(Builder $query, int $communityId): Builder
+    {
+        return $query->where('scope_type', 'community')->where('scope_id', $communityId);
+    }
+
+    /**
+     * Scope posts for the global home feed (no community scope).
+     */
+    public function scopeHomeFeed(Builder $query): Builder
+    {
+        return $query->whereNull('scope_type');
+    }
+
+    /**
+     * Relationship to the user who pinned this post.
+     */
+    public function pinnedByUser(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'pinned_by');
     }
 
     /**
