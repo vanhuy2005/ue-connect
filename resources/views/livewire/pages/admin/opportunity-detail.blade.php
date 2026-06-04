@@ -29,6 +29,11 @@ new #[Layout('layouts.app', ['shell' => 'admin'])] class extends Component
 
     public function process(): void
     {
+        if (in_array($this->post->status->value, ['published', 'edited', 'rejected'])) {
+            session()->flash('error', 'Cơ hội này đã được xử lý trước đó.');
+            return;
+        }
+
         $this->validate([
             'reason' => ['nullable', 'string', 'min:5', 'max:1000'],
         ]);
@@ -204,8 +209,8 @@ new #[Layout('layouts.app', ['shell' => 'admin'])] class extends Component
                                 </div>
                             </div>
                         @endif
-                    </div>
-                </x-ui.card>
+                </div>
+            </x-ui.card>
             @endif
 
             {{-- Post Content --}}
@@ -226,21 +231,21 @@ new #[Layout('layouts.app', ['shell' => 'admin'])] class extends Component
                     @php
                         $audits = \App\Models\AuditLog::where('target_type', 'posts')
                             ->where('target_id', $post->id)
-                            ->whereIn('action', ['opportunity.approve', 'opportunity.reject'])
+                            ->whereIn('action_key', ['opportunity.approve', 'opportunity.reject'])
                             ->latest()
                             ->get();
                     @endphp
                     @forelse ($audits as $act)
                         @php
-                            $dotColor = match($act->action) {
+                            $dotColor = match($act->action_key) {
                                 'opportunity.approve' => 'bg-green-500 ring-green-100',
                                 'opportunity.reject' => 'bg-red-500 ring-red-100',
                                 default => 'bg-slate-500 ring-slate-100',
                             };
-                            $actLabel = match($act->action) {
-                                'opportunity.approve' => 'Đã phê duyệt',
-                                'opportunity.reject' => 'Đã từ chối',
-                                default => $act->action,
+                            $actLabel = match($act->action_key) {
+                                'opportunity.approve' => 'Phê duyệt',
+                                'opportunity.reject' => 'Từ chối',
+                                default => $act->action_key,
                             };
                         @endphp
                         <div class="relative">
@@ -268,6 +273,23 @@ new #[Layout('layouts.app', ['shell' => 'admin'])] class extends Component
             <x-ui.card variant="elevated" class="sticky top-6">
                 <h2 class="text-base font-bold text-ue-text border-b border-ue-border pb-3 mb-4">Xử lý cơ hội việc làm</h2>
 
+                @if (in_array($post->status->value, ['published', 'edited']))
+                    <div class="p-3 bg-green-50 text-green-800 border border-green-200 rounded-lg text-xs space-y-1">
+                        <div class="font-bold flex items-center gap-1">
+                            <x-ui.icon name="check-circle" size="xs" />
+                            Đã duyệt
+                        </div>
+                        <div class="leading-relaxed font-semibold">Cơ hội này đã được duyệt và hiển thị công khai.</div>
+                    </div>
+                @elseif ($post->status->value === 'rejected')
+                    <div class="p-3 bg-red-50 text-red-800 border border-red-200 rounded-lg text-xs space-y-1">
+                        <div class="font-bold flex items-center gap-1">
+                            <x-ui.icon name="x-circle" size="xs" />
+                            Đã từ chối
+                        </div>
+                        <div class="leading-relaxed font-semibold">Cơ hội này đã bị từ chối.</div>
+                    </div>
+                @else
                 <form wire:submit.prevent="process" class="space-y-4">
                     {{-- Action Selection --}}
                     <div>
@@ -323,26 +345,7 @@ new #[Layout('layouts.app', ['shell' => 'admin'])] class extends Component
                     </div>
                 </form>
 
-                {{-- Quick actions (matching greeting style) --}}
-                <div class="mt-4 pt-4 border-t border-ue-border">
-                    <div class="text-[10px] text-ue-text-muted font-bold uppercase tracking-wider mb-2">Thao tác nhanh</div>
-                    <div class="flex gap-2">
-                        <button
-                            type="button"
-                            wire:click="$set('action', 'approve'); $set('reason', '');"
-                            class="flex-1 bg-slate-900 hover:bg-slate-800 text-white text-[10px] font-bold px-3 py-2 rounded-lg shadow-2xs hover:shadow-xs transition-all"
-                        >
-                            Duyệt
-                        </button>
-                        <button
-                            type="button"
-                            wire:click="$set('action', 'reject'); $set('reason', '');"
-                            class="flex-1 bg-slate-50 hover:bg-slate-100 text-slate-500 text-[10px] font-bold px-3 py-2 rounded-lg border border-slate-200 transition-colors"
-                        >
-                            Từ chối
-                        </button>
-                    </div>
-                </div>
+            @endif
             </x-ui.card>
         </div>
     </div>

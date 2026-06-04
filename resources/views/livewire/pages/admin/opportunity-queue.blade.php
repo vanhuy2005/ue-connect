@@ -32,45 +32,6 @@ new #[Layout('layouts.app', ['shell' => 'admin'])] class extends Component
         $this->resetPage();
     }
 
-    public function approve(int $postId): void
-    {
-        $post = Post::findOrFail($postId);
-
-        if ($post->post_type?->value !== PostType::OPPORTUNITY->value) {
-            session()->flash('error', 'Chỉ có thể duyệt bài viết cơ hội.');
-            return;
-        }
-
-        DB::transaction(function () use ($post) {
-            $post->update([
-                'status' => PostStatus::PUBLISHED,
-                'published_at' => now(),
-            ]);
-        });
-
-        session()->flash('success', 'Đã duyệt cơ hội "' . ($post->opportunityDetail?->position ?? '') . '" thành công.');
-        $this->resetPage();
-    }
-
-    public function reject(int $postId): void
-    {
-        $post = Post::findOrFail($postId);
-
-        if ($post->post_type?->value !== PostType::OPPORTUNITY->value) {
-            session()->flash('error', 'Chỉ có thể từ chối bài viết cơ hội.');
-            return;
-        }
-
-        DB::transaction(function () use ($post) {
-            $post->update([
-                'status' => PostStatus::REJECTED,
-            ]);
-        });
-
-        session()->flash('success', 'Đã từ chối cơ hội.');
-        $this->resetPage();
-    }
-
     public function getPostsProperty()
     {
         $query = Post::with(['user.profile', 'opportunityDetail'])
@@ -191,16 +152,6 @@ new #[Layout('layouts.app', ['shell' => 'admin'])] class extends Component
                             <x-ui.icon name="eye" size="xs" />
                             Chi tiết
                         </a>
-                        @if ($post->status->value === 'pending_review')
-                            <div class="flex flex-col gap-1.5">
-                                <button type="button" wire:click="approve({{ $post->id }})" wire:confirm="Duyệt cơ hội này?" class="bg-slate-900 hover:bg-slate-800 text-white text-[10px] font-bold px-3 py-1.5 rounded-lg shadow-2xs hover:shadow-xs transition-all w-full">
-                                    Duyệt
-                                </button>
-                                <button type="button" wire:click="reject({{ $post->id }})" wire:confirm="Từ chối cơ hội này?" class="bg-slate-50 hover:bg-slate-100 text-slate-500 text-[10px] font-bold px-3 py-1.5 rounded-lg border border-slate-200 transition-colors w-full">
-                                    Từ chối
-                                </button>
-                            </div>
-                        @endif
                     </div>
                 </div>
             </div>
