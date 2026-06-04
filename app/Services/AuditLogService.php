@@ -60,6 +60,7 @@ class AuditLogService
 
             if (in_array($field, $logicalFields, true)) {
                 $attributes[$field] = $value;
+
                 continue;
             }
 

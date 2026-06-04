@@ -7,6 +7,10 @@ use App\Models\AuditLog;
 use App\Models\BlockedUser;
 use App\Models\Comment;
 use App\Models\Community;
+use App\Models\CommunityEvent;
+use App\Models\CommunityJoinRequest;
+use App\Models\CommunityResource;
+use App\Models\CommunitySuggestion;
 use App\Models\Connection;
 use App\Models\Conversation;
 use App\Models\Media;
@@ -22,7 +26,11 @@ use App\Models\VerificationRequest;
 use App\Policies\AnnouncementPolicy;
 use App\Policies\AuditLogPolicy;
 use App\Policies\CommentPolicy;
+use App\Policies\CommunityEventPolicy;
+use App\Policies\CommunityJoinRequestPolicy;
 use App\Policies\CommunityPolicy;
+use App\Policies\CommunityResourcePolicy;
+use App\Policies\CommunitySuggestionPolicy;
 use App\Policies\ConnectionPolicy;
 use App\Policies\ConversationPolicy;
 use App\Policies\MediaPolicy;
@@ -69,6 +77,7 @@ class AppServiceProvider extends ServiceProvider
             'media' => Media::class,
             'profile' => Profile::class,
             'message' => Message::class,
+            'community' => Community::class,
         ]);
 
         Gate::policy(Connection::class, ConnectionPolicy::class);
@@ -83,6 +92,10 @@ class AppServiceProvider extends ServiceProvider
         Gate::policy(Announcement::class, AnnouncementPolicy::class);
         Gate::policy(AuditLog::class, AuditLogPolicy::class);
         Gate::policy(Community::class, CommunityPolicy::class);
+        Gate::policy(CommunityJoinRequest::class, CommunityJoinRequestPolicy::class);
+        Gate::policy(CommunityResource::class, CommunityResourcePolicy::class);
+        Gate::policy(CommunitySuggestion::class, CommunitySuggestionPolicy::class);
+        Gate::policy(CommunityEvent::class, CommunityEventPolicy::class);
         Gate::policy(Media::class, MediaPolicy::class);
         Gate::policy(MentorAccessRequest::class, MentorAccessRequestPolicy::class);
         Gate::policy(MentorProfile::class, MentorProfilePolicy::class);
