@@ -679,4 +679,66 @@ if (app()->environment('local')) {
         ->name('dev.design-system');
 }
 
+Route::get('/run-diagnostics', function () {
+    if (request('token') !== 'ueconnect_secret_token_2026') {
+        abort(403, 'Unauthorized');
+    }
+
+    $results = [];
+
+    // 1. Check environment variables & config
+    $results['active_strategy'] = config('media.storage.strategy', config('media.default_strategy', 'local_only'));
+    $results['public_disk'] = config('media.public_disk', 'public');
+    $results['private_disk'] = config('media.private_disk', 'private');
+    $results['r2_enabled'] = config('media.r2.enabled');
+    $results['cloudinary_enabled'] = config('media.providers.cloudinary.enabled');
+
+    // 2. Check GD extension
+    $results['gd_loaded'] = extension_loaded('gd');
+    if ($results['gd_loaded']) {
+        $results['gd_info'] = gd_info();
+    }
+
+    // 3. Test R2 Public Disk Connection
+    try {
+        $publicDisk = config('media.public_disk', 'r2_public');
+        Storage::disk($publicDisk)->put('diagnostics_test_public.txt', 'public test '.now()->toIso8601String());
+        $results['r2_public_write'] = 'SUCCESS';
+        $results['r2_public_url'] = Storage::disk($publicDisk)->url('diagnostics_test_public.txt');
+        Storage::disk($publicDisk)->delete('diagnostics_test_public.txt');
+    } catch (Throwable $e) {
+        $results['r2_public_write_error'] = $e->getMessage()."\n".$e->getTraceAsString();
+    }
+
+    // 4. Test R2 Private Disk Connection
+    try {
+        $privateDisk = config('media.private_disk', 'r2_private');
+        Storage::disk($privateDisk)->put('diagnostics_test_private.txt', 'private test '.now()->toIso8601String());
+        $results['r2_private_write'] = 'SUCCESS';
+        Storage::disk($privateDisk)->delete('diagnostics_test_private.txt');
+    } catch (Throwable $e) {
+        $results['r2_private_write_error'] = $e->getMessage()."\n".$e->getTraceAsString();
+    }
+
+    // 5. Check logs directory
+    $logPath = storage_path('logs');
+    if (is_dir($logPath)) {
+        $results['logs_dir_writable'] = is_writable($logPath);
+        $results['log_files'] = scandir($logPath);
+
+        $laravelLog = storage_path('logs/laravel.log');
+        if (file_exists($laravelLog)) {
+            $lines = file($laravelLog);
+            $tail = array_slice($lines, -150);
+            $results['laravel_log_tail'] = implode('', $tail);
+        } else {
+            $results['laravel_log_status'] = 'laravel.log not found';
+        }
+    } else {
+        $results['logs_dir_status'] = 'logs dir not found';
+    }
+
+    return response()->json($results, 200, [], JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES);
+});
+
 require __DIR__.'/auth.php';
