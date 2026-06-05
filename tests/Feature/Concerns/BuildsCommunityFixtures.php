@@ -30,7 +30,7 @@ trait BuildsCommunityFixtures
     protected function createAdminUser(): User
     {
         Role::findOrCreate('admin', 'web');
-        $admin = $this->createActiveUser('advisor');
+        $admin = $this->createActiveUser('teacher');
         $admin->assignRole('admin');
 
         return $admin;

@@ -40,17 +40,17 @@ class UatVerificationSeeder extends Seeder
 
     private function resolveUsers(): void
     {
-        $this->reviewer = User::where('email', 'verification.reviewer@hcmue.edu.vn')->firstOrFail();
+        $this->reviewer = User::where('email', 'verification.reviewer@teacher.hcmue.edu.vn')->firstOrFail();
 
         foreach ([
-            'unverified' => 'unverified.student@hcmue.edu.vn',
-            'legacy' => 'student.test@hcmue.edu.vn',
-            'student' => 'student@hcmue.edu.vn',
-            'student2' => 'student2@hcmue.edu.vn',
-            'alumni_pending' => 'alumni.pending@hcmue.edu.vn',
-            'advisor_pending' => 'advisor.pending@hcmue.edu.vn',
-            'advisor_rejected' => 'advisor.rejected@hcmue.edu.vn',
-            'blocked_student' => 'blocked.student@hcmue.edu.vn',
+            'unverified' => 'unverified.student@student.hcmue.edu.vn',
+            'legacy' => 'student.test@student.hcmue.edu.vn',
+            'student' => 'student@student.hcmue.edu.vn',
+            'student2' => 'student2@student.hcmue.edu.vn',
+            'alumni_pending' => 'alumni.pending@gmail.com',
+            'teacher_pending' => 'teacher.pending@teacher.hcmue.edu.vn',
+            'teacher_rejected' => 'teacher.rejected@teacher.hcmue.edu.vn',
+            'blocked_student' => 'blocked.student@student.hcmue.edu.vn',
         ] as $key => $email) {
             $this->users[$key] = User::where('email', $email)->firstOrFail();
         }
@@ -115,9 +115,9 @@ class UatVerificationSeeder extends Seeder
                 'risk_flags' => [EvidenceRiskFlag::DocumentTypeMismatch->value],
             ],
             [
-                'key' => 'advisor_conflict',
-                'user' => $this->users['advisor_pending'],
-                'role' => 'advisor',
+                'key' => 'teacher_conflict',
+                'user' => $this->users['teacher_pending'],
+                'role' => 'teacher',
                 'status' => VerificationStatus::CONFLICT,
                 'student_code' => null,
                 'note' => 'Thông tin cố vấn cần đối chiếu thủ công.',
@@ -125,9 +125,9 @@ class UatVerificationSeeder extends Seeder
                 'risk_flags' => [EvidenceRiskFlag::ManualReviewRequired->value],
             ],
             [
-                'key' => 'advisor_suspicious',
-                'user' => $this->users['advisor_rejected'],
-                'role' => 'advisor',
+                'key' => 'teacher_suspicious',
+                'user' => $this->users['teacher_rejected'],
+                'role' => 'teacher',
                 'status' => VerificationStatus::SUSPICIOUS,
                 'student_code' => null,
                 'note' => 'Minh chứng có dấu hiệu không khớp.',
@@ -159,10 +159,12 @@ class UatVerificationSeeder extends Seeder
                     'submitted_cohort' => $case['role'] === 'student' ? 'K48' : null,
                     'submitted_graduation_year' => $case['role'] === 'alumni' ? '2020' : null,
                     'submitted_email' => $case['user']->email,
-                    'submitted_old_student_email' => $case['role'] === 'alumni' ? 'alumni.demo.old@hcmue.edu.vn' : null,
+                    'submitted_old_student_email' => $case['role'] === 'alumni' ? 'alumni.demo.old@student.hcmue.edu.vn' : null,
                     'submitted_note' => '[UAT] '.$case['note'],
-                    'submitted_position' => $case['role'] === 'advisor' ? 'Cố vấn học tập' : null,
-                    'submitted_organization' => $case['role'] === 'advisor' ? 'HCMUE' : null,
+                    'submitted_position' => $case['role'] === 'teacher' ? 'Cố vấn học tập' : null,
+                    'submitted_organization' => $case['role'] === 'teacher' ? 'HCMUE' : null,
+                    'submitted_is_academic_advisor' => $case['role'] === 'teacher',
+                    'submitted_advised_class_codes' => $case['role'] === 'teacher' ? '49.CNTTD' : null,
                     'assigned_admin_id' => $this->reviewer->id,
                     'submitted_at' => now()->subDays(6),
                     'reviewed_at' => $this->isReviewed($case['status']) ? now()->subDays(2) : null,
@@ -179,6 +181,12 @@ class UatVerificationSeeder extends Seeder
 
     private function evidence(VerificationRequest $request, string $seedKey): VerificationEvidence
     {
+        $evidenceType = match ($request->role_requested) {
+            'teacher' => 'teacher_email_screenshot',
+            'alumni' => 'graduation_certificate',
+            default => 'student_card',
+        };
+
         $media = MediaFile::updateOrCreate(
             ['checksum' => 'uat-verification-'.$seedKey],
             [
@@ -201,7 +209,7 @@ class UatVerificationSeeder extends Seeder
                 'user_id' => $request->user_id,
                 'verification_request_id' => $request->id,
                 'status' => EvidenceCaptureStatus::Completed,
-                'required_evidence_type' => 'student_card',
+                'required_evidence_type' => $evidenceType,
                 'started_at' => now()->subDays(6),
                 'expires_at' => now()->addDays(7),
                 'completed_at' => now()->subDays(6)->addMinutes(4),
@@ -211,7 +219,7 @@ class UatVerificationSeeder extends Seeder
         );
 
         return VerificationEvidence::updateOrCreate(
-            ['verification_request_id' => $request->id, 'evidence_type' => 'student_card'],
+            ['verification_request_id' => $request->id, 'evidence_type' => $evidenceType],
             [
                 'media_file_id' => $media->id,
                 'evidence_link' => null,
@@ -305,7 +313,7 @@ class UatVerificationSeeder extends Seeder
     {
         return match ($role) {
             'alumni' => 'alumni',
-            'advisor' => 'teacher_advisor',
+            'teacher' => 'teacher_advisor',
             default => 'current_student',
         };
     }

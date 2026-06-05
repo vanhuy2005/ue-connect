@@ -46,7 +46,7 @@ trait BuildsMentorFixtures
         $role = Role::findOrCreate('admin', 'web');
         $role->givePermissionTo('manage_mentor_access');
 
-        $admin = $this->activeUser('advisor');
+        $admin = $this->activeUser('teacher');
         $admin->assignRole('admin');
 
         return $admin;

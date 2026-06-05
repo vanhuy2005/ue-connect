@@ -70,15 +70,15 @@ class UatCommunitySeeder extends Seeder
     private function resolveUsers(): void
     {
         foreach ([
-            'admin' => 'admin@hcmue.edu.vn',
-            'manager' => 'student.cntt@hcmue.edu.vn',
-            'moderator' => 'student.math@hcmue.edu.vn',
-            'member' => 'student@hcmue.edu.vn',
-            'member2' => 'student2@hcmue.edu.vn',
-            'pending' => 'student.english@hcmue.edu.vn',
-            'resource_manager' => 'student.literature@hcmue.edu.vn',
-            'banned_member' => 'blocked.student@hcmue.edu.vn',
-            'advisor' => 'advisor.mentor@hcmue.edu.vn',
+            'admin' => 'admin@teacher.hcmue.edu.vn',
+            'manager' => 'student.cntt@student.hcmue.edu.vn',
+            'moderator' => 'student.math@student.hcmue.edu.vn',
+            'member' => 'student@student.hcmue.edu.vn',
+            'member2' => 'student2@student.hcmue.edu.vn',
+            'pending' => 'student.english@student.hcmue.edu.vn',
+            'resource_manager' => 'student.literature@student.hcmue.edu.vn',
+            'banned_member' => 'blocked.student@student.hcmue.edu.vn',
+            'teacher' => 'teacher.mentor@teacher.hcmue.edu.vn',
         ] as $key => $email) {
             $this->users[$key] = User::where('email', $email)->firstOrFail();
         }
@@ -185,7 +185,7 @@ class UatCommunitySeeder extends Seeder
         $this->member('it_club', 'pending', CommunityMemberRole::Member, CommunityMemberStatus::Pending);
         $this->member('it_club', 'banned_member', CommunityMemberRole::Member, CommunityMemberStatus::BannedFromCommunity);
 
-        $this->member('math_private', 'advisor', CommunityMemberRole::Owner, CommunityMemberStatus::Active, 'Cố vấn học thuật');
+        $this->member('math_private', 'teacher', CommunityMemberRole::Owner, CommunityMemberStatus::Active, 'Cố vấn học thuật');
         $this->member('math_private', 'member2', CommunityMemberRole::Member, CommunityMemberStatus::Muted);
 
         $this->member('career_group', 'member', CommunityMemberRole::Member, CommunityMemberStatus::Active);
@@ -386,7 +386,7 @@ class UatCommunitySeeder extends Seeder
                 'join_policy' => CommunityJoinPolicy::ApprovalRequired->value,
                 'visibility' => CommunityVisibility::Public->value,
                 'purpose' => 'Tạo không gian đọc và thảo luận sách giáo dục bằng nội dung hợp lệ.',
-                'target_members' => 'Sinh viên, alumni và advisor quan tâm giáo dục.',
+                'target_members' => 'Sinh viên, alumni và giảng viên quan tâm giáo dục.',
                 'rules' => 'Không chia sẻ bản scan sách có bản quyền.',
                 'related_faculty' => 'Khoa Khoa học Giáo dục',
                 'proposed_owner_id' => $this->users['member']->id,

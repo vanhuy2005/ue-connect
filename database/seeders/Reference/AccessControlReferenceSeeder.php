@@ -20,6 +20,8 @@ class AccessControlReferenceSeeder extends Seeder
             Permission::findOrCreate($permissionName, 'web');
         }
 
+        app(PermissionRegistrar::class)->forgetCachedPermissions();
+
         foreach ($this->roles() as $roleName => $rolePermissions) {
             Role::findOrCreate($roleName, 'web')->syncPermissions($rolePermissions);
         }
@@ -165,7 +167,7 @@ class AccessControlReferenceSeeder extends Seeder
         return [
             'student' => $verifiedUserPermissions,
             'alumni' => $verifiedUserPermissions,
-            'advisor' => $verifiedUserPermissions,
+            'teacher' => $verifiedUserPermissions,
             'admin' => $adminPermissions,
         ];
     }

@@ -33,7 +33,7 @@ class UatAccountSeeder extends Seeder
             $this->seedAdminUsers();
             $this->seedStudents();
             $this->seedAlumni();
-            $this->seedAdvisors();
+            $this->seedTeachers();
         });
 
         app(PermissionRegistrar::class)->forgetCachedPermissions();
@@ -43,13 +43,13 @@ class UatAccountSeeder extends Seeder
     private function seedAdminUsers(): void
     {
         foreach ([
-            ['UEConnect Super Admin', 'superadmin@hcmue.edu.vn', ['admin']],
-            ['UEConnect Admin', 'admin@hcmue.edu.vn', ['admin']],
-            ['Mentor Manager', 'mentor.manager@hcmue.edu.vn', ['admin']],
-            ['Community Moderator', 'moderator@hcmue.edu.vn', ['admin']],
-            ['Verification Reviewer', 'verification.reviewer@hcmue.edu.vn', ['admin']],
+            ['UEConnect Super Admin', 'superadmin@teacher.hcmue.edu.vn', ['admin']],
+            ['UEConnect Admin', 'admin@teacher.hcmue.edu.vn', ['admin']],
+            ['Mentor Manager', 'mentor.manager@teacher.hcmue.edu.vn', ['admin']],
+            ['Community Moderator', 'moderator@teacher.hcmue.edu.vn', ['admin']],
+            ['Verification Reviewer', 'verification.reviewer@teacher.hcmue.edu.vn', ['admin']],
         ] as [$name, $email, $roles]) {
-            $user = $this->user($name, $email, 'advisor', AccountStatus::ACTIVE, $roles, IdentityType::TEACHER_ADVISOR);
+            $user = $this->user($name, $email, 'teacher', AccountStatus::ACTIVE, $roles, IdentityType::TEACHER_ADVISOR);
             $this->advisorProfile($user, 'cntt', 'Quản trị UEConnect', 'Nhân sự vận hành UAT', 'Admin console, moderation, verification');
         }
     }
@@ -57,24 +57,24 @@ class UatAccountSeeder extends Seeder
     private function seedStudents(): void
     {
         $students = [
-            ['Nguyễn Văn Student', 'student@hcmue.edu.vn', AccountStatus::ACTIVE, 'cntt', 'cong-nghe-thong-tin', 'K48', 'CNTT48A', 'SV240001'],
-            ['Trần Thảo Student', 'student2@hcmue.edu.vn', AccountStatus::ACTIVE, 'toan-thong-ke', 'su-pham-toan-hoc', 'K48', 'TOAN48A', 'SV240002'],
-            ['Lê Minh Unverified', 'unverified.student@hcmue.edu.vn', AccountStatus::REGISTERED, 'ngu-van', 'van-hoc', 'K49', 'VAN49A', 'SV240003'],
-            ['Phạm An Suspended', 'suspended.student@hcmue.edu.vn', AccountStatus::SUSPENDED, 'tieng-anh', 'ngon-ngu-anh', 'K47', 'ANH47A', 'SV240004'],
-            ['Hoàng Nam Banned', 'banned.student@hcmue.edu.vn', AccountStatus::BANNED, 'cntt', 'su-pham-tin-hoc', 'K46', 'TIN46A', 'SV240005'],
-            ['Võ Long Limit', 'limit.student@hcmue.edu.vn', AccountStatus::ACTIVE, 'cntt', 'cong-nghe-thong-tin', 'K48', 'CNTT48B', 'SV240006'],
-            ['Đỗ Minh Blocked', 'blocked.student@hcmue.edu.vn', AccountStatus::ACTIVE, 'toan-thong-ke', 'toan-hoc', 'K48', 'TOAN48B', 'SV240007'],
-            ['Nguyễn Hạ CNTT', 'student.cntt@hcmue.edu.vn', AccountStatus::ACTIVE, 'cntt', 'cong-nghe-thong-tin', 'K49', 'CNTT49A', 'SV240008'],
-            ['Trần Bảo Toán', 'student.math@hcmue.edu.vn', AccountStatus::ACTIVE, 'toan-thong-ke', 'toan-hoc', 'K49', 'TOAN49A', 'SV240009'],
-            ['Lê Mai English', 'student.english@hcmue.edu.vn', AccountStatus::ACTIVE, 'tieng-anh', 'ngon-ngu-anh', 'K49', 'ANH49A', 'SV240010'],
-            ['Phạm Linh Psychology', 'student.psychology@hcmue.edu.vn', AccountStatus::ACTIVE, 'tam-ly-hoc', 'tam-ly-hoc', 'K49', 'TLY49A', 'SV240011'],
-            ['Bùi An Literature', 'student.literature@hcmue.edu.vn', AccountStatus::ACTIVE, 'ngu-van', 'su-pham-ngu-van', 'K49', 'VAN49B', 'SV240012'],
-            ['Ngô Thanh Vật lý', 'student.physics@hcmue.edu.vn', AccountStatus::ACTIVE, 'vat-ly', 'su-pham-vat-ly', 'K50', 'LY50A', 'SV240013'],
-            ['Đặng Tú Hóa học', 'student.chemistry@hcmue.edu.vn', AccountStatus::ACTIVE, 'hoa-hoc', 'hoa-hoc', 'K50', 'HOA50A', 'SV240014'],
-            ['Mai Thảo Sinh học', 'student.biology@hcmue.edu.vn', AccountStatus::ACTIVE, 'sinh-hoc', 'su-pham-sinh-hoc', 'K50', 'SINH50A', 'SV240015'],
-            ['Lý Khánh Lịch sử', 'student.history@hcmue.edu.vn', AccountStatus::ACTIVE, 'lich-su', 'lich-su', 'K49', 'SU49A', 'SV240016'],
-            ['Hồ Gia Địa lý', 'student.geography@hcmue.edu.vn', AccountStatus::ACTIVE, 'dia-ly', 'dia-ly-hoc', 'K49', 'DIA49A', 'SV240017'],
-            ['Trương Hân Tiểu học', 'student.primary@hcmue.edu.vn', AccountStatus::ACTIVE, 'giao-duc-tieu-hoc', 'giao-duc-tieu-hoc', 'K48', 'GDTH48A', 'SV240018'],
+            ['Nguyễn Văn Student', 'student@student.hcmue.edu.vn', AccountStatus::ACTIVE, 'cntt', 'cong-nghe-thong-tin', 'K48', 'CNTT48A', 'SV240001'],
+            ['Trần Thảo Student', 'student2@student.hcmue.edu.vn', AccountStatus::ACTIVE, 'toan-thong-ke', 'su-pham-toan-hoc', 'K48', 'TOAN48A', 'SV240002'],
+            ['Lê Minh Unverified', 'unverified.student@student.hcmue.edu.vn', AccountStatus::REGISTERED, 'ngu-van', 'van-hoc', 'K49', 'VAN49A', 'SV240003'],
+            ['Phạm An Suspended', 'suspended.student@student.hcmue.edu.vn', AccountStatus::SUSPENDED, 'tieng-anh', 'ngon-ngu-anh', 'K47', 'ANH47A', 'SV240004'],
+            ['Hoàng Nam Banned', 'banned.student@student.hcmue.edu.vn', AccountStatus::BANNED, 'cntt', 'su-pham-tin-hoc', 'K46', 'TIN46A', 'SV240005'],
+            ['Võ Long Limit', 'limit.student@student.hcmue.edu.vn', AccountStatus::ACTIVE, 'cntt', 'cong-nghe-thong-tin', 'K48', 'CNTT48B', 'SV240006'],
+            ['Đỗ Minh Blocked', 'blocked.student@student.hcmue.edu.vn', AccountStatus::ACTIVE, 'toan-thong-ke', 'toan-hoc', 'K48', 'TOAN48B', 'SV240007'],
+            ['Nguyễn Hạ CNTT', 'student.cntt@student.hcmue.edu.vn', AccountStatus::ACTIVE, 'cntt', 'cong-nghe-thong-tin', 'K49', 'CNTT49A', 'SV240008'],
+            ['Trần Bảo Toán', 'student.math@student.hcmue.edu.vn', AccountStatus::ACTIVE, 'toan-thong-ke', 'toan-hoc', 'K49', 'TOAN49A', 'SV240009'],
+            ['Lê Mai English', 'student.english@student.hcmue.edu.vn', AccountStatus::ACTIVE, 'tieng-anh', 'ngon-ngu-anh', 'K49', 'ANH49A', 'SV240010'],
+            ['Phạm Linh Psychology', 'student.psychology@student.hcmue.edu.vn', AccountStatus::ACTIVE, 'tam-ly-hoc', 'tam-ly-hoc', 'K49', 'TLY49A', 'SV240011'],
+            ['Bùi An Literature', 'student.literature@student.hcmue.edu.vn', AccountStatus::ACTIVE, 'ngu-van', 'su-pham-ngu-van', 'K49', 'VAN49B', 'SV240012'],
+            ['Ngô Thanh Vật lý', 'student.physics@student.hcmue.edu.vn', AccountStatus::ACTIVE, 'vat-ly', 'su-pham-vat-ly', 'K50', 'LY50A', 'SV240013'],
+            ['Đặng Tú Hóa học', 'student.chemistry@student.hcmue.edu.vn', AccountStatus::ACTIVE, 'hoa-hoc', 'hoa-hoc', 'K50', 'HOA50A', 'SV240014'],
+            ['Mai Thảo Sinh học', 'student.biology@student.hcmue.edu.vn', AccountStatus::ACTIVE, 'sinh-hoc', 'su-pham-sinh-hoc', 'K50', 'SINH50A', 'SV240015'],
+            ['Lý Khánh Lịch sử', 'student.history@student.hcmue.edu.vn', AccountStatus::ACTIVE, 'lich-su', 'lich-su', 'K49', 'SU49A', 'SV240016'],
+            ['Hồ Gia Địa lý', 'student.geography@student.hcmue.edu.vn', AccountStatus::ACTIVE, 'dia-ly', 'dia-ly-hoc', 'K49', 'DIA49A', 'SV240017'],
+            ['Trương Hân Tiểu học', 'student.primary@student.hcmue.edu.vn', AccountStatus::ACTIVE, 'giao-duc-tieu-hoc', 'giao-duc-tieu-hoc', 'K48', 'GDTH48A', 'SV240018'],
         ];
 
         foreach ($students as [$name, $email, $status, $facultySlug, $programSlug, $cohort, $className, $studentCode]) {
@@ -83,46 +83,46 @@ class UatAccountSeeder extends Seeder
             $this->studentProfile($user, $facultySlug, $programSlug, $cohort, $className, $studentCode);
         }
 
-        $peerMentor = $this->user('Student Peer Mentor', 'student.peermentor@hcmue.edu.vn', 'student', AccountStatus::ACTIVE, ['student'], IdentityType::CURRENT_STUDENT);
+        $peerMentor = $this->user('Student Peer Mentor', 'student.peermentor@student.hcmue.edu.vn', 'student', AccountStatus::ACTIVE, ['student'], IdentityType::CURRENT_STUDENT);
         $this->studentProfile($peerMentor, 'cntt', 'su-pham-tin-hoc', 'K47', 'TIN47A', 'SV240019');
 
-        $legacyStudent = $this->user('Nguyễn Văn Test', 'student.test@hcmue.edu.vn', 'student', AccountStatus::REGISTERED, [], IdentityType::CURRENT_STUDENT);
+        $legacyStudent = $this->user('Nguyễn Văn Test', 'student.test@student.hcmue.edu.vn', 'student', AccountStatus::REGISTERED, [], IdentityType::CURRENT_STUDENT);
         $this->studentProfile($legacyStudent, 'cntt', 'cong-nghe-thong-tin', 'K50', 'CNTT50A', 'SV240020');
     }
 
     private function seedAlumni(): void
     {
         foreach ([
-            ['Nguyễn Minh Alumni Mentor', 'alumni.mentor@hcmue.edu.vn', 'cntt', 'cong-nghe-thong-tin', true],
-            ['Trần Hoàng Paused Mentor', 'alumni.paused@hcmue.edu.vn', 'cntt', 'su-pham-tin-hoc', true],
-            ['Lê Anh Hidden Mentor', 'alumni.hidden@hcmue.edu.vn', 'toan-thong-ke', 'toan-hoc', true],
-            ['Phạm Long Full Mentor', 'alumni.full@hcmue.edu.vn', 'tieng-anh', 'ngon-ngu-anh', true],
-            ['Võ Quang Pending Alumni', 'alumni.pending@hcmue.edu.vn', 'ngu-van', 'van-hoc', false],
-            ['Ngô Khánh Under Review Alumni', 'alumni.underreview@hcmue.edu.vn', 'vat-ly', 'vat-ly-hoc', false],
-            ['Đặng Hải More Info Alumni', 'alumni.moreinfo@hcmue.edu.vn', 'hoa-hoc', 'hoa-hoc', false],
-            ['Bùi Sơn Rejected Alumni', 'alumni.rejected@hcmue.edu.vn', 'sinh-hoc', 'sinh-hoc', false],
-            ['Mai Phúc Revoked Mentor', 'alumni.revoked@hcmue.edu.vn', 'tam-ly-hoc', 'tam-ly-hoc', false],
+            ['Nguyễn Minh Alumni Mentor', 'alumni.mentor@gmail.com', 'cntt', 'cong-nghe-thong-tin', true],
+            ['Trần Hoàng Paused Mentor', 'alumni.paused@gmail.com', 'cntt', 'su-pham-tin-hoc', true],
+            ['Lê Anh Hidden Mentor', 'alumni.hidden@gmail.com', 'toan-thong-ke', 'toan-hoc', true],
+            ['Phạm Long Full Mentor', 'alumni.full@gmail.com', 'tieng-anh', 'ngon-ngu-anh', true],
+            ['Võ Quang Pending Alumni', 'alumni.pending@gmail.com', 'ngu-van', 'van-hoc', false],
+            ['Ngô Khánh Under Review Alumni', 'alumni.underreview@gmail.com', 'vat-ly', 'vat-ly-hoc', false],
+            ['Đặng Hải More Info Alumni', 'alumni.moreinfo@gmail.com', 'hoa-hoc', 'hoa-hoc', false],
+            ['Bùi Sơn Rejected Alumni', 'alumni.rejected@gmail.com', 'sinh-hoc', 'sinh-hoc', false],
+            ['Mai Phúc Revoked Mentor', 'alumni.revoked@gmail.com', 'tam-ly-hoc', 'tam-ly-hoc', false],
         ] as [$name, $email, $facultySlug, $programSlug, $willingToMentor]) {
             $user = $this->user($name, $email, 'alumni', AccountStatus::ACTIVE, ['alumni'], IdentityType::ALUMNI);
             $this->alumniProfile($user, $facultySlug, $programSlug, $willingToMentor);
         }
     }
 
-    private function seedAdvisors(): void
+    private function seedTeachers(): void
     {
         foreach ([
-            ['Thầy Lê Văn An', 'advisor.mentor@hcmue.edu.vn', 'cntt', 'Bộ môn Kỹ thuật Phần mềm', 'Cố vấn học tập', 'Nghiên cứu khoa học, AI, backend'],
-            ['Cô Nguyễn Thu Advisor Pending', 'advisor.pending@hcmue.edu.vn', 'ngu-van', 'Khoa Ngữ văn', 'Giảng viên', 'Học thuật, viết học thuật'],
-            ['Thầy Trần Minh More Info', 'advisor.moreinfo@hcmue.edu.vn', 'toan-thong-ke', 'Khoa Toán - Thống kê', 'Giảng viên', 'Đề tài nghiên cứu, thống kê'],
-            ['Cô Lê Anh Rejected', 'advisor.rejected@hcmue.edu.vn', 'tieng-anh', 'Khoa Tiếng Anh', 'Giảng viên', 'Tư vấn học tập ngoại ngữ'],
-            ['Thầy Phạm Hoàng Paused', 'advisor.paused@hcmue.edu.vn', 'vat-ly', 'Khoa Vật lý', 'Cố vấn học tập', 'Nghiên cứu vật lý, data'],
-            ['Cô Đỗ Mai Hidden', 'advisor.hidden@hcmue.edu.vn', 'tam-ly-hoc', 'Khoa Tâm lý học', 'Giảng viên', 'Tâm lý học giáo dục'],
+            ['Thầy Lê Văn An', 'teacher.mentor@teacher.hcmue.edu.vn', 'cntt', 'Bộ môn Kỹ thuật Phần mềm', 'Cố vấn học tập', 'Nghiên cứu khoa học, AI, backend'],
+            ['Cô Nguyễn Thu Teacher Pending', 'teacher.pending@teacher.hcmue.edu.vn', 'ngu-van', 'Khoa Ngữ văn', 'Giảng viên', 'Học thuật, viết học thuật'],
+            ['Thầy Trần Minh More Info', 'teacher.moreinfo@teacher.hcmue.edu.vn', 'toan-thong-ke', 'Khoa Toán - Thống kê', 'Giảng viên', 'Đề tài nghiên cứu, thống kê'],
+            ['Cô Lê Anh Rejected', 'teacher.rejected@teacher.hcmue.edu.vn', 'tieng-anh', 'Khoa Tiếng Anh', 'Giảng viên', 'Tư vấn học tập ngoại ngữ'],
+            ['Thầy Phạm Hoàng Paused', 'teacher.paused@teacher.hcmue.edu.vn', 'vat-ly', 'Khoa Vật lý', 'Cố vấn học tập', 'Nghiên cứu vật lý, data'],
+            ['Cô Đỗ Mai Hidden', 'teacher.hidden@teacher.hcmue.edu.vn', 'tam-ly-hoc', 'Khoa Tâm lý học', 'Giảng viên', 'Tâm lý học giáo dục'],
         ] as [$name, $email, $facultySlug, $department, $title, $areas]) {
-            $user = $this->user($name, $email, 'advisor', AccountStatus::ACTIVE, ['advisor'], IdentityType::TEACHER_ADVISOR);
+            $user = $this->user($name, $email, 'teacher', AccountStatus::ACTIVE, ['teacher'], IdentityType::TEACHER_ADVISOR);
             $this->advisorProfile($user, $facultySlug, $department, $title, $areas);
         }
 
-        $legacyTeacher = $this->user('Thầy Lê Văn An Feed', 'teacher.verified1@hcmue.edu.vn', 'advisor', AccountStatus::ACTIVE, ['advisor'], IdentityType::TEACHER_ADVISOR);
+        $legacyTeacher = $this->user('Thầy Lê Văn An Feed', 'teacher.verified1@teacher.hcmue.edu.vn', 'teacher', AccountStatus::ACTIVE, ['teacher'], IdentityType::TEACHER_ADVISOR);
         $this->advisorProfile($legacyTeacher, 'cntt', 'Bộ môn Kỹ thuật Phần mềm', 'Giảng viên', 'Học vụ, nghiên cứu khoa học');
     }
 
@@ -214,7 +214,7 @@ class UatAccountSeeder extends Seeder
 
     private function advisorProfile(User $user, string $facultySlug, string $department, string $title, string $areas): void
     {
-        $profile = $this->profile($user, 'advisor');
+        $profile = $this->profile($user, 'teacher');
         $faculty = $this->faculty($facultySlug);
 
         AdvisorProfile::updateOrCreate(
@@ -255,11 +255,11 @@ class UatAccountSeeder extends Seeder
         $this->command->table(
             ['Group', 'Emails'],
             [
-                ['Admin', 'superadmin@hcmue.edu.vn, admin@hcmue.edu.vn, mentor.manager@hcmue.edu.vn, moderator@hcmue.edu.vn, verification.reviewer@hcmue.edu.vn'],
-                ['Student', 'student@hcmue.edu.vn, student2@hcmue.edu.vn, unverified.student@hcmue.edu.vn, suspended.student@hcmue.edu.vn, banned.student@hcmue.edu.vn'],
-                ['Student+', 'limit.student@hcmue.edu.vn, blocked.student@hcmue.edu.vn, student.math@hcmue.edu.vn, student.english@hcmue.edu.vn, student.psychology@hcmue.edu.vn'],
-                ['Alumni', 'alumni.mentor@hcmue.edu.vn, alumni.paused@hcmue.edu.vn, alumni.hidden@hcmue.edu.vn, alumni.full@hcmue.edu.vn, alumni.pending@hcmue.edu.vn'],
-                ['Advisor', 'advisor.mentor@hcmue.edu.vn, advisor.pending@hcmue.edu.vn, advisor.moreinfo@hcmue.edu.vn, advisor.rejected@hcmue.edu.vn, advisor.paused@hcmue.edu.vn'],
+                ['Admin', 'superadmin@teacher.hcmue.edu.vn, admin@teacher.hcmue.edu.vn, mentor.manager@teacher.hcmue.edu.vn, moderator@teacher.hcmue.edu.vn, verification.reviewer@teacher.hcmue.edu.vn'],
+                ['Student', 'student@student.hcmue.edu.vn, student2@student.hcmue.edu.vn, unverified.student@student.hcmue.edu.vn, suspended.student@student.hcmue.edu.vn, banned.student@student.hcmue.edu.vn'],
+                ['Student+', 'limit.student@student.hcmue.edu.vn, blocked.student@student.hcmue.edu.vn, student.math@student.hcmue.edu.vn, student.english@student.hcmue.edu.vn, student.psychology@student.hcmue.edu.vn'],
+                ['Alumni', 'alumni.mentor@gmail.com, alumni.paused@gmail.com, alumni.hidden@gmail.com, alumni.full@gmail.com, alumni.pending@gmail.com'],
+                ['Teacher', 'teacher.mentor@teacher.hcmue.edu.vn, teacher.pending@teacher.hcmue.edu.vn, teacher.moreinfo@teacher.hcmue.edu.vn, teacher.rejected@teacher.hcmue.edu.vn, teacher.paused@teacher.hcmue.edu.vn'],
             ]
         );
     }

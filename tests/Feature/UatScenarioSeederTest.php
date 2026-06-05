@@ -24,10 +24,10 @@ class UatScenarioSeederTest extends TestCase
         $this->seed(UatScenarioSeeder::class);
 
         $this->assertDatabaseHas('users', [
-            'email' => 'student@hcmue.edu.vn',
+            'email' => 'student@student.hcmue.edu.vn',
         ]);
         $this->assertDatabaseHas('users', [
-            'email' => 'admin@hcmue.edu.vn',
+            'email' => 'admin@teacher.hcmue.edu.vn',
         ]);
         $this->assertDatabaseHas('verification_requests', [
             'status' => 'pending_review',
@@ -49,7 +49,7 @@ class UatScenarioSeederTest extends TestCase
         $this->assertGreaterThanOrEqual(4, Community::count());
         $this->assertGreaterThanOrEqual(3, PermissionGrant::where('scope_type', 'community')->count());
         $this->assertTrue(
-            User::where('email', 'alumni.mentor@hcmue.edu.vn')->firstOrFail()->can('mentor_access'),
+            User::where('email', 'alumni.mentor@gmail.com')->firstOrFail()->can('mentor_access'),
             'Approved alumni mentor UAT account should be able to access mentor features.'
         );
         $this->assertTrue(

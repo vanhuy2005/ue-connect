@@ -53,30 +53,30 @@ class UatMentorSeeder extends Seeder
     private function resolveUsers(): void
     {
         foreach ([
-            'mentor_manager' => 'mentor.manager@hcmue.edu.vn',
-            'student' => 'student@hcmue.edu.vn',
-            'student2' => 'student2@hcmue.edu.vn',
-            'student_cntt' => 'student.cntt@hcmue.edu.vn',
-            'student_math' => 'student.math@hcmue.edu.vn',
-            'student_english' => 'student.english@hcmue.edu.vn',
-            'limit_student' => 'limit.student@hcmue.edu.vn',
-            'blocked_student' => 'blocked.student@hcmue.edu.vn',
-            'student_peermentor' => 'student.peermentor@hcmue.edu.vn',
-            'alumni_mentor' => 'alumni.mentor@hcmue.edu.vn',
-            'alumni_paused' => 'alumni.paused@hcmue.edu.vn',
-            'alumni_hidden' => 'alumni.hidden@hcmue.edu.vn',
-            'alumni_full' => 'alumni.full@hcmue.edu.vn',
-            'alumni_pending' => 'alumni.pending@hcmue.edu.vn',
-            'alumni_underreview' => 'alumni.underreview@hcmue.edu.vn',
-            'alumni_moreinfo' => 'alumni.moreinfo@hcmue.edu.vn',
-            'alumni_rejected' => 'alumni.rejected@hcmue.edu.vn',
-            'alumni_revoked' => 'alumni.revoked@hcmue.edu.vn',
-            'advisor_mentor' => 'advisor.mentor@hcmue.edu.vn',
-            'advisor_pending' => 'advisor.pending@hcmue.edu.vn',
-            'advisor_moreinfo' => 'advisor.moreinfo@hcmue.edu.vn',
-            'advisor_rejected' => 'advisor.rejected@hcmue.edu.vn',
-            'advisor_paused' => 'advisor.paused@hcmue.edu.vn',
-            'advisor_hidden' => 'advisor.hidden@hcmue.edu.vn',
+            'mentor_manager' => 'mentor.manager@teacher.hcmue.edu.vn',
+            'student' => 'student@student.hcmue.edu.vn',
+            'student2' => 'student2@student.hcmue.edu.vn',
+            'student_cntt' => 'student.cntt@student.hcmue.edu.vn',
+            'student_math' => 'student.math@student.hcmue.edu.vn',
+            'student_english' => 'student.english@student.hcmue.edu.vn',
+            'limit_student' => 'limit.student@student.hcmue.edu.vn',
+            'blocked_student' => 'blocked.student@student.hcmue.edu.vn',
+            'student_peermentor' => 'student.peermentor@student.hcmue.edu.vn',
+            'alumni_mentor' => 'alumni.mentor@gmail.com',
+            'alumni_paused' => 'alumni.paused@gmail.com',
+            'alumni_hidden' => 'alumni.hidden@gmail.com',
+            'alumni_full' => 'alumni.full@gmail.com',
+            'alumni_pending' => 'alumni.pending@gmail.com',
+            'alumni_underreview' => 'alumni.underreview@gmail.com',
+            'alumni_moreinfo' => 'alumni.moreinfo@gmail.com',
+            'alumni_rejected' => 'alumni.rejected@gmail.com',
+            'alumni_revoked' => 'alumni.revoked@gmail.com',
+            'teacher_mentor' => 'teacher.mentor@teacher.hcmue.edu.vn',
+            'teacher_pending' => 'teacher.pending@teacher.hcmue.edu.vn',
+            'teacher_moreinfo' => 'teacher.moreinfo@teacher.hcmue.edu.vn',
+            'teacher_rejected' => 'teacher.rejected@teacher.hcmue.edu.vn',
+            'teacher_paused' => 'teacher.paused@teacher.hcmue.edu.vn',
+            'teacher_hidden' => 'teacher.hidden@teacher.hcmue.edu.vn',
         ] as $key => $email) {
             $this->users[$key] = User::where('email', $email)->firstOrFail();
         }
@@ -94,12 +94,12 @@ class UatMentorSeeder extends Seeder
             ['alumni_moreinfo', 'alumni', MentorAccessStatus::NeedMoreInfo, ['Portfolio']],
             ['alumni_rejected', 'alumni', MentorAccessStatus::Rejected, ['Career']],
             ['alumni_revoked', 'alumni', MentorAccessStatus::Revoked, ['Management']],
-            ['advisor_mentor', 'advisor', MentorAccessStatus::Approved, ['Nghiên cứu khoa học', 'AI']],
-            ['advisor_pending', 'advisor', MentorAccessStatus::Submitted, ['Academic writing']],
-            ['advisor_moreinfo', 'advisor', MentorAccessStatus::NeedMoreInfo, ['Research']],
-            ['advisor_rejected', 'advisor', MentorAccessStatus::Rejected, ['Counseling']],
-            ['advisor_paused', 'advisor', MentorAccessStatus::Approved, ['Data', 'AI']],
-            ['advisor_hidden', 'advisor', MentorAccessStatus::Approved, ['Psychology']],
+            ['teacher_mentor', 'teacher', MentorAccessStatus::Approved, ['Nghiên cứu khoa học', 'AI']],
+            ['teacher_pending', 'teacher', MentorAccessStatus::Submitted, ['Academic writing']],
+            ['teacher_moreinfo', 'teacher', MentorAccessStatus::NeedMoreInfo, ['Research']],
+            ['teacher_rejected', 'teacher', MentorAccessStatus::Rejected, ['Counseling']],
+            ['teacher_paused', 'teacher', MentorAccessStatus::Approved, ['Data', 'AI']],
+            ['teacher_hidden', 'teacher', MentorAccessStatus::Approved, ['Psychology']],
             ['student_peermentor', 'exceptional_student', config('mentor.enable_student_exceptional_mentors') ? MentorAccessStatus::Approved : MentorAccessStatus::Rejected, ['Kinh nghiệm học tập']],
         ] as [$userKey, $roleContext, $status, $expertise]) {
             $request = $this->mentorAccess($this->users[$userKey], $roleContext, $status, $expertise);
@@ -120,9 +120,9 @@ class UatMentorSeeder extends Seeder
             ['alumni_hidden', MentorAvailabilityStatus::Available, false, true, ['Backend', 'API'], ['Thiết kế backend']],
             ['alumni_full', MentorAvailabilityStatus::Full, true, true, ['Data', 'Internship'], ['Chuẩn bị thực tập']],
             ['alumni_revoked', MentorAvailabilityStatus::Hidden, false, false, ['Management'], ['Mentoring']],
-            ['advisor_mentor', MentorAvailabilityStatus::Available, true, true, ['Nghiên cứu khoa học', 'AI', 'Backend'], ['Định hướng học thuật', 'Chọn đề tài']],
-            ['advisor_paused', MentorAvailabilityStatus::Paused, true, true, ['Data', 'AI'], ['Định hướng nghiên cứu']],
-            ['advisor_hidden', MentorAvailabilityStatus::Available, false, true, ['Psychology'], ['Tư vấn học tập']],
+            ['teacher_mentor', MentorAvailabilityStatus::Available, true, true, ['Nghiên cứu khoa học', 'AI', 'Backend'], ['Định hướng học thuật', 'Chọn đề tài']],
+            ['teacher_paused', MentorAvailabilityStatus::Paused, true, true, ['Data', 'AI'], ['Định hướng nghiên cứu']],
+            ['teacher_hidden', MentorAvailabilityStatus::Available, false, true, ['Psychology'], ['Tư vấn học tập']],
         ] as [$userKey, $availability, $visible, $active, $expertise, $helpTopics]) {
             $this->mentorProfiles[$userKey] = $this->mentorProfile($this->users[$userKey], $availability, $visible, $active, $expertise, $helpTopics);
         }
@@ -142,11 +142,11 @@ class UatMentorSeeder extends Seeder
     private function seedMentorRequests(): void
     {
         $submitted = $this->mentorRequest($this->users['student'], $this->mentorProfiles['alumni_mentor'], MentorRequestStatus::Submitted, 'Review CV thực tập Frontend', MentorUrgency::Normal);
-        $accepted = $this->mentorRequest($this->users['student2'], $this->mentorProfiles['advisor_mentor'], MentorRequestStatus::Accepted, 'Chọn đề tài nghiên cứu AI', MentorUrgency::High, [
+        $accepted = $this->mentorRequest($this->users['student2'], $this->mentorProfiles['teacher_mentor'], MentorRequestStatus::Accepted, 'Chọn đề tài nghiên cứu AI', MentorUrgency::High, [
             'mentor_response' => 'Thầy có thể hỗ trợ em định hình phạm vi đề tài.',
             'accepted_at' => now()->subDays(2),
         ]);
-        $needMoreInfo = $this->mentorRequest($this->users['student'], $this->mentorProfiles['advisor_mentor'], MentorRequestStatus::NeedMoreInfo, 'Xây dựng lộ trình nghiên cứu Backend', MentorUrgency::Normal, [
+        $needMoreInfo = $this->mentorRequest($this->users['student'], $this->mentorProfiles['teacher_mentor'], MentorRequestStatus::NeedMoreInfo, 'Xây dựng lộ trình nghiên cứu Backend', MentorUrgency::Normal, [
             'more_info_question' => 'Em có thể mô tả rõ hơn mục tiêu nghiên cứu không?',
         ]);
         $declined = $this->mentorRequest($this->users['student2'], $this->mentorProfiles['alumni_mentor'], MentorRequestStatus::Declined, 'Tư vấn chuyển hướng sang Product', MentorUrgency::Low, [
@@ -158,8 +158,8 @@ class UatMentorSeeder extends Seeder
             'accepted_at' => now()->subDays(10),
             'completed_at' => now()->subDay(),
         ]);
-        $reported = $this->mentorRequest($this->users['student_math'], $this->mentorProfiles['advisor_paused'], MentorRequestStatus::Reported, 'Báo cáo tương tác cố vấn', MentorUrgency::Normal);
-        $closed = $this->mentorRequest($this->users['student_english'], $this->mentorProfiles['advisor_mentor'], MentorRequestStatus::Closed, 'Tổng kết định hướng học thuật', MentorUrgency::Low);
+        $reported = $this->mentorRequest($this->users['student_math'], $this->mentorProfiles['teacher_paused'], MentorRequestStatus::Reported, 'Báo cáo tương tác cố vấn', MentorUrgency::Normal);
+        $closed = $this->mentorRequest($this->users['student_english'], $this->mentorProfiles['teacher_mentor'], MentorRequestStatus::Closed, 'Tổng kết định hướng học thuật', MentorUrgency::Low);
 
         foreach ([$submitted, $needMoreInfo, $declined, $cancelled, $reported, $closed] as $request) {
             $request->update(['conversation_id' => null]);
@@ -167,7 +167,7 @@ class UatMentorSeeder extends Seeder
 
         $this->conversationForAcceptedRequest($accepted, [
             [$this->users['student2'], 'Em muốn làm đề tài AI nhưng chưa biết thu hẹp phạm vi.'],
-            [$this->users['advisor_mentor'], 'Mình bắt đầu từ dữ liệu, mục tiêu học thuật và thời gian em có nhé.'],
+            [$this->users['teacher_mentor'], 'Mình bắt đầu từ dữ liệu, mục tiêu học thuật và thời gian em có nhé.'],
         ]);
 
         $this->conversationForAcceptedRequest($completed, [
@@ -186,7 +186,7 @@ class UatMentorSeeder extends Seeder
             ]
         );
 
-        foreach (['alumni_hidden', 'alumni_full', 'advisor_paused', 'advisor_hidden'] as $mentorKey) {
+        foreach (['alumni_hidden', 'alumni_full', 'teacher_paused', 'teacher_hidden'] as $mentorKey) {
             $this->mentorRequest($this->users['limit_student'], $this->mentorProfiles[$mentorKey], MentorRequestStatus::Submitted, 'Pending limit demo '.$mentorKey, MentorUrgency::Normal);
         }
     }
