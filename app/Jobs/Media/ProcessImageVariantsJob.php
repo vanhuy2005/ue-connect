@@ -53,22 +53,36 @@ class ProcessImageVariantsJob implements ShouldQueue
             $deliveryProvider = $router->getDeliveryProvider($this->media->collection, $this->media->visibility);
             $syncCloudinary = $deliveryProvider instanceof CloudinaryMediaDeliveryProvider
                 && (bool) config('media.providers.cloudinary.sync_public_variants', true);
+            $outputFormat = config('media.processing.output_format', 'webp');
+            if ($outputFormat === 'webp' && ! function_exists('imagewebp')) {
+                $outputFormat = 'jpeg';
+            }
+
             $processedVariants = [];
 
             foreach ($variantSpecs as $name => $spec) {
                 $resizedImage = $this->resizeImage($sourceImage, $sourceWidth, $sourceHeight, $spec['w'], $spec['h'], $spec['crop'] ?? false);
 
                 ob_start();
-                imagewebp($resizedImage, null, config('media.processing.quality', 82));
-                $webpContents = ob_get_clean();
+                if ($outputFormat === 'webp') {
+                    imagewebp($resizedImage, null, config('media.processing.quality', 82));
+                } elseif ($outputFormat === 'png') {
+                    imagepng($resizedImage, null, 9);
+                } else {
+                    imagejpeg($resizedImage, null, config('media.processing.quality', 82));
+                }
+                $variantContents = ob_get_clean();
                 imagedestroy($resizedImage);
 
-                if (empty($webpContents)) {
+                if (empty($variantContents)) {
                     continue;
                 }
 
-                $variantPath = "{$this->media->collection}s/{$this->media->user_id}/{$this->media->uuid}/{$name}.webp";
-                $storedVariant = $primaryProvider->put($variantPath, $webpContents);
+                $ext = $outputFormat === 'jpeg' ? 'jpg' : $outputFormat;
+                $mimeType = 'image/'.($outputFormat === 'jpeg' ? 'jpeg' : $outputFormat);
+
+                $variantPath = "{$this->media->collection}s/{$this->media->user_id}/{$this->media->uuid}/{$name}.{$ext}";
+                $storedVariant = $primaryProvider->put($variantPath, $variantContents);
                 $cloudinaryData = [
                     'cloudinary_sync_status' => $syncCloudinary ? 'pending' : 'skipped',
                 ];
@@ -81,7 +95,7 @@ class ProcessImageVariantsJob implements ShouldQueue
                         'cloudinary_error_message' => 'Cloudinary daily sync limit reached; using R2 fallback.',
                     ];
                 } elseif ($syncCloudinary) {
-                    $cloudinaryData = $this->syncVariantToCloudinary($deliveryProvider, $name, $webpContents);
+                    $cloudinaryData = $this->syncVariantToCloudinary($deliveryProvider, $name, $variantContents, $mimeType);
                 }
 
                 $processedVariants[$name] = [
@@ -90,8 +104,8 @@ class ProcessImageVariantsJob implements ShouldQueue
                     'disk' => $storedVariant->disk,
                     'path' => $storedVariant->path,
                     'url' => $storedVariant->url,
-                    'mime_type' => 'image/webp',
-                    'size_bytes' => strlen($webpContents),
+                    'mime_type' => $mimeType,
+                    'size_bytes' => strlen($variantContents),
                     'width' => $spec['w'],
                     'height' => $spec['h'],
                 ] + $cloudinaryData;
@@ -112,6 +126,9 @@ class ProcessImageVariantsJob implements ShouldQueue
                 ? config('media.processing.keep_original_public', false)
                 : config('media.processing.keep_original_private', true);
 
+            $newExt = $this->media->extension;
+            $newMime = $this->media->mime_type;
+
             if (! $keepOriginal && $this->media->visibility === 'public') {
                 Storage::disk($this->media->primary_disk)->delete($this->media->primary_path);
 
@@ -129,6 +146,8 @@ class ProcessImageVariantsJob implements ShouldQueue
                     $finalDisk = $largest['disk'];
                     $finalProvider = $largest['provider'];
                     $deliveryUrl = $largest['cloudinary_secure_url'] ?? null;
+                    $newExt = isset($ext) ? $ext : $this->media->extension;
+                    $newMime = isset($mimeType) ? $mimeType : $this->media->mime_type;
                 }
             }
 
@@ -139,6 +158,8 @@ class ProcessImageVariantsJob implements ShouldQueue
                 'primary_provider' => $finalProvider,
                 'delivery_provider' => $deliveryProvider ? 'cloudinary' : null,
                 'delivery_url' => $deliveryUrl,
+                'extension' => $newExt,
+                'mime_type' => $newMime,
             ]);
         } catch (\Throwable $e) {
             Log::error('Error processing media variants: '.$e->getMessage(), [
@@ -146,6 +167,10 @@ class ProcessImageVariantsJob implements ShouldQueue
             ]);
 
             $this->media->update(['status' => 'failed']);
+
+            if (request()->has('debug_media_job')) {
+                throw $e;
+            }
         }
     }
 
@@ -224,12 +249,12 @@ class ProcessImageVariantsJob implements ShouldQueue
      *     cloudinary_error_message?: string|null
      * }
      */
-    protected function syncVariantToCloudinary(CloudinaryMediaDeliveryProvider $provider, string $variantName, string $webpContents): array
+    protected function syncVariantToCloudinary(CloudinaryMediaDeliveryProvider $provider, string $variantName, string $contents, string $mimeType): array
     {
         $publicId = $provider->publicId($this->media->collection, $this->media->uuid, $variantName);
 
         try {
-            $result = $provider->uploadVariant($publicId, $webpContents, 'image/webp');
+            $result = $provider->uploadVariant($publicId, $contents, $mimeType);
 
             return [
                 'cloudinary_public_id' => $result['public_id'],
