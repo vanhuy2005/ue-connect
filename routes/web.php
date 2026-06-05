@@ -640,12 +640,29 @@ Route::get('/run-artisan', function () {
 
     $params = ['--force' => true];
     if ($command === 'db:seed' && request()->has('class')) {
-        $params['--class'] = request('class');
+        $class = request('class');
+        $class = str_replace('/', '\\', $class);
+
+        if (! str_contains($class, '\\')) {
+            if (class_exists("Database\\Seeders\\Reference\\{$class}")) {
+                $class = "Database\\Seeders\\Reference\\{$class}";
+            } elseif (class_exists("Database\\Seeders\\Uat\\{$class}")) {
+                $class = "Database\\Seeders\\Uat\\{$class}";
+            } elseif (class_exists("Database\\Seeders\\{$class}")) {
+                $class = "Database\\Seeders\\{$class}";
+            }
+        }
+
+        $params['--class'] = $class;
     }
 
-    Artisan::call($command, $params);
+    try {
+        Artisan::call($command, $params);
 
-    return '<pre>'.Artisan::output().'</pre>';
+        return '<pre>'.Artisan::output().'</pre>';
+    } catch (Throwable $e) {
+        return 'Lỗi: '.$e->getMessage()."\n\n".$e->getTraceAsString();
+    }
 });
 
 // 6. Legacy redirects
