@@ -27,7 +27,6 @@ use App\Http\Controllers\Admin\VerificationActionController;
 use App\Http\Controllers\Admin\VerificationEvidenceController;
 use App\Http\Controllers\MediaController;
 use App\Http\Middleware\EnsureAdminAccess;
-use App\Jobs\Media\ProcessImageVariantsJob;
 use App\Models\AuditLog;
 use App\Models\BlockedUser;
 use App\Models\Community;
@@ -40,8 +39,6 @@ use App\Models\Post;
 use App\Models\Report;
 use App\Models\User;
 use App\Models\VerificationRequest;
-use App\Services\Media\MediaQuotaService;
-use App\Services\Media\MediaStorageRouter;
 use App\Support\Navigation\AdminNavigation;
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Support\Facades\Artisan;
@@ -692,17 +689,41 @@ Route::get('/debug-media', function () {
     $runJobId = request('run_job');
     if ($runJobId) {
         $mediaItem = Media::findOrFail($runJobId);
-        $mediaItem->update(['status' => 'temporary']);
         try {
-            $job = new ProcessImageVariantsJob($mediaItem);
-            $job->handle(
-                app(MediaStorageRouter::class),
-                app(MediaQuotaService::class)
-            );
+            $disk = $mediaItem->primary_disk;
+            $path = $mediaItem->primary_path;
 
-            return 'Job completed successfully! New status: '.$mediaItem->status;
+            $exists = Storage::disk($disk)->exists($path);
+            if (! $exists) {
+                return 'File does not exist on disk '.$disk.' at path '.$path;
+            }
+
+            $contents = Storage::disk($disk)->get($path);
+            if (empty($contents)) {
+                return 'File content is empty on disk '.$disk.' at path '.$path;
+            }
+
+            $sourceImage = @imagecreatefromstring($contents);
+            if (! $sourceImage) {
+                return 'Failed to load image via GD. Length of contents: '.strlen($contents).' bytes. PHP GD WebP support: '.json_encode(gd_info());
+            }
+
+            // Try to generate a variant
+            ob_start();
+            $resizedImage = imagecreatetruecolor(96, 96);
+            imagecopyresampled($resizedImage, $sourceImage, 0, 0, 0, 0, 96, 96, imagesx($sourceImage), imagesy($sourceImage));
+            $success = imagewebp($resizedImage, null, 82);
+            $webpContents = ob_get_clean();
+            imagedestroy($resizedImage);
+            imagedestroy($sourceImage);
+
+            if (! $success) {
+                return 'imagewebp() failed. Webp might not be supported in GD.';
+            }
+
+            return 'File read and image process successful! Webp size: '.strlen($webpContents).' bytes';
         } catch (Throwable $e) {
-            return '<pre>Job failed with exception: '.$e->getMessage()."\n\n".$e->getTraceAsString().'</pre>';
+            return '<pre>Failed with exception: '.$e->getMessage()."\n\n".$e->getTraceAsString().'</pre>';
         }
     }
 
