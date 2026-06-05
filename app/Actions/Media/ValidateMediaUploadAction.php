@@ -66,7 +66,7 @@ class ValidateMediaUploadAction
         }
 
         // 5. Image dimensions validation (ensure it is a readable image)
-        $dimensions = @getimagesize($file->getRealPath());
+        $dimensions = @getimagesizefromstring($file->get());
         if (! $dimensions) {
             $this->throwError('file', 'Không thể đọc thông tin kích thước của ảnh.');
         }

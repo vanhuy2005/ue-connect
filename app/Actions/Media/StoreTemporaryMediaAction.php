@@ -44,13 +44,14 @@ class StoreTemporaryMediaAction
 
         // 4. Raw temporary uploads always start private; variants are routed later by collection visibility.
         $provider = $this->router->getPrimaryProvider($collection, 'private');
-        $storedObject = $provider->put($tempPath, file_get_contents($file->getRealPath()));
+        $fileContent = $file->get();
+        $storedObject = $provider->put($tempPath, $fileContent);
 
         // 5. Calculate SHA256 checksum
-        $checksum = hash_file('sha256', $file->getRealPath());
+        $checksum = hash('sha256', $fileContent);
 
         // 6. Get image dimensions
-        $dimensions = @getimagesize($file->getRealPath());
+        $dimensions = @getimagesizefromstring($fileContent);
         $width = $dimensions ? $dimensions[0] : null;
         $height = $dimensions ? $dimensions[1] : null;
 
