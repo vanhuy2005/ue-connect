@@ -4,6 +4,7 @@ namespace Tests\Feature\App;
 
 use App\Enums\AccountStatus;
 use App\Models\User;
+use Database\Seeders\Reference\AccessControlReferenceSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
@@ -43,7 +44,7 @@ class AccountStatusRoutingTest extends TestCase
 
     public function test_active_user_is_not_redirected_to_restricted_page(): void
     {
-        $this->artisan('db:seed', ['--class' => 'RoleAndPermissionSeeder']);
+        $this->artisan('db:seed', ['--class' => AccessControlReferenceSeeder::class]);
 
         $user = User::factory()->create([
             'account_status' => AccountStatus::ACTIVE,

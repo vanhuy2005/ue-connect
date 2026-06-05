@@ -36,26 +36,44 @@ new #[Layout('layouts.guest')] class extends Component
     }
 }; ?>
 
-<div>
-    <div class="mb-4 text-sm text-gray-600">
-        {{ __('Forgot your password? No problem. Just let us know your email address and we will email you a password reset link that will allow you to choose a new one.') }}
+<div class="space-y-5">
+    <div class="text-center">
+        <h1 class="text-xl font-extrabold text-ue-text tracking-snug">Quên mật khẩu</h1>
+        <p class="text-xs text-ue-text-muted mt-2 leading-relaxed">
+            Nhập email đã đăng ký, UEConnect sẽ gửi liên kết để bạn đặt lại mật khẩu.
+        </p>
     </div>
 
-    <!-- Session Status -->
-    <x-auth-session-status class="mb-4" :status="session('status')" />
+    @if (session('status'))
+        <x-ui.alert variant="success" :dismissible="true">
+            {{ session('status') }}
+        </x-ui.alert>
+    @endif
 
-    <form wire:submit="sendPasswordResetLink">
-        <!-- Email Address -->
-        <div>
-            <x-input-label for="email" :value="__('Email')" />
-            <x-text-input wire:model="email" id="email" class="block mt-1 w-full" type="email" name="email" required autofocus />
-            <x-input-error :messages="$errors->get('email')" class="mt-2" />
+    <form wire:submit="sendPasswordResetLink" class="space-y-4">
+        <div class="space-y-1">
+            <x-ui.label for="email" :required="true">Email đăng ký</x-ui.label>
+            <x-ui.input
+                wire:model="email"
+                id="email"
+                type="email"
+                name="email"
+                required
+                autofocus
+                placeholder="mssv@student.hcmue.edu.vn hoặc email cá nhân"
+                autocomplete="username"
+                :hasError="$errors->has('email')"
+                size="sm"
+            />
+            <x-ui.field-error name="email" />
         </div>
 
-        <div class="flex items-center justify-end mt-4">
-            <x-primary-button>
-                {{ __('Email Password Reset Link') }}
-            </x-primary-button>
-        </div>
+        <x-ui.button type="submit" variant="primary" class="w-full justify-center font-bold" wire:loading.attr="disabled" wire:target="sendPasswordResetLink">
+            <span wire:loading.remove wire:target="sendPasswordResetLink">Gửi liên kết đặt lại mật khẩu</span>
+            <span wire:loading wire:target="sendPasswordResetLink" class="flex items-center gap-2">
+                <span class="ue-spinner" aria-hidden="true"></span>
+                Đang gửi...
+            </span>
+        </x-ui.button>
     </form>
 </div>

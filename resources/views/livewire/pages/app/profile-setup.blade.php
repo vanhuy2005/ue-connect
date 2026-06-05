@@ -17,7 +17,7 @@ use Livewire\Volt\Component;
 
 new #[Layout('layouts.app')] class extends Component
 {
-    public string $role_type = 'student'; // 'student', 'alumni', 'advisor'
+    public string $role_type = 'student'; // 'student', 'alumni', 'teacher'
     
     // Common fields
     public string $display_name = '';
@@ -34,6 +34,8 @@ new #[Layout('layouts.app')] class extends Component
     public bool $willing_to_mentor = false;
     public string $department = '';
     public string $title = '';
+    public bool $is_academic_advisor = false;
+    public string $advised_class_codes = '';
 
     public function mount(): void
     {
@@ -75,9 +77,12 @@ new #[Layout('layouts.app')] class extends Component
             $this->cohort = $request->submitted_cohort ?? '';
             if ($this->role_type === 'alumni') {
                 $this->graduation_year = (int)$request->submitted_graduation_year ?: null;
-            } elseif ($this->role_type === 'advisor') {
+            } elseif (in_array($this->role_type, ['teacher', 'advisor'], true)) {
+                $this->role_type = 'teacher';
                 $this->department = $request->submitted_organization ?? '';
-                $this->title = $request->submitted_position ?? '';
+                $this->title = $request->submitted_position ?: 'Giảng viên';
+                $this->is_academic_advisor = (bool) $request->submitted_is_academic_advisor;
+                $this->advised_class_codes = $request->submitted_advised_class_codes ?? '';
             }
         } else {
             // Fallback to intended_identity_type
@@ -85,7 +90,7 @@ new #[Layout('layouts.app')] class extends Component
             $this->role_type = match($intended) {
                 IdentityType::CURRENT_STUDENT->value, 'current_student' => 'student',
                 IdentityType::ALUMNI->value, 'alumni' => 'alumni',
-                IdentityType::TEACHER_ADVISOR->value, 'teacher_advisor' => 'advisor',
+                IdentityType::TEACHER_ADVISOR->value, 'teacher_advisor' => 'teacher',
                 default => 'student',
             };
             $this->display_name = $user->name;
@@ -140,10 +145,12 @@ new #[Layout('layouts.app')] class extends Component
             $rules['graduation_year'] = ['required', 'integer', 'min:1950', 'max:' . (date('Y') + 5)];
             $rules['willing_to_mentor'] = ['required', 'boolean'];
             $rules['cohort'] = ['nullable', 'string', 'max:50'];
-        } elseif ($this->role_type === 'advisor') {
+        } elseif ($this->role_type === 'teacher') {
             $rules['faculty_id'] = ['nullable', 'integer', 'exists:faculties,id'];
-            $rules['department'] = ['required', 'string', 'max:255'];
-            $rules['title'] = ['required', 'string', 'max:255'];
+            $rules['department'] = ['nullable', 'string', 'max:255'];
+            $rules['title'] = ['nullable', 'string', 'max:255'];
+            $rules['is_academic_advisor'] = ['required', 'boolean'];
+            $rules['advised_class_codes'] = ['nullable', 'string', 'max:500'];
         }
 
         $this->validate($rules, [
@@ -214,12 +221,14 @@ new #[Layout('layouts.app')] class extends Component
                     'graduation_year' => $this->graduation_year,
                     'willing_to_mentor' => $this->willing_to_mentor,
                 ]);
-            } elseif ($this->role_type === 'advisor') {
+            } elseif ($this->role_type === 'teacher') {
                 AdvisorProfile::create([
                     'profile_id' => $profile->id,
                     'faculty_id' => $this->faculty_id,
                     'department' => $this->department,
-                    'title' => $this->title,
+                    'title' => $this->title ?: 'Giảng viên',
+                    'is_academic_advisor' => $this->is_academic_advisor,
+                    'advised_class_codes' => $this->is_academic_advisor ? $this->advised_class_codes : null,
                 ]);
             }
 
@@ -284,8 +293,8 @@ new #[Layout('layouts.app')] class extends Component
             <h2 class="text-base font-bold text-ue-neutral-900 border-b border-ue-border pb-2 mb-4 flex items-center gap-2">
                 <x-ui.icon name="graduation-cap" size="sm" class="text-ue-brand" />
                 Thông tin vai trò:
-                <x-ui.badge :variant="match($role_type) { 'student' => 'student', 'alumni' => 'alumni', 'advisor' => 'advisor', default => 'neutral' }" size="sm">
-                    {{ match($role_type) { 'student' => 'Sinh viên', 'alumni' => 'Cựu sinh viên', 'advisor' => 'Cố vấn/Giảng viên', default => $role_type } }}
+                <x-ui.badge :variant="match($role_type) { 'student' => 'student', 'alumni' => 'alumni', 'teacher' => 'advisor', default => 'neutral' }" size="sm">
+                    {{ match($role_type) { 'student' => 'Sinh viên', 'alumni' => 'Cựu sinh viên', 'teacher' => 'Giảng viên', default => $role_type } }}
                 </x-ui.badge>
             </h2>
 
@@ -375,8 +384,8 @@ new #[Layout('layouts.app')] class extends Component
                     </div>
                 </div>
 
-            @elseif ($role_type === 'advisor')
-                {{-- Advisor form --}}
+            @elseif ($role_type === 'teacher')
+                {{-- Teacher form --}}
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
                         <x-ui.label for="faculty_id">Khoa quản lý / Công tác</x-ui.label>
@@ -390,16 +399,34 @@ new #[Layout('layouts.app')] class extends Component
                     </div>
 
                     <div>
-                        <x-ui.label for="department" :required="true">Bộ môn / Phòng ban</x-ui.label>
+                        <x-ui.label for="department">Bộ môn / Phòng ban</x-ui.label>
                         <x-ui.input wire:model="department" id="department" class="mt-1" placeholder="Ví dụ: Bộ môn Công nghệ phần mềm..." />
                         <x-ui.field-error name="department" />
                     </div>
 
                     <div class="md:col-span-2">
-                        <x-ui.label for="title" :required="true">Học hàm / Học vị / Chức vụ công tác</x-ui.label>
+                        <x-ui.label for="title">Học hàm / Học vị / Chức vụ công tác</x-ui.label>
                         <x-ui.input wire:model="title" id="title" class="mt-1" placeholder="Ví dụ: Giảng viên chính, TS..." />
                         <x-ui.field-error name="title" />
                     </div>
+                </div>
+
+                <div class="mt-4 p-4 bg-ue-blue-50 border border-ue-blue-100 rounded-xl space-y-3">
+                    <label class="flex items-start gap-3">
+                        <input type="checkbox" wire:model.live="is_academic_advisor" id="is_academic_advisor" class="h-4 w-4 rounded border-ue-border text-ue-brand focus:ring-ue-brand mt-1" />
+                        <span>
+                            <span class="block text-sm font-bold text-ue-neutral-900">Đang là cố vấn học tập</span>
+                            <span class="block text-[11px] text-ue-text-secondary leading-relaxed">Thông tin này giúp sinh viên nhận diện đúng vai trò hỗ trợ học tập của giảng viên.</span>
+                        </span>
+                    </label>
+
+                    @if ($is_academic_advisor)
+                        <div>
+                            <x-ui.label for="advised_class_codes">Lớp đang cố vấn</x-ui.label>
+                            <x-ui.textarea wire:model="advised_class_codes" id="advised_class_codes" rows="3" class="mt-1" placeholder="Ví dụ: 49.CNTTD&#10;50.CNTTA" />
+                            <x-ui.field-error name="advised_class_codes" />
+                        </div>
+                    @endif
                 </div>
             @endif
         </div>

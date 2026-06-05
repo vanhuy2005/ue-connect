@@ -58,16 +58,16 @@ new #[Layout('layouts.app', ['shell' => 'admin'])] class extends Component {
 <div class="max-w-7xl mx-auto py-8 px-4 sm:px-6 lg:px-8">
     {{-- Header --}}
     <div class="mb-6">
-        <h1 class="text-2xl font-bold text-slate-800">Kiểm duyệt báo cáo vi phạm</h1>
-        <p class="text-sm text-slate-500 mt-1">Xử lý báo cáo nội dung vi phạm tiêu chuẩn cộng đồng trường học từ các UEers.</p>
+        <h1 class="text-2xl font-bold text-ue-text">Kiểm duyệt báo cáo vi phạm</h1>
+        <p class="text-sm text-ue-text-secondary mt-1">Xử lý báo cáo nội dung vi phạm tiêu chuẩn cộng đồng trường học từ các UEers.</p>
     </div>
 
     {{-- Filters --}}
-    <x-ui.card class="mb-6 p-4">
+    <x-ui.card class="mb-6">
         <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
             {{-- Status --}}
             <div>
-                <x-ui.label class="text-xs font-semibold text-slate-500" for="status">Trạng thái</x-ui.label>
+                <x-ui.label class="text-xs" for="status">Trạng thái</x-ui.label>
                 <x-ui.select wire:model.live="status" id="status" class="mt-1 h-9 text-xs py-1">
                     <option value="">-- Tất cả --</option>
                     <option value="pending">Chờ xử lý (Mới)</option>
@@ -79,7 +79,7 @@ new #[Layout('layouts.app', ['shell' => 'admin'])] class extends Component {
 
             {{-- Target Type --}}
             <div>
-                <x-ui.label class="text-xs font-semibold text-slate-500" for="targetType">Loại nội dung</x-ui.label>
+                <x-ui.label class="text-xs" for="targetType">Loại nội dung</x-ui.label>
                 <x-ui.select wire:model.live="targetType" id="targetType" class="mt-1 h-9 text-xs py-1">
                     <option value="">-- Tất cả --</option>
                     <option value="post">Bài viết (Post)</option>
@@ -89,7 +89,7 @@ new #[Layout('layouts.app', ['shell' => 'admin'])] class extends Component {
 
             {{-- Reason --}}
             <div>
-                <x-ui.label class="text-xs font-semibold text-slate-500" for="reason">Lý do báo cáo</x-ui.label>
+                <x-ui.label class="text-xs" for="reason">Lý do báo cáo</x-ui.label>
                 <x-ui.select wire:model.live="reason" id="reason" class="mt-1 h-9 text-xs py-1">
                     <option value="">-- Tất cả --</option>
                     <option value="spam">Tin rác / Spam</option>
@@ -108,20 +108,20 @@ new #[Layout('layouts.app', ['shell' => 'admin'])] class extends Component {
     
     @if ($reports->isEmpty())
         {{-- EMPTY STATE --}}
-        <div class="bg-white border border-slate-200 rounded-2xl p-12 text-center shadow-sm">
-            <div class="w-16 h-16 rounded-full bg-slate-50 border border-slate-100 flex items-center justify-center mx-auto mb-4">
-                <x-ui.icon name="shield" size="lg" class="text-slate-400" />
+        <x-ui.card class="p-12 text-center" variant="admin">
+            <div class="w-16 h-16 rounded-full bg-ue-surface-subtle border border-ue-border flex items-center justify-center mx-auto mb-4">
+                <x-ui.icon name="shield" size="lg" class="text-ue-text-muted" />
             </div>
-            <h3 class="text-base font-bold text-slate-800 mb-2">Hàng chờ sạch sẽ!</h3>
-            <p class="text-sm text-slate-500 max-w-sm mx-auto">
+            <h3 class="text-base font-bold text-ue-text mb-2">Hàng chờ sạch sẽ!</h3>
+            <p class="text-sm text-ue-text-muted max-w-sm mx-auto">
                 Không có báo cáo nào khớp với bộ lọc hiện tại. Cảm ơn các UEers đã bảo vệ cộng đồng an toàn.
             </p>
-        </div>
+        </x-ui.card>
     @else
         {{-- DESKTOP TABLE --}}
-        <div class="hidden md:block bg-white border border-slate-200 rounded-2xl overflow-hidden shadow-sm">
-            <table class="min-w-full divide-y divide-slate-100 text-left text-xs">
-                <thead class="bg-slate-50 text-slate-500 font-semibold uppercase tracking-wider">
+        <x-ui.card padding="none" class="hidden md:block overflow-hidden" variant="admin">
+            <table class="min-w-full divide-y divide-ue-border text-left text-xs">
+                <thead class="bg-ue-surface-subtle text-ue-text-muted font-bold uppercase tracking-wider">
                     <tr>
                         <th class="px-6 py-4">ID</th>
                         <th class="px-6 py-4">Người báo cáo</th>
@@ -132,21 +132,31 @@ new #[Layout('layouts.app', ['shell' => 'admin'])] class extends Component {
                         <th class="px-6 py-4 text-right">Thao tác</th>
                     </tr>
                 </thead>
-                <tbody class="divide-y divide-slate-100 text-slate-700 font-medium">
+                <tbody class="divide-y divide-ue-border bg-ue-surface text-ue-text font-medium text-sm">
                     @foreach ($reports as $report)
-                        <tr>
-                            <td class="px-6 py-4 text-slate-400">#{{ $report->id }}</td>
+                        @php
+                            $badgeVariant = match($report->status->value) {
+                                'pending' => 'pending',
+                                'reviewed' => 'info',
+                                'dismissed' => 'neutral',
+                                'action_taken' => 'success',
+                                default => 'neutral',
+                            };
+                            $targetBadgeVariant = $report->target_type === 'post' ? 'info' : 'neutral';
+                        @endphp
+                        <tr class="hover:bg-ue-surface-hover transition-colors">
+                            <td class="px-6 py-4 text-ue-text-muted">#{{ $report->id }}</td>
                             <td class="px-6 py-4">
-                                <div class="font-bold text-slate-800">{{ $report->reporter->name }}</div>
-                                <div class="text-xxs text-slate-400 font-medium">{{ $report->reporter->email }}</div>
+                                <div class="font-bold text-ue-text">{{ $report->reporter->name }}</div>
+                                <div class="text-xs text-ue-text-muted mt-0.5">{{ $report->reporter->email }}</div>
                             </td>
-                            <td class="px-6 py-4">
-                                <span class="px-2 py-0.5 rounded-lg text-xxs font-bold uppercase {{ $report->target_type === 'post' ? 'bg-blue-50 text-blue-700 border border-blue-100' : 'bg-purple-50 text-purple-700 border border-purple-100' }}">
+                            <td class="px-6 py-4 whitespace-nowrap">
+                                <x-ui.badge :variant="$targetBadgeVariant" size="sm">
                                     {{ $report->target_type === 'post' ? 'Bài viết' : 'Bình luận' }}
-                                </span>
+                                </x-ui.badge>
                             </td>
                             <td class="px-6 py-4">
-                                <span class="font-semibold text-slate-800">
+                                <span class="font-semibold text-ue-text">
                                     @switch($report->reason->value)
                                         @case('spam') Tin rác @break
                                         @case('harassment') Quấy rối / Công kích @break
@@ -157,75 +167,74 @@ new #[Layout('layouts.app', ['shell' => 'admin'])] class extends Component {
                                     @endswitch
                                 </span>
                             </td>
-                            <td class="px-6 py-4 text-slate-400 font-medium">
+                            <td class="px-6 py-4 text-ue-text-muted whitespace-nowrap text-xs">
                                 {{ $report->created_at->format('H:i d/m/Y') }}
                             </td>
-                            <td class="px-6 py-4">
-                                @switch($report->status->value)
-                                    @case('pending')
-                                        <span class="px-2 py-0.5 rounded-full bg-yellow-50 text-yellow-700 font-bold border border-yellow-100 text-xxs">Chờ xử lý</span>
-                                        @break
-                                    @case('reviewed')
-                                        <span class="px-2 py-0.5 rounded-full bg-blue-50 text-blue-700 font-bold border border-blue-100 text-xxs">Đang xem xét</span>
-                                        @break
-                                    @case('dismissed')
-                                        <span class="px-2 py-0.5 rounded-full bg-slate-100 text-slate-500 font-bold border border-slate-200 text-xxs">Đã bỏ qua</span>
-                                        @break
-                                    @case('action_taken')
-                                        <span class="px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 font-bold border border-emerald-100 text-xxs">Đã ẩn/Xử lý</span>
-                                        @break
-                                @endswitch
+                            <td class="px-6 py-4 whitespace-nowrap">
+                                <x-ui.badge :variant="$badgeVariant">
+                                    {{ match($report->status->value) {
+                                        'pending' => 'Chờ xử lý',
+                                        'reviewed' => 'Đang xem xét',
+                                        'dismissed' => 'Đã bỏ qua',
+                                        'action_taken' => 'Đã xử lý',
+                                        default => $report->status->value,
+                                    } }}
+                                </x-ui.badge>
                             </td>
-                            <td class="px-6 py-4 text-right">
-                                <a href="{{ route('admin.reports.show', $report) }}" class="inline-flex items-center gap-1.5 px-3 py-1.5 bg-ue-brand-soft text-ue-brand text-xs font-bold rounded-xl hover:bg-ue-brand hover:text-white transition-all shadow-sm">
-                                    <x-ui.icon name="eye" size="xs" />
-                                    <span>Chi tiết</span>
-                                </a>
+                            <td class="px-6 py-4 text-right whitespace-nowrap">
+                                <x-ui.button href="{{ route('admin.reports.show', $report) }}" variant="secondary" size="sm" icon="eye">
+                                    Chi tiết
+                                </x-ui.button>
                             </td>
                         </tr>
                     @endforeach
                 </tbody>
             </table>
-        </div>
+        </x-ui.card>
 
         {{-- MOBILE CARDS --}}
         <div class="md:hidden space-y-4">
             @foreach ($reports as $report)
-                <div class="bg-white border border-slate-200 rounded-2xl p-5 shadow-sm space-y-3">
+                @php
+                    $badgeVariant = match($report->status->value) {
+                        'pending' => 'pending',
+                        'reviewed' => 'info',
+                        'dismissed' => 'neutral',
+                        'action_taken' => 'success',
+                        default => 'neutral',
+                    };
+                    $targetBadgeVariant = $report->target_type === 'post' ? 'info' : 'neutral';
+                @endphp
+                <x-ui.card class="space-y-3" variant="admin">
                     <div class="flex items-center justify-between">
-                        <span class="text-slate-400 text-xs font-bold">#{{ $report->id }}</span>
-                        @switch($report->status->value)
-                            @case('pending')
-                                <span class="px-2 py-0.5 rounded-full bg-yellow-50 text-yellow-700 font-bold border border-yellow-100 text-xxs">Chờ xử lý</span>
-                                @break
-                            @case('reviewed')
-                                <span class="px-2 py-0.5 rounded-full bg-blue-50 text-blue-700 font-bold border border-blue-100 text-xxs">Đang xem xét</span>
-                                @break
-                            @case('dismissed')
-                                <span class="px-2 py-0.5 rounded-full bg-slate-100 text-slate-500 font-bold border border-slate-200 text-xxs">Đã bỏ qua</span>
-                                @break
-                            @case('action_taken')
-                                <span class="px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 font-bold border border-emerald-100 text-xxs">Đã ẩn/Xử lý</span>
-                                @break
-                        @endswitch
+                        <span class="text-ue-text-muted text-xs font-bold">#{{ $report->id }}</span>
+                        <x-ui.badge :variant="$badgeVariant">
+                            {{ match($report->status->value) {
+                                'pending' => 'Chờ xử lý',
+                                'reviewed' => 'Đang xem xét',
+                                'dismissed' => 'Đã bỏ qua',
+                                'action_taken' => 'Đã xử lý',
+                                default => $report->status->value,
+                            } }}
+                        </x-ui.badge>
                     </div>
 
                     <div class="space-y-1">
-                        <div class="text-xs font-semibold text-slate-400">Người báo cáo:</div>
-                        <div class="text-sm font-bold text-slate-800">{{ $report->reporter->name }}</div>
-                        <div class="text-xxs text-slate-400 font-medium">{{ $report->reporter->email }}</div>
+                        <div class="text-[10px] font-semibold uppercase tracking-wider text-ue-text-muted">Người báo cáo:</div>
+                        <div class="text-sm font-bold text-ue-text">{{ $report->reporter->name }}</div>
+                        <div class="text-xs text-ue-text-muted">{{ $report->reporter->email }}</div>
                     </div>
 
-                    <div class="grid grid-cols-2 gap-4 pt-2 border-t border-slate-100 text-xs">
+                    <div class="grid grid-cols-2 gap-4 pt-2 border-t border-ue-border text-xs">
                         <div>
-                            <span class="text-slate-400 block mb-0.5">Loại mục tiêu</span>
-                            <span class="px-2 py-0.5 rounded-lg text-xxs font-bold uppercase {{ $report->target_type === 'post' ? 'bg-blue-50 text-blue-700 border border-blue-100' : 'bg-purple-50 text-purple-700 border border-purple-100' }}">
+                            <span class="text-ue-text-muted block mb-1 font-semibold">Loại mục tiêu</span>
+                            <x-ui.badge :variant="$targetBadgeVariant" size="sm">
                                 {{ $report->target_type === 'post' ? 'Bài viết' : 'Bình luận' }}
-                            </span>
+                            </x-ui.badge>
                         </div>
                         <div>
-                            <span class="text-slate-400 block mb-0.5">Lý do</span>
-                            <span class="font-semibold text-slate-800">
+                            <span class="text-ue-text-muted block mb-1 font-semibold">Lý do</span>
+                            <span class="font-semibold text-ue-text">
                                 @switch($report->reason->value)
                                     @case('spam') Tin rác @break
                                     @case('harassment') Quấy rối / Công kích @break
@@ -233,19 +242,18 @@ new #[Layout('layouts.app', ['shell' => 'admin'])] class extends Component {
                                     @case('misinformation') Tin sai lệch @break
                                     @case('privacy_violation') Riêng tư @break
                                     @default Khác
-                                    @endswitch
+                                @endswitch
                             </span>
                         </div>
                     </div>
 
-                    <div class="pt-3 border-t border-slate-100 flex items-center justify-between">
-                        <span class="text-xxs text-slate-400 font-semibold">{{ $report->created_at->format('H:i d/m/Y') }}</span>
-                        <a href="{{ route('admin.reports.show', $report) }}" class="inline-flex items-center gap-1.5 px-3 py-1.5 bg-ue-brand-soft text-ue-brand text-xs font-bold rounded-xl hover:bg-ue-brand hover:text-white transition-all shadow-sm">
-                            <x-ui.icon name="eye" size="xs" />
-                            <span>Chi tiết</span>
-                        </a>
+                    <div class="pt-3 border-t border-ue-border flex items-center justify-between">
+                        <span class="text-xs text-ue-text-muted">{{ $report->created_at->format('H:i d/m/Y') }}</span>
+                        <x-ui.button href="{{ route('admin.reports.show', $report) }}" variant="secondary" size="sm" icon="eye">
+                            Chi tiết
+                        </x-ui.button>
                     </div>
-                </div>
+                </x-ui.card>
             @endforeach
         </div>
 

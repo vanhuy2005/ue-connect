@@ -2,6 +2,8 @@
 
 namespace App\Actions\Admin;
 
+use App\Enums\AccountStatus;
+use App\Enums\VerificationStatus;
 use App\Models\AuditLog;
 use App\Models\Comment;
 use App\Models\Media;
@@ -65,21 +67,21 @@ class BuildAdminDashboardAction
         }
 
         // 2. Fetch raw counts
-        $pendingVerificationsCount = VerificationRequest::where('status', 'pending_review')->count();
-        $needsInfoVerificationsCount = VerificationRequest::where('status', 'need_more_information')->count();
-        $conflictsVerificationsCount = VerificationRequest::where('status', 'conflict')->count();
+        $pendingVerificationsCount = VerificationRequest::where('status', VerificationStatus::PENDING_REVIEW)->count();
+        $needsInfoVerificationsCount = VerificationRequest::where('status', VerificationStatus::NEEDS_MORE_INFORMATION)->count();
+        $conflictsVerificationsCount = VerificationRequest::where('status', VerificationStatus::CONFLICT)->count();
 
         $openReportsCount = Report::where('status', 'pending')->count();
         $criticalReportsCount = 0; // Set to 0 as default since report table lacks critical flag, but we will treat conflict verifications or media quota alerts as critical
 
         $pendingModerationCount = Post::where('visibility', 'hidden_by_system')->count();
-        $restrictedUsersCount = User::where('account_status', 'suspended')->count();
+        $restrictedUsersCount = User::where('account_status', AccountStatus::SUSPENDED)->count();
 
         // 3. Priority Queue items
         $priorityItems = [];
 
         // Add verification requests
-        $pendingVerifications = VerificationRequest::whereIn('status', ['pending_review', 'conflict'])
+        $pendingVerifications = VerificationRequest::whereIn('status', [VerificationStatus::PENDING_REVIEW, VerificationStatus::CONFLICT])
             ->with('user')
             ->latest()
             ->limit(5)
@@ -89,8 +91,8 @@ class BuildAdminDashboardAction
             if (! $req->user) {
                 continue;
             }
-            $severity = $req->status === 'conflict' ? 'critical' : 'info';
-            $title = $req->status === 'conflict'
+            $severity = $req->status === VerificationStatus::CONFLICT ? 'critical' : 'info';
+            $title = $req->status === VerificationStatus::CONFLICT
                 ? "Xung đột MSSV: Yêu cầu của {$req->user->name} (MSSV: {$req->student_id})"
                 : "Yêu cầu xác thực sinh viên của {$req->user->name} chờ phê duyệt";
 
@@ -205,7 +207,7 @@ class BuildAdminDashboardAction
             'pending_verification' => $pendingVerificationsCount,
             'needs_info_verification' => $needsInfoVerificationsCount,
             'conflicts_verification' => $conflictsVerificationsCount,
-            'approved_today' => VerificationRequest::where('status', 'approved')->whereDate('updated_at', $today)->count(),
+            'approved_today' => VerificationRequest::where('status', VerificationStatus::APPROVED)->whereDate('updated_at', $today)->count(),
             'open_reports' => $openReportsCount,
             'critical_reports' => $conflictsVerificationsCount + ($mediaStats['quota_warning'] && $mediaStats['warning_level'] === 'critical' ? 1 : 0),
             'pending_moderation' => $pendingModerationCount,
@@ -222,7 +224,7 @@ class BuildAdminDashboardAction
             'posts' => Post::where('created_at', '>=', $sevenDaysAgo)->count(),
             'comments' => Comment::where('created_at', '>=', $sevenDaysAgo)->count(),
             'reports' => Report::where('created_at', '>=', $sevenDaysAgo)->count(),
-            'verifications_approved' => VerificationRequest::where('status', 'approved')
+            'verifications_approved' => VerificationRequest::where('status', VerificationStatus::APPROVED)
                 ->where('updated_at', '>=', $sevenDaysAgo)
                 ->count(),
         ];

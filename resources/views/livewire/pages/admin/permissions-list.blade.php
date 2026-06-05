@@ -17,6 +17,11 @@ new class extends Component {
         'permission' => ['except' => ''],
     ];
 
+    public function mount(): void
+    {
+        $this->authorize('manage_permissions');
+    }
+
     public function updatingSearch(): void
     {
         $this->resetPage();
@@ -47,6 +52,8 @@ new class extends Component {
 
     public function revoke(int $id): void
     {
+        $this->authorize('manage_permissions');
+
         $grant = PermissionGrant::find($id);
         if (!$grant) {
             session()->flash('error', 'Grant không tồn tại');
@@ -87,8 +94,14 @@ new class extends Component {
 
     <x-ui.card class="mb-6">
         <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <input type="text" wire:model.live="search" placeholder="Tìm người dùng" class="w-full px-3 py-2 border rounded-lg">
-            <input type="text" wire:model.live="permission" placeholder="Mã quyền" class="w-full px-3 py-2 border rounded-lg">
+            <div>
+                <x-ui.label for="search" class="text-xs">Tìm người dùng</x-ui.label>
+                <x-ui.input type="text" id="search" wire:model.live="search" placeholder="Tìm người dùng" class="mt-1 h-9 text-xs" />
+            </div>
+            <div>
+                <x-ui.label for="permission" class="text-xs">Mã quyền</x-ui.label>
+                <x-ui.input type="text" id="permission" wire:model.live="permission" placeholder="Mã quyền" class="mt-1 h-9 text-xs" />
+            </div>
         </div>
     </x-ui.card>
 

@@ -9,7 +9,7 @@ return [
 
         'staff_email_domains' => array_values(array_filter(array_map(
             fn ($domain) => strtolower(ltrim(trim($domain), '@')),
-            explode(',', env('AUTH_STAFF_EMAIL_DOMAINS', 'hcmue.edu.vn,teacher.hcmue.edu.vn'))
+            explode(',', env('AUTH_STAFF_EMAIL_DOMAINS', 'teacher.hcmue.edu.vn'))
         ))),
 
         'alumni_personal_email_allowed' => filter_var(env('AUTH_ALUMNI_PERSONAL_EMAIL_ALLOWED', true), FILTER_VALIDATE_BOOLEAN),

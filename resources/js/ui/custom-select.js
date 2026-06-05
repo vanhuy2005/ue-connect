@@ -35,6 +35,16 @@ function enhanceSelect(select) {
         return;
     }
 
+    // Skip select elements managed by Livewire or nested in Livewire components
+    if (
+        select.hasAttribute('wire:model') || 
+        select.hasAttribute('wire:model.live') || 
+        select.closest('[wire\\:id], [wire\\:snapshot], [wire\\:effects]')
+    ) {
+        select.dataset[ENHANCED] = 'skipped_livewire';
+        return;
+    }
+
     if (isOverlaySelect(select)) {
         enhanceOverlaySelect(select);
         return;

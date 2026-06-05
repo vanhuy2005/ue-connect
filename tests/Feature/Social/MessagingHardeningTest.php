@@ -10,6 +10,7 @@ use App\Enums\AccountStatus;
 use App\Models\Conversation;
 use App\Models\Message;
 use App\Models\User;
+use Database\Seeders\Reference\AccessControlReferenceSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Livewire\Volt\Volt;
 use Tests\TestCase;
@@ -27,7 +28,7 @@ class MessagingHardeningTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
-        $this->artisan('db:seed', ['--class' => 'RoleAndPermissionSeeder']);
+        $this->artisan('db:seed', ['--class' => AccessControlReferenceSeeder::class]);
 
         // Main User
         $this->user = User::factory()->create(['account_status' => AccountStatus::ACTIVE]);

@@ -44,7 +44,9 @@ use App\Policies\ProfilePolicy;
 use App\Policies\SettingsPolicy;
 use App\Policies\UserBlockPolicy;
 use App\Policies\VerificationReviewPolicy;
+use Illuminate\Auth\Notifications\VerifyEmail;
 use Illuminate\Database\Eloquent\Relations\Relation;
+use Illuminate\Notifications\Messages\MailMessage;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\ServiceProvider;
@@ -70,6 +72,13 @@ class AppServiceProvider extends ServiceProvider
             SocialiteWasCalled::class,
             MicrosoftExtendSocialite::class
         );
+
+        VerifyEmail::toMailUsing(fn (object $notifiable, string $url) => (new MailMessage)
+            ->subject('Xác minh email UEConnect')
+            ->greeting('Xin chào '.$notifiable->name.'!')
+            ->line('Vui lòng xác minh email đăng ký để tiếp tục gửi hồ sơ định danh trên UEConnect.')
+            ->action('Xác minh email', $url)
+            ->line('Nếu bạn không tạo tài khoản UEConnect, bạn có thể bỏ qua email này.'));
 
         Relation::morphMap([
             'post' => Post::class,

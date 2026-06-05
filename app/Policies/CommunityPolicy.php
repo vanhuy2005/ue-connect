@@ -112,9 +112,12 @@ class CommunityPolicy
      */
     public function update(User $user, Community $community): bool
     {
+        if (! $this->isEligibleUser($user)) {
+            return false;
+        }
+
         return $community->isOwnedBy($user)
             || $this->hasScopedPermission($user, $community, 'manage_community')
-            || $user->hasRole('admin')
             || $user->can('manage_communities');
     }
 
@@ -123,8 +126,11 @@ class CommunityPolicy
      */
     public function suspend(User $user, Community $community): bool
     {
-        return $user->hasRole('admin')
-            || $user->can('manage_communities')
+        if (! $this->isEligibleUser($user)) {
+            return false;
+        }
+
+        return $user->can('manage_communities')
             || $user->can('moderate_content');
     }
 
@@ -133,7 +139,7 @@ class CommunityPolicy
      */
     public function reactivate(User $user, Community $community): bool
     {
-        return $user->hasRole('admin') || $user->can('manage_communities');
+        return $this->isEligibleUser($user) && $user->can('manage_communities');
     }
 
     /**
@@ -141,7 +147,7 @@ class CommunityPolicy
      */
     public function archive(User $user, Community $community): bool
     {
-        return $user->hasRole('admin') || $user->can('manage_communities');
+        return $this->isEligibleUser($user) && $user->can('manage_communities');
     }
 
     /**
@@ -150,7 +156,11 @@ class CommunityPolicy
      */
     public function manageMember(User $user, Community $community): bool
     {
-        if ($user->hasRole('admin') || $user->can('manage_communities')) {
+        if (! $this->isEligibleUser($user)) {
+            return false;
+        }
+
+        if ($user->can('manage_communities')) {
             return true;
         }
 
@@ -194,7 +204,11 @@ class CommunityPolicy
      */
     public function moderateContent(User $user, Community $community): bool
     {
-        if ($user->hasRole('admin') || $user->can('moderate_content')) {
+        if (! $this->isEligibleUser($user)) {
+            return false;
+        }
+
+        if ($user->can('moderate_content')) {
             return true;
         }
 
@@ -207,9 +221,9 @@ class CommunityPolicy
      */
     public function grantManager(User $user, Community $community): bool
     {
-        return $user->hasRole('admin')
-            || $user->can('manage_communities')
-            || $user->can('manage_permissions');
+        return $this->isEligibleUser($user)
+            && ($user->can('manage_communities')
+            || $user->can('manage_permissions'));
     }
 
     /**

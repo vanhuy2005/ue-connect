@@ -63,13 +63,13 @@ new #[Layout('layouts.guest')] class extends Component
     <form wire:submit="login" class="space-y-3.5">
         {{-- Email Address --}}
         <div class="space-y-1">
-            <x-ui.label for="email" :required="true">Email HCMUE</x-ui.label>
+            <x-ui.label for="email" :required="true">Email đăng nhập</x-ui.label>
             <x-ui.input 
                 id="email" 
                 name="form.email" 
                 type="email" 
                 wire:model="form.email" 
-                placeholder="tensinhvien@hcmue.edu.vn" 
+                placeholder="Nhập email đã đăng ký" 
                 required 
                 autofocus 
                 autocomplete="username"
@@ -77,6 +77,9 @@ new #[Layout('layouts.guest')] class extends Component
                 size="sm"
             />
             <x-ui.field-error name="form.email" />
+            <p class="text-[10px] text-ue-text-muted mt-0.5 leading-normal">
+                Sinh viên dùng email <strong>@student.hcmue.edu.vn</strong>, giảng viên dùng <strong>@teacher.hcmue.edu.vn</strong>. Cựu sinh viên có thể đăng nhập bằng email cá nhân đã đăng ký.
+            </p>
         </div>
 
         {{-- Password --}}

@@ -1,6 +1,6 @@
 <?php
 
-namespace Database\Seeders;
+namespace Database\Seeders\Uat;
 
 use App\Enums\CommentStatus;
 use App\Enums\PostStatus;
@@ -42,12 +42,12 @@ class UatFeedSeeder extends Seeder
     private function resolveUsers(): void
     {
         foreach ([
-            'student' => 'student@hcmue.edu.vn',
-            'student2' => 'student2@hcmue.edu.vn',
-            'student_math' => 'student.math@hcmue.edu.vn',
-            'student_english' => 'student.english@hcmue.edu.vn',
-            'advisor' => 'advisor.mentor@hcmue.edu.vn',
-            'moderator' => 'moderator@hcmue.edu.vn',
+            'student' => 'student@student.hcmue.edu.vn',
+            'student2' => 'student2@student.hcmue.edu.vn',
+            'student_math' => 'student.math@student.hcmue.edu.vn',
+            'student_english' => 'student.english@student.hcmue.edu.vn',
+            'teacher' => 'teacher.mentor@teacher.hcmue.edu.vn',
+            'moderator' => 'moderator@teacher.hcmue.edu.vn',
         ] as $key => $email) {
             $this->users[$key] = User::where('email', $email)->firstOrFail();
         }
@@ -72,7 +72,7 @@ class UatFeedSeeder extends Seeder
 
         $this->posts['research_notice'] = $this->post(
             'research_notice',
-            $this->users['advisor'],
+            $this->users['teacher'],
             'Thông báo học vụ: thời hạn đăng ký đề tài nghiên cứu khoa học cấp sinh viên được gia hạn đến hết ngày 15 tháng sau.',
             now()->subHours(2)
         );
@@ -119,7 +119,7 @@ class UatFeedSeeder extends Seeder
         $this->comments['research_answer'] = $this->comment(
             'research_answer',
             $this->posts['research_notice'],
-            $this->users['advisor'],
+            $this->users['teacher'],
             'Năm nhất có thể tham gia cùng nhóm anh chị khóa trên để làm quen và học hỏi em nhé.',
             $this->comments['research_question']
         );
@@ -129,7 +129,7 @@ class UatFeedSeeder extends Seeder
     {
         foreach ([
             [$this->posts['math_resources'], $this->users['student2']],
-            [$this->posts['math_resources'], $this->users['advisor']],
+            [$this->posts['math_resources'], $this->users['teacher']],
             [$this->posts['research_notice'], $this->users['student']],
         ] as [$post, $user]) {
             PostLike::updateOrCreate(['post_id' => $post->id, 'user_id' => $user->id]);

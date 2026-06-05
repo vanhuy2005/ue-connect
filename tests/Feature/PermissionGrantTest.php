@@ -2,9 +2,10 @@
 
 namespace Tests\Feature;
 
+use App\Enums\AccountStatus;
 use App\Models\PermissionGrant;
 use App\Models\User;
-use Database\Seeders\RoleAndPermissionSeeder;
+use Database\Seeders\Reference\AccessControlReferenceSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Spatie\Permission\Models\Permission;
 use Spatie\Permission\Models\Role;
@@ -16,13 +17,13 @@ class PermissionGrantTest extends TestCase
 
     public function test_admin_can_grant_and_revoke_permission()
     {
-        $this->seed(RoleAndPermissionSeeder::class);
+        $this->seed(AccessControlReferenceSeeder::class);
 
         $managePermissions = Permission::findOrCreate('manage_permissions', 'web');
         $adminRole = Role::findOrCreate('admin', 'web');
         $adminRole->givePermissionTo($managePermissions);
 
-        $admin = User::factory()->create();
+        $admin = User::factory()->create(['account_status' => AccountStatus::ACTIVE]);
         if (method_exists($admin, 'assignRole')) {
             $admin->assignRole('admin');
         }

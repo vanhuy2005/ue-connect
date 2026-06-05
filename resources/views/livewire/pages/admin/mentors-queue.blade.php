@@ -55,52 +55,77 @@ new class extends Component {
         </div>
     </div>
 
-    <div class="mb-6 rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
+    <x-ui.card class="mb-6">
         <div class="grid gap-4 sm:grid-cols-2">
-            <input type="search" wire:model.live.debounce.250ms="search" placeholder="Tìm kiếm tên hoặc email" class="w-full rounded-lg border-slate-200 text-sm">
-            <select wire:model.live="status" class="w-full rounded-lg border-slate-200 text-sm">
-                <option value="all">Tất cả trạng thái</option>
-                @foreach ($statuses as $statusCase)
-                    <option value="{{ $statusCase->value }}">{{ $statusCase->label() }}</option>
-                @endforeach
-            </select>
+            <div>
+                <x-ui.label for="search" class="text-xs">Tìm kiếm</x-ui.label>
+                <x-ui.input type="search" id="search" wire:model.live.debounce.250ms="search" placeholder="Tìm kiếm tên hoặc email" class="mt-1 h-9 text-xs" />
+            </div>
+            <div>
+                <x-ui.label for="status" class="text-xs">Trạng thái</x-ui.label>
+                <x-ui.select id="status" wire:model.live="status" class="mt-1 h-9 text-xs py-1">
+                    <option value="all">Tất cả trạng thái</option>
+                    @foreach ($statuses as $statusCase)
+                        <option value="{{ $statusCase->value }}">{{ $statusCase->label() }}</option>
+                    @endforeach
+                </x-ui.select>
+            </div>
         </div>
-    </div>
+    </x-ui.card>
 
-    <div class="overflow-hidden rounded-lg border border-slate-200 bg-white shadow-sm">
-        <table class="min-w-full divide-y divide-slate-200 text-sm">
-            <thead class="bg-slate-50">
-                <tr>
-                    <th class="px-4 py-3 text-left font-semibold text-slate-600">Người yêu cầu</th>
-                    <th class="px-4 py-3 text-left font-semibold text-slate-600">Vai trò</th>
-                    <th class="px-4 py-3 text-left font-semibold text-slate-600">Trạng thái</th>
-                    <th class="px-4 py-3 text-left font-semibold text-slate-600">Gửi lúc</th>
-                    <th class="px-4 py-3 text-right font-semibold text-slate-600">Hành động</th>
-                </tr>
-            </thead>
-            <tbody class="divide-y divide-slate-100">
-                @forelse ($requests as $request)
-                    <tr class="hover:bg-slate-50">
-                        <td class="px-4 py-3">
-                            <div class="font-semibold text-slate-900">{{ $request->user?->name ?? 'N/A' }}</div>
-                            <div class="text-xs text-slate-500">{{ $request->user?->email }}</div>
-                        </td>
-                        <td class="px-4 py-3 text-slate-600">{{ $request->requested_role_context }}</td>
-                        <td class="px-4 py-3">
-                            <span class="rounded-full bg-slate-100 px-2 py-1 text-xs font-semibold text-slate-700">{{ $request->status->label() }}</span>
-                        </td>
-                        <td class="px-4 py-3 text-slate-500">{{ $request->created_at?->format('d/m/Y H:i') }}</td>
-                        <td class="px-4 py-3 text-right">
-                            <a href="{{ route('admin.mentors.detail', $request->id) }}" class="font-semibold text-ue-brand hover:underline">Chi tiết</a>
-                        </td>
-                    </tr>
-                @empty
+    <x-ui.card padding="none" class="overflow-hidden">
+        <div class="overflow-x-auto">
+            <table class="min-w-full divide-y divide-ue-border text-sm text-left">
+                <thead class="bg-ue-surface-subtle text-xs font-bold text-ue-text-muted uppercase tracking-wider">
                     <tr>
-                        <td colspan="5" class="px-4 py-8 text-center text-slate-500">Không có yêu cầu mentor phù hợp.</td>
+                        <th scope="col" class="px-6 py-4">Người yêu cầu</th>
+                        <th scope="col" class="px-6 py-4">Vai trò</th>
+                        <th scope="col" class="px-6 py-4">Trạng thái</th>
+                        <th scope="col" class="px-6 py-4">Gửi lúc</th>
+                        <th scope="col" class="px-6 py-4 text-right">Hành động</th>
                     </tr>
-                @endforelse
-            </tbody>
-        </table>
-        <div class="border-t border-slate-100 px-4 py-3">{{ $requests->links() }}</div>
-    </div>
+                </thead>
+                <tbody class="divide-y divide-ue-border bg-ue-surface">
+                    @forelse ($requests as $request)
+                        @php
+                            $badgeVariant = match($request->status) {
+                                MentorAccessStatus::Submitted => 'pending',
+                                MentorAccessStatus::Approved => 'success',
+                                MentorAccessStatus::Rejected => 'rejected',
+                                MentorAccessStatus::NeedMoreInfo => 'need-more-info',
+                                default => 'neutral',
+                            };
+                        @endphp
+                        <tr class="hover:bg-ue-surface-hover transition-colors">
+                            <td class="px-6 py-4 whitespace-nowrap">
+                                <div class="font-bold text-ue-text">{{ $request->user?->name ?? 'N/A' }}</div>
+                                <div class="text-xs text-ue-text-muted mt-0.5">{{ $request->user?->email }}</div>
+                            </td>
+                            <td class="px-6 py-4 text-ue-text-muted whitespace-nowrap">{{ $request->requested_role_context }}</td>
+                            <td class="px-6 py-4 whitespace-nowrap">
+                                <x-ui.badge :variant="$badgeVariant">
+                                    {{ $request->status->label() }}
+                                </x-ui.badge>
+                            </td>
+                            <td class="px-6 py-4 text-xs text-ue-text-muted whitespace-nowrap">{{ $request->created_at?->format('H:i d/m/Y') }}</td>
+                            <td class="px-6 py-4 text-right whitespace-nowrap">
+                                <x-ui.button href="{{ route('admin.mentors.detail', $request->id) }}" variant="secondary" size="sm" icon="eye">
+                                    Chi tiết
+                                </x-ui.button>
+                            </td>
+                        </tr>
+                    @empty
+                        <tr>
+                            <td colspan="5" class="px-6 py-12 text-center text-ue-text-muted">
+                                <x-ui.empty-state icon="graduation-cap" title="Không tìm thấy yêu cầu nào" description="Hiện tại không có yêu cầu mentor nào khớp với bộ lọc." />
+                            </td>
+                        </tr>
+                    @endforelse
+                </tbody>
+            </table>
+        </div>
+        <div class="bg-ue-surface border-t border-ue-border px-6 py-4">
+            {{ $requests->links() }}
+        </div>
+    </x-ui.card>
 </div>

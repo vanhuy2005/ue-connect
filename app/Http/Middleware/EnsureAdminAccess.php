@@ -17,7 +17,11 @@ class EnsureAdminAccess
     {
         $user = $request->user();
 
-        if ($user && ($user->hasRole('admin') || $user->hasRole('super_admin'))) {
+        if (! $user || ! $user->isActive()) {
+            abort(403);
+        }
+
+        if ($user->hasRole('admin')) {
             return $next($request);
         }
 
@@ -49,7 +53,7 @@ class EnsureAdminAccess
         }
 
         // Special-case model-based policy for announcements
-        if ($user && $user->can('manage', Announcement::class)) {
+        if ($user->can('manage', Announcement::class)) {
             return $next($request);
         }
 

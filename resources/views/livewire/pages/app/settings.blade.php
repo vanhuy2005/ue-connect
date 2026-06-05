@@ -293,7 +293,7 @@ new class extends Component
                         <p class="text-xxs font-bold text-slate-800 truncate leading-tight">{{ Auth::user()->profile?->display_name ?? Auth::user()->name }}</p>
                         <p class="text-[9px] font-bold tracking-wider text-ue-brand uppercase leading-none mt-1">
                             @if ((Auth::user()->profile?->role_type ?? 'student') === 'student') Sinh viên
-                            @elseif ((Auth::user()->profile?->role_type ?? '') === 'advisor') Mentor/Giảng viên
+                            @elseif (in_array((Auth::user()->profile?->role_type ?? ''), ['teacher', 'advisor'], true)) Giảng viên
                             @elseif ((Auth::user()->profile?->role_type ?? '') === 'alumni') Cựu sinh viên
                             @else Thành viên
                             @endif
@@ -582,7 +582,7 @@ new class extends Component
                                                     </p>
                                                     <p class="text-[9px] font-bold tracking-wider text-slate-400 uppercase mt-0.5 leading-none">
                                                         @if ($block->blocked->profile?->role_type === 'student') Sinh viên
-                                                        @elseif ($block->blocked->profile?->role_type === 'advisor') Giảng viên
+                                                        @elseif (in_array(($block->blocked->profile?->role_type ?? ''), ['teacher', 'advisor'], true)) Giảng viên
                                                         @elseif ($block->blocked->profile?->role_type === 'alumni') Cựu sinh viên
                                                         @else Thành viên
                                                         @endif

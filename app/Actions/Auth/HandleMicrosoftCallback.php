@@ -101,7 +101,7 @@ class HandleMicrosoftCallback
         }
 
         // 3. Register a new user — no role assigned here.
-        // Roles (student/alumni/advisor) are assigned only upon admin verification approval.
+        // Roles (student/alumni/teacher) are assigned only upon admin verification approval.
         $user = User::create([
             'name' => $socialiteUser->getName() ?? Str::title(explode('@', $normalizedEmail)[0]),
             'email' => $normalizedEmail,

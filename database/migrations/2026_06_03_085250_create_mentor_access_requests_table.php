@@ -11,7 +11,7 @@ return new class extends Migration
         Schema::create('mentor_access_requests', function (Blueprint $table) {
             $table->id();
             $table->foreignId('user_id')->constrained()->cascadeOnDelete();
-            $table->string('requested_role_context')->default('alumni'); // alumni | advisor | exceptional_student
+            $table->string('requested_role_context')->default('alumni'); // alumni | teacher | exceptional_student
             $table->string('status')->default('submitted'); // draft|submitted|under_review|approved|rejected|need_more_info|revoked
             $table->text('motivation');
             $table->text('experience_summary')->nullable();

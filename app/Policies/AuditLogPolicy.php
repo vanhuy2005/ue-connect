@@ -8,6 +8,7 @@ class AuditLogPolicy
 {
     public function view(User $user): bool
     {
-        return $user->hasRole('admin') || $user->can('view_audit_log');
+        return $user->isActive()
+            && ($user->can('view_audit_log') || $user->can('view_audit_logs'));
     }
 }

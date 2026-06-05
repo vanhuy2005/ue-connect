@@ -67,8 +67,7 @@ class CommentPolicy
             return true;
         }
 
-        // Admin/moderator can delete
-        return $user->hasRole('admin') || $user->hasRole('moderator') || $user->can('moderate_content');
+        return $user->can('moderate_content');
     }
 
     /**

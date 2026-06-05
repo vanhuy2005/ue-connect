@@ -12,6 +12,7 @@ use App\Services\AuditService;
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Gate;
+use Spatie\Permission\Models\Permission;
 
 class GrantMentorAccessAction
 {
@@ -42,6 +43,8 @@ class GrantMentorAccessAction
             }
 
             $request->save();
+            Permission::findOrCreate('mentor_access', 'web');
+            $request->user->givePermissionTo('mentor_access');
 
             // 2. Create or reactivate mentor profile
             $mentorProfile = MentorProfile::updateOrCreate(

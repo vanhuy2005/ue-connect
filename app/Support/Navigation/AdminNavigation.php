@@ -12,7 +12,7 @@ class AdminNavigation
             'overview' => [
                 'label' => 'Overview',
                 'vn_label' => 'Tổng quan',
-                'icon' => 'layout-dashboard',
+                'icon' => 'shield',
                 'description' => 'Sức khỏe hệ thống, analytics và các chỉ báo vận hành.',
                 'items' => [
                     [

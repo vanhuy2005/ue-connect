@@ -69,37 +69,69 @@ new #[Layout('layouts.guest')] class extends Component
     }
 }; ?>
 
-<div>
-    <form wire:submit="resetPassword">
-        <!-- Email Address -->
-        <div>
-            <x-input-label for="email" :value="__('Email')" />
-            <x-text-input wire:model="email" id="email" class="block mt-1 w-full" type="email" name="email" required autofocus autocomplete="username" />
-            <x-input-error :messages="$errors->get('email')" class="mt-2" />
+<div class="space-y-5">
+    <div class="text-center">
+        <h1 class="text-xl font-extrabold text-ue-text tracking-snug">Đặt lại mật khẩu</h1>
+        <p class="text-xs text-ue-text-muted mt-2 leading-relaxed">
+            Tạo mật khẩu mới cho tài khoản UEConnect của bạn.
+        </p>
+    </div>
+
+    <form wire:submit="resetPassword" class="space-y-4">
+        <div class="space-y-1">
+            <x-ui.label for="email" :required="true">Email đăng ký</x-ui.label>
+            <x-ui.input
+                wire:model="email"
+                id="email"
+                type="email"
+                name="email"
+                required
+                autofocus
+                autocomplete="username"
+                :hasError="$errors->has('email')"
+                size="sm"
+            />
+            <x-ui.field-error name="email" />
         </div>
 
-        <!-- Password -->
-        <div class="mt-4">
-            <x-input-label for="password" :value="__('Password')" />
-            <x-text-input wire:model="password" id="password" class="block mt-1 w-full" type="password" name="password" required autocomplete="new-password" />
-            <x-input-error :messages="$errors->get('password')" class="mt-2" />
+        <div class="space-y-1">
+            <x-ui.label for="password" :required="true">Mật khẩu mới</x-ui.label>
+            <x-ui.input
+                wire:model="password"
+                id="password"
+                type="password"
+                name="password"
+                required
+                autocomplete="new-password"
+                placeholder="Tối thiểu 8 ký tự"
+                :hasError="$errors->has('password')"
+                size="sm"
+            />
+            <x-ui.field-error name="password" />
         </div>
 
-        <!-- Confirm Password -->
-        <div class="mt-4">
-            <x-input-label for="password_confirmation" :value="__('Confirm Password')" />
-
-            <x-text-input wire:model="password_confirmation" id="password_confirmation" class="block mt-1 w-full"
-                          type="password"
-                          name="password_confirmation" required autocomplete="new-password" />
-
-            <x-input-error :messages="$errors->get('password_confirmation')" class="mt-2" />
+        <div class="space-y-1">
+            <x-ui.label for="password_confirmation" :required="true">Xác nhận mật khẩu mới</x-ui.label>
+            <x-ui.input
+                wire:model="password_confirmation"
+                id="password_confirmation"
+                type="password"
+                name="password_confirmation"
+                required
+                autocomplete="new-password"
+                placeholder="Nhập lại mật khẩu"
+                :hasError="$errors->has('password_confirmation')"
+                size="sm"
+            />
+            <x-ui.field-error name="password_confirmation" />
         </div>
 
-        <div class="flex items-center justify-end mt-4">
-            <x-primary-button>
-                {{ __('Reset Password') }}
-            </x-primary-button>
-        </div>
+        <x-ui.button type="submit" variant="primary" class="w-full justify-center font-bold" wire:loading.attr="disabled" wire:target="resetPassword">
+            <span wire:loading.remove wire:target="resetPassword">Đặt lại mật khẩu</span>
+            <span wire:loading wire:target="resetPassword" class="flex items-center gap-2">
+                <span class="ue-spinner" aria-hidden="true"></span>
+                Đang xử lý...
+            </span>
+        </x-ui.button>
     </form>
 </div>

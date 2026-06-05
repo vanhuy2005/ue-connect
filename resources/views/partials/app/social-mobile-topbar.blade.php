@@ -1,6 +1,6 @@
 @php
     $currentUser = auth()->user();
-    $adminRoles = ['admin', 'moderator', 'super_admin'];
+    $adminRoles = ['admin'];
     $adminPermissions = [
         'view_admin_dashboard',
         'review_verification',
@@ -94,6 +94,22 @@
         >
             <x-ui.icon name="edit" size="sm" class="text-slate-400" />
             Chỉnh sửa hồ sơ
+        </a>
+        <a
+            href="{{ route('community.index') }}"
+            class="flex items-center gap-3 px-2 py-2.5 hover:text-ue-brand transition-colors"
+            role="menuitem"
+        >
+            <x-ui.icon name="community" size="sm" class="text-slate-400" />
+            Cộng đồng
+        </a>
+        <a
+            href="{{ route('mentor.discovery') }}"
+            class="flex items-center gap-3 px-2 py-2.5 hover:text-ue-brand transition-colors"
+            role="menuitem"
+        >
+            <x-ui.icon name="graduation-cap" size="sm" class="text-slate-400" />
+            Mentor
         </a>
         <button
             type="button"

@@ -8,6 +8,7 @@ use App\Models\AcademicProgram;
 use App\Models\Faculty;
 use App\Models\User;
 use App\Models\VerificationRequest;
+use Database\Seeders\Reference\AccessControlReferenceSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Livewire\Volt\Volt;
 use Tests\TestCase;
@@ -26,7 +27,7 @@ class ProfileSetupTest extends TestCase
     {
         parent::setUp();
 
-        $this->artisan('db:seed', ['--class' => 'RoleAndPermissionSeeder']);
+        $this->artisan('db:seed', ['--class' => AccessControlReferenceSeeder::class]);
 
         $this->faculty = Faculty::create([
             'name' => 'Khoa Công nghệ Thông tin',
@@ -172,7 +173,7 @@ class ProfileSetupTest extends TestCase
         ]);
     }
 
-    public function test_profile_setup_completes_advisor_profile_successfully(): void
+    public function test_profile_setup_completes_teacher_profile_successfully(): void
     {
         $user = User::factory()->create([
             'account_status' => AccountStatus::PROFILE_INCOMPLETE,
@@ -180,11 +181,13 @@ class ProfileSetupTest extends TestCase
 
         Volt::actingAs($user)
             ->test('pages.app.profile-setup')
-            ->set('role_type', 'advisor')
-            ->set('display_name', 'Advisor Test')
-            ->set('bio', 'My advisor bio')
+            ->set('role_type', 'teacher')
+            ->set('display_name', 'Teacher Test')
+            ->set('bio', 'My teacher bio')
             ->set('department', 'Software Engineering')
             ->set('title', 'Lecturer')
+            ->set('is_academic_advisor', true)
+            ->set('advised_class_codes', "49.CNTTD\n50.CNTTA")
             ->set('faculty_id', $this->faculty->id)
             ->call('save')
             ->assertRedirect(route('dashboard'));
@@ -194,6 +197,8 @@ class ProfileSetupTest extends TestCase
         $this->assertDatabaseHas('advisor_profiles', [
             'department' => 'Software Engineering',
             'title' => 'Lecturer',
+            'is_academic_advisor' => true,
+            'advised_class_codes' => "49.CNTTD\n50.CNTTA",
             'faculty_id' => $this->faculty->id,
         ]);
     }

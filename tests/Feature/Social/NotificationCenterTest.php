@@ -10,6 +10,7 @@ use App\Enums\AccountStatus;
 use App\Models\User;
 use App\Notifications\GreetingReceived;
 use App\Notifications\MessageReceived;
+use Database\Seeders\Reference\AccessControlReferenceSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Livewire\Volt\Volt;
 use Tests\TestCase;
@@ -25,7 +26,7 @@ class NotificationCenterTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
-        $this->artisan('db:seed', ['--class' => 'RoleAndPermissionSeeder']);
+        $this->artisan('db:seed', ['--class' => AccessControlReferenceSeeder::class]);
 
         // Main User
         $this->user = User::factory()->create(['account_status' => AccountStatus::ACTIVE]);

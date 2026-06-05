@@ -29,9 +29,9 @@
                 {{-- Steps --}}
                 <ol class="space-y-4" aria-label="Các bước xác thực danh tính">
                     @foreach([
-                        ['user',           'Chọn vai trò',          'Sinh viên, Cựu sinh viên, Cố vấn/Giảng viên'],
-                        ['mail',           'Xác minh email',         'Email @hcmue.edu.vn hoặc email đã đăng ký'],
-                        ['upload',         'Gửi minh chứng',        'Thẻ sinh viên, bằng tốt nghiệp, quyết định công tác...'],
+                        ['user',           'Chọn vai trò',          'Sinh viên, Cựu sinh viên, Giảng viên'],
+                        ['mail',           'Xác minh email',         'Email sinh viên, email giảng viên hoặc email cá nhân của alumni'],
+                        ['upload',         'Gửi minh chứng',        'Thẻ sinh viên, bằng tốt nghiệp, thẻ viên chức, quyết định công tác...'],
                         ['shield-check',   'Admin xét duyệt',       'Đội ngũ quản trị kiểm tra và phê duyệt trong 1-2 ngày'],
                         ['check-circle',   'Tham gia cộng đồng',    'Truy cập đầy đủ UEConnect sau khi được duyệt'],
                     ] as $i => [$icon, $title, $body])
@@ -77,13 +77,13 @@
                         'badgeCls' => 'bg-mentor/10 text-mentor-text',
                     ],
                     [
-                        'role'  => 'Giảng viên / Cố vấn',
+                        'role'  => 'Giảng viên',
                         'icon'  => 'briefcase',
                         'color' => 'text-success-text',
                         'bg'    => 'bg-success/10',
                         'border'=> 'border-[rgba(32,201,151,0.14)]',
-                        'email' => '@hcmue.edu.vn / @teacher.hcmue.edu.vn',
-                        'badge' => 'Cố vấn',
+                        'email' => '@teacher.hcmue.edu.vn',
+                        'badge' => 'Teacher',
                         'badgeCls' => 'bg-success/10 text-success-text',
                     ],
                     [

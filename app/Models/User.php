@@ -2,10 +2,11 @@
 
 namespace App\Models;
 
-// use Illuminate\Contracts\Auth\MustVerifyEmail;
 use App\Enums\AccountStatus;
 use App\Enums\IdentityType;
+use App\Enums\MentorAccessStatus;
 use Database\Factories\UserFactory;
+use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Attributes\Hidden;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -23,7 +24,7 @@ use Spatie\Permission\Traits\HasRoles;
  *
  * @method bool can(string $ability, mixed $arguments = null)
  */
-class User extends Authenticatable
+class User extends Authenticatable implements MustVerifyEmail
 {
     /** @use HasFactory<UserFactory> */
     use HasFactory, HasRoles, Notifiable, SoftDeletes;
@@ -230,6 +231,17 @@ class User extends Authenticatable
     }
 
     /**
+     * Check if the user has an approved mentor access grant.
+     */
+    public function hasApprovedMentorAccess(): bool
+    {
+        return $this->can('mentor_access')
+            && $this->mentorAccessRequests()
+                ->where('status', MentorAccessStatus::Approved)
+                ->exists();
+    }
+
+    /**
      * Get the user's approved mentor profile.
      */
     public function mentorProfile(): HasOne
@@ -242,8 +254,10 @@ class User extends Authenticatable
      */
     public function isActiveMentor(): bool
     {
-        return $this->mentorProfile !== null
-            && $this->mentorProfile->is_active;
+        return $this->isActive()
+            && $this->mentorProfile !== null
+            && $this->mentorProfile->is_active
+            && $this->hasApprovedMentorAccess();
     }
 
     /**

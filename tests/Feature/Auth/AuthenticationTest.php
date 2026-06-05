@@ -5,6 +5,7 @@ namespace Tests\Feature\Auth;
 use App\Enums\AccountStatus;
 use App\Livewire\Actions\Logout;
 use App\Models\User;
+use Database\Seeders\Reference\AccessControlReferenceSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Livewire\Volt\Volt;
 use Spatie\Permission\PermissionRegistrar;
@@ -120,7 +121,7 @@ class AuthenticationTest extends TestCase
 
     public function test_admin_with_permission_can_access_admin_routes(): void
     {
-        $this->artisan('db:seed', ['--class' => 'RoleAndPermissionSeeder']);
+        $this->artisan('db:seed', ['--class' => AccessControlReferenceSeeder::class]);
 
         $admin = User::factory()->create([
             'account_status' => AccountStatus::ACTIVE,
@@ -149,7 +150,7 @@ class AuthenticationTest extends TestCase
 
     public function test_sidebar_shows_admin_menu_for_admin_only(): void
     {
-        $this->artisan('db:seed', ['--class' => 'RoleAndPermissionSeeder']);
+        $this->artisan('db:seed', ['--class' => AccessControlReferenceSeeder::class]);
 
         $admin = User::factory()->create([
             'account_status' => AccountStatus::ACTIVE,

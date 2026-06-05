@@ -35,23 +35,23 @@ new class extends Component {
         $getSeverityClasses = function($level) {
             return match($level) {
                 'info' => [
-                    'badgeBg' => 'bg-blue-50 text-blue-600 dark:bg-blue-950/40 dark:text-blue-400',
+                    'badgeBg' => 'bg-blue-50 text-blue-700',
                     'icon' => 'blue',
                 ],
                 'warning' => [
-                    'badgeBg' => 'bg-amber-50 text-amber-600 dark:bg-amber-950/40 dark:text-amber-400',
+                    'badgeBg' => 'bg-amber-50 text-amber-700',
                     'icon' => 'amber',
                 ],
                 'critical' => [
-                    'badgeBg' => 'bg-rose-50 text-rose-600 dark:bg-rose-950/40 dark:text-rose-400',
+                    'badgeBg' => 'bg-red-50 text-red-700',
                     'icon' => 'rose',
                 ],
                 'success' => [
-                    'badgeBg' => 'bg-emerald-50 text-emerald-600 dark:bg-emerald-950/40 dark:text-emerald-400',
+                    'badgeBg' => 'bg-emerald-50 text-emerald-700',
                     'icon' => 'emerald',
                 ],
                 default => [
-                    'badgeBg' => 'bg-slate-50 text-slate-600 dark:bg-slate-800 dark:text-slate-400',
+                    'badgeBg' => 'bg-ue-surface-subtle text-ue-text-muted',
                     'icon' => 'slate',
                 ],
             };
@@ -67,7 +67,7 @@ new class extends Component {
                 $vLevel = $snapshot['pending_verification'] > 0 ? 'info' : 'neutral';
                 $vClasses = $getSeverityClasses($vLevel);
             @endphp
-            <x-ui.card padding="none" class="bg-white dark:bg-slate-900 border border-ue-border hover:shadow-md transition-shadow p-6 flex flex-col justify-between">
+            <x-ui.card variant="admin" padding="none" class="hover:shadow-md transition-shadow p-6 flex flex-col justify-between">
                 <div>
                     <div class="flex items-center justify-between">
                         <span class="text-xs font-bold text-ue-text-muted uppercase">Chờ duyệt xác thực</span>
@@ -95,7 +95,7 @@ new class extends Component {
                 $rLevel = $snapshot['open_reports'] > 0 ? 'warning' : 'neutral';
                 $rClasses = $getSeverityClasses($rLevel);
             @endphp
-            <x-ui.card padding="none" class="bg-white dark:bg-slate-900 border border-ue-border hover:shadow-md transition-shadow p-6 flex flex-col justify-between">
+            <x-ui.card variant="admin" padding="none" class="hover:shadow-md transition-shadow p-6 flex flex-col justify-between">
                 <div>
                     <div class="flex items-center justify-between">
                         <span class="text-xs font-bold text-ue-text-muted uppercase">Báo cáo đang mở</span>
@@ -123,7 +123,7 @@ new class extends Component {
                 $cLevel = $snapshot['critical_reports'] > 0 ? 'critical' : 'neutral';
                 $cClasses = $getSeverityClasses($cLevel);
             @endphp
-            <x-ui.card padding="none" class="bg-white dark:bg-slate-900 border {{ $snapshot['critical_reports'] > 0 ? 'border-rose-200 dark:border-rose-950' : 'border-ue-border' }} hover:shadow-md transition-shadow p-6 flex flex-col justify-between">
+            <x-ui.card variant="admin" padding="none" class="{{ $snapshot['critical_reports'] > 0 ? 'border-red-200 bg-red-50/10' : '' }} hover:shadow-md transition-shadow p-6 flex flex-col justify-between">
                 <div>
                     <div class="flex items-center justify-between">
                         <span class="text-xs font-bold text-ue-text-muted uppercase">Vấn đề nghiêm trọng</span>
@@ -151,7 +151,7 @@ new class extends Component {
                 $mLevel = $snapshot['pending_moderation'] > 0 ? 'warning' : 'neutral';
                 $mClasses = $getSeverityClasses($mLevel);
             @endphp
-            <x-ui.card padding="none" class="bg-white dark:bg-slate-900 border border-ue-border hover:shadow-md transition-shadow p-6 flex flex-col justify-between">
+            <x-ui.card variant="admin" padding="none" class="hover:shadow-md transition-shadow p-6 flex flex-col justify-between">
                 <div>
                     <div class="flex items-center justify-between">
                         <span class="text-xs font-bold text-ue-text-muted uppercase">Bài viết chờ duyệt</span>
@@ -178,7 +178,7 @@ new class extends Component {
             @php
                 $uClasses = $getSeverityClasses('neutral');
             @endphp
-            <x-ui.card padding="none" class="bg-white dark:bg-slate-900 border border-ue-border hover:shadow-md transition-shadow p-6 flex flex-col justify-between">
+            <x-ui.card variant="admin" padding="none" class="hover:shadow-md transition-shadow p-6 flex flex-col justify-between">
                 <div>
                     <div class="flex items-center justify-between">
                         <span class="text-xs font-bold text-ue-text-muted uppercase">Tài khoản bị hạn chế</span>
@@ -206,7 +206,7 @@ new class extends Component {
                 $medLevel = $snapshot['media_usage_warning_level'];
                 $medClasses = $getSeverityClasses($medLevel);
             @endphp
-            <x-ui.card padding="none" class="bg-white dark:bg-slate-900 border {{ $medLevel === 'critical' ? 'border-rose-200 dark:border-rose-950' : ($medLevel === 'warning' ? 'border-amber-200 dark:border-amber-950' : 'border-ue-border') }} hover:shadow-md transition-shadow p-6 flex flex-col justify-between">
+            <x-ui.card variant="admin" padding="none" class="{{ $medLevel === 'critical' ? 'border-red-200 bg-red-50/10' : ($medLevel === 'warning' ? 'border-amber-200 bg-amber-50/10' : '') }} hover:shadow-md transition-shadow p-6 flex flex-col justify-between">
                 <div>
                     <div class="flex items-center justify-between">
                         <span class="text-xs font-bold text-ue-text-muted uppercase">Dung lượng Media</span>
@@ -246,7 +246,7 @@ new class extends Component {
         {{-- Priority Queue --}}
         <div class="min-w-0">
             <h2 class="text-sm font-bold text-ue-text-muted/85 uppercase tracking-wider mb-4">Việc cần xử lý gấp</h2>
-            <x-ui.card padding="none" class="bg-white dark:bg-slate-900 border border-ue-border shadow-sm overflow-hidden h-full flex flex-col justify-between">
+            <x-ui.card variant="admin" padding="none" class="shadow-sm overflow-hidden h-full flex flex-col justify-between">
                 <div class="divide-y divide-ue-border">
                     @forelse($priorityQueue as $item)
                         @php
@@ -287,7 +287,7 @@ new class extends Component {
         {{-- System Health --}}
         <div class="min-w-0">
             <h2 class="text-sm font-bold text-ue-text-muted/85 uppercase tracking-wider mb-4">Tình trạng hệ thống</h2>
-            <x-ui.card padding="none" class="bg-white dark:bg-slate-900 border border-ue-border shadow-sm p-4 h-full">
+            <x-ui.card variant="admin" padding="none" class="shadow-sm p-4 h-full">
                 <div class="flex flex-col gap-4">
                     @foreach($systemHealth as $service)
                         @php
@@ -313,7 +313,7 @@ new class extends Component {
                             <div class="flex-1 min-w-0">
                                 <div class="flex items-center justify-between gap-2">
                                     <span class="text-xs font-bold text-ue-text">{{ $service['name'] }}</span>
-                                    <span class="text-[10px] font-bold px-1.5 py-0.5 rounded uppercase {{ $service['status'] === 'healthy' ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/30 dark:text-emerald-400' : ($service['status'] === 'degraded' ? 'bg-amber-50 text-amber-700 dark:bg-amber-950/30' : 'bg-slate-50 text-slate-600') }}">{{ $statusText }}</span>
+                                    <span class="text-[10px] font-bold px-1.5 py-0.5 rounded uppercase {{ $service['status'] === 'healthy' ? 'bg-emerald-50 text-emerald-700' : ($service['status'] === 'degraded' ? 'bg-amber-50 text-amber-700' : 'bg-red-50 text-red-700') }}">{{ $statusText }}</span>
                                 </div>
                                 <p class="text-xxs text-ue-text-muted mt-1 leading-normal">{{ $service['message'] }}</p>
                             </div>
@@ -329,7 +329,7 @@ new class extends Component {
         {{-- Trends --}}
         <div class="lg:col-span-1 min-w-0">
             <h2 class="text-sm font-bold text-ue-text-muted/85 uppercase tracking-wider mb-4">Hoạt động 7 ngày gần đây</h2>
-            <x-ui.card padding="none" class="bg-white dark:bg-slate-900 border border-ue-border shadow-sm p-5 space-y-4">
+            <x-ui.card variant="admin" padding="none" class="shadow-sm p-5 space-y-4">
                 <div class="flex items-center justify-between border-b border-ue-border/60 pb-3">
                     <span class="text-xs font-semibold text-ue-text">Thành viên mới</span>
                     <span class="text-sm font-bold text-ue-text">{{ number_format($trends['new_users']) }}</span>
@@ -356,7 +356,7 @@ new class extends Component {
         {{-- Recent Admin Activity --}}
         <div class="lg:col-span-2 min-w-0">
             <h2 class="text-sm font-bold text-ue-text-muted/85 uppercase tracking-wider mb-4">Hoạt động quản trị gần đây</h2>
-            <x-ui.card padding="none" class="bg-white dark:bg-slate-900 border border-ue-border shadow-sm overflow-hidden">
+            <x-ui.card variant="admin" padding="none" class="shadow-sm overflow-hidden">
                 <div class="overflow-x-auto">
                     <table class="min-w-full divide-y divide-ue-border">
                         <thead class="bg-ue-surface-subtle">

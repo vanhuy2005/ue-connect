@@ -76,7 +76,7 @@ $disabledClasses = $disabled ? 'opacity-60 cursor-not-allowed resize-none' : '';
             $errorClasses,
             $disabledClasses,
         ]) }}
-    ></textarea>
+    >{{ $slot }}</textarea>
 
     @if($maxlength && $showCount)
         <p class="mt-1 text-right text-xs text-ue-text-muted" aria-live="polite">

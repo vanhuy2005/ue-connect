@@ -22,7 +22,7 @@
             @else
                 <div class="divide-y divide-ue-border">
                     @foreach($notifications as $notification)
-                        <div class="px-6 py-4 {{ $notification->read_at ? 'bg-ue-surface' : 'bg-amber-50/40' }}">
+                        <div class="px-6 py-4 transition-colors duration-sm {{ $notification->read_at ? 'bg-ue-surface' : 'bg-ue-brand-soft border-l-4 border-ue-brand' }}">
                             <div class="flex items-start justify-between gap-4">
                                 <div>
                                     <p class="font-semibold text-ue-text">
@@ -33,15 +33,17 @@
                                     </p>
 
                                     @if(!empty($notification->data['action_url']))
-                                        <a href="{{ $notification->data['action_url'] }}" class="mt-2 inline-flex text-sm font-semibold text-ue-brand hover:underline">
+                                        <x-ui.button href="{{ $notification->data['action_url'] }}" variant="link" size="sm" class="mt-2">
                                             Mở chi tiết
-                                        </a>
+                                        </x-ui.button>
                                     @endif
                                 </div>
 
                                 <div class="text-right text-xs text-ue-text-muted">
                                     <p>{{ optional($notification->created_at)->diffForHumans() }}</p>
-                                    <p class="mt-1">{{ $notification->read_at ? 'Đã đọc' : 'Chưa đọc' }}</p>
+                                    <p class="mt-1 font-semibold {{ $notification->read_at ? 'text-ue-text-muted' : 'text-ue-brand' }}">
+                                        {{ $notification->read_at ? 'Đã đọc' : 'Chưa đọc' }}
+                                    </p>
                                 </div>
                             </div>
                         </div>

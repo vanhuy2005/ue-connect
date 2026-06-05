@@ -20,8 +20,8 @@
                     <x-ui.input id="action" name="action" value="{{ request('action') }}" class="mt-1" />
                 </div>
                 <div class="flex items-end gap-2">
-                    <button class="px-4 py-2 rounded-lg bg-ue-brand text-white font-semibold">Lọc</button>
-                    <a href="{{ route('admin.audit-logs.index') }}" class="px-4 py-2 rounded-lg border border-ue-border text-ue-text">Xóa lọc</a>
+                    <x-ui.button type="submit" size="sm">Lọc</x-ui.button>
+                    <x-ui.button variant="secondary" size="sm" href="{{ route('admin.audit-logs.index') }}">Xóa lọc</x-ui.button>
                 </div>
             </form>
         </x-ui.card>

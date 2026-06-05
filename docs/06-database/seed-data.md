@@ -5,7 +5,7 @@ product: "UEConnect"
 version: "1.0"
 status: "approved-draft"
 priority: "P0"
-last_updated: "2026-05-26"
+last_updated: "2026-06-05"
 owner: "Database Architecture / Backend / QA"
 depends_on:
   - "database-overview.md"
@@ -123,27 +123,21 @@ database/
 ├── seeders/
 │   ├── DatabaseSeeder.php
 │   ├── Reference/
-│   │   ├── RoleSeeder.php
-│   │   ├── PermissionSeeder.php
-│   │   ├── FacultySeeder.php
-│   │   ├── AcademicProgramSeeder.php
-│   │   ├── MentorTopicSeeder.php
-│   │   ├── ReportReasonSeeder.php
-│   │   ├── ModerationActionTypeSeeder.php
-│   │   └── SystemSettingSeeder.php
-│   ├── Demo/
-│   │   ├── DemoUserSeeder.php
-│   │   ├── DemoVerificationSeeder.php
-│   │   ├── DemoProfileSeeder.php
-│   │   ├── DemoFeedSeeder.php
-│   │   ├── DemoConnectionSeeder.php
-│   │   ├── DemoMessagingSeeder.php
-│   │   ├── DemoMentorSeeder.php
-│   │   ├── DemoCommunitySeeder.php
-│   │   ├── DemoModerationSeeder.php
-│   │   └── DemoNotificationSeeder.php
+│   │   ├── AccessControlReferenceSeeder.php
+│   │   └── AcademicStructureSeeder.php
+│   ├── Uat/
+│   │   ├── UatScenarioSeeder.php
+│   │   ├── UatAccountSeeder.php
+│   │   ├── UatVerificationSeeder.php
+│   │   ├── UatFeedSeeder.php
+│   │   ├── UatCommunitySeeder.php
+│   │   └── UatMentorSeeder.php
 │   └── Testing/
 │       └── MinimalTestingSeeder.php
+
+Root `database/seeders` should only keep `DatabaseSeeder.php`. Do not keep
+legacy wrapper seeders such as generic role, permission, UAT, or demo aliases.
+Update tests and commands to call the purpose-named classes directly.
 ## 4. DatabaseSeeder Strategy
 ### 4.1. Recommended DatabaseSeeder
 <?php
@@ -151,35 +145,24 @@ database/
 namespace Database\Seeders;
 
 use Illuminate\Database\Seeder;
+use Database\Seeders\Reference\AccessControlReferenceSeeder;
+use Database\Seeders\Reference\AcademicStructureSeeder;
+use Database\Seeders\Testing\MinimalTestingSeeder;
+use Database\Seeders\Uat\UatScenarioSeeder;
 
 class DatabaseSeeder extends Seeder
 {
     public function run(): void
     {
         $this->call([
-            Reference\RoleSeeder::class,
-            Reference\PermissionSeeder::class,
-            Reference\FacultySeeder::class,
-            Reference\AcademicProgramSeeder::class,
-            Reference\MentorTopicSeeder::class,
-            Reference\ReportReasonSeeder::class,
-            Reference\ModerationActionTypeSeeder::class,
-            Reference\SystemSettingSeeder::class,
+            AccessControlReferenceSeeder::class,
+            AcademicStructureSeeder::class,
         ]);
 
-        if (app()->environment(['local'])) {
-            $this->call([
-                Demo\DemoUserSeeder::class,
-                Demo\DemoProfileSeeder::class,
-                Demo\DemoVerificationSeeder::class,
-                Demo\DemoFeedSeeder::class,
-                Demo\DemoConnectionSeeder::class,
-                Demo\DemoMessagingSeeder::class,
-                Demo\DemoMentorSeeder::class,
-                Demo\DemoCommunitySeeder::class,
-                Demo\DemoModerationSeeder::class,
-                Demo\DemoNotificationSeeder::class,
-            ]);
+        if (app()->environment(['local', 'staging'])) {
+            $this->call(UatScenarioSeeder::class);
+        } elseif (app()->environment('testing')) {
+            $this->call(MinimalTestingSeeder::class);
         }
     }
 }
@@ -189,8 +172,7 @@ Production deployment should run only reference seeders.
 
 Use command intentionally:
 
-php artisan db:seed --class=Database\\Seeders\\Reference\\RoleSeeder
-php artisan db:seed --class=Database\\Seeders\\Reference\\PermissionSeeder
+php artisan db:seed --class=Database\\Seeders\\Reference\\AccessControlReferenceSeeder
 
 Or use a production-safe seeder group.
 
@@ -204,12 +186,7 @@ Seed roles:
 student
 alumni
 advisor
-mentor
-club_owner
-club_manager
-moderator
 admin
-super_admin
 
 Example:
 
@@ -217,12 +194,7 @@ $roles = [
     'student',
     'alumni',
     'advisor',
-    'mentor',
-    'club_owner',
-    'club_manager',
-    'moderator',
     'admin',
-    'super_admin',
 ];
 
 foreach ($roles as $role) {
@@ -263,15 +235,17 @@ Suggested mapping:
 | student | basic app usage |
 | alumni | basic app usage, mentor request eligibility |
 | advisor | basic app usage, mentor request eligibility |
-| mentor | mentor profile/request handling |
-| club_manager | scoped community permissions only |
-| moderator | moderate content, manage reports |
+| mentor capability | `mentor_access`; not a primary global role |
+| club manager capability | scoped `permission_grants`, not a primary global role |
 | admin | verification, users, reports, communities, mentors |
-| super_admin | all permissions |
 
 Important:
 
-club_manager should not be global by default. Use permission_grants scoped by community_id.
+`student`, `alumni`, `advisor`, and `admin` are the only global primary roles.
+Mentor access, moderation, club management, community moderation and resource
+management are operational capabilities. Do not seed them as global primary
+roles by default. Use permissions and scoped `permission_grants` for those
+capabilities.
 
 ### 5.4. Faculties
 
@@ -871,11 +845,10 @@ Before approving seed data:
 Local reset
 php artisan migrate:fresh --seed
 Seed reference only
-php artisan db:seed --class=Database\\Seeders\\Reference\\RoleSeeder
-php artisan db:seed --class=Database\\Seeders\\Reference\\PermissionSeeder
-php artisan db:seed --class=Database\\Seeders\\Reference\\FacultySeeder
+php artisan db:seed --class=Database\\Seeders\\Reference\\AccessControlReferenceSeeder
+php artisan db:seed --class=Database\\Seeders\\Reference\\AcademicStructureSeeder
 Seed demo only
-php artisan db:seed --class=Database\\Seeders\\Demo\\DemoUserSeeder
+php artisan db:seed --class=Database\\Seeders\\Uat\\UatScenarioSeeder
 Testing
 php artisan migrate:fresh --env=testing
 php artisan db:seed --class=Database\\Seeders\\Testing\\MinimalTestingSeeder --env=testing

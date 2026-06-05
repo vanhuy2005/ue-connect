@@ -1,9 +1,12 @@
 <?php
 
 use App\Models\User;
+use App\Support\Auth\AllowedEmailDomain;
 use Illuminate\Auth\Events\Registered;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Session;
 use Illuminate\Validation\Rules;
 use Illuminate\Validation\ValidationException;
 use Livewire\Attributes\Layout;
@@ -22,13 +25,6 @@ new #[Layout('layouts.guest')] class extends Component
      */
     public function register(): void
     {
-        // P0-2: Check if external mentor is disabled
-        if ($this->identity_type === 'external_mentor' && ! config('ueconnect.identity.external_mentor_personal_email_allowed')) {
-            throw ValidationException::withMessages([
-                'identity_type' => ['Tính năng đăng ký mentor khách mời hiện chỉ mở theo lời mời.'],
-            ]);
-        }
-
         $emailRules = [
             'required',
             'string',
@@ -42,26 +38,28 @@ new #[Layout('layouts.guest')] class extends Component
         if ($this->identity_type === 'current_student') {
             $allowedDomains = config('ueconnect.identity.student_email_domains', ['student.hcmue.edu.vn']);
             $emailRules[] = function ($attribute, $value, $fail) use ($allowedDomains) {
-                if (! \App\Support\Auth\AllowedEmailDomain::check($value, $allowedDomains)) {
+                if (! AllowedEmailDomain::check($value, $allowedDomains)) {
                     $fail('Sinh viên hiện tại cần sử dụng email sinh viên HCMUE, ví dụ: mssv@student.hcmue.edu.vn.');
                 }
             };
         } elseif ($this->identity_type === 'teacher_advisor') {
-            $allowedDomains = config('ueconnect.identity.staff_email_domains', ['teacher.hcmue.edu.vn', 'hcmue.edu.vn']);
+            $allowedDomains = config('ueconnect.identity.staff_email_domains', ['teacher.hcmue.edu.vn']);
             $emailRules[] = function ($attribute, $value, $fail) use ($allowedDomains) {
-                if (! \App\Support\Auth\AllowedEmailDomain::check($value, $allowedDomains)) {
-                    $fail('Giảng viên hoặc cố vấn học tập cần sử dụng email thuộc hệ thống HCMUE.');
+                if (! AllowedEmailDomain::check($value, $allowedDomains)) {
+                    $fail('Giảng viên cần sử dụng email công vụ HCMUE, ví dụ: ten@teacher.hcmue.edu.vn.');
                 }
             };
         } else {
-            // Alumni or External Mentor: personal emails allowed
+            // Alumni: personal emails are allowed, evidence is required in verification.
         }
 
         $validated = $this->validate([
-            'identity_type' => ['required', 'string', 'in:current_student,teacher_advisor,alumni,external_mentor'],
+            'identity_type' => ['required', 'string', 'in:current_student,teacher_advisor,alumni'],
             'name' => ['required', 'string', 'max:255'],
             'email' => $emailRules,
             'password' => ['required', 'string', 'confirmed', Rules\Password::defaults()],
+        ], [
+            'email.unique' => 'Email này đã được đăng ký. Nếu đây là email trường của bạn, hãy dùng đăng nhập/quên mật khẩu hoặc liên hệ admin để được hỗ trợ.',
         ]);
 
         $user = User::create([
@@ -72,11 +70,22 @@ new #[Layout('layouts.guest')] class extends Component
             'intended_identity_type' => $validated['identity_type'],
         ]);
 
-        event(new Registered($user));
+        try {
+            event(new Registered($user));
+        } catch (Throwable $exception) {
+            Log::warning('Initial email verification delivery failed.', [
+                'user_id' => $user->id,
+                'mailer' => config('mail.default'),
+                'host' => config('mail.mailers.smtp.host'),
+                'message' => $exception->getMessage(),
+            ]);
+
+            Session::flash('status', 'verification-link-failed');
+        }
 
         Auth::login($user);
 
-        $this->redirect(route('verification.start', absolute: false), navigate: true);
+        $this->redirect(route('verification.notice', absolute: false), navigate: true);
     }
 
     /**
@@ -122,9 +131,8 @@ new #[Layout('layouts.guest')] class extends Component
                     size="sm"
                 >
                     <option value="current_student">Sinh viên hiện tại</option>
-                    <option value="teacher_advisor">Giảng viên / Cố vấn</option>
+                    <option value="teacher_advisor">Giảng viên</option>
                     <option value="alumni">Cựu sinh viên</option>
-                    <option value="external_mentor">Mentor khách mời</option>
                 </x-ui.select>
                 <x-ui.field-error name="identity_type" />
             </div>
@@ -150,13 +158,21 @@ new #[Layout('layouts.guest')] class extends Component
 
         {{-- Email Address --}}
         <div class="space-y-1">
+            @php
+                $emailPlaceholder = match ($identity_type) {
+                    'current_student' => '4901104055@student.hcmue.edu.vn',
+                    'teacher_advisor' => 'ntt239@teacher.hcmue.edu.vn',
+                    'alumni' => 'nguyenvana@gmail.com',
+                    default => 'email@example.com',
+                };
+            @endphp
             <x-ui.label for="email" :required="true">Email</x-ui.label>
             <x-ui.input 
                 id="email" 
                 name="email" 
                 type="email" 
                 wire:model="email" 
-                placeholder="tensinhvien@student.hcmue.edu.vn" 
+                :placeholder="$emailPlaceholder" 
                 required 
                 autocomplete="username"
                 :hasError="$errors->has('email')"
@@ -167,11 +183,9 @@ new #[Layout('layouts.guest')] class extends Component
                 @if ($identity_type === 'current_student')
                     Chỉ chấp nhận email sinh viên HCMUE (mssv@student.hcmue.edu.vn).
                 @elseif ($identity_type === 'teacher_advisor')
-                    Chỉ chấp nhận email công vụ HCMUE (@teacher.hcmue.edu.vn hoặc @hcmue.edu.vn).
+                    Chỉ chấp nhận email công vụ HCMUE dạng ten@teacher.hcmue.edu.vn.
                 @elseif ($identity_type === 'alumni')
                     Cho phép sử dụng email cá nhân. Cần cung cấp minh chứng sau.
-                @else
-                    Đăng ký mentor khách mời hiện chỉ áp dụng theo lời mời đặc biệt.
                 @endif
             </p>
         </div>

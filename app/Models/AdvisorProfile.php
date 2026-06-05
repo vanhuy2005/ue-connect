@@ -17,6 +17,8 @@ class AdvisorProfile extends Model
         'title',
         'office_location',
         'advising_areas',
+        'is_academic_advisor',
+        'advised_class_codes',
     ];
 
     /**

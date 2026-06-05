@@ -36,7 +36,7 @@ class DebugUatUsers extends Command
         $this->line('Current Database: '.$dbName);
 
         // 1. Verify Admin User
-        $adminEmail = 'admin@hcmue.edu.vn';
+        $adminEmail = 'admin@teacher.hcmue.edu.vn';
         $admin = User::where('email', $adminEmail)->first();
 
         if ($admin) {
@@ -51,8 +51,8 @@ class DebugUatUsers extends Command
             $this->line('Admin can review_verification: '.$canReview);
 
             // Check password
-            $passwordOk = Hash::check('Password@123', $admin->password) ? 'yes' : 'no';
-            $this->line('Password check (Password@123): '.$passwordOk);
+            $passwordOk = Hash::check('password', $admin->password) ? 'yes' : 'no';
+            $this->line('Password check (password): '.$passwordOk);
         } else {
             $this->error("Admin user '{$adminEmail}' exists: NO");
         }
@@ -60,7 +60,7 @@ class DebugUatUsers extends Command
         $this->line('--------------------------------------------------');
 
         // 2. Verify Student User
-        $studentEmail = 'student.test@hcmue.edu.vn';
+        $studentEmail = 'student.test@student.hcmue.edu.vn';
         $student = User::where('email', $studentEmail)->first();
 
         if ($student) {
@@ -71,8 +71,8 @@ class DebugUatUsers extends Command
             $this->line('Student has roles: '.$hasRoles);
 
             // Check password
-            $passwordOk = Hash::check('Password@123', $student->password) ? 'yes' : 'no';
-            $this->line('Password check (Password@123): '.$passwordOk);
+            $passwordOk = Hash::check('password', $student->password) ? 'yes' : 'no';
+            $this->line('Password check (password): '.$passwordOk);
         } else {
             $this->error("Student user '{$studentEmail}' exists: NO");
         }

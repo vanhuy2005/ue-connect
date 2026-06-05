@@ -1,10 +1,11 @@
 <?php
 
+use App\Enums\AccountStatus;
 use App\Models\User;
-use Livewire\Volt\Component;
-use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Auth;
 use App\Services\AuditLogService;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
+use Livewire\Volt\Component;
 
 new class extends Component {
     public User $user;
@@ -13,11 +14,15 @@ new class extends Component {
 
     public function mount(User $user): void
     {
+        $this->authorize('manage_users');
+
         $this->user = $user;
     }
 
     public function process(): void
     {
+        $this->authorize('manage_users');
+
         $this->validate([
             'reason' => ['required', 'string', 'min:5', 'max:1000'],
             'action' => ['required', 'string'],
@@ -27,7 +32,7 @@ new class extends Component {
             $before = $this->user->toArray();
 
             if ($this->action === 'suspend') {
-                $this->user->account_status = 'suspended';
+                $this->user->account_status = AccountStatus::SUSPENDED;
                 $this->user->account_status_reason = $this->reason;
                 $this->user->save();
 
@@ -42,7 +47,7 @@ new class extends Component {
                     reason: $this->reason
                 );
             } elseif ($this->action === 'ban') {
-                $this->user->account_status = 'banned';
+                $this->user->account_status = AccountStatus::BANNED;
                 $this->user->account_status_reason = $this->reason;
                 $this->user->save();
 
@@ -57,7 +62,7 @@ new class extends Component {
                     reason: $this->reason
                 );
             } elseif ($this->action === 'reactivate') {
-                $this->user->account_status = 'active';
+                $this->user->account_status = AccountStatus::ACTIVE;
                 $this->user->account_status_reason = $this->reason;
                 $this->user->save();
 

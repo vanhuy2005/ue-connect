@@ -5,9 +5,11 @@ namespace Tests\Feature\Concerns;
 use App\Actions\Media\AttachMediaToModelAction;
 use App\Actions\Media\StoreTemporaryMediaAction;
 use App\Enums\AccountStatus;
+use App\Enums\MentorAccessStatus;
 use App\Enums\MentorAvailabilityStatus;
 use App\Enums\MentorRequestStatus;
 use App\Enums\MentorUrgency;
+use App\Models\MentorAccessRequest;
 use App\Models\MentorProfile;
 use App\Models\MentorRequest;
 use App\Models\Profile;
@@ -44,7 +46,7 @@ trait BuildsMentorFixtures
         $role = Role::findOrCreate('admin', 'web');
         $role->givePermissionTo('manage_mentor_access');
 
-        $admin = $this->activeUser('advisor');
+        $admin = $this->activeUser('teacher');
         $admin->assignRole('admin');
 
         return $admin;
@@ -53,6 +55,20 @@ trait BuildsMentorFixtures
     protected function mentorProfile(?User $mentor = null, array $attributes = []): MentorProfile
     {
         $mentor ??= $this->activeUser('alumni');
+        Permission::findOrCreate('mentor_access', 'web');
+        $mentor->givePermissionTo('mentor_access');
+
+        MentorAccessRequest::updateOrCreate(
+            ['user_id' => $mentor->id, 'status' => MentorAccessStatus::Approved],
+            [
+                'requested_role_context' => $mentor->profile?->role_type ?? 'alumni',
+                'motivation' => 'Approved mentor fixture for feature tests.',
+                'policy_agreed' => true,
+                'reviewed_by' => $this->adminUser()->id,
+                'reviewed_at' => now(),
+                'review_reason' => 'Approved fixture mentor access.',
+            ]
+        );
 
         return MentorProfile::create(array_merge([
             'user_id' => $mentor->id,

@@ -3,10 +3,12 @@
 namespace Tests\Feature\Verification;
 
 use App\Enums\AccountStatus;
+use App\Enums\IdentityType;
 use App\Enums\VerificationStatus;
 use App\Models\AcademicProgram;
 use App\Models\Faculty;
 use App\Models\User;
+use Database\Seeders\Reference\AccessControlReferenceSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Storage;
@@ -27,7 +29,7 @@ class VerificationFlowTest extends TestCase
     {
         parent::setUp();
 
-        $this->artisan('db:seed', ['--class' => 'RoleAndPermissionSeeder']);
+        $this->artisan('db:seed', ['--class' => AccessControlReferenceSeeder::class]);
 
         $this->faculty = Faculty::create([
             'name' => 'Khoa Công nghệ Thông tin',
@@ -43,8 +45,9 @@ class VerificationFlowTest extends TestCase
         ]);
 
         $this->user = User::factory()->create([
-            'email' => 'student@hcmue.edu.vn',
+            'email' => 'student@student.hcmue.edu.vn',
             'account_status' => AccountStatus::REGISTERED,
+            'intended_identity_type' => IdentityType::CURRENT_STUDENT,
         ]);
         $this->user->assignRole('student');
     }
@@ -88,6 +91,46 @@ class VerificationFlowTest extends TestCase
             'submitted_student_code' => '48.01.103.001',
             'submitted_faculty_id' => $this->faculty->id,
             'submitted_cohort' => 'K48',
+            'status' => VerificationStatus::PENDING_REVIEW->value,
+        ]);
+    }
+
+    public function test_teacher_verification_role_is_locked_and_accepts_advising_classes(): void
+    {
+        Storage::fake('private');
+
+        $teacher = User::factory()->create([
+            'email' => 'teacher@teacher.hcmue.edu.vn',
+            'account_status' => AccountStatus::REGISTERED,
+            'intended_identity_type' => IdentityType::TEACHER_ADVISOR,
+        ]);
+
+        $file = UploadedFile::fake()->image('staff-card.jpg', 800, 600)->size(1024);
+
+        Volt::actingAs($teacher)
+            ->test('pages.verification.start')
+            ->set('role_requested', 'alumni')
+            ->call('nextStep')
+            ->assertSet('role_requested', 'teacher')
+            ->assertSet('step', 2)
+            ->set('submitted_name', 'Nguyen Thai Nguyen')
+            ->set('submitted_faculty_id', $this->faculty->id)
+            ->set('submitted_position', 'Giảng viên')
+            ->set('submitted_is_academic_advisor', true)
+            ->set('submitted_advised_class_codes', "49.cnttd\n50.CNTTA")
+            ->call('nextStep')
+            ->assertSet('step', 3)
+            ->set('evidence_files', [$file])
+            ->set('evidence_types', ['staff_card'])
+            ->set('evidence_notes', ['Thẻ viên chức'])
+            ->call('submit')
+            ->assertRedirect(route('verification.status'));
+
+        $this->assertDatabaseHas('verification_requests', [
+            'user_id' => $teacher->id,
+            'role_requested' => 'teacher',
+            'submitted_is_academic_advisor' => true,
+            'submitted_advised_class_codes' => "49.CNTTD\n50.CNTTA",
             'status' => VerificationStatus::PENDING_REVIEW->value,
         ]);
     }

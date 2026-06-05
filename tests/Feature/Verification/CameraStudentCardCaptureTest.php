@@ -10,6 +10,7 @@ use App\Models\AcademicProgram;
 use App\Models\EvidenceCaptureSession;
 use App\Models\Faculty;
 use App\Models\User;
+use Database\Seeders\Reference\AccessControlReferenceSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Bus;
 use Illuminate\Support\Facades\Storage;
@@ -30,7 +31,7 @@ class CameraStudentCardCaptureTest extends TestCase
     {
         parent::setUp();
 
-        $this->artisan('db:seed', ['--class' => 'RoleAndPermissionSeeder']);
+        $this->artisan('db:seed', ['--class' => AccessControlReferenceSeeder::class]);
 
         $this->faculty = Faculty::create([
             'name' => 'Khoa Công nghệ Thông tin',
@@ -46,7 +47,7 @@ class CameraStudentCardCaptureTest extends TestCase
         ]);
 
         $this->user = User::factory()->create([
-            'email' => 'student@hcmue.edu.vn',
+            'email' => 'student@student.hcmue.edu.vn',
             'account_status' => AccountStatus::REGISTERED,
         ]);
         $this->user->assignRole('student');
@@ -285,7 +286,7 @@ class CameraStudentCardCaptureTest extends TestCase
         Storage::fake('private');
 
         $userB = User::factory()->create([
-            'email' => 'userb@hcmue.edu.vn',
+            'email' => 'userb@student.hcmue.edu.vn',
             'account_status' => AccountStatus::REGISTERED,
         ]);
         $userB->assignRole('student');

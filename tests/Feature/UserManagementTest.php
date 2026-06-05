@@ -2,8 +2,9 @@
 
 namespace Tests\Feature;
 
+use App\Enums\AccountStatus;
 use App\Models\User;
-use Database\Seeders\RoleAndPermissionSeeder;
+use Database\Seeders\Reference\AccessControlReferenceSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Spatie\Permission\Models\Permission;
 use Spatie\Permission\Models\Role;
@@ -15,13 +16,13 @@ class UserManagementTest extends TestCase
 
     public function test_admin_can_suspend_ban_and_reactivate_user(): void
     {
-        $this->seed(RoleAndPermissionSeeder::class);
+        $this->seed(AccessControlReferenceSeeder::class);
 
         Permission::findOrCreate('manage_users', 'web');
         $adminRole = Role::findOrCreate('admin', 'web');
         $adminRole->givePermissionTo('manage_users');
 
-        $admin = User::factory()->create();
+        $admin = User::factory()->create(['account_status' => AccountStatus::ACTIVE]);
         $admin->assignRole('admin');
 
         $target = User::factory()->create();

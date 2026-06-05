@@ -63,11 +63,11 @@
 
                 <div>
                     <x-ui.label for="reason">Lý do thao tác</x-ui.label>
-                    <textarea id="reason" name="reason" rows="3" class="ue-input block w-full px-3.5 py-3 text-base resize-y mt-1" placeholder="Giải thích vì sao cần cập nhật cài đặt này">{{ old('reason') }}</textarea>
+                    <x-ui.textarea id="reason" name="reason" rows="3" class="mt-1" placeholder="Giải thích vì sao cần cập nhật cài đặt này">{{ old('reason') }}</x-ui.textarea>
                 </div>
 
                 <div class="flex items-center justify-end">
-                    <button class="rounded-lg bg-ue-brand px-4 py-2 font-semibold text-white">Lưu cài đặt</button>
+                    <x-ui.button type="submit">Lưu cài đặt</x-ui.button>
                 </div>
             </form>
         </x-ui.card>
@@ -99,11 +99,11 @@
 
                     <div>
                         <x-ui.label for="snapshot_reason">Lý do tạo snapshot</x-ui.label>
-                        <textarea id="snapshot_reason" name="reason" rows="3" class="ue-input block w-full px-3.5 py-3 text-base resize-y mt-1" placeholder="Vì sao cần lưu snapshot này?">{{ old('reason') }}</textarea>
+                        <x-ui.textarea id="snapshot_reason" name="reason" rows="3" class="mt-1" placeholder="Vì sao cần lưu snapshot này?">{{ old('reason') }}</x-ui.textarea>
                     </div>
 
                     <div class="flex items-center justify-end">
-                        <button class="rounded-lg border border-ue-border px-4 py-2 font-semibold text-ue-text">Tạo snapshot</button>
+                        <x-ui.button type="submit" variant="secondary">Tạo snapshot</x-ui.button>
                     </div>
                 </form>
 
@@ -122,9 +122,9 @@
                                             <p class="text-xs text-ue-text-muted">Khôi phục sẽ ghi đè các thiết lập hiện tại.</p>
                                         </div>
 
-                                        <a class="inline-flex items-center rounded-lg border border-ue-border px-3 py-2 text-sm font-semibold text-ue-text" href="{{ route('admin.system-settings.snapshot.download', ['file' => $snapshot]) }}">
+                                        <x-ui.button href="{{ route('admin.system-settings.snapshot.download', ['file' => $snapshot]) }}" variant="secondary" size="sm">
                                             Tải về
-                                        </a>
+                                        </x-ui.button>
                                     </div>
 
                                     <form method="POST" action="{{ route('admin.system-settings.snapshot.restore') }}" class="mt-4 grid grid-cols-1 gap-3">
@@ -132,10 +132,10 @@
                                         <input type="hidden" name="snapshot" value="{{ $snapshot }}" />
                                         <div>
                                             <x-ui.label for="reason_{{ $loop->index }}">Lý do khôi phục</x-ui.label>
-                                            <textarea id="reason_{{ $loop->index }}" name="reason" rows="2" class="ue-input block w-full px-3.5 py-3 text-base resize-y mt-1" placeholder="Giải thích vì sao cần khôi phục snapshot này"></textarea>
+                                            <x-ui.textarea id="reason_{{ $loop->index }}" name="reason" rows="2" class="mt-1" placeholder="Giải thích vì sao cần khôi phục snapshot này"></x-ui.textarea>
                                         </div>
                                         <div class="flex justify-end">
-                                            <button class="rounded-lg bg-amber-500 px-4 py-2 font-semibold text-white">Khôi phục</button>
+                                            <x-ui.button type="submit" variant="danger">Khôi phục</x-ui.button>
                                         </div>
                                     </form>
                                 </div>

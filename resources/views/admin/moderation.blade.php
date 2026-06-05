@@ -11,7 +11,7 @@
             <x-ui.card variant="admin">
                 <p class="text-xs font-semibold text-ue-text-muted uppercase">Báo cáo chờ xử lý</p>
                 <p class="mt-2 text-3xl font-bold text-ue-text">{{ $pendingReports }}</p>
-                <a href="{{ route('admin.reports.index') }}" class="mt-4 inline-flex items-center gap-1 text-sm font-semibold text-ue-brand hover:underline">
+                <a href="{{ route('admin.reports.index') }}" class="mt-4 inline-flex items-center gap-1 text-sm font-semibold text-ue-brand-active hover:underline">
                     Mở hàng đợi
                     <x-ui.icon name="arrow-right" size="xs" />
                 </a>
@@ -20,7 +20,7 @@
             <x-ui.card variant="admin">
                 <p class="text-xs font-semibold text-ue-text-muted uppercase">Xác thực chờ duyệt</p>
                 <p class="mt-2 text-3xl font-bold text-ue-text">{{ $pendingVerifications }}</p>
-                <a href="{{ route('admin.verifications.queue') }}" class="mt-4 inline-flex items-center gap-1 text-sm font-semibold text-ue-brand hover:underline">
+                <a href="{{ route('admin.verifications.queue') }}" class="mt-4 inline-flex items-center gap-1 text-sm font-semibold text-ue-brand-active hover:underline">
                     Mở hàng đợi
                     <x-ui.icon name="arrow-right" size="xs" />
                 </a>
@@ -29,7 +29,7 @@
             <x-ui.card variant="admin">
                 <p class="text-xs font-semibold text-ue-text-muted uppercase">Tài khoản bị khóa</p>
                 <p class="mt-2 text-3xl font-bold text-ue-text">{{ $suspendedUsers }}</p>
-                <a href="{{ route('admin.users.index') }}" class="mt-4 inline-flex items-center gap-1 text-sm font-semibold text-ue-brand hover:underline">
+                <a href="{{ route('admin.users.index') }}" class="mt-4 inline-flex items-center gap-1 text-sm font-semibold text-ue-brand-active hover:underline">
                     Xem người dùng
                     <x-ui.icon name="arrow-right" size="xs" />
                 </a>

@@ -2,8 +2,9 @@
 
 namespace Tests\Feature;
 
+use App\Enums\AccountStatus;
 use App\Models\User;
-use Database\Seeders\RoleAndPermissionSeeder;
+use Database\Seeders\Reference\AccessControlReferenceSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Route;
 use Tests\TestCase;
@@ -15,7 +16,7 @@ class AdminRouteSmokeTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
-        $this->seed(RoleAndPermissionSeeder::class);
+        $this->seed(AccessControlReferenceSeeder::class);
     }
 
     public function test_named_admin_routes_exist()
@@ -41,7 +42,7 @@ class AdminRouteSmokeTest extends TestCase
 
     public function test_admin_can_access_get_admin_pages()
     {
-        $admin = User::factory()->create();
+        $admin = User::factory()->create(['account_status' => AccountStatus::ACTIVE]);
         $admin->assignRole('admin');
 
         $response = $this->actingAs($admin)->get(route('admin.dashboard'));

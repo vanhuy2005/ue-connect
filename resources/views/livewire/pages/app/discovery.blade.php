@@ -20,7 +20,7 @@ new #[Layout('layouts.app')] class extends Component
 
     public string $search = '';
 
-    public string $roleFilter = 'all'; // all, student, advisor, alumni
+    public string $roleFilter = 'all'; // all, student, teacher, alumni
 
     // Greeting modal state
     public bool $showGreetingModal = false;
@@ -201,7 +201,7 @@ new #[Layout('layouts.app')] class extends Component
             $myFacultyId = $myProfile->studentProfile->faculty_id;
         } elseif ($myProfile->role_type === 'alumni' && $myProfile->alumniProfile) {
             $myFacultyId = $myProfile->alumniProfile->faculty_id;
-        } elseif ($myProfile->role_type === 'advisor' && $myProfile->advisorProfile) {
+        } elseif (in_array($myProfile->role_type, ['teacher', 'advisor'], true) && $myProfile->advisorProfile) {
             $myFacultyId = $myProfile->advisorProfile->faculty_id;
         }
 
@@ -209,13 +209,13 @@ new #[Layout('layouts.app')] class extends Component
             $targetFacultyId = $targetProfile->studentProfile->faculty_id;
         } elseif ($targetProfile->role_type === 'alumni' && $targetProfile->alumniProfile) {
             $targetFacultyId = $targetProfile->alumniProfile->faculty_id;
-        } elseif ($targetProfile->role_type === 'advisor' && $targetProfile->advisorProfile) {
+        } elseif (in_array($targetProfile->role_type, ['teacher', 'advisor'], true) && $targetProfile->advisorProfile) {
             $targetFacultyId = $targetProfile->advisorProfile->faculty_id;
         }
 
         if ($myFacultyId && $targetFacultyId && $myFacultyId === $targetFacultyId) {
-            if ($targetProfile->role_type === 'advisor') {
-                $shared[] = 'Cố vấn cùng khoa';
+            if (in_array($targetProfile->role_type, ['teacher', 'advisor'], true)) {
+                $shared[] = 'Giảng viên cùng khoa';
             } elseif ($targetProfile->role_type === 'alumni') {
                 $shared[] = 'Cựu sinh viên cùng khoa';
             } else {
@@ -523,28 +523,28 @@ new #[Layout('layouts.app')] class extends Component
                         <button
                             type="button"
                             wire:click="$set('roleFilter', 'all')"
-                            class="px-3 py-1.5 rounded-lg text-xxs font-bold transition-all {{ $roleFilter === 'all' ? 'bg-ue-brand-soft text-ue-brand border border-ue-brand-border shadow-3xs' : 'bg-slate-50 text-slate-500 hover:bg-slate-100 border border-transparent' }}"
+                            class="px-3 py-1.5 rounded-lg text-xxs font-bold transition-all shrink-0 whitespace-nowrap {{ $roleFilter === 'all' ? 'bg-ue-brand-soft text-ue-brand border border-ue-brand-border shadow-3xs' : 'bg-slate-50 text-slate-500 hover:bg-slate-100 border border-transparent' }}"
                         >
                             Tất cả
                         </button>
                         <button
                             type="button"
                             wire:click="$set('roleFilter', 'student')"
-                            class="px-3 py-1.5 rounded-lg text-xxs font-bold transition-all {{ $roleFilter === 'student' ? 'bg-ue-brand-soft text-ue-brand border border-ue-brand-border shadow-3xs' : 'bg-slate-50 text-slate-500 hover:bg-slate-100 border border-transparent' }}"
+                            class="px-3 py-1.5 rounded-lg text-xxs font-bold transition-all shrink-0 whitespace-nowrap {{ $roleFilter === 'student' ? 'bg-ue-brand-soft text-ue-brand border border-ue-brand-border shadow-3xs' : 'bg-slate-50 text-slate-500 hover:bg-slate-100 border border-transparent' }}"
                         >
                             Sinh viên
                         </button>
                         <button
                             type="button"
-                            wire:click="$set('roleFilter', 'advisor')"
-                            class="px-3 py-1.5 rounded-lg text-xxs font-bold transition-all {{ $roleFilter === 'advisor' ? 'bg-ue-brand-soft text-ue-brand border border-ue-brand-border shadow-3xs' : 'bg-slate-50 text-slate-500 hover:bg-slate-100 border border-transparent' }}"
+                            wire:click="$set('roleFilter', 'teacher')"
+                            class="px-3 py-1.5 rounded-lg text-xxs font-bold transition-all shrink-0 whitespace-nowrap {{ $roleFilter === 'teacher' ? 'bg-ue-brand-soft text-ue-brand border border-ue-brand-border shadow-3xs' : 'bg-slate-50 text-slate-500 hover:bg-slate-100 border border-transparent' }}"
                         >
-                            Mentor / Giảng viên
+                            Giảng viên
                         </button>
                         <button
                             type="button"
                             wire:click="$set('roleFilter', 'alumni')"
-                            class="px-3 py-1.5 rounded-lg text-xxs font-bold transition-all {{ $roleFilter === 'alumni' ? 'bg-ue-brand-soft text-ue-brand border border-ue-brand-border shadow-3xs' : 'bg-slate-50 text-slate-500 hover:bg-slate-100 border border-transparent' }}"
+                            class="px-3 py-1.5 rounded-lg text-xxs font-bold transition-all shrink-0 whitespace-nowrap {{ $roleFilter === 'alumni' ? 'bg-ue-brand-soft text-ue-brand border border-ue-brand-border shadow-3xs' : 'bg-slate-50 text-slate-500 hover:bg-slate-100 border border-transparent' }}"
                         >
                             Cựu sinh viên
                         </button>
@@ -580,7 +580,7 @@ new #[Layout('layouts.app')] class extends Component
                                             </a>
                                             <p class="text-[10px] text-slate-400 font-bold tracking-wide uppercase mt-0.5">
                                                 @if ($profile->role_type === 'student') Sinh viên
-                                                @elseif ($profile->role_type === 'advisor') Mentor/Giảng viên
+                                                @elseif (in_array($profile->role_type, ['teacher', 'advisor'], true)) Giảng viên
                                                 @elseif ($profile->role_type === 'alumni') Cựu sinh viên
                                                 @else Thành viên
                                                 @endif
