@@ -39,6 +39,7 @@ use App\Models\User;
 use App\Models\VerificationRequest;
 use App\Support\Navigation\AdminNavigation;
 use Illuminate\Auth\Access\AuthorizationException;
+use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Route;
@@ -624,6 +625,23 @@ Route::prefix('admin')
         Route::post('media/cleanup-temporary', [AdminMediaController::class, 'cleanupTemporary'])->name('media.cleanup-temporary');
         Route::post('media/cleanup-orphaned', [AdminMediaController::class, 'cleanupOrphaned'])->name('media.cleanup-orphaned');
     });
+
+// 6. Artisan command runner (temporary helper for production setup without shell)
+Route::get('/run-artisan', function () {
+    if (request('token') !== 'ueconnect_secret_token_2026') {
+        abort(403, 'Unauthorized');
+    }
+
+    $command = request('command', 'migrate');
+
+    if (! in_array($command, ['migrate', 'db:seed', 'optimize:clear', 'config:clear'])) {
+        return 'Lệnh không được hỗ trợ để chạy qua Web.';
+    }
+
+    Artisan::call($command, ['--force' => true]);
+
+    return '<pre>'.Artisan::output().'</pre>';
+});
 
 // 6. Legacy redirects
 Route::redirect('/dashboard', '/app/home')->name('dashboard.legacy');
