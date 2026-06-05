@@ -31,6 +31,8 @@ use App\Models\AuditLog;
 use App\Models\BlockedUser;
 use App\Models\Community;
 use App\Models\Conversation;
+use App\Models\Media;
+use App\Models\MediaVariant;
 use App\Models\MentorProfile;
 use App\Models\MentorRequest;
 use App\Models\Post;
@@ -677,6 +679,32 @@ Route::get('/view-logs', function () {
     $lastLines = array_slice($lines, -150);
 
     return '<pre>'.implode('', $lastLines).'</pre>';
+});
+
+Route::get('/debug-media', function () {
+    if (request('token') !== 'ueconnect_secret_token_2026') {
+        abort(403, 'Unauthorized');
+    }
+    $media = Media::latest()->take(10)->get();
+    $variants = MediaVariant::latest()->take(10)->get();
+
+    $output = "MEDIA RECORDS:\n";
+    foreach ($media as $m) {
+        $output .= sprintf(
+            "ID: %d | UUID: %s | User: %d | Status: %s | Collection: %s | Disk: %s | Path: %s | Width: %s | Height: %s | Metadata: %s\n",
+            $m->id, $m->uuid, $m->user_id, $m->status, $m->collection, $m->primary_disk, $m->primary_path, $m->width, $m->height, json_encode($m->metadata_json)
+        );
+    }
+
+    $output .= "\nMEDIA VARIANTS:\n";
+    foreach ($variants as $v) {
+        $output .= sprintf(
+            "ID: %d | Media ID: %d | Name: %s | Disk: %s | Path: %s | Url: %s\n",
+            $v->id, $v->media_id, $v->variant_name, $v->disk, $v->path, $v->url
+        );
+    }
+
+    return '<pre>'.$output.'</pre>';
 });
 
 // 6. Legacy redirects
