@@ -49,5 +49,5 @@ return [
     /**
      * Eligible role types that can apply for mentor access.
      */
-    'eligible_role_contexts' => ['alumni', 'advisor'],
+    'eligible_role_contexts' => ['alumni', 'teacher'],
 ];

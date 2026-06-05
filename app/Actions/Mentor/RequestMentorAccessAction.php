@@ -21,8 +21,8 @@ class RequestMentorAccessAction
             return ['alumni' => 'Cựu sinh viên'];
         }
 
-        if ($roleType === 'advisor' && in_array('advisor', config('mentor.eligible_role_contexts', []), true)) {
-            return ['advisor' => 'Cố vấn / giảng viên'];
+        if ($roleType === 'teacher' && in_array('teacher', config('mentor.eligible_role_contexts', []), true)) {
+            return ['teacher' => 'Giảng viên'];
         }
 
         if ($roleType === 'student' && config('mentor.enable_student_exceptional_mentors')) {

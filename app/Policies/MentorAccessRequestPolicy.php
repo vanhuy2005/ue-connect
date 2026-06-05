@@ -9,7 +9,7 @@ use App\Models\User;
 class MentorAccessRequestPolicy
 {
     /**
-     * Alumni or advisor (or exceptional student with config enabled) can apply.
+     * Alumni or teacher (or exceptional student with config enabled) can apply.
      */
     public function create(User $user): bool
     {

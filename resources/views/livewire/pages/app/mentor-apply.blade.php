@@ -566,7 +566,7 @@ new class extends Component {
                                         </span>
                                         <p class="text-[9px] text-slate-400 font-semibold tracking-wide uppercase mt-0.5">
                                             @if ($requested_role_context === 'alumni') Cựu sinh viên
-                                            @elseif ($requested_role_context === 'advisor') Mentor/Giảng viên
+                                            @elseif ($requested_role_context === 'teacher') Giảng viên
                                             @elseif ($requested_role_context === 'exceptional_student') Sinh viên nổi bật
                                             @else Mentor thành viên
                                             @endif

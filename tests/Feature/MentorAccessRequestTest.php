@@ -83,7 +83,7 @@ class MentorAccessRequestTest extends TestCase
         $alumni = $this->activeUser('alumni');
 
         $response = $this->actingAs($alumni)->from(route('mentor.apply'))->post(route('mentor.apply.store'), [
-            'requested_role_context' => 'advisor',
+            'requested_role_context' => 'teacher',
             'motivation' => 'I want to help students prepare for internships and early career choices.',
             'experience_summary' => 'Five years in student career support.',
             'expertise_topics' => ['career', 'cv'],
