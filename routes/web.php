@@ -665,6 +665,20 @@ Route::get('/run-artisan', function () {
     }
 });
 
+Route::get('/view-logs', function () {
+    if (request('token') !== 'ueconnect_secret_token_2026') {
+        abort(403, 'Unauthorized');
+    }
+    $logPath = storage_path('logs/laravel.log');
+    if (! file_exists($logPath)) {
+        return 'Log file not found at: '.$logPath;
+    }
+    $lines = file($logPath);
+    $lastLines = array_slice($lines, -150);
+
+    return '<pre>'.implode('', $lastLines).'</pre>';
+});
+
 // 6. Legacy redirects
 Route::redirect('/dashboard', '/app/home')->name('dashboard.legacy');
 Route::redirect('/verification', '/verification/status')->name('verification.legacy');
