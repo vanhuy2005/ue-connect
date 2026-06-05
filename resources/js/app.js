@@ -5,5 +5,4 @@
  */
 
 import "./identity-camera-upload";
-import "./echo";
 import "./ui";

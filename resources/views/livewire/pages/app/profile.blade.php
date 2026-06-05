@@ -4,6 +4,7 @@ use App\Models\User;
 use App\Models\Profile;
 use App\Models\Connection;
 use App\Models\BlockedUser;
+use App\Models\Media;
 use App\Enums\ConnectionStatus;
 use App\Actions\Connections\SendGreeting;
 use App\Actions\Connections\BlockUser;
@@ -45,7 +46,7 @@ new class extends Component
             $profile->restore();
         }
         
-        $this->user->load(['profile.media', 'profile.studentProfile.faculty', 'profile.studentProfile.academicProgram', 'profile.alumniProfile', 'profile.advisorProfile']);
+        $this->user->load(['profile.media.variants', 'profile.studentProfile.faculty', 'profile.studentProfile.academicProgram', 'profile.alumniProfile', 'profile.advisorProfile']);
     }
 
     /**
@@ -99,7 +100,7 @@ new class extends Component
             // Attach to the Profile
             $attachAction->execute(Auth::user(), $this->user->profile, [$media->id], 'avatar');
 
-            $this->user->load('profile.media');
+            $this->user->load('profile.media.variants');
             $this->feedbackMessage = 'Cập nhật ảnh đại diện thành công.';
         } catch (\Exception $e) {
             $this->feedbackMessage = 'Lỗi tải ảnh lên: ' . $e->getMessage();
@@ -138,7 +139,7 @@ new class extends Component
             // Attach to the Profile
             $attachAction->execute(Auth::user(), $this->user->profile, [$media->id], 'profile_cover');
 
-            $this->user->load('profile.media');
+            $this->user->load('profile.media.variants');
             $this->feedbackMessage = 'Cập nhật ảnh bìa thành công.';
         } catch (\Exception $e) {
             $this->feedbackMessage = 'Lỗi tải ảnh lên: ' . $e->getMessage();
@@ -261,10 +262,14 @@ new class extends Component
      */
     public function getAvatarUrlProperty(): string
     {
-        $media = $this->user->profile->avatar()->first();
+        $media = $this->user->profile->relationLoaded('media')
+            ? $this->user->profile->media->firstWhere('collection', 'avatar')
+            : $this->user->profile->avatar()->with('variants')->first();
+
         if ($media) {
             return app(GenerateMediaUrlAction::class)->execute($media, 'display', Auth::user()) ?: asset('images/default-avatar.svg');
         }
+
         return asset('images/default-avatar.svg');
     }
 
@@ -273,11 +278,58 @@ new class extends Component
      */
     public function getCoverUrlProperty(): ?string
     {
-        $media = $this->user->profile->cover()->first();
+        $media = $this->user->profile->relationLoaded('media')
+            ? $this->user->profile->media->firstWhere('collection', 'profile_cover')
+            : $this->user->profile->cover()->with('variants')->first();
+
         if ($media) {
             return app(GenerateMediaUrlAction::class)->execute($media, 'desktop', Auth::user());
         }
+
         return null;
+    }
+
+    public function with(): array
+    {
+        $profilePosts = collect();
+        $profileComments = collect();
+        $profileMedia = collect();
+        $savedPosts = collect();
+
+        if ($this->activeTab === 'posts') {
+            $profilePosts = $this->user->posts()
+                ->with('media.variants')
+                ->latest()
+                ->take(10)
+                ->get();
+        } elseif ($this->activeTab === 'replies') {
+            $profileComments = $this->user->comments()
+                ->with('post.user')
+                ->latest()
+                ->take(10)
+                ->get();
+        } elseif ($this->activeTab === 'media') {
+            $profileMedia = Media::query()
+                ->with('variants')
+                ->where('user_id', $this->user->id)
+                ->where('collection', 'post_image')
+                ->where('status', 'ready')
+                ->latest()
+                ->get();
+        } elseif ($this->activeTab === 'saved' && $this->user->id === Auth::id()) {
+            $savedPosts = $this->user->postSaves()
+                ->with(['post.user.profile', 'post.media.variants'])
+                ->latest()
+                ->take(10)
+                ->get();
+        }
+
+        return [
+            'profilePosts' => $profilePosts,
+            'profileComments' => $profileComments,
+            'profileMedia' => $profileMedia,
+            'savedPosts' => $savedPosts,
+        ];
     }
 }; ?>
 
@@ -571,7 +623,7 @@ new class extends Component
             <div>
                 @if ($activeTab === 'posts')
                     <div class="space-y-4">
-                        @forelse ($user->posts()->latest()->take(10)->get() as $post)
+                        @forelse ($profilePosts as $post)
                             <div class="bg-white border border-slate-150 rounded-2xl p-4 shadow-2xs">
                                 <div class="flex items-center gap-3">
                                     <x-ui.avatar :user="$user" size="sm" />
@@ -583,9 +635,14 @@ new class extends Component
                                 <p class="text-xxs font-medium text-slate-655 leading-relaxed mt-2.5">{{ $post->body }}</p>
 
                                 {{-- Render post image grid polymorphically if active --}}
-                                @if ($post->media()->where('status', 'ready')->exists())
+                                @php
+                                    $postMedia = $post->relationLoaded('media')
+                                        ? $post->media->where('status', 'ready')->values()
+                                        : collect();
+                                @endphp
+                                @if ($postMedia->isNotEmpty())
                                     <div class="mt-3 grid grid-cols-2 gap-2 rounded-xl overflow-hidden border border-slate-100">
-                                        @foreach ($post->media()->where('status', 'ready')->get() as $mediaItem)
+                                        @foreach ($postMedia as $mediaItem)
                                             <a href="{{ app(GenerateMediaUrlAction::class)->execute($mediaItem, 'detail', Auth::user()) ?? app(GenerateMediaUrlAction::class)->execute($mediaItem, 'original', Auth::user()) }}" target="_blank" rel="noopener noreferrer" class="aspect-square bg-slate-50 flex items-center justify-center overflow-hidden">
                                                 <img src="{{ app(GenerateMediaUrlAction::class)->execute($mediaItem, 'feed', Auth::user()) }}" alt="Post image" class="object-cover w-full h-full cursor-zoom-in" />
                                             </a>
@@ -610,7 +667,7 @@ new class extends Component
 
                 @elseif ($activeTab === 'replies')
                     <div class="space-y-4">
-                        @forelse ($user->comments()->latest()->take(10)->get() as $comment)
+                        @forelse ($profileComments as $comment)
                             <div class="bg-white border border-slate-150 rounded-2xl p-4 shadow-2xs space-y-2">
                                 <div class="flex items-center gap-2 text-slate-400 text-[10px] font-medium">
                                     <x-ui.icon name="corner-down-right" size="xs" />
@@ -629,17 +686,9 @@ new class extends Component
                     </div>
 
                 @elseif ($activeTab === 'media')
-                    {{-- Load polymorphic post media --}}
-                    @php
-                        $polymorphicMedia = \App\Models\Media::where('user_id', $user->id)
-                            ->where('collection', 'post_image')
-                            ->where('status', 'ready')
-                            ->latest()
-                            ->get();
-                    @endphp
-                    @if ($polymorphicMedia->isNotEmpty())
+                    @if ($profileMedia->isNotEmpty())
                         <div class="grid grid-cols-3 gap-2">
-                            @foreach ($polymorphicMedia as $mediaItem)
+                            @foreach ($profileMedia as $mediaItem)
                                 <div class="aspect-square bg-slate-100 border border-slate-150 rounded-xl overflow-hidden group relative flex items-center justify-center">
                                     <img src="{{ app(GenerateMediaUrlAction::class)->execute($mediaItem, 'thumb', Auth::user()) }}" alt="Grid image" class="object-cover w-full h-full group-hover:scale-105 transition-transform duration-300" />
                                 </div>
@@ -662,7 +711,7 @@ new class extends Component
 
                 @elseif ($activeTab === 'saved' && $user->id === Auth::id())
                     <div class="space-y-4">
-                        @forelse ($user->postSaves()->with('post.user.profile')->latest()->take(10)->get() as $saved)
+                        @forelse ($savedPosts as $saved)
                             @if ($saved->post)
                                 <div class="bg-white border border-slate-150 rounded-2xl p-4 shadow-2xs">
                                     <div class="flex items-center gap-3">

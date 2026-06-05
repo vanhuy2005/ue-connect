@@ -589,9 +589,8 @@ new #[Layout('layouts.app')] class extends Component
             })
             ->with([
                 'participants.user.profile',
-                'messages' => function($q) {
-                    $q->orderBy('created_at', 'desc');
-                },
+                'lastMessage',
+                'latestMessage',
                 'conversationUserSettings' => function($q) use ($userId) {
                     $q->where('user_id', $userId);
                 }
@@ -607,15 +606,10 @@ new #[Layout('layouts.app')] class extends Component
                 $deletedAt = $settings ? $settings->deleted_at : null;
                 $nickname = ($settings && $settings->nickname) ? $settings->nickname : null;
 
-                // Get messages after local soft delete timestamp if set
-                $messagesQuery = $convo->messages;
-                if ($deletedAt) {
-                    $messagesQuery = $messagesQuery->filter(function ($msg) use ($deletedAt) {
-                        return $msg->created_at->gt($deletedAt);
-                    });
+                $lastMsg = $convo->lastMessage ?: $convo->latestMessage;
+                if ($deletedAt && $lastMsg && ! $lastMsg->created_at->gt($deletedAt)) {
+                    $lastMsg = null;
                 }
-
-                $lastMsg = $messagesQuery->sortByDesc('created_at')->first();
 
                 // Hide locally soft-deleted conversation if no new messages received since deletion, unless it is currently selected
                 if ($deletedAt && !$lastMsg && $convo->id !== $this->selectedConversationId) {
@@ -680,7 +674,7 @@ new #[Layout('layouts.app')] class extends Component
 
             $messagesQuery = Message::where('conversation_id', $this->selectedConversationId)
                 ->withTrashed()
-                ->with(['sender.profile', 'sharedPost.user', 'replyTo', 'media']);
+                ->with(['sender.profile', 'sharedPost.user.profile', 'replyTo.sender', 'media.variants']);
 
             if ($deletedAt) {
                 $messagesQuery->where('created_at', '>', $deletedAt);
@@ -744,6 +738,10 @@ new #[Layout('layouts.app')] class extends Component
     }
 }; ?>
 
+@push('scripts')
+    @vite('resources/js/realtime.js')
+@endpush
+
 <div class="h-[calc(100dvh-64px)] lg:h-dvh flex overflow-hidden bg-slate-50 relative">
     {{-- Feedback Message Toast --}}
     @if ($feedbackMessage)
@@ -768,7 +766,7 @@ new #[Layout('layouts.app')] class extends Component
     @endif
 
     {{-- Left Pane: Conversation List --}}
-    <div class="w-full lg:w-80 border-r border-slate-150 bg-white flex flex-col flex-shrink-0 {{ $selectedConversationId ? 'hidden lg:flex' : 'flex' }}" wire:poll.30s>
+    <div class="w-full lg:w-80 border-r border-slate-150 bg-white flex flex-col flex-shrink-0 {{ $selectedConversationId ? 'hidden lg:flex' : 'flex' }}" wire:poll.visible.60s>
         {{-- Header --}}
         <div class="p-4 border-b border-slate-100 flex items-center justify-between flex-shrink-0">
             <h1 class="text-sm font-bold text-slate-800 tracking-tight">Hộp thư</h1>
@@ -1042,7 +1040,7 @@ new #[Layout('layouts.app')] class extends Component
             @endif
 
             {{-- Message Thread Bubble Container --}}
-            <div class="flex-1 overflow-y-auto p-4 space-y-4 flex flex-col" wire:poll.10s>
+            <div class="flex-1 overflow-y-auto p-4 space-y-4 flex flex-col" wire:poll.visible.20s>
                 <div class="text-center py-6">
                     <x-ui.icon name="shield-alert" size="md" class="text-slate-300 mx-auto" />
                     <p class="text-[10px] text-slate-400 font-medium max-w-xs mx-auto mt-2 leading-relaxed">

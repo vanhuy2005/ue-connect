@@ -17,6 +17,7 @@ use App\Models\PostSave;
 use App\Models\User;
 use App\Models\Connection;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Gate;
 use Livewire\Attributes\Layout;
 use Livewire\Volt\Component;
 use Livewire\WithPagination;
@@ -93,7 +94,7 @@ new #[Layout('layouts.app')] class extends Component
     {
         $post = Post::findOrFail($postId);
         
-        if (! Auth::user()->can('update', $post)) {
+        if (! Gate::allows('update', $post)) {
             $this->feedbackMessage = 'Bạn không có quyền chỉnh sửa bài viết này.';
             return;
         }
@@ -280,7 +281,7 @@ new #[Layout('layouts.app')] class extends Component
     {
         $post = Post::findOrFail($postId);
         
-        if (! Auth::user()->can('share', $post)) {
+        if (! Gate::allows('share', $post)) {
             $this->feedbackMessage = 'Bạn không có quyền chia sẻ bài viết này.';
             return;
         }
@@ -362,7 +363,7 @@ new #[Layout('layouts.app')] class extends Component
         $user = Auth::user();
 
         // Get saved posts (latest saved first, filtering out hidden/deleted and user-hidden posts, except those hidden in current session)
-        $saves = PostSave::with(['post.user.profile', 'post.comments', 'post.likes', 'post.saves'])
+        $saves = PostSave::with(['post.user.profile', 'post.comments', 'post.likes', 'post.saves', 'post.media.variants'])
             ->where('user_id', $user->id)
             ->whereHas('post', function ($query) use ($user) {
                 $query->whereIn('status', [PostStatus::PUBLISHED, PostStatus::EDITED])

@@ -28,7 +28,8 @@ class GenerateMediaUrlAction
 
         // 3. If we are looking for a specific variant on a primary Media object
         if ($media instanceof Media && ! empty($variant) && $variant !== 'original') {
-            $variantModel = $media->variants()->where('variant_name', $variant)->first();
+            $variantModel = $media->variant($variant);
+
             if ($variantModel) {
                 return $this->resolveUrlForAsset($variantModel, $parentMedia);
             }

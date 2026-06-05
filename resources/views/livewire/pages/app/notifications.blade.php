@@ -106,7 +106,11 @@ new #[Layout('layouts.app')] class extends Component
     }
 }; ?>
 
-<div wire:poll.15s class="py-6 px-4 max-w-4xl mx-auto space-y-6">
+@push('scripts')
+    @vite('resources/js/realtime.js')
+@endpush
+
+<div wire:poll.visible.30s class="py-6 px-4 max-w-4xl mx-auto space-y-6">
     {{-- Header --}}
     <div class="flex flex-col gap-1.5 border-b border-slate-100 pb-4">
         <h1 class="text-xl font-bold text-slate-800 tracking-tight">Hoạt động</h1>

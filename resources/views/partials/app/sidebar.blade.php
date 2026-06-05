@@ -8,6 +8,7 @@
 
 @php
 $currentUser = auth()->user();
+$navigationMetrics = app(\App\Support\Navigation\UserNavigationMetrics::class)->forUser($currentUser);
 $adminRoles = ['admin'];
 $adminPermissions = [
     'view_admin_dashboard',
@@ -20,18 +21,8 @@ $isAdmin = $currentUser && (
     || $currentUser->permissions()->whereIn('name', $adminPermissions)->exists()
 );
 
-$unreadNotificationsCount = $currentUser ? $currentUser->unreadNotifications()->count() : 0;
-$unreadMessagesCount = $currentUser ? \App\Models\ConversationParticipant::where('user_id', $currentUser->id)
-    ->where(function ($q) {
-        $q->whereNull('last_read_at')
-            ->orWhereHas('conversation', function ($q2) {
-                $q2->whereColumn('last_message_at', '>', 'conversation_participants.last_read_at');
-            });
-    })
-    ->whereHas('conversation', function ($q3) {
-        $q3->whereNotNull('last_message_at');
-    })
-    ->count() : 0;
+$unreadNotificationsCount = $navigationMetrics['unread_notifications'];
+$unreadMessagesCount = $navigationMetrics['unread_messages'];
 
 $primaryNav = [
     [

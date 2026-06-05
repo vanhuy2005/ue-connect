@@ -177,7 +177,7 @@ new class extends Component
         return Post::where('scope_type', 'community')
             ->whereIn('scope_id', $joinedIds)
             ->whereIn('status', [PostStatus::PUBLISHED->value, PostStatus::EDITED->value])
-            ->with(['author.profile', 'mediaFiles', 'reactions', 'comments'])
+            ->with(['user.profile', 'comments', 'likes', 'saves', 'media.variants'])
             ->latest('published_at')
             ->paginate(10, pageName: 'feedPage');
     }

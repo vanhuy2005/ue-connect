@@ -77,7 +77,7 @@ new #[Layout('layouts.app')] class extends Component
     public function mount(Post $post): void
     {
         Gate::authorize('view', $post);
-        $this->post = $post;
+        $this->post = $post->loadMissing(['user.profile', 'likes', 'saves', 'media.variants']);
     }
 
     /**
@@ -171,7 +171,7 @@ new #[Layout('layouts.app')] class extends Component
      */
     public function startPostEdit(): void
     {
-        if (! Auth::user()->can('update', $this->post)) {
+        if (! Gate::allows('update', $this->post)) {
             $this->feedbackMessage = 'Bạn không có quyền chỉnh sửa bài viết này.';
             return;
         }
@@ -243,7 +243,7 @@ new #[Layout('layouts.app')] class extends Component
     {
         $comment = Comment::findOrFail($commentId);
 
-        if (! Auth::user()->can('update', $comment)) {
+        if (! Gate::allows('update', $comment)) {
             $this->feedbackMessage = 'Bạn không có quyền chỉnh sửa bình luận này.';
             return;
         }
@@ -451,7 +451,7 @@ new #[Layout('layouts.app')] class extends Component
     {
         $post = Post::findOrFail($postId);
         
-        if (! Auth::user()->can('share', $post)) {
+        if (! Gate::allows('share', $post)) {
             $this->feedbackMessage = 'Bạn không có quyền chia sẻ bài viết này.';
             return;
         }
@@ -564,6 +564,10 @@ new #[Layout('layouts.app')] class extends Component
                 $likeCount = $post->likes->count();
                 $isOwner = $post->user_id === $currentUser->id;
                 $mediaUrlAction = app(\App\Actions\Media\GenerateMediaUrlAction::class);
+                $mediaItems = $post->relationLoaded('media')
+                    ? $post->media->where('status', 'ready')->values()
+                    : $post->media()->where('status', 'ready')->with('variants')->get();
+                $mediaCount = $mediaItems->count();
             @endphp
 
             <div class="ue-feed-surface">
@@ -707,11 +711,7 @@ new #[Layout('layouts.app')] class extends Component
                                 <div class="ue-post-card__content mt-2 text-slate-800 text-sm sm:text-base whitespace-pre-wrap leading-relaxed">{{ $post->body }}</div>
                                 
                                 {{-- Polymorphic Media Grid --}}
-                                @if ($post->media()->where('status', 'ready')->exists())
-                                    @php
-                                        $mediaItems = $post->media()->where('status', 'ready')->get();
-                                        $mediaCount = $mediaItems->count();
-                                    @endphp
+                                @if ($mediaCount > 0)
                                     <div class="mt-3 max-w-lg select-none">
                                         @if ($mediaCount === 1)
                                             {{-- 1 image: full width, smart ratio --}}

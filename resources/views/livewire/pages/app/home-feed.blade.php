@@ -21,6 +21,7 @@ use App\Models\Post;
 use App\Models\User;
 use App\Models\Connection;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Gate;
 use Livewire\Attributes\Layout;
 use Livewire\Volt\Component;
 use Livewire\WithPagination;
@@ -183,7 +184,7 @@ new #[Layout('layouts.app')] class extends Component
     {
         $post = Post::findOrFail($postId);
         
-        if (! Auth::user()->can('update', $post)) {
+        if (! Gate::allows('update', $post)) {
             $this->feedbackMessage = 'Bạn không có quyền chỉnh sửa bài viết này.';
             return;
         }
@@ -375,7 +376,7 @@ new #[Layout('layouts.app')] class extends Component
     {
         $post = Post::findOrFail($postId);
         
-        if (! Auth::user()->can('share', $post)) {
+        if (! Gate::allows('share', $post)) {
             $this->feedbackMessage = 'Bạn không có quyền chia sẻ bài viết này.';
             return;
         }
@@ -457,7 +458,7 @@ new #[Layout('layouts.app')] class extends Component
         $user = Auth::user();
 
         // Get latest verified active posts (Strictly PUBLISHED and EDITED only, excluding hidden posts, except those hidden in current session)
-        $posts = Post::with(['user.profile', 'comments', 'likes', 'saves'])
+        $posts = Post::with(['user.profile', 'comments', 'likes', 'saves', 'media.variants'])
             ->whereIn('status', [PostStatus::PUBLISHED, PostStatus::EDITED])
             ->where(function ($query) use ($user) {
                 $query->whereDoesntHave('hides', function ($q) use ($user) {

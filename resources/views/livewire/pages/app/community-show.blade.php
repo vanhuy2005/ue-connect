@@ -243,7 +243,7 @@ new class extends Component
     {
         return Post::inCommunity($this->community->id)
             ->where('status', PostStatus::PUBLISHED->value)
-            ->with('author', 'mediaFiles', 'reactions')
+            ->with(['user.profile', 'comments', 'likes', 'saves', 'media.variants'])
             ->latest('published_at')
             ->paginate(15, pageName: 'feedPage');
     }
@@ -896,11 +896,14 @@ new class extends Component
             $shareLink = route('community.show', $this->community->id);
             $messageBody = "Chào {$friend->name}! Mình muốn mời bạn tham gia cộng đồng: {$this->community->name}\nTham gia tại đây: {$shareLink}";
 
-            $conversation->messages()->create([
+            $message = $conversation->messages()->create([
                 'sender_id' => auth()->id(),
                 'body' => $messageBody,
             ]);
-            $conversation->update(['last_message_at' => now()]);
+            $conversation->update([
+                'last_message_id' => $message->id,
+                'last_message_at' => $message->created_at ?? now(),
+            ]);
         }
 
         $this->showInviteModal = false;
@@ -934,11 +937,14 @@ new class extends Component
                 $messageBody .= "\n\nLời nhắn: ".$this->shareOptionalMessage;
             }
 
-            $conversation->messages()->create([
+            $message = $conversation->messages()->create([
                 'sender_id' => auth()->id(),
                 'body' => $messageBody,
             ]);
-            $conversation->update(['last_message_at' => now()]);
+            $conversation->update([
+                'last_message_id' => $message->id,
+                'last_message_at' => $message->created_at ?? now(),
+            ]);
 
             $this->showShareModal = false;
             $this->dispatch('notify', type: 'success', message: 'Đã chia sẻ cộng đồng qua tin nhắn thành công.');

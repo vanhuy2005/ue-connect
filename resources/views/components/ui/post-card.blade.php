@@ -16,6 +16,10 @@
     $isOwner = $post->user_id === $currentUser->id;
     $isAdmin = $currentUser && ($currentUser->can('review_verification') || $currentUser->can('manage_reports'));
     $mediaUrlAction = app(\App\Actions\Media\GenerateMediaUrlAction::class);
+    $mediaItems = $post->relationLoaded('media')
+        ? $post->media->where('status', 'ready')->values()
+        : $post->media()->where('status', 'ready')->with('variants')->get();
+    $mediaCount = $mediaItems->count();
 @endphp
 
 <div
@@ -124,11 +128,7 @@
                 <div class="ue-post-card__content mt-1">{{ $post->body }}</div>
                 
                 {{-- Polymorphic Media Grid --}}
-                @if ($post->media()->where('status', 'ready')->exists())
-                    @php
-                        $mediaItems = $post->media()->where('status', 'ready')->get();
-                        $mediaCount = $mediaItems->count();
-                    @endphp
+                @if ($mediaCount > 0)
                     <div class="mt-2.5 max-w-lg select-none">
                         @if ($mediaCount === 1)
                             {{-- 1 image: full width, smart ratio --}}

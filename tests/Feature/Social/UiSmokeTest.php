@@ -111,6 +111,32 @@ class UiSmokeTest extends TestCase
         $topbar->assertSee('wire:navigate', false);
     }
 
+    public function test_navigation_badges_use_shared_metrics_service(): void
+    {
+        $sidebar = file_get_contents(resource_path('views/partials/app/sidebar.blade.php'));
+        $mobileNav = file_get_contents(resource_path('views/partials/app/mobile-bottom-nav.blade.php'));
+        $metrics = file_get_contents(app_path('Support/Navigation/UserNavigationMetrics.php'));
+
+        $this->assertStringContainsString('UserNavigationMetrics::class', $sidebar);
+        $this->assertStringContainsString('UserNavigationMetrics::class', $mobileNav);
+        $this->assertStringNotContainsString('unreadNotifications()->count()', $sidebar);
+        $this->assertStringNotContainsString('unreadNotifications()->count()', $mobileNav);
+        $this->assertStringContainsString('Cache::remember', $metrics);
+    }
+
+    public function test_realtime_assets_are_not_loaded_globally(): void
+    {
+        $appEntry = file_get_contents(resource_path('js/app.js'));
+        $viteConfig = file_get_contents(base_path('vite.config.js'));
+        $messages = file_get_contents(resource_path('views/livewire/pages/app/messages.blade.php'));
+        $notifications = file_get_contents(resource_path('views/livewire/pages/app/notifications.blade.php'));
+
+        $this->assertStringNotContainsString('import "./echo"', $appEntry);
+        $this->assertStringContainsString('resources/js/realtime.js', $viteConfig);
+        $this->assertStringContainsString("@vite('resources/js/realtime.js')", $messages);
+        $this->assertStringContainsString("@vite('resources/js/realtime.js')", $notifications);
+    }
+
     public function test_list_loading_states_are_bound_to_real_cards_not_fake_skeleton_grids(): void
     {
         $mentorList = file_get_contents(resource_path('views/livewire/pages/app/mentors.blade.php'));
