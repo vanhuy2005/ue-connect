@@ -25,7 +25,7 @@ class MicrosoftSsoTest extends TestCase
         // Enable SSO for tests that need it
         config(['services.microsoft.enabled' => true]);
         config(['services.microsoft.tenant' => 'b1a9fdc0-1d56-4c3d-a481-809fff8a26db']);
-        config(['services.microsoft.allowed_domain' => 'hcmue.edu.vn']);
+        config(['services.microsoft.allowed_domains' => ['student.hcmue.edu.vn', 'teacher.hcmue.edu.vn']]);
     }
 
     /**
@@ -39,7 +39,7 @@ class MicrosoftSsoTest extends TestCase
 
         $mockUser = mock(\Laravel\Socialite\Two\User::class);
         $mockUser->shouldReceive('getId')->andReturn($userAttributes['id'] ?? 'ms-user-test');
-        $mockUser->shouldReceive('getEmail')->andReturn($userAttributes['email'] ?? 'test@hcmue.edu.vn');
+        $mockUser->shouldReceive('getEmail')->andReturn($userAttributes['email'] ?? 'test@student.hcmue.edu.vn');
         $mockUser->shouldReceive('getName')->andReturn($userAttributes['name'] ?? 'Test User');
         $mockUser->user = $microsoftUser;
 
@@ -109,7 +109,7 @@ class MicrosoftSsoTest extends TestCase
 
         $this->mockSocialiteUser([
             'id' => 'ms-user-bad-tenant',
-            'email' => 'student@hcmue.edu.vn',
+            'email' => 'student@student.hcmue.edu.vn',
             'name' => 'Bad Tenant Student',
             'user' => ['tid' => 'wrong-tenant-guid'],
         ]);
@@ -118,7 +118,7 @@ class MicrosoftSsoTest extends TestCase
 
         $response->assertRedirect(route('login'));
         $response->assertSessionHasErrors(['sso']);
-        $this->assertDatabaseMissing('users', ['email' => 'student@hcmue.edu.vn']);
+        $this->assertDatabaseMissing('users', ['email' => 'student@student.hcmue.edu.vn']);
     }
 
     public function test_sso_callback_succeeds_when_tenant_id_matches(): void
@@ -128,7 +128,7 @@ class MicrosoftSsoTest extends TestCase
 
         $this->mockSocialiteUser([
             'id' => 'ms-user-good-tenant',
-            'email' => 'goodtenant@hcmue.edu.vn',
+            'email' => 'goodtenant@student.hcmue.edu.vn',
             'name' => 'Good Tenant Student',
             'user' => ['tid' => $correctTenant],
         ]);
@@ -136,7 +136,7 @@ class MicrosoftSsoTest extends TestCase
         $response = $this->get(route('auth.microsoft.callback'));
 
         $response->assertRedirect();
-        $this->assertDatabaseHas('users', ['email' => 'goodtenant@hcmue.edu.vn']);
+        $this->assertDatabaseHas('users', ['email' => 'goodtenant@student.hcmue.edu.vn']);
     }
 
     public function test_sso_callback_fails_for_tenant_mismatch_with_organizations_tenant(): void
@@ -145,7 +145,7 @@ class MicrosoftSsoTest extends TestCase
 
         $this->mockSocialiteUser([
             'id' => 'ms-user-multi',
-            'email' => 'multi@hcmue.edu.vn',
+            'email' => 'multi@student.hcmue.edu.vn',
             'name' => 'Multi Tenant User',
             'user' => ['tid' => 'any-tenant-id'],
         ]);
@@ -154,7 +154,7 @@ class MicrosoftSsoTest extends TestCase
 
         $response->assertRedirect(route('login'));
         $response->assertSessionHasErrors(['sso']);
-        $this->assertDatabaseMissing('users', ['email' => 'multi@hcmue.edu.vn']);
+        $this->assertDatabaseMissing('users', ['email' => 'multi@student.hcmue.edu.vn']);
     }
 
     // -------------------------------------------------------------------------
@@ -166,7 +166,7 @@ class MicrosoftSsoTest extends TestCase
         try {
             $this->mockSocialiteUser([
                 'id' => 'ms-user-456',
-                'email' => 'newstudent@hcmue.edu.vn',
+                'email' => 'newstudent@student.hcmue.edu.vn',
                 'name' => 'Nguyen Van Student',
             ]);
 
@@ -174,17 +174,17 @@ class MicrosoftSsoTest extends TestCase
 
             $response->assertRedirect(route('verification.status'));
             $this->assertDatabaseHas('users', [
-                'email' => 'newstudent@hcmue.edu.vn',
+                'email' => 'newstudent@student.hcmue.edu.vn',
                 'name' => 'Nguyen Van Student',
                 'account_status' => AccountStatus::REGISTERED->value,
             ]);
 
-            $user = User::where('email', 'newstudent@hcmue.edu.vn')->first();
+            $user = User::where('email', 'newstudent@student.hcmue.edu.vn')->first();
 
             // P0-2: New SSO users must NOT be auto-assigned any role at registration
             $this->assertFalse($user->hasRole('student'));
             $this->assertFalse($user->hasRole('alumni'));
-            $this->assertFalse($user->hasRole('advisor'));
+            $this->assertFalse($user->hasRole('teacher'));
 
             $this->assertDatabaseHas('user_identity_providers', [
                 'user_id' => $user->id,
@@ -205,7 +205,7 @@ class MicrosoftSsoTest extends TestCase
     public function test_sso_callback_authenticates_existing_linked_user(): void
     {
         $user = User::factory()->create([
-            'email' => 'existing@hcmue.edu.vn',
+            'email' => 'existing@student.hcmue.edu.vn',
             'account_status' => AccountStatus::ACTIVE,
         ]);
 
@@ -213,13 +213,13 @@ class MicrosoftSsoTest extends TestCase
             'user_id' => $user->id,
             'provider_name' => 'microsoft',
             'provider_user_id' => 'ms-user-789',
-            'provider_email' => 'existing@hcmue.edu.vn',
+            'provider_email' => 'existing@student.hcmue.edu.vn',
             'linked_at' => now(),
         ]);
 
         $this->mockSocialiteUser([
             'id' => 'ms-user-789',
-            'email' => 'existing@hcmue.edu.vn',
+            'email' => 'existing@student.hcmue.edu.vn',
         ]);
 
         $response = $this->get(route('auth.microsoft.callback'));
@@ -235,7 +235,7 @@ class MicrosoftSsoTest extends TestCase
     public function test_sso_callback_blocks_suspended_user(): void
     {
         $user = User::factory()->create([
-            'email' => 'suspended@hcmue.edu.vn',
+            'email' => 'suspended@student.hcmue.edu.vn',
             'account_status' => AccountStatus::SUSPENDED,
         ]);
 
@@ -243,13 +243,13 @@ class MicrosoftSsoTest extends TestCase
             'user_id' => $user->id,
             'provider_name' => 'microsoft',
             'provider_user_id' => 'ms-suspended',
-            'provider_email' => 'suspended@hcmue.edu.vn',
+            'provider_email' => 'suspended@student.hcmue.edu.vn',
             'linked_at' => now(),
         ]);
 
         $this->mockSocialiteUser([
             'id' => 'ms-suspended',
-            'email' => 'suspended@hcmue.edu.vn',
+            'email' => 'suspended@student.hcmue.edu.vn',
         ]);
 
         $response = $this->get(route('auth.microsoft.callback'));
@@ -262,7 +262,7 @@ class MicrosoftSsoTest extends TestCase
     public function test_sso_callback_blocks_banned_user(): void
     {
         $user = User::factory()->create([
-            'email' => 'banned@hcmue.edu.vn',
+            'email' => 'banned@student.hcmue.edu.vn',
             'account_status' => AccountStatus::BANNED,
         ]);
 
@@ -270,13 +270,13 @@ class MicrosoftSsoTest extends TestCase
             'user_id' => $user->id,
             'provider_name' => 'microsoft',
             'provider_user_id' => 'ms-banned',
-            'provider_email' => 'banned@hcmue.edu.vn',
+            'provider_email' => 'banned@student.hcmue.edu.vn',
             'linked_at' => now(),
         ]);
 
         $this->mockSocialiteUser([
             'id' => 'ms-banned',
-            'email' => 'banned@hcmue.edu.vn',
+            'email' => 'banned@student.hcmue.edu.vn',
         ]);
 
         // MicrosoftAuthController explicitly redirects banned users to account-restricted
@@ -353,7 +353,7 @@ class MicrosoftSsoTest extends TestCase
 
         $this->mockSocialiteUser([
             'id' => 'ms-user-no-tenant-config',
-            'email' => 'student@hcmue.edu.vn',
+            'email' => 'student@student.hcmue.edu.vn',
         ]);
 
         $response = $this->get(route('auth.microsoft.callback'));
@@ -380,7 +380,7 @@ class MicrosoftSsoTest extends TestCase
 
         $this->mockSocialiteUser([
             'id' => 'ms-user-common-config',
-            'email' => 'student@hcmue.edu.vn',
+            'email' => 'student@student.hcmue.edu.vn',
         ]);
 
         $response = $this->get(route('auth.microsoft.callback'));
@@ -403,7 +403,7 @@ class MicrosoftSsoTest extends TestCase
 
         $this->mockSocialiteUser([
             'id' => 'ms-user-common-actual',
-            'email' => 'student@hcmue.edu.vn',
+            'email' => 'student@student.hcmue.edu.vn',
             'user' => ['tid' => 'common'],
         ]);
 
@@ -414,7 +414,7 @@ class MicrosoftSsoTest extends TestCase
 
         $this->mockSocialiteUser([
             'id' => 'ms-user-orgs-actual',
-            'email' => 'student@hcmue.edu.vn',
+            'email' => 'student@student.hcmue.edu.vn',
             'user' => ['tid' => 'organizations'],
         ]);
 
@@ -443,17 +443,17 @@ class MicrosoftSsoTest extends TestCase
 
     public function test_config_parses_microsoft_allowed_domains(): void
     {
-        config(['services.microsoft.allowed_domains' => ['hcmue.edu.vn', 'student.hcmue.edu.vn', 'teacher.hcmue.edu.vn']]);
+        config(['services.microsoft.allowed_domains' => ['student.hcmue.edu.vn', 'teacher.hcmue.edu.vn']]);
 
         $this->assertEquals(
-            ['hcmue.edu.vn', 'student.hcmue.edu.vn', 'teacher.hcmue.edu.vn'],
+            ['student.hcmue.edu.vn', 'teacher.hcmue.edu.vn'],
             config('services.microsoft.allowed_domains')
         );
     }
 
     public function test_sso_callback_accepts_teacher_domain(): void
     {
-        config(['services.microsoft.allowed_domains' => ['hcmue.edu.vn', 'student.hcmue.edu.vn', 'teacher.hcmue.edu.vn']]);
+        config(['services.microsoft.allowed_domains' => ['student.hcmue.edu.vn', 'teacher.hcmue.edu.vn']]);
 
         $this->mockSocialiteUser([
             'id' => 'ms-user-teacher-domain',
@@ -499,7 +499,7 @@ class MicrosoftSsoTest extends TestCase
         Socialite::shouldReceive('driver')->with('microsoft')->andReturn($mockProvider);
 
         config(['services.microsoft.tenant' => 'b1a9fdc0-1d56-4c3d-a481-809fff8a26db']);
-        config(['services.microsoft.allowed_domains' => ['hcmue.edu.vn', 'student.hcmue.edu.vn']]);
+        config(['services.microsoft.allowed_domains' => ['student.hcmue.edu.vn', 'teacher.hcmue.edu.vn']]);
 
         $response = $this->get(route('auth.microsoft.callback'));
 

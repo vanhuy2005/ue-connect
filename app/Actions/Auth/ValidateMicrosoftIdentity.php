@@ -79,7 +79,7 @@ class ValidateMicrosoftIdentity
         $allowedDomains = config('services.microsoft.allowed_domains');
         if (empty($allowedDomains)) {
             $singleDomain = config('services.microsoft.allowed_domain');
-            $allowedDomains = $singleDomain ? [$singleDomain] : ['hcmue.edu.vn', 'student.hcmue.edu.vn', 'teacher.hcmue.edu.vn'];
+            $allowedDomains = $singleDomain ? [$singleDomain] : ['student.hcmue.edu.vn', 'teacher.hcmue.edu.vn'];
         }
 
         if (! AllowedEmailDomain::check($normalizedEmail, $allowedDomains)) {
@@ -106,7 +106,7 @@ class ValidateMicrosoftIdentity
         $intendedIdentityType = null;
         if (AllowedEmailDomain::check($normalizedEmail, ['student.hcmue.edu.vn'])) {
             $intendedIdentityType = IdentityType::CURRENT_STUDENT;
-        } elseif (AllowedEmailDomain::check($normalizedEmail, ['teacher.hcmue.edu.vn', 'hcmue.edu.vn'])) {
+        } elseif (AllowedEmailDomain::check($normalizedEmail, ['teacher.hcmue.edu.vn'])) {
             $intendedIdentityType = IdentityType::TEACHER_ADVISOR;
         }
 

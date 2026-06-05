@@ -50,7 +50,7 @@ class DebugAuthConfig extends Command
         $mentorAllowed = config('ueconnect.identity.external_mentor_personal_email_allowed') ? 'yes' : 'no';
 
         $this->line('Student Allowed Domains: '.implode(', ', $studentDomains));
-        $this->line('Staff/Advisor Allowed Domains: '.implode(', ', $staffDomains));
+        $this->line('Teacher Allowed Domains: '.implode(', ', $staffDomains));
         $this->line('Alumni Personal Email Allowed: '.$alumniAllowed);
         $this->line('External Mentor Personal Email Allowed: '.$mentorAllowed);
 
