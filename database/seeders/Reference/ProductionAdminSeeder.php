@@ -24,9 +24,6 @@ class ProductionAdminSeeder extends Seeder
         app(PermissionRegistrar::class)->forgetCachedPermissions();
 
         DB::transaction(function () {
-            // Disable foreign key constraints for clean deletion
-            Schema::disableForeignKeyConstraints();
-
             $excludeTables = [
                 'migrations',
                 'faculties',
@@ -37,17 +34,32 @@ class ProductionAdminSeeder extends Seeder
             ];
 
             // Get all tables in the database dynamically
-            $tables = DB::select("SELECT table_name FROM information_schema.tables WHERE table_type = 'BASE TABLE'");
+            $tables = array_map(fn ($table) => $table['name'], Schema::getTables());
 
-            foreach ($tables as $table) {
-                $tableArray = array_change_key_case((array) $table, CASE_LOWER);
-                $tableName = $tableArray['table_name'] ?? null;
-                if ($tableName && ! in_array(strtolower($tableName), $excludeTables, true)) {
+            // Disable foreign key constraints for clean deletion
+            $isSqlSrv = DB::getDriverName() === 'sqlsrv';
+            if ($isSqlSrv) {
+                foreach ($tables as $tableName) {
+                    DB::statement("ALTER TABLE [{$tableName}] NOCHECK CONSTRAINT ALL");
+                }
+            } else {
+                Schema::disableForeignKeyConstraints();
+            }
+
+            foreach ($tables as $tableName) {
+                if (! in_array(strtolower($tableName), $excludeTables, true)) {
                     DB::table($tableName)->delete();
                 }
             }
 
-            Schema::enableForeignKeyConstraints();
+            // Re-enable foreign key constraints
+            if ($isSqlSrv) {
+                foreach ($tables as $tableName) {
+                    DB::statement("ALTER TABLE [{$tableName}] CHECK CONSTRAINT ALL");
+                }
+            } else {
+                Schema::enableForeignKeyConstraints();
+            }
 
             // 1. Ensure Roles & Permissions reference data are populated
             $this->call(AccessControlReferenceSeeder::class);
