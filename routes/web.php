@@ -638,7 +638,12 @@ Route::get('/run-artisan', function () {
         return 'Lệnh không được hỗ trợ để chạy qua Web.';
     }
 
-    Artisan::call($command, ['--force' => true]);
+    $params = ['--force' => true];
+    if ($command === 'db:seed' && request()->has('class')) {
+        $params['--class'] = request('class');
+    }
+
+    Artisan::call($command, $params);
 
     return '<pre>'.Artisan::output().'</pre>';
 });
