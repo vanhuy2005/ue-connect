@@ -102,7 +102,7 @@ class Profile extends Model
             return $this->alumniProfile->faculty->name;
         }
 
-        if ($this->role_type === 'advisor' && $this->advisorProfile && $this->advisorProfile->faculty) {
+        if (in_array($this->role_type, ['teacher', 'advisor'], true) && $this->advisorProfile && $this->advisorProfile->faculty) {
             return $this->advisorProfile->faculty->name;
         }
 

@@ -427,7 +427,7 @@ new class extends Component
                         {{-- Role Badge --}}
                         <span class="inline-flex self-center px-2 py-0.5 rounded-full text-[9px] font-bold tracking-wide uppercase bg-slate-100 text-slate-500">
                             @if (($user->profile?->role_type ?? 'student') === 'student') Sinh viên
-                            @elseif (($user->profile?->role_type ?? '') === 'advisor') Mentor
+                            @elseif (in_array(($user->profile?->role_type ?? ''), ['teacher', 'advisor'], true)) Giảng viên
                             @elseif (($user->profile?->role_type ?? '') === 'alumni') Cựu sinh viên
                             @else Thành viên
                             @endif
@@ -742,7 +742,7 @@ new class extends Component
                                         </span>
                                     </div>
                                 @endif
-                            @elseif (($user->profile?->role_type ?? '') === 'advisor' && $user->profile?->advisorProfile)
+                            @elseif (in_array(($user->profile?->role_type ?? ''), ['teacher', 'advisor'], true) && $user->profile?->advisorProfile)
                                 <div class="space-y-1">
                                     <span class="text-slate-400 block font-semibold uppercase tracking-wider text-[9px]">Chức vụ / Học vị</span>
                                     <span class="text-slate-850 font-bold">{{ $user->profile?->advisorProfile?->title ?: 'Giảng viên' }}</span>
