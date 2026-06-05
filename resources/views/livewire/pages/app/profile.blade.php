@@ -263,9 +263,9 @@ new class extends Component
     {
         $media = $this->user->profile->avatar()->first();
         if ($media) {
-            return app(GenerateMediaUrlAction::class)->execute($media, 'display', Auth::user()) ?: asset('images/default-avatar.png');
+            return app(GenerateMediaUrlAction::class)->execute($media, 'display', Auth::user()) ?: asset('images/default-avatar.svg');
         }
-        return asset('images/default-avatar.png');
+        return asset('images/default-avatar.svg');
     }
 
     /**
@@ -574,7 +574,7 @@ new class extends Component
                         @forelse ($user->posts()->latest()->take(10)->get() as $post)
                             <div class="bg-white border border-slate-150 rounded-2xl p-4 shadow-2xs">
                                 <div class="flex items-center gap-3">
-                                    <img src="{{ $this->avatarUrl }}" alt="Avatar" class="w-8 h-8 rounded-full object-cover" />
+                                    <x-ui.avatar :user="$user" size="sm" />
                                     <div>
                                         <h4 class="text-xxs font-bold text-slate-800">{{ $user->profile?->display_name ?? $user->name }}</h4>
                                         <span class="text-[9px] text-slate-400">{{ $post->created_at->diffForHumans() }}</span>
