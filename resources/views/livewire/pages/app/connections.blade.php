@@ -599,7 +599,7 @@ new #[Layout('layouts.app')] class extends Component
                                                 </a>
                                                 <p class="text-[9px] text-slate-400 font-bold uppercase mt-0.5 tracking-wider">
                                                     @if ($profile->role_type === 'student') Sinh viên
-                                                    @elseif ($profile->role_type === 'advisor') Mentor/Giảng viên
+                                                    @elseif (in_array($profile->role_type, ['teacher', 'advisor'], true)) Giảng viên
                                                     @elseif ($profile->role_type === 'alumni') Cựu sinh viên
                                                     @else Thành viên
                                                     @endif

@@ -57,7 +57,7 @@ Route::view('system/403', 'system.403')
     ->name('system.403');
 
 // 3. Verification workflow (protected by account status)
-Route::middleware(['auth', 'active.account'])->group(function () {
+Route::middleware(['auth', 'verified', 'active.account'])->group(function () {
     Route::view('verification/status', 'verification.status')
         ->name('verification.status');
 

@@ -82,7 +82,7 @@ new class extends Component {
                     <option value="">-- Tất cả --</option>
                     <option value="student">Sinh viên</option>
                     <option value="alumni">Cựu sinh viên</option>
-                    <option value="advisor">Cố vấn</option>
+                    <option value="teacher">Giảng viên</option>
                     <option value="admin">Admin</option>
                 </x-ui.select>
             </div>

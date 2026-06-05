@@ -185,12 +185,12 @@ class DiscoveryUpgradeTest extends TestCase
     {
         $this->actingAs($this->user);
 
-        // Advisor User
-        $advisorUser = User::factory()->create(['account_status' => AccountStatus::ACTIVE]);
-        $advisorUser->assignRole('advisor');
-        $advisorProfile = $advisorUser->profile()->create([
+        // Teacher User
+        $teacherUser = User::factory()->create(['account_status' => AccountStatus::ACTIVE]);
+        $teacherUser->assignRole('teacher');
+        $advisorProfile = $teacherUser->profile()->create([
             'display_name' => 'Professor Smith',
-            'role_type' => 'advisor',
+            'role_type' => 'teacher',
             'profile_status' => 'complete',
             'discoverable' => true,
         ]);
@@ -214,7 +214,7 @@ class DiscoveryUpgradeTest extends TestCase
         ]);
 
         Volt::test('pages.app.discovery')
-            ->set('roleFilter', 'advisor')
+            ->set('roleFilter', 'teacher')
             ->assertSee('Professor Smith')
             ->assertDontSee('Bob Student')
             ->set('roleFilter', 'student')
