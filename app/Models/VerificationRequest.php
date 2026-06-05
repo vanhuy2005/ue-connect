@@ -29,6 +29,8 @@ class VerificationRequest extends Model
         'submitted_note',
         'submitted_position',
         'submitted_organization',
+        'submitted_is_academic_advisor',
+        'submitted_advised_class_codes',
         'assigned_admin_id',
         'submitted_at',
         'reviewed_at',
@@ -40,6 +42,7 @@ class VerificationRequest extends Model
 
     protected $casts = [
         'status' => VerificationStatus::class,
+        'submitted_is_academic_advisor' => 'boolean',
         'submitted_at' => 'datetime',
         'reviewed_at' => 'datetime',
         'expires_at' => 'datetime',

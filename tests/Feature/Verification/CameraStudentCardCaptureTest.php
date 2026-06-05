@@ -47,7 +47,7 @@ class CameraStudentCardCaptureTest extends TestCase
         ]);
 
         $this->user = User::factory()->create([
-            'email' => 'student@hcmue.edu.vn',
+            'email' => 'student@student.hcmue.edu.vn',
             'account_status' => AccountStatus::REGISTERED,
         ]);
         $this->user->assignRole('student');
@@ -286,7 +286,7 @@ class CameraStudentCardCaptureTest extends TestCase
         Storage::fake('private');
 
         $userB = User::factory()->create([
-            'email' => 'userb@hcmue.edu.vn',
+            'email' => 'userb@student.hcmue.edu.vn',
             'account_status' => AccountStatus::REGISTERED,
         ]);
         $userB->assignRole('student');

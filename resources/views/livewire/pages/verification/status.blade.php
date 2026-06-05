@@ -114,7 +114,7 @@ new #[Layout('layouts.app')] class extends Component
             'submitted_name' => ['required', 'string', 'max:255'],
         ];
 
-        if ($this->request->role_requested !== 'advisor') {
+        if ($this->request->role_requested !== 'teacher') {
             $rules['submitted_student_code'] = ['required', 'string', 'max:50'];
             $rules['submitted_faculty_id'] = ['required', 'integer', 'exists:faculties,id'];
             $rules['submitted_academic_program_id'] = ['required', 'integer', 'exists:academic_programs,id'];
@@ -140,10 +140,10 @@ new #[Layout('layouts.app')] class extends Component
             $this->request->update([
                 'status' => VerificationStatus::PENDING_REVIEW,
                 'submitted_name' => $this->submitted_name,
-                'submitted_student_code' => $this->request->role_requested !== 'advisor' ? $this->submitted_student_code : null,
+                'submitted_student_code' => $this->request->role_requested !== 'teacher' ? $this->submitted_student_code : null,
                 'submitted_faculty_id' => $this->submitted_faculty_id,
-                'submitted_academic_program_id' => $this->request->role_requested !== 'advisor' ? $this->submitted_academic_program_id : null,
-                'submitted_cohort' => $this->request->role_requested !== 'advisor' ? $this->submitted_cohort : null,
+                'submitted_academic_program_id' => $this->request->role_requested !== 'teacher' ? $this->submitted_academic_program_id : null,
+                'submitted_cohort' => $this->request->role_requested !== 'teacher' ? $this->submitted_cohort : null,
                 'submitted_note' => $this->submitted_note,
                 'submitted_at' => now(),
             ]);
@@ -258,7 +258,7 @@ new #[Layout('layouts.app')] class extends Component
                             </div>
                         </div>
 
-                        @if ($request->role_requested !== 'advisor')
+                        @if ($request->role_requested !== 'teacher')
                             <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                                 <div>
                                     <x-ui.label for="submitted_student_code" :required="true">Mã số sinh viên (MSSV)</x-ui.label>
@@ -416,7 +416,7 @@ new #[Layout('layouts.app')] class extends Component
                                 <div class="text-ue-text font-bold">{{ $request->submitted_name }}</div>
                             </div>
                             
-                            @if ($request->role_requested !== 'advisor')
+                            @if ($request->role_requested !== 'teacher')
                                 <div class="grid grid-cols-2 gap-2 text-xs">
                                     <div class="text-ue-text-muted font-semibold">Mã sinh viên (MSSV):</div>
                                     <div class="text-ue-text font-bold">{{ $request->submitted_student_code }}</div>
@@ -438,6 +438,20 @@ new #[Layout('layouts.app')] class extends Component
                                     <div class="text-ue-text-muted font-semibold">Khoa / Phòng ban:</div>
                                     <div class="text-ue-text font-bold">{{ $request->submittedFaculty ? $request->submittedFaculty->name : 'N/A' }}</div>
                                 </div>
+                                <div class="grid grid-cols-2 gap-2 text-xs">
+                                    <div class="text-ue-text-muted font-semibold">Chức danh:</div>
+                                    <div class="text-ue-text font-bold">{{ $request->submitted_position ?: 'Giảng viên' }}</div>
+                                </div>
+                                <div class="grid grid-cols-2 gap-2 text-xs">
+                                    <div class="text-ue-text-muted font-semibold">Cố vấn học tập:</div>
+                                    <div class="text-ue-text font-bold">{{ $request->submitted_is_academic_advisor ? 'Có' : 'Không' }}</div>
+                                </div>
+                                @if ($request->submitted_is_academic_advisor && filled($request->submitted_advised_class_codes))
+                                    <div class="grid grid-cols-2 gap-2 text-xs">
+                                        <div class="text-ue-text-muted font-semibold">Lớp cố vấn:</div>
+                                        <div class="text-ue-text font-bold whitespace-pre-line">{{ $request->submitted_advised_class_codes }}</div>
+                                    </div>
+                                @endif
                             @endif
 
                             @if (!empty($request->submitted_note))

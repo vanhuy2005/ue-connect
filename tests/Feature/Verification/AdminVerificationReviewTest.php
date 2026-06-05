@@ -51,14 +51,14 @@ class AdminVerificationReviewTest extends TestCase
 
         // Create Admin
         $this->admin = User::factory()->create([
-            'email' => 'admin@hcmue.edu.vn',
+            'email' => 'admin@teacher.hcmue.edu.vn',
             'account_status' => AccountStatus::ACTIVE,
         ]);
         $this->admin->assignRole('admin');
 
         // Create Student user and request
         $this->studentUser = User::factory()->create([
-            'email' => 'student@hcmue.edu.vn',
+            'email' => 'student@student.hcmue.edu.vn',
             'account_status' => AccountStatus::PENDING_VERIFICATION,
         ]);
         $this->studentUser->assignRole('student');
@@ -72,7 +72,7 @@ class AdminVerificationReviewTest extends TestCase
             'submitted_faculty_id' => $this->faculty->id,
             'submitted_academic_program_id' => $this->program->id,
             'submitted_cohort' => 'K48',
-            'submitted_email' => 'student@hcmue.edu.vn',
+            'submitted_email' => 'student@student.hcmue.edu.vn',
             'submitted_at' => now(),
         ]);
     }

@@ -97,7 +97,7 @@ new #[Layout('layouts.app', ['shell' => 'admin'])] class extends Component {
     <div class="mb-6 flex flex-col md:flex-row md:items-center md:justify-between gap-4">
         <div>
             <h1 class="text-2xl font-bold text-ue-text">Phê duyệt định danh tài khoản</h1>
-            <p class="text-sm text-ue-text-secondary mt-1">Quản lý hồ sơ xác thực của Sinh viên, Cựu sinh viên, và Cố vấn học tập HCMUE.</p>
+            <p class="text-sm text-ue-text-secondary mt-1">Quản lý hồ sơ xác thực của Sinh viên, Cựu sinh viên, và Giảng viên HCMUE.</p>
         </div>
     </div>
 
@@ -133,7 +133,7 @@ new #[Layout('layouts.app', ['shell' => 'admin'])] class extends Component {
                     <option value="">-- Tất cả --</option>
                     <option value="student">Sinh viên</option>
                     <option value="alumni">Cựu sinh viên</option>
-                    <option value="advisor">Cố vấn / Giảng viên</option>
+                    <option value="teacher">Giảng viên</option>
                 </x-ui.select>
             </div>
 
@@ -189,14 +189,14 @@ new #[Layout('layouts.app', ['shell' => 'admin'])] class extends Component {
                             $roleBadgeVariant = match($req->role_requested) {
                                 'student' => 'student',
                                 'alumni' => 'alumni',
-                                'advisor' => 'advisor',
+                                'teacher', 'advisor' => 'advisor',
                                 default => 'neutral',
                             };
 
                             $roleLabel = match($req->role_requested) {
                                 'student' => 'Sinh viên',
                                 'alumni' => 'Cựu sinh viên',
-                                'advisor' => 'Cố vấn',
+                                'teacher', 'advisor' => 'Giảng viên',
                                 default => $req->role_requested,
                             };
                         @endphp
@@ -282,14 +282,14 @@ new #[Layout('layouts.app', ['shell' => 'admin'])] class extends Component {
                     $roleBadgeVariant = match($req->role_requested) {
                         'student' => 'student',
                         'alumni' => 'alumni',
-                        'advisor' => 'advisor',
+                        'teacher', 'advisor' => 'advisor',
                         default => 'neutral',
                     };
 
                     $roleLabel = match($req->role_requested) {
                         'student' => 'Sinh viên',
                         'alumni' => 'Cựu sinh viên',
-                        'advisor' => 'Cố vấn',
+                        'teacher', 'advisor' => 'Giảng viên',
                         default => $req->role_requested,
                     };
                 @endphp

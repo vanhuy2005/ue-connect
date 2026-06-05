@@ -216,18 +216,20 @@ class ReviewVerificationAction
                     'graduation_year' => $requestModel->submitted_graduation_year,
                 ]
             );
-        } elseif ($requestModel->role_requested === 'advisor') {
+        } elseif (in_array($requestModel->role_requested, ['teacher', 'advisor'], true)) {
             AdvisorProfile::updateOrCreate(
                 ['profile_id' => $profile->id],
                 [
                     'faculty_id' => $requestModel->submitted_faculty_id,
                     'department' => $requestModel->submitted_organization,
-                    'title' => $requestModel->submitted_position,
+                    'title' => $requestModel->submitted_position ?: 'Giảng viên',
+                    'is_academic_advisor' => $requestModel->submitted_is_academic_advisor,
+                    'advised_class_codes' => $requestModel->submitted_advised_class_codes,
                 ]
             );
         }
 
-        $user->syncRoles([$requestModel->role_requested]);
+        $user->syncRoles([$requestModel->role_requested === 'advisor' ? 'teacher' : $requestModel->role_requested]);
         $user->forceFill([
             'account_status' => AccountStatus::PROFILE_INCOMPLETE,
             'account_status_reason' => null,

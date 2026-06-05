@@ -163,7 +163,7 @@ new class extends Component {
                 
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-y-4 gap-x-6 text-sm">
                     <div>
-                        <div class="text-xs text-ue-text-muted font-semibold">Họ và tên học viên</div>
+                        <div class="text-xs text-ue-text-muted font-semibold">Họ và tên</div>
                         <div class="font-bold text-ue-text mt-0.5">{{ $request->submitted_name }}</div>
                     </div>
                     <div>
@@ -173,13 +173,13 @@ new class extends Component {
                     <div>
                         <div class="text-xs text-ue-text-muted font-semibold">Vai trò yêu cầu</div>
                         <div class="font-bold text-ue-text mt-0.5 flex items-center gap-1.5 capitalize">
-                            <x-ui.badge :variant="match($request->role_requested) { 'student'=>'student', 'alumni'=>'alumni', 'advisor'=>'advisor', default=>'neutral' }" size="sm">
-                                {{ match($request->role_requested) { 'student'=>'Sinh viên', 'alumni'=>'Cựu sinh viên', 'advisor'=>'Cố vấn', default=>$request->role_requested } }}
+                            <x-ui.badge :variant="match($request->role_requested) { 'student'=>'student', 'alumni'=>'alumni', 'teacher', 'advisor'=>'advisor', default=>'neutral' }" size="sm">
+                                {{ match($request->role_requested) { 'student'=>'Sinh viên', 'alumni'=>'Cựu sinh viên', 'teacher', 'advisor'=>'Giảng viên', default=>$request->role_requested } }}
                             </x-ui.badge>
                         </div>
                     </div>
                     
-                    @if ($request->role_requested !== 'advisor')
+                    @if ($request->role_requested !== 'teacher' && $request->role_requested !== 'advisor')
                         <div>
                             <div class="text-xs text-ue-text-muted font-semibold">Mã số sinh viên (MSSV)</div>
                             <div class="font-bold text-ue-text mt-0.5">{{ $request->submitted_student_code ?: 'N/A' }}</div>
@@ -201,11 +201,25 @@ new class extends Component {
                             <div class="text-xs text-ue-text-muted font-semibold">Khoa / Phòng ban công tác</div>
                             <div class="font-bold text-ue-text mt-0.5">{{ $request->submittedFaculty ? $request->submittedFaculty->name : 'N/A' }}</div>
                         </div>
+                        <div>
+                            <div class="text-xs text-ue-text-muted font-semibold">Chức danh</div>
+                            <div class="font-bold text-ue-text mt-0.5">{{ $request->submitted_position ?: 'Giảng viên' }}</div>
+                        </div>
+                        <div>
+                            <div class="text-xs text-ue-text-muted font-semibold">Cố vấn học tập</div>
+                            <div class="font-bold text-ue-text mt-0.5">{{ $request->submitted_is_academic_advisor ? 'Có' : 'Không' }}</div>
+                        </div>
+                        @if ($request->submitted_is_academic_advisor && filled($request->submitted_advised_class_codes))
+                            <div>
+                                <div class="text-xs text-ue-text-muted font-semibold">Lớp cố vấn</div>
+                                <div class="font-bold text-ue-text mt-0.5 whitespace-pre-line">{{ $request->submitted_advised_class_codes }}</div>
+                            </div>
+                        @endif
                     @endif
 
                     @if ($request->submitted_note)
                         <div class="md:col-span-2 border-t border-ue-border pt-4">
-                            <div class="text-xs text-ue-text-muted font-semibold">Ghi chú bổ sung từ học viên</div>
+                            <div class="text-xs text-ue-text-muted font-semibold">Ghi chú bổ sung từ người dùng</div>
                             <div class="text-ue-text italic mt-1 bg-ue-surface-subtle p-3 rounded-lg border border-ue-border">
                                 "{{ $request->submitted_note }}"
                             </div>
@@ -235,6 +249,13 @@ new class extends Component {
                                                     'admission_letter' => 'Giấy báo nhập học',
                                                     'transcript' => 'Bảng điểm',
                                                     'graduation_certificate' => 'Bằng tốt nghiệp',
+                                                    'student_email_screenshot' => 'Email sinh viên',
+                                                    'teacher_email_screenshot' => 'Email công vụ',
+                                                    'old_student_card' => 'Thẻ sinh viên cũ',
+                                                    'staff_card' => 'Thẻ viên chức',
+                                                    'appointment_decision' => 'Quyết định phân công',
+                                                    'faculty_profile' => 'Hồ sơ website khoa',
+                                                    'academic_advisor_assignment' => 'Phân công cố vấn',
                                                     'email_evidence' => 'Email trường',
                                                     default => 'Khác',
                                                 } }}
@@ -260,7 +281,7 @@ new class extends Component {
 
                             @if ($evidence->user_note)
                                 <div class="text-xs">
-                                    <span class="font-semibold text-ue-text-muted">Ghi chú của học viên:</span>
+                                    <span class="font-semibold text-ue-text-muted">Ghi chú của người dùng:</span>
                                     <span class="text-ue-text italic ml-1">"{{ $evidence->user_note }}"</span>
                                 </div>
                             @endif

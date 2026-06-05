@@ -10,10 +10,13 @@ use App\Models\VerificationRequest;
 use App\Models\VerificationEvidence;
 use App\Models\EvidenceCaptureSession;
 use App\Models\MediaFile;
+use App\Support\Auth\AllowedEmailDomain;
 use App\Jobs\AnalyzeStudentCardEvidenceJob;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
 use Livewire\Attributes\Layout;
 use Livewire\Attributes\Renderless;
@@ -39,6 +42,8 @@ new #[Layout('layouts.app')] class extends Component
     public string $submitted_old_student_email = '';
     public string $submitted_position = '';
     public string $submitted_organization = '';
+    public bool $submitted_is_academic_advisor = false;
+    public string $submitted_advised_class_codes = '';
     public string $submitted_note = '';
 
     // Evidence fields
@@ -64,7 +69,7 @@ new #[Layout('layouts.app')] class extends Component
             if ($user->intended_identity_type) {
                 $this->role_requested = match($user->intended_identity_type->value ?? $user->intended_identity_type) {
                     'current_student' => 'student',
-                    'teacher_advisor' => 'advisor',
+                    'teacher_advisor' => 'teacher',
                     'alumni' => 'alumni',
                     default => 'student',
                 };
@@ -94,28 +99,135 @@ new #[Layout('layouts.app')] class extends Component
             ->get();
     }
 
+    private function lockedRoleForCurrentUser(): string
+    {
+        $identityType = auth()->user()?->intended_identity_type;
+        $identityType = $identityType?->value ?? $identityType;
+
+        return match ($identityType) {
+            'current_student' => 'student',
+            'teacher_advisor' => 'teacher',
+            'alumni' => 'alumni',
+            default => 'student',
+        };
+    }
+
+    private function syncLockedRole(): void
+    {
+        $this->role_requested = $this->lockedRoleForCurrentUser();
+    }
+
+    private function domainRule(array $allowedDomains, string $message): \Closure
+    {
+        return function ($attribute, $value, $fail) use ($allowedDomains, $message) {
+            if (! AllowedEmailDomain::check((string) $value, $allowedDomains)) {
+                $fail($message);
+            }
+        };
+    }
+
+    /**
+     * @return array<string, string>
+     */
+    public function evidenceTypeOptions(): array
+    {
+        return match ($this->role_requested) {
+            'student' => [
+                'student_card' => 'Thẻ sinh viên',
+                'admission_letter' => 'Giấy báo nhập học',
+                'transcript' => 'Bảng điểm',
+                'student_email_screenshot' => 'Chụp màn hình email sinh viên',
+                'other' => 'Minh chứng khác',
+            ],
+            'alumni' => [
+                'graduation_certificate' => 'Bằng tốt nghiệp',
+                'transcript' => 'Bảng điểm',
+                'old_student_card' => 'Thẻ sinh viên cũ',
+                'student_email_screenshot' => 'Chụp màn hình email sinh viên cũ',
+                'other' => 'Minh chứng khác',
+            ],
+            'teacher' => [
+                'teacher_email_screenshot' => 'Chụp màn hình email công vụ',
+                'staff_card' => 'Thẻ viên chức / thẻ giảng viên',
+                'appointment_decision' => 'Quyết định phân công / bổ nhiệm',
+                'faculty_profile' => 'Trang hồ sơ trên website khoa',
+                'academic_advisor_assignment' => 'Thông tin phân công cố vấn học tập',
+                'other' => 'Minh chứng khác',
+            ],
+            default => ['other' => 'Minh chứng khác'],
+        };
+    }
+
+    private function normalizeAndValidateAdvisedClasses(): void
+    {
+        if (! $this->submitted_is_academic_advisor) {
+            $this->submitted_advised_class_codes = '';
+
+            return;
+        }
+
+        $classCodes = array_values(array_filter(array_map(
+            fn (string $classCode): string => Str::upper(trim($classCode)),
+            preg_split('/[\r\n,;]+/', $this->submitted_advised_class_codes) ?: []
+        )));
+
+        foreach ($classCodes as $classCode) {
+            if (! preg_match('/^\d{2}\.[A-Z0-9]{2,12}[A-D]$/u', $classCode)) {
+                throw ValidationException::withMessages([
+                    'submitted_advised_class_codes' => 'Tên lớp cố vấn cần đúng định dạng như 49.CNTTD hoặc 50.CNTTA.',
+                ]);
+            }
+        }
+
+        $this->submitted_advised_class_codes = implode("\n", array_unique($classCodes));
+    }
+
     public function selectRole(string $role): void
     {
-        $this->role_requested = $role;
+        $lockedRole = $this->lockedRoleForCurrentUser();
+
+        if ($role !== $lockedRole) {
+            $this->addError('role_requested', 'Vai trò xác thực đã được khóa theo lựa chọn lúc đăng ký.');
+
+            return;
+        }
+
+        $this->role_requested = $lockedRole;
     }
 
     public function nextStep(): void
     {
         if ($this->step === 1) {
+            $this->syncLockedRole();
+
             $this->validate([
-                'role_requested' => ['required', 'string', 'in:student,alumni,advisor'],
+                'role_requested' => ['required', 'string', 'in:student,alumni,teacher'],
             ]);
             $this->step = 2;
             return;
         }
 
         if ($this->step === 2) {
+            $this->syncLockedRole();
+
             $rules = [
                 'submitted_name' => ['required', 'string', 'max:255'],
-                'submitted_email' => ['required', 'email', 'max:255'],
+                'submitted_email' => [
+                    'required',
+                    'email',
+                    'max:255',
+                    function ($attribute, $value, $fail) {
+                        $userEmail = auth()->user()?->email;
+
+                        if ($userEmail && strcasecmp((string) $value, $userEmail) !== 0) {
+                            $fail('Email xác thực phải trùng với email đã đăng ký.');
+                        }
+                    },
+                ],
             ];
 
             if ($this->role_requested === 'student') {
+                $rules['submitted_email'][] = $this->domainRule(['student.hcmue.edu.vn'], 'Sinh viên phải dùng email dạng mssv@student.hcmue.edu.vn.');
                 $rules['submitted_student_code'] = ['required', 'string', 'max:50'];
                 $rules['submitted_faculty_id'] = ['required', 'integer', 'exists:faculties,id'];
                 $rules['submitted_academic_program_id'] = ['required', 'integer', 'exists:academic_programs,id'];
@@ -125,10 +237,13 @@ new #[Layout('layouts.app')] class extends Component
                 $rules['submitted_faculty_id'] = ['required', 'integer', 'exists:faculties,id'];
                 $rules['submitted_academic_program_id'] = ['required', 'integer', 'exists:academic_programs,id'];
                 $rules['submitted_graduation_year'] = ['required', 'string', 'max:10'];
-                $rules['submitted_old_student_email'] = ['nullable', 'email', 'max:255'];
-            } elseif ($this->role_requested === 'advisor') {
+                $rules['submitted_old_student_email'] = ['nullable', 'email', 'max:255', $this->domainRule(['student.hcmue.edu.vn'], 'Email sinh viên cũ phải có dạng mssv@student.hcmue.edu.vn.')];
+            } elseif ($this->role_requested === 'teacher') {
+                $rules['submitted_email'][] = $this->domainRule(['teacher.hcmue.edu.vn'], 'Giảng viên phải dùng email dạng ten@teacher.hcmue.edu.vn.');
                 $rules['submitted_faculty_id'] = ['nullable', 'integer', 'exists:faculties,id'];
-                $rules['submitted_position'] = ['required', 'string', 'max:100'];
+                $rules['submitted_position'] = ['nullable', 'string', 'max:100'];
+                $rules['submitted_is_academic_advisor'] = ['boolean'];
+                $rules['submitted_advised_class_codes'] = ['nullable', 'string', 'max:500'];
             }
 
             $this->validate($rules, [
@@ -138,8 +253,11 @@ new #[Layout('layouts.app')] class extends Component
                 'submitted_academic_program_id.required' => 'Vui lòng chọn ngành đào tạo.',
                 'submitted_cohort.required' => 'Vui lòng nhập khóa học (ví dụ: K48).',
                 'submitted_graduation_year.required' => 'Vui lòng nhập năm tốt nghiệp.',
-                'submitted_position.required' => 'Vui lòng nhập chức vụ / vai trò công tác.',
             ]);
+
+            if ($this->role_requested === 'teacher') {
+                $this->normalizeAndValidateAdvisedClasses();
+            }
 
             $this->step = 3;
             return;
@@ -227,6 +345,8 @@ new #[Layout('layouts.app')] class extends Component
             return;
         }
 
+        $this->syncLockedRole();
+
         // Only one active verification request per user
         $activeRequest = $user->activeVerificationRequest;
         if ($activeRequest) {
@@ -245,6 +365,7 @@ new #[Layout('layouts.app')] class extends Component
             $this->validate([
                 'evidence_files.*' => ['nullable', 'file', 'mimes:jpeg,png,pdf,webp', 'max:5120'], // 5MB
                 'evidence_links.*' => ['nullable', 'url', 'max:2048'],
+                'evidence_types.*' => ['nullable', 'string', Rule::in(array_keys($this->evidenceTypeOptions()))],
                 'evidence_notes.*' => ['required_with:evidence_files.*,evidence_links.*', 'nullable', 'string', 'max:500'],
             ], [
                 'evidence_files.*.max' => 'Kích thước tệp tin không được vượt quá 5MB.',
@@ -420,16 +541,18 @@ new #[Layout('layouts.app')] class extends Component
                     'requested_identity_type' => $user->intended_identity_type ?? null,
                     'status' => VerificationStatus::PENDING_REVIEW,
                     'submitted_name' => $this->submitted_name,
-                    'submitted_student_code' => $this->role_requested !== 'advisor' ? $this->submitted_student_code : null,
+                    'submitted_student_code' => $this->role_requested !== 'teacher' ? $this->submitted_student_code : null,
                     'submitted_faculty_id' => $this->submitted_faculty_id,
-                    'submitted_academic_program_id' => $this->role_requested !== 'advisor' ? $this->submitted_academic_program_id : null,
+                    'submitted_academic_program_id' => $this->role_requested !== 'teacher' ? $this->submitted_academic_program_id : null,
                     'submitted_cohort' => $this->role_requested === 'student' ? $this->submitted_cohort : null,
                     'submitted_graduation_year' => $this->role_requested === 'alumni' ? $this->submitted_graduation_year : null,
                     'submitted_email' => $this->submitted_email,
                     'submitted_old_student_email' => $this->role_requested === 'alumni' ? $this->submitted_old_student_email : null,
                     'submitted_note' => $this->submitted_note,
-                    'submitted_position' => $this->role_requested === 'advisor' ? $this->submitted_position : null,
-                    'submitted_organization' => $this->role_requested === 'advisor' ? $this->submitted_organization : null,
+                    'submitted_position' => $this->role_requested === 'teacher' ? ($this->submitted_position ?: 'Giảng viên') : null,
+                    'submitted_organization' => $this->role_requested === 'teacher' ? $this->submitted_organization : null,
+                    'submitted_is_academic_advisor' => $this->role_requested === 'teacher' && $this->submitted_is_academic_advisor,
+                    'submitted_advised_class_codes' => $this->role_requested === 'teacher' ? $this->submitted_advised_class_codes : null,
                     'submitted_at' => now(),
                     'expires_at' => now()->addDays(30),
                 ]);
@@ -575,37 +698,31 @@ new #[Layout('layouts.app')] class extends Component
         {{-- Step 1: Role Selection --}}
         @if ($step === 1)
             <div class="p-6 sm:p-8">
-                <h2 class="text-xl font-bold text-ue-text mb-2">Chọn vai trò của bạn trên UEConnect</h2>
-                <p class="text-sm text-ue-text-secondary mb-6">Để đảm bảo an toàn và kết nối đúng đối tượng, vui lòng chọn vai trò chính xác của bạn.</p>
+                @php
+                    $roleMeta = match($role_requested) {
+                        'student' => ['label' => 'Sinh viên', 'icon' => 'user', 'description' => 'Đang học tập tại Trường Đại học Sư phạm TP.HCM.'],
+                        'alumni' => ['label' => 'Cựu sinh viên', 'icon' => 'graduation-cap', 'description' => 'Đã tốt nghiệp từ Trường Đại học Sư phạm TP.HCM.'],
+                        'teacher' => ['label' => 'Giảng viên', 'icon' => 'shield-check', 'description' => 'Giảng viên HCMUE; nếu đang là cố vấn học tập, bạn sẽ bổ sung thông tin ở bước sau.'],
+                        default => ['label' => 'Sinh viên', 'icon' => 'user', 'description' => 'Đang học tập tại Trường Đại học Sư phạm TP.HCM.'],
+                    };
+                @endphp
 
-                <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
-                    {{-- Student --}}
-                    <button wire:click="selectRole('student')" class="flex flex-col items-start p-5 rounded-xl border text-left transition-all duration-sm ue-focus-ring {{ $role_requested === 'student' ? 'border-ue-brand bg-ue-brand-soft shadow-sm' : 'border-ue-border hover:border-ue-border-strong hover:bg-ue-surface-hover' }}">
-                        <div class="p-3 bg-ue-brand text-ue-text-inverse rounded-lg mb-4">
-                            <x-ui.icon name="user" size="lg" />
-                        </div>
-                        <h3 class="font-bold text-ue-text mb-1">Sinh viên</h3>
-                        <p class="text-xs text-ue-text-secondary leading-relaxed">Đang học tập tại Trường Đại học Sư phạm TP.HCM.</p>
-                    </button>
+                <h2 class="text-xl font-bold text-ue-text mb-2">Vai trò xác thực đã được khóa</h2>
+                <p class="text-sm text-ue-text-secondary mb-6">UEConnect dùng đúng vai trò bạn đã chọn ở bước đăng ký. Nếu đăng ký sai vai trò, vui lòng tạo lại tài khoản theo đúng luồng đăng ký.</p>
 
-                    {{-- Alumni --}}
-                    <button wire:click="selectRole('alumni')" class="flex flex-col items-start p-5 rounded-xl border text-left transition-all duration-sm ue-focus-ring {{ $role_requested === 'alumni' ? 'border-ue-brand bg-ue-brand-soft shadow-sm' : 'border-ue-border hover:border-ue-border-strong hover:bg-ue-surface-hover' }}">
-                        <div class="p-3 bg-ue-brand text-ue-text-inverse rounded-lg mb-4">
-                            <x-ui.icon name="graduation-cap" size="lg" />
+                <div class="mb-8 rounded-xl border border-ue-brand bg-ue-brand-soft p-5 text-left">
+                    <div class="flex items-start gap-4">
+                        <div class="p-3 bg-ue-brand text-ue-text-inverse rounded-lg">
+                            <x-ui.icon :name="$roleMeta['icon']" size="lg" />
                         </div>
-                        <h3 class="font-bold text-ue-text mb-1">Cựu sinh viên</h3>
-                        <p class="text-xs text-ue-text-secondary leading-relaxed">Đã tốt nghiệp từ Trường Đại học Sư phạm TP.HCM.</p>
-                    </button>
-
-                    {{-- Advisor --}}
-                    <button wire:click="selectRole('advisor')" class="flex flex-col items-start p-5 rounded-xl border text-left transition-all duration-sm ue-focus-ring {{ $role_requested === 'advisor' ? 'border-ue-brand bg-ue-brand-soft shadow-sm' : 'border-ue-border hover:border-ue-border-strong hover:bg-ue-surface-hover' }}">
-                        <div class="p-3 bg-ue-brand text-ue-text-inverse rounded-lg mb-4">
-                            <x-ui.icon name="shield-check" size="lg" />
+                        <div>
+                            <div class="text-xs font-bold uppercase tracking-wider text-ue-brand mb-1">Vai trò của tài khoản này</div>
+                            <h3 class="font-bold text-ue-text mb-1">{{ $roleMeta['label'] }}</h3>
+                            <p class="text-xs text-ue-text-secondary leading-relaxed">{{ $roleMeta['description'] }}</p>
                         </div>
-                        <h3 class="font-bold text-ue-text mb-1">Cố vấn / Giảng viên</h3>
-                        <p class="text-xs text-ue-text-secondary leading-relaxed">Giảng viên hoặc cố vấn học tập chính thức của trường.</p>
-                    </button>
+                    </div>
                 </div>
+                <x-ui.field-error name="role_requested" />
 
                 <div class="flex justify-end border-t border-ue-border pt-6">
                     <x-ui.button wire:click="nextStep" variant="primary" icon="arrow-right" icon-position="right">
@@ -714,12 +831,12 @@ new #[Layout('layouts.app')] class extends Component
                             </x-ui.select>
                             <x-ui.field-error name="submitted_academic_program_id" />
                         </div>
-                    @elseif ($role_requested === 'advisor')
+                    @elseif ($role_requested === 'teacher')
                         <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                             <div>
                                 <x-ui.label for="submitted_faculty_id">Khoa / Phòng ban công tác</x-ui.label>
                                 <x-ui.select wire:model="submitted_faculty_id" id="submitted_faculty_id" class="mt-1">
-                                    <option value="">-- Chọn Khoa/Phòng ban (Tùy chọn) --</option>
+                                    <option value="">-- Có thể bổ sung sau --</option>
                                     @foreach ($this->faculties as $faculty)
                                         <option value="{{ $faculty->id }}">{{ $faculty->name }}</option>
                                     @endforeach
@@ -727,10 +844,29 @@ new #[Layout('layouts.app')] class extends Component
                                 <x-ui.field-error name="submitted_faculty_id" />
                             </div>
                             <div>
-                                <x-ui.label for="submitted_position" :required="true">Chức vụ / Vai trò</x-ui.label>
-                                <x-ui.input wire:model="submitted_position" id="submitted_position" placeholder="Ví dụ: Giảng viên, Cố vấn học tập" class="mt-1" />
+                                <x-ui.label for="submitted_position">Chức danh hiện tại</x-ui.label>
+                                <x-ui.input wire:model="submitted_position" id="submitted_position" placeholder="Ví dụ: Giảng viên, Giảng viên chính" class="mt-1" />
                                 <x-ui.field-error name="submitted_position" />
                             </div>
+                        </div>
+
+                        <div class="rounded-xl border border-ue-border bg-ue-surface-subtle p-4 space-y-3">
+                            <label class="flex items-start gap-3 cursor-pointer">
+                                <input type="checkbox" wire:model.live="submitted_is_academic_advisor" class="mt-1 rounded border-ue-border text-ue-brand focus:ring-ue-brand">
+                                <span>
+                                    <span class="block text-sm font-bold text-ue-text">Tôi đang là cố vấn học tập</span>
+                                    <span class="block text-xs text-ue-text-secondary mt-0.5">Cố vấn học tập là thuộc tính của giảng viên, không phải role riêng.</span>
+                                </span>
+                            </label>
+
+                            @if ($submitted_is_academic_advisor)
+                                <div>
+                                    <x-ui.label for="submitted_advised_class_codes">Lớp đang cố vấn</x-ui.label>
+                                    <x-ui.textarea wire:model="submitted_advised_class_codes" id="submitted_advised_class_codes" rows="3" placeholder="Ví dụ: 49.CNTTD&#10;50.CNTTA" class="mt-1" />
+                                    <p class="text-[10px] text-ue-text-muted mt-1">Mỗi dòng một lớp, theo định dạng khóa + ngành viết tắt + nhóm lớp, ví dụ 49.CNTTD.</p>
+                                    <x-ui.field-error name="submitted_advised_class_codes" />
+                                </div>
+                            @endif
                         </div>
                     @endif
 
@@ -755,8 +891,16 @@ new #[Layout('layouts.app')] class extends Component
         {{-- Step 3: Evidences --}}
         @if ($step === 3)
             <div class="p-6 sm:p-8">
+                @php
+                    $evidenceIntro = match($role_requested) {
+                        'student' => 'Tải lên thẻ sinh viên, giấy báo nhập học, bảng điểm hoặc chụp màn hình email sinh viên để chứng minh bạn là sinh viên HCMUE.',
+                        'alumni' => 'Tải lên một minh chứng cựu sinh viên như bằng tốt nghiệp, bảng điểm, thẻ sinh viên cũ hoặc minh chứng khác để admin xét duyệt.',
+                        'teacher' => 'Tải lên minh chứng giảng viên như email công vụ, thẻ viên chức, quyết định phân công, trang hồ sơ khoa hoặc minh chứng công tác phù hợp.',
+                        default => 'Tải lên minh chứng định danh phù hợp để admin xét duyệt.',
+                    };
+                @endphp
                 <h2 class="text-xl font-bold text-ue-text mb-2">Tải lên minh chứng định danh</h2>
-                <p class="text-sm text-ue-text-secondary mb-6">Tải lên hình ảnh thẻ sinh viên, bảng điểm, bằng tốt nghiệp hoặc chụp màn hình email trường để chứng minh vai trò học viên.</p>
+                <p class="text-sm text-ue-text-secondary mb-6">{{ $evidenceIntro }}</p>
 
                 @if ($errors->has('evidence'))
                     <div class="mb-4 p-3 bg-red-50 text-red-700 text-sm rounded-lg border border-red-200">
@@ -987,12 +1131,9 @@ new #[Layout('layouts.app')] class extends Component
                                             <div class="w-full">
                                                 <x-ui.label class="text-left text-xs mb-1" :required="true">Loại minh chứng</x-ui.label>
                                                 <x-ui.select wire:model="evidence_types.{{ $i }}" class="h-8 py-0 px-2 text-xs mb-2">
-                                                    <option value="student_card">Thẻ sinh viên</option>
-                                                    <option value="admission_letter">Giấy báo nhập học</option>
-                                                    <option value="transcript">Bảng điểm</option>
-                                                    <option value="graduation_certificate">Bằng tốt nghiệp</option>
-                                                    <option value="email_evidence">Chụp màn hình email trường</option>
-                                                    <option value="other">Minh chứng khác</option>
+                                                    @foreach ($this->evidenceTypeOptions() as $value => $label)
+                                                        <option value="{{ $value }}">{{ $label }}</option>
+                                                    @endforeach
                                                 </x-ui.select>
 
                                                 <x-ui.label class="text-left text-xs mb-1" :required="true">Mô tả chi tiết</x-ui.label>

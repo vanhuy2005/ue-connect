@@ -59,13 +59,13 @@ class StudentCardAiVerificationTest extends TestCase
 
         $this->user = User::factory()->create([
             'name' => 'Nguyen Van A',
-            'email' => 'student@hcmue.edu.vn',
+            'email' => 'student@student.hcmue.edu.vn',
             'account_status' => AccountStatus::REGISTERED,
         ]);
         $this->user->assignRole('student');
 
         $this->admin = User::factory()->create([
-            'email' => 'admin@hcmue.edu.vn',
+            'email' => 'admin@teacher.hcmue.edu.vn',
             'account_status' => AccountStatus::ACTIVE,
         ]);
         $this->admin->assignRole('admin');
@@ -79,7 +79,7 @@ class StudentCardAiVerificationTest extends TestCase
             'submitted_faculty_id' => $this->faculty->id,
             'submitted_academic_program_id' => $this->program->id,
             'submitted_cohort' => 'K48',
-            'submitted_email' => 'student@hcmue.edu.vn',
+            'submitted_email' => 'student@student.hcmue.edu.vn',
             'submitted_at' => now(),
             'expires_at' => now()->addDays(30),
         ]);
