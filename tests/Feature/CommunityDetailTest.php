@@ -266,4 +266,27 @@ class CommunityDetailTest extends TestCase
             ->assertSee('Club Guide')
             ->assertSee('Tải xuống');
     }
+
+    public function test_owner_can_upload_community_cover_and_avatar(): void
+    {
+        Storage::fake('local');
+        Storage::fake('r2_public');
+
+        $owner = $this->createActiveUser();
+        $community = Community::factory()->active()->forOwner($owner)->create();
+
+        $coverFile = UploadedFile::fake()->image('cover.jpg', 1200, 400);
+        $avatarFile = UploadedFile::fake()->image('avatar.png', 300, 300);
+
+        Volt::actingAs($owner)
+            ->test('pages.app.community-show', ['community' => $community])
+            ->set('coverFile', $coverFile)
+            ->set('avatarFile', $avatarFile)
+            ->assertHasNoErrors();
+
+        $community->refresh();
+
+        $this->assertNotNull($community->cover()->first());
+        $this->assertNotNull($community->avatar()->first());
+    }
 }

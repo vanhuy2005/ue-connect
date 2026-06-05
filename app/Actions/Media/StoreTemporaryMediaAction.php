@@ -33,7 +33,7 @@ class StoreTemporaryMediaAction
 
         // 2. Resolve default visibility if none provided
         $visibility = $options['visibility'] ?? match ($collection) {
-            'avatar', 'profile_cover', 'post_image', 'comment_image' => 'public',
+            'avatar', 'profile_cover', 'post_image', 'comment_image', 'community_avatar', 'community_cover' => 'public',
             default => 'private',
         };
 

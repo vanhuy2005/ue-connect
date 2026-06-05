@@ -17,6 +17,8 @@ class ValidateMediaUploadAction
         $allowedCollections = [
             'avatar',
             'profile_cover',
+            'community_avatar',
+            'community_cover',
             'post_image',
             'comment_image',
             'message_attachment',
@@ -52,8 +54,8 @@ class ValidateMediaUploadAction
         // 4. File size validation by collection
         $sizeBytes = $file->getSize();
         $maxMb = match ($collection) {
-            'avatar' => config('media.limits.avatar_mb', 5),
-            'profile_cover' => config('media.limits.cover_mb', 8),
+            'avatar', 'community_avatar' => config('media.limits.avatar_mb', 5),
+            'profile_cover', 'community_cover' => config('media.limits.cover_mb', 8),
             'post_image' => config('media.limits.post_image_mb', 10),
             'message_attachment' => config('media.limits.message_image_mb', 10),
             'verification_evidence' => config('media.limits.verification_evidence_mb', 10),

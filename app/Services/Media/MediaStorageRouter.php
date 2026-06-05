@@ -9,7 +9,7 @@ use App\Services\Media\Providers\S3CompatibleMediaStorageProvider;
 
 class MediaStorageRouter
 {
-    public const PUBLIC_CLOUDINARY_COLLECTIONS = ['avatar', 'profile_cover', 'post_image'];
+    public const PUBLIC_CLOUDINARY_COLLECTIONS = ['avatar', 'profile_cover', 'post_image', 'community_avatar', 'community_cover'];
 
     /**
      * Resolve the primary storage provider for a collection and visibility.
@@ -29,6 +29,7 @@ class MediaStorageRouter
             'r2_primary',
             'hybrid_public_cloudinary',
             'r2_with_cloudinary_delivery',
+            'r2_cloudinary',
         ], true)) {
             $disk = ($visibility === 'public')
                 ? config('media.providers.r2.public_disk', 'r2_public')
@@ -68,6 +69,7 @@ class MediaStorageRouter
         if ($cloudinaryEnabled && in_array($strategy, [
             'hybrid_public_cloudinary',
             'r2_with_cloudinary_delivery',
+            'r2_cloudinary',
             'cloudinary_public_local_private',
         ], true)) {
             return new CloudinaryMediaDeliveryProvider;

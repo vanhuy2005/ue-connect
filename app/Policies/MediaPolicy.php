@@ -40,6 +40,11 @@ class MediaPolicy
                 // Check if profile is visible
                 return Gate::forUser($user)->allows('viewProfile', $parent);
 
+            case 'community_avatar':
+            case 'community_cover':
+                // Check if community is visible
+                return Gate::forUser($user)->allows('view', $parent);
+
             case 'post_image':
                 // Check if post is visible
                 return Gate::forUser($user)->allows('view', $parent);

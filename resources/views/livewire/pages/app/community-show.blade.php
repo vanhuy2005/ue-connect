@@ -35,6 +35,10 @@ use Illuminate\Support\Str;
 use Livewire\Volt\Component;
 use Livewire\WithFileUploads;
 use Livewire\WithPagination;
+use App\Actions\Media\StoreTemporaryMediaAction;
+use App\Actions\Media\AttachMediaToModelAction;
+use App\Actions\Media\DeleteMediaAction;
+use App\Actions\Media\GenerateMediaUrlAction;
 
 new class extends Component
 {
@@ -43,6 +47,10 @@ new class extends Component
     public Community $community;
 
     public string $activeTab = 'feed';
+
+    // Community media uploads
+    public $coverFile = null;
+    public $avatarFile = null;
 
     // Post composer
     public bool $showPostComposer = false;
@@ -962,6 +970,104 @@ new class extends Component
 
         return $connections->values();
     }
+
+    /**
+     * Handle community cover uploads.
+     */
+    public function updatedCoverFile(): void
+    {
+        $this->validate([
+            'coverFile' => 'image|max:8192', // 8MB limit
+        ]);
+
+        try {
+            $storeAction = app(StoreTemporaryMediaAction::class);
+            $attachAction = app(AttachMediaToModelAction::class);
+            $deleteAction = app(DeleteMediaAction::class);
+
+            if (! $this->canManage) {
+                $this->dispatch('notify', type: 'error', message: 'Bạn không có quyền quản lý cộng đồng này.');
+                return;
+            }
+
+            $oldCover = $this->community->cover()->first();
+            if ($oldCover) {
+                $deleteAction->execute($oldCover);
+            }
+
+            // Store new temporary media (public visibility)
+            $media = $storeAction->execute(auth()->user(), $this->coverFile, 'community_cover', ['visibility' => 'public']);
+
+            // Attach to the Community model
+            $attachAction->execute(auth()->user(), $this->community, [$media->id], 'community_cover');
+
+            $this->community->load('media');
+            $this->dispatch('notify', type: 'success', message: 'Cập nhật ảnh bìa cộng đồng thành công.');
+        } catch (\Exception $e) {
+            $this->dispatch('notify', type: 'error', message: 'Lỗi tải ảnh lên: ' . $e->getMessage());
+        }
+    }
+
+    /**
+     * Handle community avatar uploads.
+     */
+    public function updatedAvatarFile(): void
+    {
+        $this->validate([
+            'avatarFile' => 'image|max:5120', // 5MB limit
+        ]);
+
+        try {
+            $storeAction = app(StoreTemporaryMediaAction::class);
+            $attachAction = app(AttachMediaToModelAction::class);
+            $deleteAction = app(DeleteMediaAction::class);
+
+            if (! $this->canManage) {
+                $this->dispatch('notify', type: 'error', message: 'Bạn không có quyền quản lý cộng đồng này.');
+                return;
+            }
+
+            $oldAvatar = $this->community->avatar()->first();
+            if ($oldAvatar) {
+                $deleteAction->execute($oldAvatar);
+            }
+
+            // Store new temporary media (public visibility)
+            $media = $storeAction->execute(auth()->user(), $this->avatarFile, 'community_avatar', ['visibility' => 'public']);
+
+            // Attach to the Community model
+            $attachAction->execute(auth()->user(), $this->community, [$media->id], 'community_avatar');
+
+            $this->community->load('media');
+            $this->dispatch('notify', type: 'success', message: 'Cập nhật ảnh đại diện cộng đồng thành công.');
+        } catch (\Exception $e) {
+            $this->dispatch('notify', type: 'error', message: 'Lỗi tải ảnh lên: ' . $e->getMessage());
+        }
+    }
+
+    /**
+     * Get safe cover URL.
+     */
+    public function getCoverUrlProperty(): ?string
+    {
+        $media = $this->community->cover()->first();
+        if ($media) {
+            return app(GenerateMediaUrlAction::class)->execute($media, 'desktop', auth()->user());
+        }
+        return null;
+    }
+
+    /**
+     * Get safe avatar URL.
+     */
+    public function getAvatarUrlProperty(): ?string
+    {
+        $media = $this->community->avatar()->first();
+        if ($media) {
+            return app(GenerateMediaUrlAction::class)->execute($media, 'display', auth()->user());
+        }
+        return null;
+    }
 };
 ?>
 
@@ -1024,13 +1130,18 @@ new class extends Component
         <header class="bg-white border-b border-slate-200 shadow-2xs">
             {{-- Cover Photo Section --}}
             <div class="relative h-44 sm:h-56 md:h-64 lg:h-72 bg-gradient-to-br from-[#0A3761] via-[#124874] to-[#4BB7E8] flex items-center justify-center overflow-hidden">
-                <span class="text-8xl font-black text-white/10 select-none">{{ strtoupper(substr($community->name, 0, 2)) }}</span>
+                @if ($this->coverUrl)
+                    <img src="{{ $this->coverUrl }}" class="w-full h-full object-cover absolute inset-0" alt="{{ $community->name }}">
+                @else
+                    <span class="text-8xl font-black text-white/10 select-none">{{ strtoupper(substr($community->name, 0, 2)) }}</span>
+                @endif
                 
                 @if ($this->canManage)
-                    <button class="absolute bottom-4 right-4 bg-white/80 backdrop-blur-xs text-slate-800 text-xs font-bold px-3 py-1.5 rounded-lg border border-slate-250 hover:bg-white transition flex items-center gap-1.5 shadow-sm">
+                    <label class="absolute bottom-4 right-4 bg-white/80 backdrop-blur-xs text-slate-800 text-xs font-bold px-3 py-1.5 rounded-lg border border-slate-250 hover:bg-white transition flex items-center gap-1.5 shadow-sm cursor-pointer">
                         <x-ui.icon name="camera" size="xs" />
                         <span>Chỉnh sửa ảnh bìa</span>
-                    </button>
+                        <input type="file" wire:model="coverFile" class="hidden" accept="image/jpeg,image/png,image/webp">
+                    </label>
                 @endif
             </div>
 
@@ -1038,8 +1149,19 @@ new class extends Component
             <div class="max-w-5xl mx-auto px-4 sm:px-6 py-5 flex flex-col md:flex-row md:items-end justify-between gap-5">
                 {{-- Overlapping Avatar & details --}}
                 <div class="flex flex-col sm:flex-row items-center sm:items-start gap-4 -mt-16 sm:-mt-20 md:-mt-24 relative z-10">
-                    <div class="w-24 h-24 sm:w-32 sm:h-32 rounded-2xl bg-ue-brand text-white border-4 border-white flex items-center justify-center font-black text-3xl sm:text-4xl shadow-md select-none">
-                        {{ strtoupper(substr($community->name, 0, 2)) }}
+                    <div class="w-24 h-24 sm:w-32 sm:h-32 rounded-2xl bg-ue-brand text-white border-4 border-white flex items-center justify-center font-black text-3xl sm:text-4xl shadow-md select-none overflow-hidden relative group">
+                        @if ($this->avatarUrl)
+                            <img src="{{ $this->avatarUrl }}" class="w-full h-full object-cover" alt="{{ $community->name }}">
+                        @else
+                            {{ strtoupper(substr($community->name, 0, 2)) }}
+                        @endif
+
+                        @if ($this->canManage)
+                            <label class="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition flex items-center justify-center cursor-pointer text-white text-xs font-bold">
+                                <x-ui.icon name="camera" size="sm" class="text-white" />
+                                <input type="file" wire:model="avatarFile" class="hidden" accept="image/jpeg,image/png,image/webp">
+                            </label>
+                        @endif
                     </div>
 
                     <div class="text-center sm:text-left pt-2 sm:pt-14 md:pt-20">

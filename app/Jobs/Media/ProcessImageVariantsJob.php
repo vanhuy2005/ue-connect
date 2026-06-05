@@ -133,8 +133,8 @@ class ProcessImageVariantsJob implements ShouldQueue
                 Storage::disk($this->media->primary_disk)->delete($this->media->primary_path);
 
                 $largestVariantName = match ($this->media->collection) {
-                    'avatar' => 'display',
-                    'profile_cover' => 'desktop',
+                    'avatar', 'community_avatar' => 'display',
+                    'profile_cover', 'community_cover' => 'desktop',
                     'post_image' => 'detail',
                     'message_attachment' => 'display',
                     default => array_key_first($processedVariants),
@@ -180,11 +180,11 @@ class ProcessImageVariantsJob implements ShouldQueue
     protected function getVariantSpecsForCollection(string $collection): array
     {
         return match ($collection) {
-            'avatar' => [
+            'avatar', 'community_avatar' => [
                 'thumb' => ['w' => 96, 'h' => 96, 'crop' => true],
                 'display' => ['w' => 320, 'h' => 320, 'crop' => true],
             ],
-            'profile_cover' => [
+            'profile_cover', 'community_cover' => [
                 'mobile' => ['w' => 800, 'h' => 300, 'crop' => true],
                 'desktop' => ['w' => 1600, 'h' => 600, 'crop' => true],
             ],
