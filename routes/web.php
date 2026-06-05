@@ -27,21 +27,17 @@ use App\Http\Controllers\Admin\VerificationActionController;
 use App\Http\Controllers\Admin\VerificationEvidenceController;
 use App\Http\Controllers\MediaController;
 use App\Http\Middleware\EnsureAdminAccess;
-use App\Jobs\Media\ProcessImageVariantsJob;
 use App\Models\AuditLog;
 use App\Models\BlockedUser;
 use App\Models\Community;
 use App\Models\Conversation;
 use App\Models\Media;
-use App\Models\MediaVariant;
 use App\Models\MentorProfile;
 use App\Models\MentorRequest;
 use App\Models\Post;
 use App\Models\Report;
 use App\Models\User;
 use App\Models\VerificationRequest;
-use App\Services\Media\MediaQuotaService;
-use App\Services\Media\MediaStorageRouter;
 use App\Support\Navigation\AdminNavigation;
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Support\Facades\Artisan;
@@ -668,109 +664,6 @@ Route::get('/run-artisan', function () {
     } catch (Throwable $e) {
         return 'Lỗi: '.$e->getMessage()."\n\n".$e->getTraceAsString();
     }
-});
-
-Route::get('/view-logs', function () {
-    if (request('token') !== 'ueconnect_secret_token_2026') {
-        abort(403, 'Unauthorized');
-    }
-    $logPath = storage_path('logs/laravel.log');
-    if (! file_exists($logPath)) {
-        return 'Log file not found at: '.$logPath;
-    }
-    $lines = file($logPath);
-    $lastLines = array_slice($lines, -150);
-
-    return '<pre>'.implode('', $lastLines).'</pre>';
-});
-
-Route::get('/debug-media', function () {
-    if (request('token') !== 'ueconnect_secret_token_2026') {
-        abort(403, 'Unauthorized');
-    }
-
-    $runJobId = request('run_job');
-    if ($runJobId) {
-        $mediaItem = Media::findOrFail($runJobId);
-        try {
-            $disk = $mediaItem->primary_disk;
-            $path = $mediaItem->primary_path;
-
-            $exists = Storage::disk($disk)->exists($path);
-            if (! $exists) {
-                return 'File does not exist on disk '.$disk.' at path '.$path;
-            }
-
-            $contents = Storage::disk($disk)->get($path);
-            if (empty($contents)) {
-                return 'File content is empty on disk '.$disk.' at path '.$path;
-            }
-
-            $sourceImage = @imagecreatefromstring($contents);
-            if (! $sourceImage) {
-                return 'Failed to load image via GD. Length of contents: '.strlen($contents).' bytes. PHP GD WebP support: '.json_encode(gd_info());
-            }
-
-            // Try to generate a variant
-            ob_start();
-            $resizedImage = imagecreatetruecolor(96, 96);
-            imagecopyresampled($resizedImage, $sourceImage, 0, 0, 0, 0, 96, 96, imagesx($sourceImage), imagesy($sourceImage));
-            if (function_exists('imagewebp')) {
-                $success = imagewebp($resizedImage, null, 82);
-            } else {
-                $success = imagejpeg($resizedImage, null, 82);
-            }
-            $webpContents = ob_get_clean();
-            imagedestroy($resizedImage);
-            imagedestroy($sourceImage);
-
-            if (! $success) {
-                return 'imagewebp() / imagejpeg() failed. GD might be broken.';
-            }
-
-            return 'File read and image process successful! Webp/Jpeg size: '.strlen($webpContents).' bytes';
-        } catch (Throwable $e) {
-            return '<pre>Failed with exception: '.$e->getMessage()."\n\n".$e->getTraceAsString().'</pre>';
-        }
-    }
-
-    $runActualJob = request('run_actual_job');
-    if ($runActualJob) {
-        $mediaItem = Media::findOrFail($runActualJob);
-        $mediaItem->update(['status' => 'temporary']);
-        try {
-            $job = new ProcessImageVariantsJob($mediaItem);
-            $job->handle(
-                app(MediaStorageRouter::class),
-                app(MediaQuotaService::class)
-            );
-
-            return 'Actual job completed successfully! New status: '.$mediaItem->status;
-        } catch (Throwable $e) {
-            return '<pre>Actual job failed with exception: '.$e->getMessage()."\n\n".$e->getTraceAsString().'</pre>';
-        }
-    }
-
-    $media = Media::latest()->take(10)->get();
-    $variants = MediaVariant::latest()->take(10)->get();
-
-    $output = "MEDIA RECORDS:\n";
-    foreach ($media as $m) {
-        $output .= sprintf(
-            "ID: %d | UUID: %s | User: %d | Status: %s | Collection: %s | Disk: %s | Path: %s | Width: %s | Height: %s | Metadata: %s\n",
-            $m->id, $m->uuid, $m->user_id, $m->status, $m->collection, $m->primary_disk, $m->primary_path, $m->width, $m->height, json_encode($m->metadata_json)
-        );
-    }
-
-    $output .= "\nMEDIA VARIANTS:\n";
-    foreach ($variants as $v) {
-        $output .= sprintf(
-            "ID: %d | Media ID: %d | Name: %s | Disk: %s | Path: %s | Url: %s\n",
-            $v->id, $v->media_id, $v->variant_name, $v->disk, $v->path, $v->url
-        );
-    }
-
-    return '<pre>'.$output.'</pre>';
 });
 
 // 6. Legacy redirects
