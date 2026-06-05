@@ -27,6 +27,7 @@ use App\Http\Controllers\Admin\VerificationActionController;
 use App\Http\Controllers\Admin\VerificationEvidenceController;
 use App\Http\Controllers\MediaController;
 use App\Http\Middleware\EnsureAdminAccess;
+use App\Jobs\Media\ProcessImageVariantsJob;
 use App\Models\AuditLog;
 use App\Models\BlockedUser;
 use App\Models\Community;
@@ -39,6 +40,8 @@ use App\Models\Post;
 use App\Models\Report;
 use App\Models\User;
 use App\Models\VerificationRequest;
+use App\Services\Media\MediaQuotaService;
+use App\Services\Media\MediaStorageRouter;
 use App\Support\Navigation\AdminNavigation;
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Support\Facades\Artisan;
@@ -685,6 +688,24 @@ Route::get('/debug-media', function () {
     if (request('token') !== 'ueconnect_secret_token_2026') {
         abort(403, 'Unauthorized');
     }
+
+    $runJobId = request('run_job');
+    if ($runJobId) {
+        $mediaItem = Media::findOrFail($runJobId);
+        $mediaItem->update(['status' => 'temporary']);
+        try {
+            $job = new ProcessImageVariantsJob($mediaItem);
+            $job->handle(
+                app(MediaStorageRouter::class),
+                app(MediaQuotaService::class)
+            );
+
+            return 'Job completed successfully! New status: '.$mediaItem->status;
+        } catch (Throwable $e) {
+            return '<pre>Job failed with exception: '.$e->getMessage()."\n\n".$e->getTraceAsString().'</pre>';
+        }
+    }
+
     $media = Media::latest()->take(10)->get();
     $variants = MediaVariant::latest()->take(10)->get();
 
