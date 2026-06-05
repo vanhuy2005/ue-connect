@@ -29,7 +29,7 @@ class RegistrationTest extends TestCase
 
         $component->call('register');
 
-        $component->assertRedirect(route('verification.start', absolute: false));
+        $component->assertRedirect(route('verification.notice', absolute: false));
 
         $this->assertAuthenticated();
     }
@@ -49,19 +49,34 @@ class RegistrationTest extends TestCase
         $this->assertGuest();
     }
 
-    public function test_advisor_registration_accepts_staff_domain(): void
+    public function test_teacher_registration_accepts_teacher_domain(): void
     {
         $component = Volt::test('pages.auth.register')
             ->set('identity_type', 'teacher_advisor')
             ->set('name', 'Test Staff')
-            ->set('email', 'advisor@teacher.hcmue.edu.vn')
+            ->set('email', 'teacher@teacher.hcmue.edu.vn')
             ->set('password', 'password')
             ->set('password_confirmation', 'password');
 
         $component->call('register');
 
-        $component->assertRedirect(route('verification.start', absolute: false));
+        $component->assertRedirect(route('verification.notice', absolute: false));
         $this->assertAuthenticated();
+    }
+
+    public function test_teacher_registration_rejects_root_hcmue_domain(): void
+    {
+        $component = Volt::test('pages.auth.register')
+            ->set('identity_type', 'teacher_advisor')
+            ->set('name', 'Test Staff')
+            ->set('email', 'teacher@hcmue.edu.vn')
+            ->set('password', 'password')
+            ->set('password_confirmation', 'password');
+
+        $component->call('register');
+
+        $component->assertHasErrors(['email']);
+        $this->assertGuest();
     }
 
     public function test_alumni_registration_accepts_personal_email(): void
@@ -75,14 +90,12 @@ class RegistrationTest extends TestCase
 
         $component->call('register');
 
-        $component->assertRedirect(route('verification.start', absolute: false));
+        $component->assertRedirect(route('verification.notice', absolute: false));
         $this->assertAuthenticated();
     }
 
-    public function test_external_mentor_registration_is_disabled_by_default(): void
+    public function test_external_mentor_is_not_a_public_registration_role(): void
     {
-        config(['ueconnect.identity.external_mentor_personal_email_allowed' => false]);
-
         $component = Volt::test('pages.auth.register')
             ->set('identity_type', 'external_mentor')
             ->set('name', 'Test Mentor')
