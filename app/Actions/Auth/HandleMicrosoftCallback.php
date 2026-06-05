@@ -68,6 +68,11 @@ class HandleMicrosoftCallback
                 // Update login timestamps
                 $now = now();
                 $identity->update(['last_login_at' => $now]);
+
+                if (! $user->hasVerifiedEmail()) {
+                    $user->markEmailAsVerified();
+                }
+
                 $user->update(['last_login_at' => $now]);
 
                 Auth::login($user, true);
@@ -95,13 +100,16 @@ class HandleMicrosoftCallback
                 'last_login_at' => now(),
                 'intended_identity_type' => $user->intended_identity_type ?? ($identityData['intended_identity_type'] ?? null),
             ]);
+
+            if (! $user->hasVerifiedEmail()) {
+                $user->markEmailAsVerified();
+            }
+
             Auth::login($user, true);
 
             return $user;
         }
 
-        // 3. Register a new user — no role assigned here.
-        // Roles (student/alumni/teacher) are assigned only upon admin verification approval.
         $user = User::create([
             'name' => $socialiteUser->getName() ?? Str::title(explode('@', $normalizedEmail)[0]),
             'email' => $normalizedEmail,
@@ -110,6 +118,8 @@ class HandleMicrosoftCallback
             'intended_identity_type' => $identityData['intended_identity_type'] ?? null,
             'last_login_at' => now(),
         ]);
+
+        $user->forceFill(['email_verified_at' => now()])->save();
 
         // Create identity provider mapping
         UserIdentityProvider::create([

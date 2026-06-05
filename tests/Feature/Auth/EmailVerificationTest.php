@@ -116,4 +116,48 @@ class EmailVerificationTest extends TestCase
 
         $this->assertFalse($user->fresh()->hasVerifiedEmail());
     }
+
+    public function test_verification_notice_resends_email_through_configured_resend(): void
+    {
+        Notification::fake();
+
+        config([
+            'mail.default' => 'resend',
+            'services.resend.key' => 're_testkey123',
+            'mail.from.address' => 'no-reply@mail.ueconnect.edu.vn',
+        ]);
+
+        $user = User::factory()->unverified()->create();
+
+        $this->actingAs($user);
+
+        Volt::test('pages.auth.verify-email')
+            ->call('sendVerification')
+            ->assertSet('mailDeliveryStatus', 'verification-link-sent')
+            ->assertHasNoErrors();
+
+        Notification::assertSentTo($user, VerifyEmail::class);
+    }
+
+    public function test_verification_notice_fails_when_resend_is_unconfigured(): void
+    {
+        Notification::fake();
+
+        config([
+            'mail.default' => 'resend',
+            'services.resend.key' => null,
+            'mail.from.address' => 'no-reply@mail.ueconnect.edu.vn',
+        ]);
+
+        $user = User::factory()->unverified()->create();
+
+        $this->actingAs($user);
+
+        Volt::test('pages.auth.verify-email')
+            ->call('sendVerification')
+            ->assertSet('mailDeliveryStatus', 'mail-not-configured')
+            ->assertHasNoErrors();
+
+        Notification::assertNotSentTo($user, VerifyEmail::class);
+    }
 }

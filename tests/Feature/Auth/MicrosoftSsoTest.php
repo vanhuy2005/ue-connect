@@ -506,4 +506,64 @@ class MicrosoftSsoTest extends TestCase
         $response->assertRedirect();
         $this->assertDatabaseHas('users', ['email' => 'student@student.hcmue.edu.vn']);
     }
+
+    public function test_sso_callback_auto_verifies_email_for_new_users(): void
+    {
+        $this->mockSocialiteUser([
+            'id' => 'ms-new-verify',
+            'email' => 'newverify@student.hcmue.edu.vn',
+            'name' => 'Verify Student',
+        ]);
+
+        $response = $this->get(route('auth.microsoft.callback'));
+
+        $user = User::where('email', 'newverify@student.hcmue.edu.vn')->firstOrFail();
+        $this->assertTrue($user->hasVerifiedEmail());
+    }
+
+    public function test_sso_callback_auto_verifies_email_for_existing_unverified_users_when_linked(): void
+    {
+        $user = User::factory()->create([
+            'email' => 'existingunverified@student.hcmue.edu.vn',
+            'email_verified_at' => null,
+            'account_status' => AccountStatus::ACTIVE,
+        ]);
+
+        $this->mockSocialiteUser([
+            'id' => 'ms-existing-unverified',
+            'email' => 'existingunverified@student.hcmue.edu.vn',
+        ]);
+
+        $response = $this->get(route('auth.microsoft.callback'));
+
+        $user->refresh();
+        $this->assertTrue($user->hasVerifiedEmail());
+    }
+
+    public function test_sso_callback_auto_verifies_email_for_existing_linked_unverified_users(): void
+    {
+        $user = User::factory()->create([
+            'email' => 'linkedunverified@student.hcmue.edu.vn',
+            'email_verified_at' => null,
+            'account_status' => AccountStatus::ACTIVE,
+        ]);
+
+        UserIdentityProvider::create([
+            'user_id' => $user->id,
+            'provider_name' => 'microsoft',
+            'provider_user_id' => 'ms-linked-unverified',
+            'provider_email' => 'linkedunverified@student.hcmue.edu.vn',
+            'linked_at' => now(),
+        ]);
+
+        $this->mockSocialiteUser([
+            'id' => 'ms-linked-unverified',
+            'email' => 'linkedunverified@student.hcmue.edu.vn',
+        ]);
+
+        $response = $this->get(route('auth.microsoft.callback'));
+
+        $user->refresh();
+        $this->assertTrue($user->hasVerifiedEmail());
+    }
 }
