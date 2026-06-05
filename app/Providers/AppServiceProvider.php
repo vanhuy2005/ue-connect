@@ -49,6 +49,7 @@ use Illuminate\Database\Eloquent\Relations\Relation;
 use Illuminate\Notifications\Messages\MailMessage;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Gate;
+use Illuminate\Support\Facades\URL;
 use Illuminate\Support\ServiceProvider;
 use SocialiteProviders\Manager\SocialiteWasCalled;
 use SocialiteProviders\Microsoft\MicrosoftExtendSocialite;
@@ -110,5 +111,9 @@ class AppServiceProvider extends ServiceProvider
         Gate::policy(MentorProfile::class, MentorProfilePolicy::class);
         Gate::policy(MentorRequest::class, MentorRequestPolicy::class);
         Gate::policy(MentorFeedback::class, MentorFeedbackPolicy::class);
+
+        if (config('app.env') === 'production') {
+            URL::forceScheme('https');
+        }
     }
 }
