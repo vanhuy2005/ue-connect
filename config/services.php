@@ -39,7 +39,9 @@ return [
         'enabled' => env('MICROSOFT_LOGIN_ENABLED', false),
         'client_id' => env('MICROSOFT_CLIENT_ID'),
         'client_secret' => env('MICROSOFT_CLIENT_SECRET'),
-        'redirect' => env('MICROSOFT_REDIRECT_URI'),
+        'redirect' => env('MICROSOFT_REDIRECT_URI')
+            ? str_replace('${APP_URL}', env('APP_URL', 'http://localhost'), env('MICROSOFT_REDIRECT_URI'))
+            : null,
         'tenant' => env('MICROSOFT_TENANT_ID'),
         'allowed_domains' => array_values(array_filter(array_map(
             fn ($domain) => strtolower(trim($domain)),
