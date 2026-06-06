@@ -3,12 +3,14 @@
 namespace App\Models;
 
 use App\Enums\PostStatus;
+use App\Enums\PostType;
 use App\Enums\PostVisibility;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Database\Eloquent\Relations\MorphMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
@@ -23,15 +25,17 @@ class Post extends Model
      */
     protected $fillable = [
         'user_id',
-        'scope_type',
+'scope_type',
         'scope_id',
         'community_post_type',
         'pinned_at',
         'pinned_by',
+        'post_type',
         'body',
         'media_url',
         'visibility',
         'status',
+        'metadata',
         'edited_at',
         'published_at',
     ];
@@ -44,8 +48,10 @@ class Post extends Model
     protected function casts(): array
     {
         return [
+            'post_type' => PostType::class,
             'visibility' => PostVisibility::class,
             'status' => PostStatus::class,
+            'metadata' => 'array',
             'edited_at' => 'datetime',
             'published_at' => 'datetime',
             'pinned_at' => 'datetime',
@@ -137,5 +143,15 @@ class Post extends Model
     public function hides(): HasMany
     {
         return $this->hasMany(PostHide::class);
+    }
+
+    /**
+     * Get the opportunity details if this is an opportunity post.
+     *
+     * @return HasOne<OpportunityDetail, $this>
+     */
+    public function opportunityDetail(): HasOne
+    {
+        return $this->hasOne(OpportunityDetail::class);
     }
 }

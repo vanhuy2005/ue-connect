@@ -111,6 +111,14 @@ class AdminNavigation
                         'permission' => 'manage_announcements',
                         'description' => 'Tạo và gửi thông báo chung cho toàn trường',
                     ],
+                    [
+                        'key' => 'opportunities',
+                        'label' => 'Cơ hội việc làm',
+                        'route' => 'admin.opportunities.queue',
+                        'icon' => 'briefcase',
+                        'permission' => null,
+                        'description' => 'Duyệt và quản lý các cơ hội việc làm từ cựu sinh viên',
+                    ],
                 ],
             ],
             'system' => [

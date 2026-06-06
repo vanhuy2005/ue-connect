@@ -15,6 +15,7 @@ use App\Actions\Media\GenerateMediaUrlAction;
 use App\Actions\Media\StoreTemporaryMediaAction;
 use App\Enums\CommentStatus;
 use App\Enums\PostStatus;
+use App\Enums\PostType;
 use App\Enums\PostVisibility;
 use App\Enums\ReportReason;
 use App\Enums\ConnectionStatus;
@@ -35,6 +36,18 @@ new #[Layout('layouts.app')] class extends Component
     // Composer properties
     public string $body = '';
     public string $visibility = 'verified_users';
+    public string $postType = 'standard';
+
+    // Opportunity-specific fields
+    public string $oppCompany = '';
+    public string $oppPosition = '';
+    public string $oppLocation = '';
+    public string $oppApplicationUrl = '';
+    public ?string $oppApplicationDeadline = null;
+    public array $oppFieldTags = [];
+
+    // Feed tab filter
+    public string $activeTab = 'for_you';
 
     // Multi-image upload properties
     public $imageFiles = [];
@@ -70,10 +83,25 @@ new #[Layout('layouts.app')] class extends Component
     /**
      * Rules for validation.
      */
-    protected array $rules = [
-        'body' => 'required|string|max:3000',
-        'visibility' => 'required|string|in:verified_users,connections_only,community,private',
-    ];
+    protected function rules(): array
+    {
+        $rules = [
+            'body' => 'required|string|max:3000',
+            'visibility' => 'required|string|in:verified_users,connections_only,community,private',
+            'postType' => 'required|string|in:standard,experience_share,mentor_insight,opportunity',
+        ];
+
+        if ($this->postType === 'opportunity') {
+            $rules['oppCompany'] = ['required', 'string', 'max:255'];
+            $rules['oppPosition'] = ['required', 'string', 'max:255'];
+            $rules['oppLocation'] = ['nullable', 'string', 'max:255'];
+            $rules['oppApplicationUrl'] = ['nullable', 'url', 'max:500'];
+            $rules['oppApplicationDeadline'] = ['nullable', 'date', 'after:today'];
+            $rules['oppFieldTags'] = ['nullable', 'array'];
+        }
+
+        return $rules;
+    }
 
     /**
      * Handle temporary composer image uploads.
@@ -132,10 +160,24 @@ new #[Layout('layouts.app')] class extends Component
     {
         $this->validate();
 
-        $post = $createPost->execute(Auth::user(), [
+        $data = [
             'body' => $this->body,
+            'post_type' => $this->postType,
             'visibility' => $this->visibility,
-        ]);
+        ];
+
+        if ($this->postType === 'opportunity') {
+            $data['opportunity'] = [
+                'company' => $this->oppCompany,
+                'position' => $this->oppPosition,
+                'location' => $this->oppLocation ?: null,
+                'application_url' => $this->oppApplicationUrl ?: null,
+                'application_deadline' => $this->oppApplicationDeadline,
+                'field_tags' => $this->oppFieldTags,
+            ];
+        }
+
+        $post = $createPost->execute(Auth::user(), $data);
 
         // Attach composer images polymorphically
         if (!empty($this->composerImages)) {
@@ -144,11 +186,27 @@ new #[Layout('layouts.app')] class extends Component
         }
 
         $this->body = '';
+        $this->postType = 'standard';
+        $this->oppCompany = '';
+        $this->oppPosition = '';
+        $this->oppLocation = '';
+        $this->oppApplicationUrl = '';
+        $this->oppApplicationDeadline = null;
+        $this->oppFieldTags = [];
         $this->composerImages = [];
         $this->imageFiles = [];
         $this->feedbackMessage = 'Đăng bài viết thành công.';
         $this->dispatch('post-created');
         $this->resetPage(); // Re-render feed at page 1
+    }
+
+    /**
+     * Switch feed tab filter.
+     */
+    public function setTab(string $tab): void
+    {
+        $this->activeTab = $tab;
+        $this->resetPage();
     }
 
     /**
@@ -458,15 +516,12 @@ new #[Layout('layouts.app')] class extends Component
     {
         $user = Auth::user();
 
-        // Get latest verified active posts (Strictly PUBLISHED and EDITED only, excluding hidden posts, except those hidden in current session)
-        $posts = Post::with(['user.profile', 'media.variants'])
+        $query = Post::with(['user.profile', 'media.variants', 'opportunityDetail'])
             ->withCount([
                 'likes',
                 'comments as published_comments_count' => function ($query): void {
                     $query->where('status', CommentStatus::PUBLISHED->value);
                 },
-            ])
-            ->withCount([
                 'likes as liked_by_current_user_count' => function ($query) use ($user): void {
                     $query->where('user_id', $user->id);
                 },
@@ -475,14 +530,24 @@ new #[Layout('layouts.app')] class extends Component
                 },
             ])
             ->whereIn('status', [PostStatus::PUBLISHED, PostStatus::EDITED])
-            ->where(function ($query) use ($user) {
-                $query->whereDoesntHave('hides', function ($q) use ($user) {
-                    $q->where('user_id', $user->id);
+            ->where(function ($q) use ($user) {
+                $q->whereDoesntHave('hides', function ($h) use ($user) {
+                    $h->where('user_id', $user->id);
                 })
                 ->orWhereIn('id', $this->locallyHiddenPostIds);
-            })
-            ->latest('published_at')
-            ->paginate(10);
+            });
+
+        // Apply tab filter
+        if ($this->activeTab === 'experience') {
+            $query->whereIn('post_type', [PostType::EXPERIENCE_SHARE->value, PostType::MENTOR_INSIGHT->value]);
+        } elseif ($this->activeTab === 'opportunities') {
+            $query->where('post_type', PostType::OPPORTUNITY->value);
+            $query->whereDoesntHave('opportunityDetail', function ($o) {
+                $o->where('is_expired', true);
+            });
+        }
+
+        $posts = $query->latest('published_at')->paginate(10);
 
         return [
             'posts' => $posts,
@@ -504,22 +569,28 @@ new #[Layout('layouts.app')] class extends Component
                 
                 {{-- Tabs --}}
                 <div class="ue-feed-tabs">
-                    <button type="button" class="px-3 py-1.5 rounded-full text-xxs font-bold bg-ue-brand-soft text-ue-brand">
+                    <button type="button" wire:click="setTab('for_you')" class="px-3 py-1.5 rounded-full text-xxs font-bold {{ $activeTab === 'for_you' ? 'bg-ue-brand-soft text-ue-brand' : 'text-slate-400 hover:bg-slate-50 transition-colors' }}">
                         Dành cho bạn
                     </button>
-                    <button type="button" class="px-3 py-1.5 rounded-full text-xxs font-bold text-slate-400 hover:bg-slate-50 transition-colors" disabled>
-                        Theo dõi
+                    <button type="button" wire:click="setTab('experience')" class="px-3 py-1.5 rounded-full text-xxs font-bold {{ $activeTab === 'experience' ? 'bg-ue-brand-soft text-ue-brand' : 'text-slate-400 hover:bg-slate-50 transition-colors' }}">
+                        Kinh nghiệm
+                    </button>
+                    <button type="button" wire:click="setTab('opportunities')" class="px-3 py-1.5 rounded-full text-xxs font-bold {{ $activeTab === 'opportunities' ? 'bg-ue-brand-soft text-ue-brand' : 'text-slate-400 hover:bg-slate-50 transition-colors' }}">
+                        Cơ hội
                     </button>
                 </div>
             </div>
 
             {{-- Mobile: Threads-style centered tab strip only --}}
             <div class="flex sm:hidden items-center justify-center border-b border-slate-100 pb-1">
-                <button type="button" class="flex-1 py-2 text-xs font-bold text-slate-800 border-b-2 border-slate-800 text-center">
+                <button type="button" wire:click="setTab('for_you')" class="flex-1 py-2 text-xs {{ $activeTab === 'for_you' ? 'font-bold text-slate-800 border-b-2 border-slate-800' : 'font-medium text-slate-400' }} text-center">
                     Dành cho bạn
                 </button>
-                <button type="button" class="flex-1 py-2 text-xs font-medium text-slate-400 text-center" disabled>
-                    Theo dõi
+                <button type="button" wire:click="setTab('experience')" class="flex-1 py-2 text-xs {{ $activeTab === 'experience' ? 'font-bold text-slate-800 border-b-2 border-slate-800' : 'font-medium text-slate-400' }} text-center">
+                    Kinh nghiệm
+                </button>
+                <button type="button" wire:click="setTab('opportunities')" class="flex-1 py-2 text-xs {{ $activeTab === 'opportunities' ? 'font-bold text-slate-800 border-b-2 border-slate-800' : 'font-medium text-slate-400' }} text-center">
+                    Cơ hội
                 </button>
             </div>
         </header>
@@ -539,14 +610,69 @@ new #[Layout('layouts.app')] class extends Component
                         </div>
                         
                         {{-- Right Column: Form content --}}
-                        <div class="min-w-0">
+                        <div class="min-w-0 flex-1">
                             <form wire:submit.prevent="submitPost">
+                                {{-- Post Type Selector --}}
+                                <div class="flex items-center gap-2 mb-3">
+                                    <span class="text-xxs font-bold text-slate-400">Đăng:</span>
+                                    <div class="flex gap-1">
+                                        <button type="button" wire:click="$set('postType', 'standard')" class="px-2.5 py-1 text-[10px] font-bold rounded-lg border transition-colors {{ $postType === 'standard' ? 'bg-ue-brand-soft text-ue-brand border-ue-brand/20' : 'bg-slate-50 text-slate-500 border-slate-200 hover:bg-slate-100' }}">
+                                            Bài viết
+                                        </button>
+                                        <button type="button" wire:click="$set('postType', 'experience_share')" class="px-2.5 py-1 text-[10px] font-bold rounded-lg border transition-colors {{ $postType === 'experience_share' ? 'bg-ue-brand-soft text-ue-brand border-ue-brand/20' : 'bg-slate-50 text-slate-500 border-slate-200 hover:bg-slate-100' }}">
+                                            Kinh nghiệm
+                                        </button>
+                                        <button type="button" wire:click="$set('postType', 'mentor_insight')" class="px-2.5 py-1 text-[10px] font-bold rounded-lg border transition-colors {{ $postType === 'mentor_insight' ? 'bg-ue-brand-soft text-ue-brand border-ue-brand/20' : 'bg-slate-50 text-slate-500 border-slate-200 hover:bg-slate-100' }}">
+                                            Career Insight
+                                        </button>
+                                        <button type="button" wire:click="$set('postType', 'opportunity')" class="px-2.5 py-1 text-[10px] font-bold rounded-lg border transition-colors {{ $postType === 'opportunity' ? 'bg-ue-brand-soft text-ue-brand border-ue-brand/20' : 'bg-slate-50 text-slate-500 border-slate-200 hover:bg-slate-100' }}">
+                                            Cơ hội
+                                        </button>
+                                    </div>
+                                </div>
+
+                                {{-- Opportunity Fields --}}
+                                @if ($postType === 'opportunity')
+                                    <div class="mb-3 p-3 bg-white border border-slate-200 rounded-xl space-y-2.5">
+                                        <p class="text-[10px] font-bold text-slate-600 flex items-center gap-1.5">
+                                            <x-ui.icon name="briefcase" size="xs" class="text-ue-brand" />
+                                            Thông tin cơ hội
+                                        </p>
+                                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                                            <div>
+                                                <label for="opp-company" class="text-2xs font-bold text-slate-700">Công ty / Tổ chức <span class="text-red-500">*</span></label>
+                                                <input type="text" id="opp-company" wire:model="oppCompany" placeholder="Tên công ty..." class="mt-0.5 w-full rounded-lg border-slate-200 text-xs focus:border-ue-brand focus:ring-ue-brand-soft">
+                                                @error('oppCompany') <p class="text-2xs text-red-600 mt-0.5">{{ $message }}</p> @enderror
+                                            </div>
+                                            <div>
+                                                <label for="opp-position" class="text-2xs font-bold text-slate-700">Vị trí <span class="text-red-500">*</span></label>
+                                                <input type="text" id="opp-position" wire:model="oppPosition" placeholder="Ví dụ: Thực tập sinh PHP..." class="mt-0.5 w-full rounded-lg border-slate-200 text-xs focus:border-ue-brand focus:ring-ue-brand-soft">
+                                                @error('oppPosition') <p class="text-2xs text-red-600 mt-0.5">{{ $message }}</p> @enderror
+                                            </div>
+                                            <div>
+                                                <label for="opp-location" class="text-2xs font-bold text-slate-700">Địa điểm</label>
+                                                <input type="text" id="opp-location" wire:model="oppLocation" placeholder="TP. Hồ Chí Minh..." class="mt-0.5 w-full rounded-lg border-slate-200 text-xs focus:border-ue-brand focus:ring-ue-brand-soft">
+                                            </div>
+                                            <div>
+                                                <label for="opp-deadline" class="text-2xs font-bold text-slate-700">Hạn nộp</label>
+                                                <input type="date" id="opp-deadline" wire:model="oppApplicationDeadline" class="mt-0.5 w-full rounded-lg border-slate-200 text-xs focus:border-ue-brand focus:ring-ue-brand-soft">
+                                                @error('oppApplicationDeadline') <p class="text-2xs text-red-600 mt-0.5">{{ $message }}</p> @enderror
+                                            </div>
+                                            <div class="sm:col-span-2">
+                                                <label for="opp-url" class="text-2xs font-bold text-slate-700">Link ứng tuyển</label>
+                                                <input type="url" id="opp-url" wire:model="oppApplicationUrl" placeholder="https://..." class="mt-0.5 w-full rounded-lg border-slate-200 text-xs focus:border-ue-brand focus:ring-ue-brand-soft">
+                                                @error('oppApplicationUrl') <p class="text-2xs text-red-600 mt-0.5">{{ $message }}</p> @enderror
+                                            </div>
+                                        </div>
+                                    </div>
+                                @endif
+
                                 <div>
                                     <label for="post-body" class="sr-only">Nội dung bài viết</label>
                                     <textarea
                                         id="post-body"
                                         wire:model="body"
-                                        placeholder="Có gì mới trong cộng đồng HCMUE hôm nay?"
+                                        placeholder="{{ $postType === 'opportunity' ? 'Mô tả thêm về cơ hội này...' : ($postType === 'experience_share' ? 'Chia sẻ kinh nghiệm của bạn với cộng đồng...' : ($postType === 'mentor_insight' ? 'Chia sẻ góc nhìn nghề nghiệp, lời khuyên dành cho sinh viên...' : 'Có gì mới trong cộng đồng HCMUE hôm nay?')) }}"
                                         rows="2"
                                         class="ue-composer__textarea focus:outline-none"
                                         maxlength="3000"
@@ -622,7 +748,15 @@ new #[Layout('layouts.app')] class extends Component
                                         wire:loading.attr="disabled"
                                         wire:target="imageFiles"
                                     >
-                                        Đăng bài
+                                        @if ($postType === 'opportunity')
+                                            Đăng cơ hội
+                                        @elseif ($postType === 'experience_share')
+                                            Chia sẻ
+                                        @elseif ($postType === 'mentor_insight')
+                                            Đăng insight
+                                        @else
+                                            Đăng bài
+                                        @endif
                                     </x-ui.button>
                                 </div>
                             </form>
@@ -737,7 +871,7 @@ new #[Layout('layouts.app')] class extends Component
             <div class="bg-white rounded-2xl max-w-md w-full border border-slate-200 shadow-2xl overflow-hidden ue-animate-scale-in">
                 <div class="px-6 py-4 border-b border-slate-100 flex items-center justify-between">
                     <h3 id="report-modal-title" class="text-sm font-bold text-slate-800 flex items-center gap-2">
-                        <x-ui.icon name="alert-triangle" size="xs" class="text-yellow-600" />
+                        <x-ui.icon name="alert-triangle" size="xs" class="text-ue-brand" />
                         Báo cáo vi phạm cộng đồng
                     </h3>
                     <button type="button" wire:click="closeReport" class="text-slate-400 hover:text-slate-600 transition-colors">
