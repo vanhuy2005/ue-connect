@@ -7,6 +7,7 @@ use App\Models\BlockedUser;
 use App\Models\Media;
 use App\Models\UserFollow;
 use App\Enums\ConnectionStatus;
+use App\Enums\PostStatus;
 use App\Enums\GreetingStatus;
 use App\Models\Greeting;
 use App\Actions\Connections\SendGreeting;
@@ -30,7 +31,7 @@ new class extends Component
     use WithFileUploads;
 
     public User $user;
-    public string $activeTab = 'posts'; // posts, replies, media, communities
+    public string $activeTab = 'posts'; // posts, replies, media, communities, reposts
     public ?string $feedbackMessage = null;
     public bool $isFollowing = false;
     public int $followersCount = 0;
@@ -94,7 +95,10 @@ new class extends Component
      */
     public function getPostsCountProperty(): int
     {
-        return $this->user->posts()->count();
+        return $this->user->posts()
+            ->whereIn('status', [PostStatus::PUBLISHED, PostStatus::EDITED])
+            ->visibleTo(Auth::user())
+            ->count();
     }
 
     /**
@@ -439,11 +443,13 @@ new class extends Component
         $profilePosts = collect();
         $profileComments = collect();
         $profileMedia = collect();
-        $savedPosts = collect();
+        $profileReposts = collect();
 
         if ($this->activeTab === 'posts') {
             $profilePosts = $this->user->posts()
                 ->with('media.variants')
+                ->whereIn('status', [PostStatus::PUBLISHED, PostStatus::EDITED])
+                ->visibleTo(Auth::user())
                 ->latest()
                 ->take(10)
                 ->get();
@@ -462,9 +468,13 @@ new class extends Component
                 ->latest()
                 ->take(30)
                 ->get();
-        } elseif ($this->activeTab === 'saved' && $this->user->id === Auth::id()) {
-            $savedPosts = $this->user->postSaves()
-                ->with(['post.user.profile', 'post.media.variants'])
+        } elseif ($this->activeTab === 'reposts') {
+            $profileReposts = $this->user->postReposts()
+                ->with(['user.profile', 'post.user.profile', 'post.media.variants'])
+                ->whereHas('post', function ($query): void {
+                    $query->whereIn('status', [PostStatus::PUBLISHED, PostStatus::EDITED])
+                        ->visibleTo(Auth::user());
+                })
                 ->latest()
                 ->take(10)
                 ->get();
@@ -474,7 +484,7 @@ new class extends Component
             'profilePosts' => $profilePosts,
             'profileComments' => $profileComments,
             'profileMedia' => $profileMedia,
-            'savedPosts' => $savedPosts,
+            'profileReposts' => $profileReposts,
         ];
     }
 }; ?>
@@ -571,7 +581,7 @@ new class extends Component
                     </h1>
                     
                     <div class="flex items-center gap-2 text-xxs text-slate-500 font-medium">
-                        <span>@{{ $user->username ?? Str::slug($user->name, '') }}</span>
+                        <span>{{ '@' . ($user->username ?? Str::slug($user->name, '')) }}</span>
                         <span class="px-1.5 py-0.5 rounded bg-slate-100 text-slate-605 font-bold uppercase text-[8px] tracking-wide">
                             @if (($user->profile?->role_type ?? 'student') === 'student') Sinh viên
                             @elseif (in_array(($user->profile?->role_type ?? ''), ['teacher', 'advisor'], true)) Giảng viên
@@ -700,16 +710,29 @@ new class extends Component
 
                     {{-- Friend Connection Status Icon Button --}}
                     @if ($this->connectionStatus === 'connected')
-                        <button
-                            type="button"
-                            wire:click="removeConnection"
-                            wire:loading.attr="disabled"
-                            wire:target="removeConnection"
-                            class="w-9 h-9 rounded-xl bg-slate-100 text-slate-700 border border-slate-200 hover:bg-slate-200 hover:text-slate-900 transition-colors flex items-center justify-center flex-shrink-0 shadow-3xs"
-                            title="Hủy kết bạn"
-                        >
-                            <x-ui.icon name="user-check" size="sm" />
-                        </button>
+                        <div class="relative" x-data="{ openFriendMenu: false }" @click.away="openFriendMenu = false">
+                            <button
+                                type="button"
+                                @click="openFriendMenu = !openFriendMenu"
+                                class="w-12 h-9 rounded-xl bg-slate-100 text-slate-700 border border-slate-200 hover:bg-slate-200 hover:text-slate-900 transition-colors flex items-center justify-center flex-shrink-0 shadow-3xs gap-0.5"
+                                title="Bạn bè"
+                            >
+                                <x-ui.icon name="user-check" size="sm" />
+                                <x-ui.icon name="chevron-down" size="xxs" class="text-slate-400 -ml-0.5" />
+                            </button>
+                            <div x-show="openFriendMenu" x-transition class="absolute right-0 mt-1 bg-white border border-slate-150 rounded-xl shadow-lg py-1 z-30 w-36 text-left" style="display: none;">
+                                <button
+                                    type="button"
+                                    wire:click="removeConnection"
+                                    wire:loading.attr="disabled"
+                                    wire:target="removeConnection"
+                                    class="w-full text-left px-3 py-2 text-xxs font-semibold text-red-600 hover:bg-red-50 flex items-center gap-1.5 transition-colors disabled:opacity-60"
+                                >
+                                    <x-ui.icon name="user-minus" size="xs" class="text-red-400" />
+                                    <span>Hủy kết bạn</span>
+                                </button>
+                            </div>
+                        </div>
                     @elseif ($this->connectionStatus === 'pending_sent')
                         <button
                             type="button"
@@ -812,47 +835,41 @@ new class extends Component
             </div>
 
             {{-- Profile Metadata Area --}}
-            <div class="relative px-6 pb-6 pt-0 text-center md:text-left">
-                {{-- Flex Row containing User info on the left/center and Avatar on the right/top --}}
-                <div class="flex flex-col md:flex-row items-center md:items-end justify-between gap-6 -mt-16 md:-mt-20 mb-4">
-                    {{-- Round Avatar Photo --}}
-                    <div class="relative w-28 h-28 sm:w-32 sm:h-32 rounded-full overflow-hidden border-4 border-white bg-slate-50 shadow-md group flex-shrink-0 mx-auto md:mx-0">
+            <div class="relative px-4 sm:px-6 pb-6 pt-0 md:pt-6 text-center md:text-left">
+                {{-- Round Avatar Photo --}}
+                <div class="relative -mt-14 mx-auto md:absolute md:-top-16 md:left-6 md:mt-0 md:mx-0 w-28 h-28 sm:w-32 sm:h-32 rounded-full overflow-hidden border-4 border-white bg-slate-50 shadow-md group">
                         <x-ui.avatar :user="$user" size="2xl" class="w-full h-full border-none rounded-none shadow-none text-2xl font-bold bg-slate-100 flex items-center justify-center" />
 
-                        @if ($isOwn)
-                            <label class="absolute inset-0 bg-slate-900/40 opacity-0 group-hover:opacity-100 cursor-pointer flex flex-col items-center justify-center text-white text-[9px] font-bold transition-opacity">
-                                <x-ui.icon name="camera" size="sm" />
-                                Đổi ảnh
-                                <input type="file" wire:model="avatarFile" class="hidden" accept="image/*" />
-                            </label>
-                        @endif
-                    </div>
+
+                    @if ($isOwn)
+                        <label class="absolute inset-0 bg-slate-900/40 opacity-0 group-hover:opacity-100 cursor-pointer flex flex-col items-center justify-center text-white text-[9px] font-bold transition-opacity">
+                            <x-ui.icon name="camera" size="sm" />
+                            Đổi ảnh
+                            <input type="file" wire:model="avatarFile" class="hidden" accept="image/*" />
+                        </label>
+                    @endif
                 </div>
 
                 {{-- Profile Info Section --}}
-                <div class="space-y-4 w-full min-w-0">
-                    <div class="space-y-2">
-                        <div class="flex flex-col sm:flex-row sm:items-center gap-2.5 justify-center md:justify-start">
-                            <h1 class="text-base sm:text-lg font-bold text-slate-800 flex items-center justify-center md:justify-start gap-1.5 min-w-0">
-                                <span class="truncate">{{ $user->profile?->display_name ?? $user->name }}</span>
-                                @if ($user->isActive())
-                                    <x-ui.icon name="shield-check" size="xs" class="text-ue-brand fill-ue-brand" />
-                                @endif
-                            </h1>
+                <div class="space-y-3.5 w-full mt-4 md:mt-0 md:pl-40 min-w-0">
+                    <div class="flex flex-col sm:flex-row sm:items-center gap-3 justify-center md:justify-start">
+                        <h1 class="text-base sm:text-lg font-bold text-slate-800 flex items-center justify-center md:justify-start gap-1.5 min-w-0">
+                            <span class="truncate">{{ $user->profile?->display_name ?? $user->name }}</span>
+                            @if ($user->isActive())
+                                <x-ui.icon name="shield-check" size="xs" class="text-ue-brand fill-ue-brand" />
+                            @endif
+                        </h1>
 
-                            {{-- Role Badge --}}
-                            <span class="inline-flex self-center px-2 py-0.5 rounded-full text-[9px] font-bold tracking-wide uppercase bg-slate-100 text-slate-500">
-                                @if (($user->profile?->role_type ?? 'student') === 'student') Sinh viên
-                                @elseif (in_array(($user->profile?->role_type ?? ''), ['teacher', 'advisor'], true)) Giảng viên
-                                @elseif (($user->profile?->role_type ?? '') === 'alumni') Cựu sinh viên
-                                @else Thành viên
-                                @endif
-                            </span>
-                        </div>
-                        <p class="text-xxs text-slate-400 font-medium">@<span>{{ $user->username ?? Str::slug($user->name, '') }}</span></p>
+                        {{-- Role Badge --}}
+                        <span class="inline-flex self-center px-2 py-0.5 rounded-full text-[9px] font-bold tracking-wide uppercase bg-slate-100 text-slate-500">
+                            @if (($user->profile?->role_type ?? 'student') === 'student') Sinh viên
+                            @elseif (in_array(($user->profile?->role_type ?? ''), ['teacher', 'advisor'], true)) Giảng viên
+                            @elseif (($user->profile?->role_type ?? '') === 'alumni') Cựu sinh viên
+                            @else Thành viên
+                            @endif
+                        </span>
                     </div>
 
-                    {{-- Stats --}}
                     <div class="flex items-center justify-center md:justify-start gap-6 py-1 text-slate-700 select-none text-xxs font-medium">
                         <div class="flex items-baseline gap-1">
                             <span class="text-xs font-bold text-slate-800">{{ $this->postsCount }}</span>
@@ -887,7 +904,6 @@ new class extends Component
                             @endif
                         @endif
                     </div>
-                </div>
 
                 {{-- Action Buttons Row --}}
                 <div class="mt-5 pt-4 border-t border-slate-100 flex items-center justify-center md:justify-start gap-3 w-full flex-wrap">
@@ -944,17 +960,31 @@ new class extends Component
 
                         {{-- Connection status --}}
                         @if ($this->connectionStatus === 'connected')
-                            {{-- Friends (Click to unfriend) --}}
-                            <button
-                                type="button"
-                                wire:click="removeConnection"
-                                wire:loading.attr="disabled"
-                                wire:target="removeConnection"
-                                class="px-3.5 py-2 rounded-xl bg-slate-100 text-slate-800 border border-slate-200 hover:bg-slate-200 hover:text-slate-900 transition-colors flex items-center justify-center"
-                                title="Bạn bè (Click để hủy kết bạn)"
-                            >
-                                <x-ui.icon name="user-check" size="xs" />
-                            </button>
+                            {{-- Friends dropdown menu --}}
+                            <div class="relative" x-data="{ openFriendMenu: false }" @click.away="openFriendMenu = false">
+                                <button
+                                    type="button"
+                                    @click="openFriendMenu = !openFriendMenu"
+                                    class="inline-flex items-center justify-center gap-1.5 px-4 py-2 rounded-xl bg-slate-100 text-slate-800 border border-slate-200 hover:bg-slate-200 hover:text-slate-900 transition-colors text-xxs font-bold"
+                                    title="Bạn bè"
+                                >
+                                    <x-ui.icon name="user-check" size="xs" />
+                                    <span>Bạn bè</span>
+                                    <x-ui.icon name="chevron-down" size="xs" class="text-slate-500" />
+                                </button>
+                                <div x-show="openFriendMenu" x-transition class="absolute left-0 sm:left-auto sm:right-0 mt-1 bg-white border border-slate-150 rounded-xl shadow-lg py-1 z-30 w-40 text-left" style="display: none;">
+                                    <button
+                                        type="button"
+                                        wire:click="removeConnection"
+                                        wire:loading.attr="disabled"
+                                        wire:target="removeConnection"
+                                        class="w-full text-left px-3 py-2 text-xxs font-semibold text-red-650 hover:bg-red-50 flex items-center gap-1.5 transition-colors disabled:opacity-60"
+                                    >
+                                        <x-ui.icon name="user-minus" size="xs" class="text-red-400" />
+                                        <span>Hủy kết bạn</span>
+                                    </button>
+                                </div>
+                            </div>
                         @elseif ($this->connectionStatus === 'pending_sent')
                             {{-- Pending Sent (Click to cancel) --}}
                             <button
@@ -1019,6 +1049,7 @@ new class extends Component
                 </div>
             </div>
         </div>
+    </div>
 
         {{-- Modern Profile Tabs --}}
         <div class="flex flex-col space-y-4">
@@ -1051,15 +1082,13 @@ new class extends Component
                 >
                     Cộng đồng
                 </button>
-                @if ($user->id === Auth::id())
-                    <button 
-                        type="button" 
-                        wire:click="$set('activeTab', 'saved')" 
-                        class="pb-3 text-xxs font-bold transition-all border-b-2 whitespace-nowrap {{ $activeTab === 'saved' ? 'border-slate-800 text-slate-800 font-bold' : 'border-transparent text-slate-400 hover:text-slate-600' }}"
-                    >
-                        Đã lưu
-                    </button>
-                @endif
+                <button
+                    type="button"
+                    wire:click="$set('activeTab', 'reposts')"
+                    class="pb-3 text-xxs font-bold transition-all border-b-2 whitespace-nowrap {{ $activeTab === 'reposts' ? 'border-slate-800 text-slate-800 font-bold' : 'border-transparent text-slate-400 hover:text-slate-600' }}"
+                >
+                    Đăng lại
+                </button>
                 <button 
                     type="button" 
                     wire:click="$set('activeTab', 'about')" 
@@ -1159,26 +1188,31 @@ new class extends Component
                         <p class="text-xxs text-slate-400 max-w-xs">Cộng đồng và câu lạc bộ học thuật sẽ hiển thị tại đây khi tham gia.</p>
                     </div>
 
-                @elseif ($activeTab === 'saved' && $user->id === Auth::id())
+                @elseif ($activeTab === 'reposts')
                     <div class="space-y-4">
-                        @forelse ($savedPosts as $saved)
-                            @if ($saved->post)
+                        @forelse ($profileReposts as $repost)
+                            @if ($repost->post)
                                 <div class="bg-white border border-slate-150 rounded-2xl p-4 shadow-2xs">
+                                    <div class="mb-2 flex items-center gap-1.5 text-[10px] font-bold text-slate-400">
+                                        <x-ui.icon name="repost" size="xs" class="text-slate-400" />
+                                        <span>{{ $user->profile?->display_name ?? $user->name }} đã đăng lại</span>
+                                        <span class="font-semibold">· {{ $repost->created_at->diffForHumans() }}</span>
+                                    </div>
                                     <div class="flex items-center gap-3">
-                                        <x-ui.avatar :user="$saved->post->user" size="xs" />
+                                        <x-ui.avatar :user="$repost->post->user" size="xs" />
                                         <div>
-                                            <h4 class="text-xxs font-bold text-slate-800">{{ $saved->post->user->profile?->display_name ?? $saved->post->user->name }}</h4>
-                                            <span class="text-[9px] text-slate-400">{{ $saved->post->created_at->diffForHumans() }}</span>
+                                            <h4 class="text-xxs font-bold text-slate-800">{{ $repost->post->user->profile?->display_name ?? $repost->post->user->name }}</h4>
+                                            <span class="text-[9px] text-slate-400">{{ $repost->post->created_at->diffForHumans() }}</span>
                                         </div>
                                     </div>
-                                    <p class="text-xxs font-medium text-slate-655 leading-relaxed mt-2.5">{{ $saved->post->body }}</p>
+                                    <p class="text-xxs font-medium text-slate-655 leading-relaxed mt-2.5">{{ $repost->post->body }}</p>
                                 </div>
                             @endif
                         @empty
                             <div class="py-12 flex flex-col items-center justify-center text-center space-y-3 bg-slate-50 border border-dashed border-slate-200 rounded-2xl">
-                                <x-ui.icon name="bookmark" size="lg" class="text-slate-300" />
-                                <h3 class="text-xs font-bold text-slate-700">Thư mục đã lưu trống</h3>
-                                <p class="text-xxs text-slate-400 max-w-xs">Đánh dấu những bài viết bạn muốn lưu để dễ dàng xem lại tại đây.</p>
+                                <x-ui.icon name="repost" size="lg" class="text-slate-300" />
+                                <h3 class="text-xs font-bold text-slate-700">Chưa có bài đăng lại nào</h3>
+                                <p class="text-xxs text-slate-400 max-w-xs">Các bài viết thành viên đăng lại công khai sẽ xuất hiện tại đây.</p>
                             </div>
                         @endforelse
                     </div>
