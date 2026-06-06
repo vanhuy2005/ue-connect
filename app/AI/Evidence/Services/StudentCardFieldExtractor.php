@@ -129,8 +129,8 @@ class StudentCardFieldExtractor
             return 'K'.$matches[1];
         }
 
-        // Year range: 2023-2027
-        if (preg_match('/(\d{4})[-–](\d{4})/', $text, $matches)) {
+        // Year range: 2023-2027, 2023 - 2027
+        if (preg_match('/(\d{4})[\s]*[-–][\s]*(\d{4})/', $text, $matches)) {
             return $matches[1].'-'.$matches[2];
         }
 
@@ -142,6 +142,19 @@ class StudentCardFieldExtractor
      */
     private function extractFullName(array $lines): ?string
     {
+        // Pass 1: Look for anchor "THẺ SINH VIÊN" and take the first valid subsequent line
+        foreach ($lines as $i => $line) {
+            if (str_contains(mb_strtolower($line, 'UTF-8'), 'thẻ sinh viên')) {
+                for ($j = $i + 1; $j < min($i + 4, count($lines)); $j++) {
+                    $nextLine = trim($lines[$j]);
+                    if (preg_match('/^[\p{L}\s]+$/u', $nextLine) && mb_strlen($nextLine, 'UTF-8') >= 5) {
+                        return mb_strtoupper($nextLine, 'UTF-8');
+                    }
+                }
+            }
+        }
+
+        // Pass 2: Fallback logic with expanded skip keywords
         foreach ($lines as $line) {
             // Skip lines that are likely labels, codes, or school names
             if (preg_match('/\d{4,}/', $line)) {
@@ -154,7 +167,12 @@ class StudentCardFieldExtractor
 
             // Skip known label words
             $lower = mb_strtolower($line, 'UTF-8');
-            $skipKeywords = ['khoa', 'ngành', 'khóa', 'trường', 'hcmue', 'mssv', 'student', 'university', 'faculty'];
+            $skipKeywords = [
+                'khoa', 'ngành', 'khóa', 'trường', 'đại học', 'hcmue', 'mssv', 'student', 
+                'university', 'faculty', 'thành phố', 'hồ chí minh', 'thẻ sinh viên', 
+                'chất lượng', 'nhân văn', 'sáng tạo', 'education', 'sp', 'tp', 'city'
+            ];
+            
             $hasSkipKeyword = false;
             foreach ($skipKeywords as $keyword) {
                 if (str_contains($lower, $keyword)) {

@@ -3,11 +3,11 @@
 return [
     'enabled' => env('AI_VERIFICATION_ENABLED', false),
 
-    'provider' => env('AI_VERIFICATION_PROVIDER', 'mock'),
+    'provider' => env('AI_VERIFICATION_PROVIDER', 'local_hybrid'),
 
     'student_card_only' => true,
 
-    'camera_capture_required_for_ai' => true,
+    'camera_capture_required_for_ai' => false,
 
     'auto_approve' => false,
 
@@ -28,7 +28,9 @@ return [
     ],
 
     'local_hybrid' => [
-        'ocr_engine' => env('AI_OCR_ENGINE', 'tesseract'),
+        'ocr_engine' => env('AI_OCR_ENGINE', 'ocr_space'),
+        'ocr_space_api_key' => env('OCR_SPACE_API_KEY'),
+        'ocr_space_api_url' => env('OCR_SPACE_API_URL', 'https://api.ocr.space/parse/image'),
         'paddleocr_service_url' => env('AI_PADDLEOCR_SERVICE_URL'),
         'ollama_enabled' => env('AI_OLLAMA_ENABLED', true),
         'ollama_base_url' => env('OLLAMA_BASE_URL', 'http://127.0.0.1:11434'),
