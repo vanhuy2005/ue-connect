@@ -2,10 +2,12 @@
 
 namespace Tests\Feature;
 
+use App\Enums\ConnectionStatus;
 use App\Models\Community;
 use App\Models\CommunityJoinRequest;
 use App\Models\CommunityMember;
 use App\Models\CommunityResource;
+use App\Models\Connection;
 use App\Models\MediaFile;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
@@ -300,15 +302,15 @@ class CommunityDetailTest extends TestCase
         $friend2 = $this->createActiveUser();
 
         // Establish connections
-        \App\Models\Connection::create([
+        Connection::create([
             'user_one_id' => min($user->id, $friend1->id),
             'user_two_id' => max($user->id, $friend1->id),
-            'status' => \App\Enums\ConnectionStatus::ACTIVE,
+            'status' => ConnectionStatus::ACTIVE,
         ]);
-        \App\Models\Connection::create([
+        Connection::create([
             'user_one_id' => min($user->id, $friend2->id),
             'user_two_id' => max($user->id, $friend2->id),
-            'status' => \App\Enums\ConnectionStatus::ACTIVE,
+            'status' => ConnectionStatus::ACTIVE,
         ]);
 
         Volt::actingAs($user)
@@ -324,12 +326,12 @@ class CommunityDetailTest extends TestCase
         // Check if messages were sent
         $this->assertDatabaseHas('messages', [
             'sender_id' => $user->id,
-            'body' => "Chào {$friend1->name}! Mình muốn mời bạn tham gia cộng đồng: {$community->name}\nTham gia tại đây: " . route('community.show', $community->id),
+            'body' => "Chào {$friend1->name}! Mình muốn mời bạn tham gia cộng đồng: {$community->name}\nTham gia tại đây: ".route('community.show', $community->id),
         ]);
 
         $this->assertDatabaseHas('messages', [
             'sender_id' => $user->id,
-            'body' => "Chào {$friend2->name}! Mình muốn mời bạn tham gia cộng đồng: {$community->name}\nTham gia tại đây: " . route('community.show', $community->id),
+            'body' => "Chào {$friend2->name}! Mình muốn mời bạn tham gia cộng đồng: {$community->name}\nTham gia tại đây: ".route('community.show', $community->id),
         ]);
     }
 }
