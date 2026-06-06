@@ -89,6 +89,41 @@ class SavedPostsTest extends TestCase
             ->assertDontSee('Post to be saved.');
     }
 
+    public function test_saved_posts_are_private_route_not_public_profile_tab(): void
+    {
+        $savedOnlyAuthor = User::factory()->create([
+            'account_status' => AccountStatus::ACTIVE,
+        ]);
+        $savedOnlyAuthor->profile()->create([
+            'display_name' => 'Saved Only Author',
+            'role_type' => 'student',
+            'profile_status' => 'complete',
+        ]);
+        $savedOnlyPost = Post::factory()->create([
+            'user_id' => $savedOnlyAuthor->id,
+            'body' => 'Private saved-only post.',
+            'status' => PostStatus::PUBLISHED,
+            'published_at' => now(),
+        ]);
+
+        $this->actingAs($this->user);
+
+        resolve(TogglePostSave::class)->execute($this->user, $savedOnlyPost);
+
+        Volt::test('pages.app.profile', ['user' => $this->user])
+            ->assertDontSee('Đã lưu')
+            ->assertSee('Đăng lại');
+
+        Volt::test('pages.app.profile', ['user' => $this->otherUser])
+            ->assertDontSee('Đã lưu')
+            ->assertSee('Đăng lại')
+            ->assertDontSee('Private saved-only post.');
+
+        Volt::test('pages.app.saved-posts')
+            ->assertSee('Chỉ bạn mới xem được danh sách lưu trữ cá nhân này.')
+            ->assertSee('Private saved-only post.');
+    }
+
     public function test_hidden_saved_post_does_not_appear_on_saved_posts_page(): void
     {
         $this->actingAs($this->user);

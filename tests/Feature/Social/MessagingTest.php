@@ -197,7 +197,7 @@ class MessagingTest extends TestCase
         $post = Post::factory()->create([
             'user_id' => $this->otherUser->id,
             'status' => PostStatus::PUBLISHED,
-            'visibility' => PostVisibility::COMMUNITY,
+            'visibility' => PostVisibility::VERIFIED_USERS,
             'published_at' => now(),
         ]);
 

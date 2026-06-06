@@ -4,6 +4,7 @@ use App\Actions\Posts\CreatePost;
 use App\Actions\Posts\DeletePost;
 use App\Actions\Posts\UpdatePost;
 use App\Actions\Posts\TogglePostLike;
+use App\Actions\Posts\TogglePostRepost;
 use App\Actions\Posts\TogglePostSave;
 use App\Actions\Posts\HidePostFromFeed;
 use App\Actions\Reports\CreateReport;
@@ -13,14 +14,18 @@ use App\Actions\Media\AttachMediaToModelAction;
 use App\Actions\Media\DeleteMediaAction;
 use App\Actions\Media\GenerateMediaUrlAction;
 use App\Actions\Media\StoreTemporaryMediaAction;
+use App\Actions\Follows\FollowUser;
 use App\Enums\CommentStatus;
 use App\Enums\PostStatus;
 use App\Enums\PostVisibility;
 use App\Enums\ReportReason;
 use App\Enums\ConnectionStatus;
 use App\Models\Post;
+use App\Models\PostRepost;
 use App\Models\User;
 use App\Models\Connection;
+use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Pagination\Paginator;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Gate;
 use Livewire\Attributes\Layout;
@@ -32,9 +37,14 @@ new #[Layout('layouts.app')] class extends Component
 {
     use WithPagination, WithFileUploads;
 
+    private const FEED_PAGE_SIZE = 10;
+
     // Composer properties
     public string $body = '';
     public string $visibility = 'verified_users';
+    public int $perPage = self::FEED_PAGE_SIZE;
+    public string $activeFeedTab = 'for_you';
+    public ?int $selectedCommunityId = null;
 
     // Multi-image upload properties
     public $imageFiles = [];
@@ -64,7 +74,7 @@ new #[Layout('layouts.app')] class extends Component
     public bool $showShareModal = false;
     public ?int $sharingPostId = null;
     public string $shareSearch = '';
-    public ?int $selectedShareUserId = null;
+    public array $selectedShareUserIds = [];
     public string $shareOptionalMessage = '';
 
     /**
@@ -73,7 +83,18 @@ new #[Layout('layouts.app')] class extends Component
     protected array $rules = [
         'body' => 'required|string|max:3000',
         'visibility' => 'required|string|in:verified_users,connections_only,community,private',
+        'selectedCommunityId' => 'nullable|integer|exists:communities,id',
     ];
+
+    /**
+     * Clear community selection when switching away from community audience.
+     */
+    public function updatedVisibility(string $value): void
+    {
+        if ($value !== PostVisibility::COMMUNITY->value) {
+            $this->selectedCommunityId = null;
+        }
+    }
 
     /**
      * Handle temporary composer image uploads.
@@ -130,11 +151,19 @@ new #[Layout('layouts.app')] class extends Component
      */
     public function submitPost(CreatePost $createPost): void
     {
-        $this->validate();
+        $this->validate([
+            'body' => 'required|string|max:3000',
+            'visibility' => 'required|string|in:verified_users,connections_only,community,private',
+            'selectedCommunityId' => 'nullable|required_if:visibility,community|integer|exists:communities,id',
+        ], [
+            'selectedCommunityId.required_if' => 'Vui lòng chọn cộng đồng để đăng bài.',
+            'selectedCommunityId.exists' => 'Cộng đồng đã chọn không khả dụng.',
+        ]);
 
         $post = $createPost->execute(Auth::user(), [
             'body' => $this->body,
             'visibility' => $this->visibility,
+            'community_id' => $this->selectedCommunityId,
         ]);
 
         // Attach composer images polymorphically
@@ -144,10 +173,13 @@ new #[Layout('layouts.app')] class extends Component
         }
 
         $this->body = '';
+        $this->visibility = PostVisibility::VERIFIED_USERS->value;
+        $this->selectedCommunityId = null;
         $this->composerImages = [];
         $this->imageFiles = [];
         $this->feedbackMessage = 'Đăng bài viết thành công.';
         $this->dispatch('post-created');
+        $this->perPage = self::FEED_PAGE_SIZE;
         $this->resetPage(); // Re-render feed at page 1
     }
 
@@ -384,43 +416,93 @@ new #[Layout('layouts.app')] class extends Component
 
         $this->sharingPostId = $postId;
         $this->shareSearch = '';
-        $this->selectedShareUserId = null;
+        $this->selectedShareUserIds = [];
         $this->shareOptionalMessage = '';
         $this->showShareModal = true;
     }
 
     /**
-     * Execute post sharing to conversation.
+     * Toggle a recipient in the share modal.
+     */
+    public function toggleShareRecipient(int $userId): void
+    {
+        $selectedUserIds = collect($this->selectedShareUserIds)
+            ->map(fn ($selectedUserId) => (int) $selectedUserId)
+            ->unique()
+            ->values();
+
+        if ($selectedUserIds->contains($userId)) {
+            $this->selectedShareUserIds = $selectedUserIds
+                ->reject(fn ($selectedUserId) => $selectedUserId === $userId)
+                ->values()
+                ->all();
+
+            return;
+        }
+
+        $this->selectedShareUserIds = $selectedUserIds
+            ->push($userId)
+            ->unique()
+            ->values()
+            ->all();
+    }
+
+    /**
+     * Execute post sharing to selected conversations.
      */
     public function executeShare(
         SendSharedPostMessage $sendSharedPostMessage,
         FindOrCreateDirectConversation $findOrCreateDirectConversation
     ): void {
-        if (! $this->sharingPostId || ! $this->selectedShareUserId) {
+        $selectedUserIds = collect($this->selectedShareUserIds)
+            ->map(fn ($selectedUserId) => (int) $selectedUserId)
+            ->filter()
+            ->unique()
+            ->values();
+
+        if (! $this->sharingPostId || $selectedUserIds->isEmpty()) {
             return;
         }
 
-        try {
-            $post = Post::findOrFail($this->sharingPostId);
-            $recipient = User::findOrFail($this->selectedShareUserId);
+        $post = Post::findOrFail($this->sharingPostId);
+        $sentCount = 0;
+        $failedRecipients = [];
 
-            // Find or create conversation
-            $conversation = $findOrCreateDirectConversation->execute(Auth::user(), $recipient);
+        foreach ($selectedUserIds as $recipientId) {
+            try {
+                $recipient = User::findOrFail($recipientId);
 
-            // Send share post message
-            $sendSharedPostMessage->execute(Auth::user(), $conversation, $post, [
-                'body' => $this->shareOptionalMessage ?: null,
-            ]);
+                $conversation = $findOrCreateDirectConversation->execute(Auth::user(), $recipient);
 
+                $sendSharedPostMessage->execute(Auth::user(), $conversation, $post, [
+                    'body' => $this->shareOptionalMessage ?: null,
+                ]);
+
+                $sentCount++;
+            } catch (\Exception $e) {
+                $failedRecipients[] = User::find($recipientId)?->name ?? "ID {$recipientId}";
+            }
+        }
+
+        if ($sentCount > 0) {
             $this->showShareModal = false;
             $this->sharingPostId = null;
-            $this->selectedShareUserId = null;
+            $this->selectedShareUserIds = [];
             $this->shareOptionalMessage = '';
-            
-            $this->feedbackMessage = 'Đã chia sẻ bài viết qua tin nhắn thành công.';
-        } catch (\Exception $e) {
-            $this->feedbackMessage = $e->getMessage();
+            $this->shareSearch = '';
+
+            if ($failedRecipients === []) {
+                $this->feedbackMessage = "Đã chia sẻ bài viết qua tin nhắn cho {$sentCount} người nhận.";
+
+                return;
+            }
+
+            $this->feedbackMessage = "Đã gửi cho {$sentCount} người nhận. Không gửi được cho: ".implode(', ', $failedRecipients).'.';
+
+            return;
         }
+
+        $this->feedbackMessage = 'Không gửi được bài viết cho người nhận đã chọn: '.implode(', ', $failedRecipients).'.';
     }
 
     /**
@@ -452,16 +534,72 @@ new #[Layout('layouts.app')] class extends Component
     }
 
     /**
-     * Render the component view.
+     * Increase the feed window while keeping already-rendered posts in place.
      */
-    public function with(): array
+    public function loadMore(): void
     {
-        $user = Auth::user();
+        $this->perPage += self::FEED_PAGE_SIZE;
+    }
 
-        // Get latest verified active posts (Strictly PUBLISHED and EDITED only, excluding hidden posts, except those hidden in current session)
-        $posts = Post::with(['user.profile', 'media.variants'])
+    /**
+     * Follow a post author directly from the feed.
+     */
+    public function quickFollowAuthor(int $authorId, FollowUser $followUser): void
+    {
+        $author = User::findOrFail($authorId);
+
+        try {
+            $followUser->execute(Auth::user(), $author);
+            $this->feedbackMessage = 'Đã theo dõi '.$author->name.'.';
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            $this->feedbackMessage = collect($e->errors())->flatten()->first() ?: 'Không thể theo dõi người dùng này.';
+        } catch (\Exception $e) {
+            $this->feedbackMessage = $e->getMessage();
+        }
+    }
+
+    /**
+     * Toggle a public repost for the selected post.
+     */
+    public function toggleRepost(int $postId, TogglePostRepost $togglePostRepost): void
+    {
+        $post = Post::findOrFail($postId);
+
+        try {
+            $isReposted = $togglePostRepost->execute(Auth::user(), $post);
+            $this->feedbackMessage = $isReposted ? 'Đã đăng lại bài viết.' : 'Đã hủy đăng lại bài viết.';
+        } catch (\Illuminate\Auth\Access\AuthorizationException $e) {
+            $this->feedbackMessage = $e->getMessage();
+        }
+    }
+
+    /**
+     * Switch between the personalized and following-only feeds.
+     */
+    public function setFeedTab(string $tab): void
+    {
+        if (! in_array($tab, ['for_you', 'following'], true)) {
+            return;
+        }
+
+        if ($this->activeFeedTab === $tab) {
+            return;
+        }
+
+        $this->activeFeedTab = $tab;
+        $this->perPage = self::FEED_PAGE_SIZE;
+        $this->resetPage();
+    }
+
+    /**
+     * Build the base visible feed query shared by both tabs.
+     */
+    private function baseFeedQuery(User $user): Builder
+    {
+        $query = Post::with(['user.profile', 'media.variants'])
             ->withCount([
                 'likes',
+                'reposts',
                 'comments as published_comments_count' => function ($query): void {
                     $query->where('status', CommentStatus::PUBLISHED->value);
                 },
@@ -473,20 +611,296 @@ new #[Layout('layouts.app')] class extends Component
                 'saves as saved_by_current_user_count' => function ($query) use ($user): void {
                     $query->where('user_id', $user->id);
                 },
-            ])
+                'reposts as reposted_by_current_user_count' => function ($query) use ($user): void {
+                    $query->where('user_id', $user->id);
+                },
+            ]);
+
+        return $this->applyVisibleFeedPostConstraints($query, $user);
+    }
+
+    /**
+     * Apply post status, privacy, and local hide filters to a feed post query.
+     */
+    private function applyVisibleFeedPostConstraints($query, User $user)
+    {
+        return $query
             ->whereIn('status', [PostStatus::PUBLISHED, PostStatus::EDITED])
+            ->visibleTo($user)
             ->where(function ($query) use ($user) {
                 $query->whereDoesntHave('hides', function ($q) use ($user) {
                     $q->where('user_id', $user->id);
                 })
                 ->orWhereIn('id', $this->locallyHiddenPostIds);
+            });
+    }
+
+    /**
+     * Build visible repost events for the feed.
+     */
+    private function baseRepostQuery(User $user): Builder
+    {
+        return PostRepost::with([
+            'user.profile',
+            'post' => function ($query) use ($user): void {
+                $query->with(['user.profile', 'media.variants'])
+                    ->withCount([
+                        'likes',
+                        'reposts',
+                        'comments as published_comments_count' => function ($query): void {
+                            $query->where('status', CommentStatus::PUBLISHED->value);
+                        },
+                    ])
+                    ->withCount([
+                        'likes as liked_by_current_user_count' => function ($query) use ($user): void {
+                            $query->where('user_id', $user->id);
+                        },
+                        'saves as saved_by_current_user_count' => function ($query) use ($user): void {
+                            $query->where('user_id', $user->id);
+                        },
+                        'reposts as reposted_by_current_user_count' => function ($query) use ($user): void {
+                            $query->where('user_id', $user->id);
+                        },
+                    ]);
+
+                $this->applyVisibleFeedPostConstraints($query, $user);
+            },
+        ])->whereHas('post', function (Builder $query) use ($user): void {
+            $this->applyVisibleFeedPostConstraints($query, $user);
+        });
+    }
+
+    /**
+     * @return list<int>
+     */
+    private function followingUserIds(User $user): array
+    {
+        return $user->following()
+            ->pluck('users.id')
+            ->map(fn ($id): int => (int) $id)
+            ->all();
+    }
+
+    /**
+     * @return list<int>
+     */
+    private function friendUserIds(User $user): array
+    {
+        return Connection::where(function ($query) use ($user) {
+                $query->where('user_one_id', $user->id)
+                    ->orWhere('user_two_id', $user->id);
             })
-            ->latest('published_at')
-            ->paginate(10);
+            ->where('status', ConnectionStatus::ACTIVE)
+            ->get(['user_one_id', 'user_two_id'])
+            ->map(fn (Connection $connection): int => $connection->user_one_id === $user->id
+                ? (int) $connection->user_two_id
+                : (int) $connection->user_one_id)
+            ->values()
+            ->all();
+    }
+
+    /**
+     * @return list<int>
+     */
+    private function joinedCommunityIds(User $user): array
+    {
+        return $user->activeCommunityMemberships()
+            ->pluck('community_id')
+            ->map(fn ($id): int => (int) $id)
+            ->all();
+    }
+
+    /**
+     * Rank For You items: friends, following, joined communities, then recent.
+     */
+    private function applyForYouRanking(Builder $query, User $user): Builder
+    {
+        $cases = [];
+        $bindings = [];
+
+        $friendIds = $this->friendUserIds($user);
+        if ($friendIds !== []) {
+            $cases[] = 'WHEN user_id IN ('.$this->placeholdersFor($friendIds).') THEN 0';
+            array_push($bindings, ...$friendIds);
+        }
+
+        $followingIds = $this->followingUserIds($user);
+        if ($followingIds !== []) {
+            $cases[] = 'WHEN user_id IN ('.$this->placeholdersFor($followingIds).') THEN 1';
+            array_push($bindings, ...$followingIds);
+        }
+
+        $communityIds = $this->joinedCommunityIds($user);
+        if ($communityIds !== []) {
+            $cases[] = 'WHEN scope_type = ? AND scope_id IN ('.$this->placeholdersFor($communityIds).') THEN 2';
+            $bindings[] = 'community';
+            array_push($bindings, ...$communityIds);
+        }
+
+        if ($cases !== []) {
+            $query->orderByRaw('CASE '.implode(' ', $cases).' ELSE 3 END', $bindings);
+        }
+
+        return $query->latest('published_at');
+    }
+
+    /**
+     * Rank a materialized feed item using the same For You buckets as the DB query.
+     *
+     * @param  list<int>  $friendIds
+     * @param  list<int>  $followingIds
+     * @param  list<int>  $communityIds
+     */
+    private function feedRankForPost(Post $post, array $friendIds, array $followingIds, array $communityIds): int
+    {
+        if (in_array((int) $post->user_id, $friendIds, true)) {
+            return 0;
+        }
+
+        if (in_array((int) $post->user_id, $followingIds, true)) {
+            return 1;
+        }
+
+        if ($post->scope_type === 'community' && in_array((int) $post->scope_id, $communityIds, true)) {
+            return 2;
+        }
+
+        return 3;
+    }
+
+    /**
+     * Rank a repost event by the user who reposted it.
+     *
+     * @param  list<int>  $friendIds
+     * @param  list<int>  $followingIds
+     */
+    private function feedRankForRepost(PostRepost $repost, array $friendIds, array $followingIds): int
+    {
+        if (in_array((int) $repost->user_id, $friendIds, true)) {
+            return 0;
+        }
+
+        if (in_array((int) $repost->user_id, $followingIds, true)) {
+            return 1;
+        }
+
+        return 3;
+    }
+
+    /**
+     * @param  list<int>  $values
+     */
+    private function placeholdersFor(array $values): string
+    {
+        return implode(', ', array_fill(0, count($values), '?'));
+    }
+
+    /**
+     * Render the component view.
+     */
+    public function with(): array
+    {
+        $user = Auth::user();
+
+        $query = $this->baseFeedQuery($user);
+        $repostQuery = $this->baseRepostQuery($user);
+        $friendIds = $this->friendUserIds($user);
+        $followingIds = $this->followingUserIds($user);
+        $communityIds = $this->joinedCommunityIds($user);
+
+        if ($this->activeFeedTab === 'following') {
+            if ($followingIds === []) {
+                $query->whereRaw('1 = 0');
+                $repostQuery->whereRaw('1 = 0');
+            } else {
+                $query->whereIn('user_id', $followingIds);
+                $repostQuery->whereIn('user_id', $followingIds);
+            }
+
+            $query->latest('published_at');
+            $repostQuery->latest('created_at');
+        } else {
+            $this->applyForYouRanking($query, $user);
+            $repostQuery->latest('created_at');
+        }
+
+        $originalPosts = $query
+            ->limit($this->perPage + 1)
+            ->get()
+            ->map(function (Post $post) use ($friendIds, $followingIds, $communityIds): Post {
+                $post->setAttribute('feed_item_key', "post-{$post->id}");
+                $post->setAttribute('feed_sort_at', $post->published_at ?? $post->created_at);
+                $post->setAttribute('feed_rank', $this->activeFeedTab === 'for_you'
+                    ? $this->feedRankForPost($post, $friendIds, $followingIds, $communityIds)
+                    : 0);
+
+                return $post;
+            });
+
+        $repostPosts = $repostQuery
+            ->limit($this->perPage + 1)
+            ->get()
+            ->filter(fn (PostRepost $repost): bool => $repost->post !== null)
+            ->map(function (PostRepost $repost) use ($friendIds, $followingIds): Post {
+                $post = $repost->post;
+                $post->setAttribute('feed_item_key', "repost-{$repost->id}");
+                $post->setAttribute('feed_sort_at', $repost->created_at);
+                $post->setAttribute('feed_rank', $this->activeFeedTab === 'for_you'
+                    ? $this->feedRankForRepost($repost, $friendIds, $followingIds)
+                    : 0);
+                $post->setRelation('feedRepostedBy', $repost->user);
+                $post->setAttribute('feed_reposted_at', $repost->created_at);
+
+                return $post;
+            });
+
+        $feedItems = $originalPosts
+            ->concat($repostPosts)
+            ->sort(function (Post $firstPost, Post $secondPost): int {
+                $rankComparison = (int) $firstPost->feed_rank <=> (int) $secondPost->feed_rank;
+
+                if ($rankComparison !== 0) {
+                    return $rankComparison;
+                }
+
+                return ($secondPost->feed_sort_at?->getTimestamp() ?? 0) <=> ($firstPost->feed_sort_at?->getTimestamp() ?? 0);
+            })
+            ->values();
+
+        $posts = new Paginator(
+            $feedItems->take($this->perPage + 1),
+            $this->perPage,
+            1,
+            ['path' => request()->url()]
+        );
+
+        $postAuthorIds = $posts->getCollection()
+            ->pluck('user_id')
+            ->map(fn ($id): int => (int) $id)
+            ->unique()
+            ->values()
+            ->all();
+        $followedAuthorIds = $postAuthorIds === []
+            ? []
+            : $user->following()
+                ->whereIn('users.id', $postAuthorIds)
+                ->pluck('users.id')
+                ->map(fn ($id): int => (int) $id)
+                ->all();
+        $friendAuthorIds = array_values(array_intersect($this->friendUserIds($user), $postAuthorIds));
+        $availableCommunities = $user->activeCommunityMemberships()
+            ->with('community')
+            ->get()
+            ->pluck('community')
+            ->filter(fn ($community): bool => $community?->isActive() ?? false)
+            ->values();
 
         return [
             'posts' => $posts,
             'currentUser' => $user,
+            'availableCommunities' => $availableCommunities,
+            'followedAuthorIds' => $followedAuthorIds,
+            'friendAuthorIds' => $friendAuthorIds,
         ];
     }
 };
@@ -504,10 +918,22 @@ new #[Layout('layouts.app')] class extends Component
                 
                 {{-- Tabs --}}
                 <div class="ue-feed-tabs">
-                    <button type="button" class="px-3 py-1.5 rounded-full text-xxs font-bold bg-ue-brand-soft text-ue-brand">
+                    <button
+                        type="button"
+                        wire:click="setFeedTab('for_you')"
+                        wire:loading.attr="disabled"
+                        wire:target="setFeedTab"
+                        class="px-3 py-1.5 rounded-full text-xxs font-bold transition-colors {{ $activeFeedTab === 'for_you' ? 'bg-ue-brand-soft text-ue-brand' : 'text-slate-400 hover:bg-slate-50' }}"
+                    >
                         Dành cho bạn
                     </button>
-                    <button type="button" class="px-3 py-1.5 rounded-full text-xxs font-bold text-slate-400 hover:bg-slate-50 transition-colors" disabled>
+                    <button
+                        type="button"
+                        wire:click="setFeedTab('following')"
+                        wire:loading.attr="disabled"
+                        wire:target="setFeedTab"
+                        class="px-3 py-1.5 rounded-full text-xxs font-bold transition-colors {{ $activeFeedTab === 'following' ? 'bg-ue-brand-soft text-ue-brand' : 'text-slate-400 hover:bg-slate-50' }}"
+                    >
                         Theo dõi
                     </button>
                 </div>
@@ -515,10 +941,22 @@ new #[Layout('layouts.app')] class extends Component
 
             {{-- Mobile: Threads-style centered tab strip only --}}
             <div class="flex sm:hidden items-center justify-center border-b border-slate-100 pb-1">
-                <button type="button" class="flex-1 py-2 text-xs font-bold text-slate-800 border-b-2 border-slate-800 text-center">
+                <button
+                    type="button"
+                    wire:click="setFeedTab('for_you')"
+                    wire:loading.attr="disabled"
+                    wire:target="setFeedTab"
+                    class="flex-1 py-2 text-xs text-center transition-colors {{ $activeFeedTab === 'for_you' ? 'font-bold text-slate-800 border-b-2 border-slate-800' : 'font-medium text-slate-400 border-b-2 border-transparent' }}"
+                >
                     Dành cho bạn
                 </button>
-                <button type="button" class="flex-1 py-2 text-xs font-medium text-slate-400 text-center" disabled>
+                <button
+                    type="button"
+                    wire:click="setFeedTab('following')"
+                    wire:loading.attr="disabled"
+                    wire:target="setFeedTab"
+                    class="flex-1 py-2 text-xs text-center transition-colors {{ $activeFeedTab === 'following' ? 'font-bold text-slate-800 border-b-2 border-slate-800' : 'font-medium text-slate-400 border-b-2 border-transparent' }}"
+                >
                     Theo dõi
                 </button>
             </div>
@@ -595,6 +1033,13 @@ new #[Layout('layouts.app')] class extends Component
                                         <span class="ue-composer__counter text-slate-400 text-xxs font-semibold">
                                             {{ mb_strlen($body) }}/3000
                                         </span>
+                                        @php
+                                            $visibilityLabel = match ($visibility) {
+                                                'connections_only' => 'Chỉ bạn bè',
+                                                'community' => 'Cộng đồng',
+                                                default => 'Chỉ sinh viên xác thực',
+                                            };
+                                        @endphp
                                         <div class="relative">
                                             <label for="post-visibility" class="sr-only">Quyền xem</label>
                                             <select
@@ -603,17 +1048,35 @@ new #[Layout('layouts.app')] class extends Component
                                                 class="absolute inset-0 w-full h-full opacity-0 z-10 cursor-pointer"
                                             >
                                                 <option value="verified_users">Chỉ sinh viên xác thực</option>
-                                                <option value="connections_only" disabled>Bạn bè (Sắp ra mắt)</option>
-                                                <option value="community" disabled>Cộng đồng (Sắp ra mắt)</option>
+                                                <option value="connections_only">Chỉ bạn bè</option>
+                                                <option value="community">Chỉ cộng đồng</option>
                                             </select>
                                             <div class="flex items-center gap-1.5 px-2.5 py-1 bg-slate-50 text-slate-500 rounded-lg select-none pointer-events-none">
                                                 <x-ui.icon name="shield-check" size="xs" class="text-ue-brand fill-ue-brand/10" />
-                                                <span class="hidden sm:inline text-xxs font-bold">Chỉ sinh viên xác thực</span>
-                                                <span class="sm:hidden text-[10px] font-bold">Xác thực</span>
+                                                <span class="hidden sm:inline text-xxs font-bold">{{ $visibilityLabel }}</span>
+                                                <span class="sm:hidden text-[10px] font-bold">{{ $visibility === 'verified_users' ? 'Xác thực' : $visibilityLabel }}</span>
                                                 <x-ui.icon name="chevron-down" size="xs" class="text-slate-400" />
                                             </div>
                                         </div>
+                                        @if ($visibility === 'community')
+                                            <div class="relative min-w-[150px]">
+                                                <label for="post-community" class="sr-only">Chọn cộng đồng</label>
+                                                <select
+                                                    id="post-community"
+                                                    wire:model="selectedCommunityId"
+                                                    class="w-full rounded-lg border border-slate-200 bg-slate-50 px-2.5 py-1 text-xxs font-bold text-slate-600 focus:border-ue-brand/40 focus:ring-ue-brand/20"
+                                                >
+                                                    <option value="">Chọn cộng đồng</option>
+                                                    @foreach ($availableCommunities as $community)
+                                                        <option value="{{ $community->id }}">{{ $community->name }}</option>
+                                                    @endforeach
+                                                </select>
+                                            </div>
+                                        @endif
                                     </div>
+                                    @error('selectedCommunityId')
+                                        <p class="text-xs text-red-650 font-semibold mt-1">{{ $message }}</p>
+                                    @enderror
                                     <x-ui.button
                                         type="submit"
                                         variant="primary"
@@ -634,28 +1097,15 @@ new #[Layout('layouts.app')] class extends Component
 
             {{-- Posts list loop --}}
             <div class="ue-feed-list">
-                <div wire:loading.delay wire:target="gotoPage,nextPage,previousPage" class="p-4 sm:p-5 space-y-4">
-                    <div class="ue-skeleton-card">
-                        <div class="flex items-start gap-3">
-                            <div class="ue-skeleton-avatar ue-skeleton"></div>
-                            <div class="flex-1 space-y-2">
-                                <div class="ue-skeleton-line ue-skeleton w-1/2"></div>
-                                <div class="ue-skeleton-line ue-skeleton w-full"></div>
-                                <div class="ue-skeleton-line ue-skeleton w-5/6"></div>
-                            </div>
-                        </div>
-                    </div>
-                    @for ($i = 0; $i < 3; $i++)
-                        <x-ui.skeleton-card />
-                    @endfor
-                </div>
-
                 @forelse ($posts as $post)
                     @php
                         $isLiked = (int) $post->liked_by_current_user_count > 0;
                         $isSaved = (int) $post->saved_by_current_user_count > 0;
+                        $isReposted = (int) $post->reposted_by_current_user_count > 0;
                         $likeCount = (int) $post->likes_count;
                         $commentCount = (int) $post->published_comments_count;
+                        $repostCount = (int) $post->reposts_count;
+                        $repostedBy = $post->relationLoaded('feedRepostedBy') ? $post->feedRepostedBy : null;
                     @endphp
 
                     @if (in_array($post->id, $locallyHiddenPostIds))
@@ -679,16 +1129,28 @@ new #[Layout('layouts.app')] class extends Component
                             </button>
                         </article>
                     @else
-                        <article class="ue-feed-item" wire:key="post-item-{{ $post->id }}">
+                        @php
+                            $showQuickFollow = $post->user_id !== $currentUser->id
+                                && ! in_array($post->user_id, $followedAuthorIds, true)
+                                && ! in_array($post->user_id, $friendAuthorIds, true);
+                        @endphp
+                        <article class="ue-feed-item" wire:key="post-item-{{ $post->feed_item_key ?? $post->id }}">
                             <x-ui.post-card
                                 :post="$post"
                                 :currentUser="$currentUser"
                                 :isSaved="$isSaved"
                                 :isLiked="$isLiked"
+                                :isReposted="$isReposted"
                                 :likeCount="$likeCount"
                                 :commentCount="$commentCount"
+                                :repostCount="$repostCount"
                                 :editingPostId="$editingPostId"
                                 :editingBody="$editingBody"
+                                :showQuickFollow="$showQuickFollow"
+                                :repostedBy="$repostedBy"
+                                :repostedAt="$post->feed_reposted_at"
+                                :feedItemKey="$post->feed_item_key"
+                                :showRepostAction="true"
                             />
                         </article>
                     @endif
@@ -715,11 +1177,25 @@ new #[Layout('layouts.app')] class extends Component
                 @endforelse
             </div>
 
-            {{-- End state / Pagination Sentinel inside feed surface --}}
+            {{-- End state / Infinite scroll sentinel inside feed surface --}}
             <div class="ue-feed-end-state">
                 <div class="w-full flex flex-col items-center justify-center gap-2">
-                    <span class="text-xxs text-slate-400 font-semibold mb-1">Bạn đã xem hết bài viết hiện có.</span>
-                    {{ $posts->links() }}
+                    @if ($posts->hasMorePages())
+                        <div
+                            wire:intersect="loadMore"
+                            class="flex flex-col items-center gap-2 py-2 text-center"
+                        >
+                            <span wire:loading.remove wire:target="loadMore" class="text-xxs text-slate-400 font-semibold">
+                                Đang tải thêm bài viết...
+                            </span>
+                            <span wire:loading wire:target="loadMore" class="inline-flex items-center gap-2 text-xxs text-slate-400 font-semibold">
+                                <span class="ue-spinner"></span>
+                                Đang tải...
+                            </span>
+                        </div>
+                    @else
+                        <span class="text-xxs text-slate-400 font-semibold mb-1">Bạn đã xem hết bài viết hiện có.</span>
+                    @endif
                 </div>
             </div>
         </section>
@@ -729,7 +1205,12 @@ new #[Layout('layouts.app')] class extends Component
     <div class="ue-mobile-bottom-spacer"></div>
 
     {{-- Modals & Sheets --}}
-    <x-ui.create-post-modal :body="$body" :visibility="$visibility" />
+    <x-ui.create-post-modal
+        :body="$body"
+        :visibility="$visibility"
+        :selectedCommunityId="$selectedCommunityId"
+        :communities="$availableCommunities"
+    />
     <x-ui.floating-action-button />
 
     {{-- 4. REPORT MODAL --}}
@@ -877,10 +1358,13 @@ new #[Layout('layouts.app')] class extends Component
                             $shareConnections = $this->getShareConnections();
                         @endphp
                         @forelse ($shareConnections as $connUser)
+                            @php
+                                $isSelectedShareRecipient = in_array($connUser->id, $selectedShareUserIds, true);
+                            @endphp
                             <button
                                 type="button"
-                                wire:click="$set('selectedShareUserId', {{ $connUser->id }})"
-                                class="w-full text-left p-3 hover:bg-slate-50 flex items-center justify-between transition-colors {{ $selectedShareUserId === $connUser->id ? 'bg-slate-50' : '' }}"
+                                wire:click="toggleShareRecipient({{ $connUser->id }})"
+                                class="w-full text-left p-3 hover:bg-slate-50 flex items-center justify-between transition-colors {{ $isSelectedShareRecipient ? 'bg-slate-50' : '' }}"
                             >
                                 <div class="flex items-center gap-3">
                                     <x-ui.avatar :user="$connUser" size="xs" />
@@ -891,7 +1375,7 @@ new #[Layout('layouts.app')] class extends Component
                                         @endif
                                     </div>
                                 </div>
-                                @if ($selectedShareUserId === $connUser->id)
+                                @if ($isSelectedShareRecipient)
                                     <x-ui.icon name="check" size="xs" class="text-ue-brand fill-ue-brand" />
                                 @endif
                             </button>
@@ -917,6 +1401,9 @@ new #[Layout('layouts.app')] class extends Component
                 </div>
 
                 <div class="flex items-center justify-end gap-3 px-6 py-4 bg-slate-50 border-t border-slate-100 flex-shrink-0">
+                    <p class="mr-auto text-[11px] font-semibold text-slate-400">
+                        Đã chọn {{ count($selectedShareUserIds) }} người nhận
+                    </p>
                     <button type="button" wire:click="$set('showShareModal', false)" class="px-4 py-2 text-xs font-bold text-slate-500 hover:text-slate-700 transition-colors">
                         Hủy bỏ
                     </button>
@@ -925,7 +1412,7 @@ new #[Layout('layouts.app')] class extends Component
                         wire:click="executeShare"
                         wire:loading.attr="disabled"
                         wire:target="executeShare"
-                        @if (! $selectedShareUserId) disabled @endif
+                        @if (empty($selectedShareUserIds)) disabled @endif
                         class="px-4 py-2 text-xs font-bold text-white bg-ue-brand hover:bg-ue-brand-dark rounded-xl shadow-2xs hover:shadow-sm transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1.5"
                     >
                         <span wire:loading.remove wire:target="executeShare" class="flex items-center gap-1.5">
