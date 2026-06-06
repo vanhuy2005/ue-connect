@@ -6,6 +6,7 @@ use Livewire\Volt\Component;
 use App\Actions\Connections\AcceptGreeting;
 use App\Actions\Connections\DeclineGreeting;
 use App\Enums\GreetingStatus;
+use App\Support\Navigation\UserNavigationMetrics;
 
 new #[Layout('layouts.app')] class extends Component
 {
@@ -20,6 +21,7 @@ new #[Layout('layouts.app')] class extends Component
         try {
             $notification = Auth::user()->notifications()->findOrFail($id);
             $notification->markAsRead();
+            app(UserNavigationMetrics::class)->forgetForUser(Auth::id());
             
             $actionUrl = $notification->data['action_url'] ?? route('dashboard');
             return redirect()->to($actionUrl);
@@ -36,6 +38,7 @@ new #[Layout('layouts.app')] class extends Component
         try {
             $notification = Auth::user()->unreadNotifications()->findOrFail($id);
             $notification->markAsRead();
+            app(UserNavigationMetrics::class)->forgetForUser(Auth::id());
             $this->feedbackMessage = 'Đã đánh dấu là đã đọc.';
         } catch (\Exception $e) {
             $this->feedbackMessage = $e->getMessage();
@@ -49,6 +52,7 @@ new #[Layout('layouts.app')] class extends Component
     {
         try {
             Auth::user()->unreadNotifications->markAsRead();
+            app(UserNavigationMetrics::class)->forgetForUser(Auth::id());
             $this->feedbackMessage = 'Đã đánh dấu tất cả thông báo là đã đọc.';
         } catch (\Exception $e) {
             $this->feedbackMessage = $e->getMessage();

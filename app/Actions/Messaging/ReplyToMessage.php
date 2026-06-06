@@ -9,6 +9,7 @@ use App\Models\Conversation;
 use App\Models\Message;
 use App\Models\User;
 use App\Notifications\MessageReceived;
+use App\Support\Navigation\UserNavigationMetrics;
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Gate;
@@ -82,6 +83,9 @@ class ReplyToMessage
                 // If muted/restricted is handled by notification policy, it will suppress it
                 $recipient->notify(new MessageReceived($message));
             }
+
+            app(UserNavigationMetrics::class)->forgetForUser($sender);
+            app(UserNavigationMetrics::class)->forgetForUser($recipient);
 
             return $message;
         });

@@ -16,12 +16,14 @@ export function initPageLoading() {
     const show = () => {
         window.clearTimeout(hideTimer);
         document.body.classList.add('ue-is-navigating');
+        document.body.setAttribute('aria-busy', 'true');
     };
 
     const hide = () => {
         window.clearTimeout(hideTimer);
         hideTimer = window.setTimeout(() => {
             document.body.classList.remove('ue-is-navigating');
+            document.body.removeAttribute('aria-busy');
         }, 180);
     };
 

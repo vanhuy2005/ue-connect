@@ -8,81 +8,76 @@
 
 @php
 $currentUser = auth()->user();
-$navigationMetrics = app(\App\Support\Navigation\UserNavigationMetrics::class)->forUser($currentUser);
-$adminRoles = ['admin'];
-$adminPermissions = [
+$metrics = app(\App\Support\Navigation\UserNavigationMetrics::class)->forUser($currentUser);
+$unreadNotificationsCount = $metrics['unread_notifications'];
+$unreadMessagesCount = $metrics['unread_messages'];
+$canReviewVerification = $currentUser?->can('review_verification') ?? false;
+$canManageReports = $currentUser?->can('manage_reports') ?? false;
+$isAdmin = $currentUser?->hasRole('admin') || ($currentUser?->canAny([
     'view_admin_dashboard',
     'review_verification',
     'manage_reports',
     'manage_media',
-];
-$isAdmin = $currentUser && (
-    $currentUser->roles()->whereIn('name', $adminRoles)->exists()
-    || $currentUser->permissions()->whereIn('name', $adminPermissions)->exists()
-);
-
-$unreadNotificationsCount = $navigationMetrics['unread_notifications'];
-$unreadMessagesCount = $navigationMetrics['unread_messages'];
+]) ?? false);
 
 $primaryNav = [
     [
-        'icon'   => 'home',
-        'label'  => 'Trang chủ',
-        'href'   => route('dashboard'),
+        'icon' => 'home',
+        'label' => 'Trang chủ',
+        'href' => route('dashboard'),
         'active' => request()->routeIs('dashboard'),
-        'badge'  => 0,
+        'badge' => 0,
     ],
     [
-        'icon'   => 'users',
-        'label'  => 'Khám phá',
-        'href'   => route('discovery.index'),
+        'icon' => 'users',
+        'label' => 'Khám phá',
+        'href' => route('discovery.index'),
         'active' => request()->routeIs('discovery.*'),
-        'badge'  => 0,
+        'badge' => 0,
     ],
     [
-        'icon'   => 'message',
-        'label'  => 'Tin nhắn',
-        'href'   => route('messages.index'),
+        'icon' => 'message',
+        'label' => 'Tin nhắn',
+        'href' => route('messages.index'),
         'active' => request()->routeIs('messages.*'),
-        'badge'  => $unreadMessagesCount,
+        'badge' => $unreadMessagesCount,
     ],
     [
-        'icon'   => 'heart',
-        'label'  => 'Hoạt động',
-        'href'   => route('notifications.index'),
+        'icon' => 'heart',
+        'label' => 'Hoạt động',
+        'href' => route('notifications.index'),
         'active' => request()->routeIs('notifications.*'),
-        'badge'  => $unreadNotificationsCount,
+        'badge' => $unreadNotificationsCount,
     ],
     [
-        'icon'   => 'user',
-        'label'  => 'Hồ sơ',
-        'href'   => route('profile'),
+        'icon' => 'user',
+        'label' => 'Hồ sơ',
+        'href' => route('profile'),
         'active' => request()->routeIs('profile'),
-        'badge'  => 0,
+        'badge' => 0,
     ],
 ];
 
 $secondaryNav = [
     [
-        'icon'   => 'community',
-        'label'  => 'Cộng đồng',
-        'href'   => route('community.index'),
+        'icon' => 'community',
+        'label' => 'Cộng đồng',
+        'href' => route('community.index'),
         'active' => request()->routeIs('community.*'),
     ],
     [
-        'icon'   => 'graduation-cap',
-        'label'  => 'Mentor',
-        'href'   => route('mentor.discovery'),
+        'icon' => 'graduation-cap',
+        'label' => 'Mentor',
+        'href' => route('mentor.discovery'),
         'active' => request()->routeIs('mentor.*'),
     ],
     [
-        'icon'   => 'bookmark',
-        'label'  => 'Đã lưu',
-        'href'   => route('posts.saved'),
+        'icon' => 'bookmark',
+        'label' => 'Đã lưu',
+        'href' => route('posts.saved'),
         'active' => request()->routeIs('posts.saved'),
     ],
 ];
-
 @endphp
 
 @if(isset($shell) && $shell === 'admin')
@@ -95,14 +90,14 @@ $secondaryNav = [
     <div class="flex flex-col gap-5 flex-1 min-h-0 overflow-y-auto pr-1">
         {{-- Logo --}}
         <div class="px-1">
-            <a href="{{ route('dashboard') }}" wire:navigate class="inline-flex items-center ue-focus-ring rounded-lg" aria-label="UEConnect - Trang chủ">
+            <a href="{{ route('dashboard') }}" wire:navigate.hover class="inline-flex items-center ue-focus-ring rounded-lg" aria-label="UEConnect - Trang chủ">
                 <x-brand.logo variant="horizontal" size="lg" class="h-8 w-auto" />
             </a>
         </div>
 
         {{-- Back to App Link --}}
         <div class="px-1 flex flex-col gap-1">
-            <a href="{{ route('dashboard') }}" wire:navigate class="inline-flex items-center gap-1.5 text-xs font-semibold text-ue-brand-active hover:underline">
+            <a href="{{ route('dashboard') }}" wire:navigate.hover class="inline-flex items-center gap-1.5 text-xs font-semibold text-ue-brand-active hover:underline">
                 <x-ui.icon name="arrow-left" size="xs" />
                 Quay lại ứng dụng
             </a>
@@ -133,7 +128,7 @@ $secondaryNav = [
                 @endphp
                 <a
                     href="{{ route('admin.console', ['group' => $groupKey]) }}"
-                    wire:navigate
+                    wire:navigate.hover
                     class="ue-admin-nav-link {{ $active ? 'active' : '' }}"
                     @if($active) aria-current="page" @endif
                 >
@@ -177,7 +172,7 @@ $secondaryNav = [
             style="display: none;"
             @keydown.escape.window="moreOpen = false"
         >
-            <a href="{{ route('settings') }}" wire:navigate class="flex items-center gap-3 px-4 py-2 text-xs font-semibold text-ue-text-secondary hover:bg-ue-surface-hover hover:text-ue-brand-active transition-colors">
+            <a href="{{ route('settings') }}" wire:navigate.hover class="flex items-center gap-3 px-4 py-2 text-xs font-semibold text-ue-text-secondary hover:bg-ue-surface-hover hover:text-ue-brand-active transition-colors">
                 <x-ui.icon name="settings" size="sm" class="text-ue-text-muted" />
                 <span>Cài đặt cá nhân</span>
             </a>
@@ -204,7 +199,7 @@ $secondaryNav = [
     <div class="flex flex-col gap-7 flex-1 min-h-0 overflow-y-auto pr-1">
         {{-- Logo --}}
         <div class="px-1">
-            <a href="{{ route('dashboard') }}" wire:navigate class="inline-flex items-center ue-focus-ring rounded-lg" aria-label="UEConnect - Trang chủ">
+            <a href="{{ route('dashboard') }}" wire:navigate.hover class="inline-flex items-center ue-focus-ring rounded-lg" aria-label="UEConnect - Trang chủ">
                 <x-brand.logo variant="horizontal" size="lg" class="h-9 w-auto" />
             </a>
         </div>
@@ -216,7 +211,7 @@ $secondaryNav = [
                     <li role="listitem">
                         <a
                             href="{{ $item['href'] }}"
-                            @if($item['href'] !== '#') wire:navigate @endif
+                            @if($item['href'] !== '#') wire:navigate.hover @endif
                             class="ue-nav-link {{ $item['active'] ? 'active' : '' }}"
                             @if($item['active']) aria-current="page" @endif
                         >
@@ -243,7 +238,7 @@ $secondaryNav = [
                     <li role="listitem">
                         <a
                             href="{{ $item['href'] }}"
-                            @if($item['href'] !== '#') wire:navigate @endif
+                            @if($item['href'] !== '#') wire:navigate.hover @endif
                             class="ue-nav-link {{ $item['active'] ? 'active' : '' }}"
                             @if($item['active']) aria-current="page" @endif
                         >
@@ -304,22 +299,22 @@ $secondaryNav = [
                 <span>Giao diện</span>
             </button>
 
-            <a href="{{ route('settings') }}" wire:navigate class="flex items-center gap-3 px-4 py-2 text-xs font-semibold text-ue-text-secondary hover:bg-ue-surface-hover hover:text-ue-brand-active transition-colors">
+            <a href="{{ route('settings') }}" wire:navigate.hover class="flex items-center gap-3 px-4 py-2 text-xs font-semibold text-ue-text-secondary hover:bg-ue-surface-hover hover:text-ue-brand-active transition-colors">
                 <x-ui.icon name="settings" size="sm" class="text-ue-text-muted" />
                 <span>Cài đặt</span>
             </a>
 
-            <a href="{{ route('posts.saved') }}" wire:navigate class="flex items-center gap-3 px-4 py-2 text-xs font-semibold text-ue-text-secondary hover:bg-ue-surface-hover hover:text-ue-brand-active transition-colors">
+            <a href="{{ route('posts.saved') }}" wire:navigate.hover class="flex items-center gap-3 px-4 py-2 text-xs font-semibold text-ue-text-secondary hover:bg-ue-surface-hover hover:text-ue-brand-active transition-colors">
                 <x-ui.icon name="bookmark" size="sm" class="text-ue-text-muted" />
                 <span>Bài viết đã lưu</span>
             </a>
 
-            <a href="{{ route('settings', ['section' => 'support']) }}" wire:navigate class="flex items-center gap-3 px-4 py-2 text-xs font-semibold text-ue-text-secondary hover:bg-ue-surface-hover hover:text-ue-brand-active transition-colors">
+            <a href="{{ route('settings', ['section' => 'support']) }}" wire:navigate.hover class="flex items-center gap-3 px-4 py-2 text-xs font-semibold text-ue-text-secondary hover:bg-ue-surface-hover hover:text-ue-brand-active transition-colors">
                 <x-ui.icon name="help-circle" size="sm" class="text-ue-text-muted" />
                 <span>Trung tâm hỗ trợ</span>
             </a>
 
-            <a href="{{ route('settings', ['section' => 'support']) }}" wire:navigate class="flex items-center gap-3 px-4 py-2 text-xs font-semibold text-ue-text-secondary hover:bg-ue-surface-hover hover:text-ue-brand-active transition-colors">
+            <a href="{{ route('settings', ['section' => 'support']) }}" wire:navigate.hover class="flex items-center gap-3 px-4 py-2 text-xs font-semibold text-ue-text-secondary hover:bg-ue-surface-hover hover:text-ue-brand-active transition-colors">
                 <x-ui.icon name="alert-triangle" size="sm" class="text-ue-text-muted" />
                 <span>Báo cáo sự cố</span>
             </a>
@@ -329,24 +324,24 @@ $secondaryNav = [
                 <div class="h-2"></div>
                 <p class="px-4 py-1 text-[9px] font-bold text-ue-text-muted uppercase tracking-wider">Quản trị</p>
                 
-                <a href="{{ route('admin.dashboard') }}" wire:navigate class="flex items-center gap-3 px-4 py-2 text-xs font-semibold text-ue-text-secondary hover:bg-ue-surface-hover hover:text-ue-brand-active transition-colors">
+                <a href="{{ route('admin.dashboard') }}" wire:navigate.hover class="flex items-center gap-3 px-4 py-2 text-xs font-semibold text-ue-text-secondary hover:bg-ue-surface-hover hover:text-ue-brand-active transition-colors">
                     <x-ui.icon name="shield" size="sm" class="text-ue-text-muted" />
                     <span>Tổng quan quản trị</span>
                 </a>
 
-                @can('review_verification')
-                    <a href="{{ route('admin.verifications.queue') }}" wire:navigate class="flex items-center gap-3 px-4 py-2 text-xs font-semibold text-ue-text-secondary hover:bg-ue-surface-hover hover:text-ue-brand-active transition-colors">
+                @if($canReviewVerification)
+                    <a href="{{ route('admin.verifications.queue') }}" wire:navigate.hover class="flex items-center gap-3 px-4 py-2 text-xs font-semibold text-ue-text-secondary hover:bg-ue-surface-hover hover:text-ue-brand-active transition-colors">
                         <x-ui.icon name="shield-check" size="sm" class="text-ue-text-muted" />
                         <span>Duyệt xác thực</span>
                     </a>
-                @endcan
+                @endif
 
-                @can('manage_reports')
-                    <a href="{{ route('admin.reports.index') }}" wire:navigate class="flex items-center gap-3 px-4 py-2 text-xs font-semibold text-ue-text-secondary hover:bg-ue-surface-hover hover:text-ue-brand-active transition-colors">
+                @if($canManageReports)
+                    <a href="{{ route('admin.reports.index') }}" wire:navigate.hover class="flex items-center gap-3 px-4 py-2 text-xs font-semibold text-ue-text-secondary hover:bg-ue-surface-hover hover:text-ue-brand-active transition-colors">
                         <x-ui.icon name="flag" size="sm" class="text-ue-text-muted" />
                         <span>Báo cáo vi phạm</span>
                     </a>
-                @endcan
+                @endif
             @endif
 
             {{-- Logout --}}

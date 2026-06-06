@@ -315,6 +315,7 @@ new class extends Component
                 ->where('collection', 'post_image')
                 ->where('status', 'ready')
                 ->latest()
+                ->take(30)
                 ->get();
         } elseif ($this->activeTab === 'saved' && $this->user->id === Auth::id()) {
             $savedPosts = $this->user->postSaves()

@@ -12,17 +12,27 @@ use Illuminate\Support\Facades\URL;
 class GenerateMediaUrlAction
 {
     /**
+     * @var array<string, ?string>
+     */
+    private static array $requestUrlCache = [];
+
+    /**
      * Generate a dynamic safe URL for a Media or MediaVariant asset.
      */
     public function execute(Media|MediaVariant $media, ?string $variant = null, ?User $viewer = null, ?string $context = null): ?string
     {
+        $cacheKey = $this->requestCacheKey($media, $variant, $viewer);
+        if (array_key_exists($cacheKey, self::$requestUrlCache)) {
+            return self::$requestUrlCache[$cacheKey];
+        }
+
         // 1. If it's a MediaVariant, get the parent Media to perform visibility checks
         $parentMedia = $media instanceof MediaVariant ? $media->media : $media;
 
         // 2. Perform Gate check for private media
         if ($parentMedia->visibility !== 'public' && $viewer) {
             if (Gate::forUser($viewer)->denies('view', $parentMedia)) {
-                return null;
+                return self::$requestUrlCache[$cacheKey] = null;
             }
         }
 
@@ -31,12 +41,12 @@ class GenerateMediaUrlAction
             $variantModel = $media->variant($variant);
 
             if ($variantModel) {
-                return $this->resolveUrlForAsset($variantModel, $parentMedia);
+                return self::$requestUrlCache[$cacheKey] = $this->resolveUrlForAsset($variantModel, $parentMedia);
             }
         }
 
         // 4. Resolve URL for the given asset (either the variant model or the primary Media model)
-        return $this->resolveUrlForAsset($media, $parentMedia);
+        return self::$requestUrlCache[$cacheKey] = $this->resolveUrlForAsset($media, $parentMedia);
     }
 
     /**
@@ -103,5 +113,15 @@ class GenerateMediaUrlAction
         }
 
         return $asset->delivery_provider === 'cloudinary' && filled($asset->delivery_url);
+    }
+
+    private function requestCacheKey(Media|MediaVariant $media, ?string $variant, ?User $viewer): string
+    {
+        return implode(':', [
+            $media instanceof MediaVariant ? 'variant' : 'media',
+            $media->getKey(),
+            $variant ?: 'default',
+            $viewer?->getKey() ?: 'guest',
+        ]);
     }
 }

@@ -8,6 +8,7 @@ use App\Models\Conversation;
 use App\Models\Message;
 use App\Models\User;
 use App\Notifications\MessageReceived;
+use App\Support\Navigation\UserNavigationMetrics;
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Gate;
@@ -46,6 +47,9 @@ class ForwardMessage
             if ($recipient) {
                 $recipient->notify(new MessageReceived($message));
             }
+
+            app(UserNavigationMetrics::class)->forgetForUser($user);
+            app(UserNavigationMetrics::class)->forgetForUser($recipient);
 
             return $message;
         });

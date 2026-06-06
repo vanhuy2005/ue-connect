@@ -30,13 +30,25 @@ class UserNavigationMetrics
         }
 
         return $this->memoizedMetrics[$user->id] = Cache::remember(
-            "navigation-metrics:user:{$user->id}",
+            $this->cacheKey($user->id),
             now()->addSeconds(20),
             fn (): array => [
                 'unread_notifications' => $user->unreadNotifications()->count(),
                 'unread_messages' => $this->unreadMessagesCount($user),
             ],
         );
+    }
+
+    public function forgetForUser(User|int|null $user): void
+    {
+        if (! $user) {
+            return;
+        }
+
+        $userId = $user instanceof User ? $user->id : $user;
+
+        unset($this->memoizedMetrics[$userId]);
+        Cache::forget($this->cacheKey($userId));
     }
 
     private function unreadMessagesCount(User $user): int
@@ -53,5 +65,10 @@ class UserNavigationMetrics
                 $conversationQuery->whereNotNull('last_message_at');
             })
             ->count();
+    }
+
+    private function cacheKey(int $userId): string
+    {
+        return "navigation-metrics:user:{$userId}";
     }
 }

@@ -20,6 +20,16 @@
         ? $post->media->where('status', 'ready')->values()
         : $post->media()->where('status', 'ready')->with('variants')->get();
     $mediaCount = $mediaItems->count();
+    $mediaDimensions = function ($mediaItem): array {
+        $variant = $mediaItem->relationLoaded('variants')
+            ? $mediaItem->variants->firstWhere('variant_name', 'feed')
+            : null;
+
+        return [
+            'width' => $variant?->width ?: $mediaItem->width,
+            'height' => $variant?->height ?: $mediaItem->height,
+        ];
+    };
 @endphp
 
 <div
@@ -132,6 +142,7 @@
                     <div class="mt-2.5 max-w-lg select-none">
                         @if ($mediaCount === 1)
                             {{-- 1 image: full width, smart ratio --}}
+                            @php($dimensions = $mediaDimensions($mediaItems[0]))
                             <div class="overflow-hidden rounded-2xl border border-slate-150 bg-slate-50">
                                 <a href="{{ $mediaUrlAction->execute($mediaItems[0], 'detail', $currentUser) ?? $mediaUrlAction->execute($mediaItems[0], 'original', $currentUser) }}" target="_blank" rel="noopener noreferrer" class="block">
                                     <img
@@ -139,6 +150,8 @@
                                         alt="Hình ảnh đính kèm"
                                         class="w-full h-auto object-cover max-h-[360px] hover:scale-[1.01] transition-transform duration-300 cursor-zoom-in"
                                         loading="lazy"
+                                        @if($dimensions['width']) width="{{ $dimensions['width'] }}" @endif
+                                        @if($dimensions['height']) height="{{ $dimensions['height'] }}" @endif
                                     />
                                 </a>
                             </div>
@@ -146,18 +159,22 @@
                             {{-- 2 images: two columns --}}
                             <div class="grid grid-cols-2 gap-2 overflow-hidden rounded-2xl border border-slate-150 bg-slate-50">
                                 @foreach ($mediaItems as $mediaItem)
+                                    @php($dimensions = $mediaDimensions($mediaItem))
                                     <a href="{{ $mediaUrlAction->execute($mediaItem, 'detail', $currentUser) ?? $mediaUrlAction->execute($mediaItem, 'original', $currentUser) }}" target="_blank" rel="noopener noreferrer" class="aspect-[4/3] overflow-hidden block">
                                         <img 
                                             src="{{ $mediaUrlAction->execute($mediaItem, 'feed', $currentUser) }}" 
                                             alt="Hình ảnh đính kèm" 
                                             class="w-full h-full object-cover hover:scale-[1.02] transition-transform duration-300 cursor-zoom-in"
                                             loading="lazy"
+                                            @if($dimensions['width']) width="{{ $dimensions['width'] }}" @endif
+                                            @if($dimensions['height']) height="{{ $dimensions['height'] }}" @endif
                                         />
                                     </a>
                                 @endforeach
                             </div>
                         @elseif ($mediaCount === 3)
                             {{-- 3 images: one large + two stacked --}}
+                            @php($dimensions = $mediaDimensions($mediaItems[0]))
                             <div class="grid grid-cols-3 gap-2 overflow-hidden rounded-2xl border border-slate-150 bg-slate-50">
                                 <a href="{{ $mediaUrlAction->execute($mediaItems[0], 'detail', $currentUser) ?? $mediaUrlAction->execute($mediaItems[0], 'original', $currentUser) }}" target="_blank" rel="noopener noreferrer" class="col-span-2 aspect-[4/3] overflow-hidden block">
                                     <img 
@@ -165,16 +182,21 @@
                                         alt="Hình ảnh" 
                                         class="w-full h-full object-cover hover:scale-[1.02] transition-transform duration-300 cursor-zoom-in"
                                         loading="lazy"
+                                        @if($dimensions['width']) width="{{ $dimensions['width'] }}" @endif
+                                        @if($dimensions['height']) height="{{ $dimensions['height'] }}" @endif
                                     />
                                 </a>
                                 <div class="grid grid-rows-2 gap-2">
                                     @foreach ($mediaItems->slice(1, 2) as $mediaItem)
+                                        @php($dimensions = $mediaDimensions($mediaItem))
                                         <a href="{{ $mediaUrlAction->execute($mediaItem, 'detail', $currentUser) ?? $mediaUrlAction->execute($mediaItem, 'original', $currentUser) }}" target="_blank" rel="noopener noreferrer" class="aspect-square overflow-hidden block">
                                             <img 
                                                 src="{{ $mediaUrlAction->execute($mediaItem, 'feed', $currentUser) }}" 
                                                 alt="Hình ảnh" 
                                                 class="w-full h-full object-cover hover:scale-[1.02] transition-transform duration-300 cursor-zoom-in"
                                                 loading="lazy"
+                                                @if($dimensions['width']) width="{{ $dimensions['width'] }}" @endif
+                                                @if($dimensions['height']) height="{{ $dimensions['height'] }}" @endif
                                             />
                                         </a>
                                     @endforeach
@@ -184,12 +206,15 @@
                             {{-- 4 images: 2x2 grid --}}
                             <div class="grid grid-cols-2 gap-2 overflow-hidden rounded-2xl border border-slate-150 bg-slate-50">
                                 @foreach ($mediaItems->take(4) as $mediaItem)
+                                    @php($dimensions = $mediaDimensions($mediaItem))
                                     <a href="{{ $mediaUrlAction->execute($mediaItem, 'detail', $currentUser) ?? $mediaUrlAction->execute($mediaItem, 'original', $currentUser) }}" target="_blank" rel="noopener noreferrer" class="aspect-[4/3] overflow-hidden block">
                                         <img 
                                             src="{{ $mediaUrlAction->execute($mediaItem, 'feed', $currentUser) }}" 
                                             alt="Hình ảnh" 
                                             class="w-full h-full object-cover hover:scale-[1.02] transition-transform duration-300 cursor-zoom-in"
                                             loading="lazy"
+                                            @if($dimensions['width']) width="{{ $dimensions['width'] }}" @endif
+                                            @if($dimensions['height']) height="{{ $dimensions['height'] }}" @endif
                                         />
                                     </a>
                                 @endforeach

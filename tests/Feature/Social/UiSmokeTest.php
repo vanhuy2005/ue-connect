@@ -111,17 +111,20 @@ class UiSmokeTest extends TestCase
         $topbar->assertSee('wire:navigate', false);
     }
 
-    public function test_navigation_badges_use_shared_metrics_service(): void
+    public function test_navigation_badges_use_shared_navigation_metrics_service(): void
     {
         $sidebar = file_get_contents(resource_path('views/partials/app/sidebar.blade.php'));
         $mobileNav = file_get_contents(resource_path('views/partials/app/mobile-bottom-nav.blade.php'));
-        $metrics = file_get_contents(app_path('Support/Navigation/UserNavigationMetrics.php'));
+        $navigationMetrics = file_get_contents(app_path('Support/Navigation/UserNavigationMetrics.php'));
 
         $this->assertStringContainsString('UserNavigationMetrics::class', $sidebar);
         $this->assertStringContainsString('UserNavigationMetrics::class', $mobileNav);
+        $this->assertStringContainsString('wire:navigate.hover', $sidebar);
+        $this->assertStringNotContainsString('wire:navigate.hover', $mobileNav);
         $this->assertStringNotContainsString('unreadNotifications()->count()', $sidebar);
         $this->assertStringNotContainsString('unreadNotifications()->count()', $mobileNav);
-        $this->assertStringContainsString('Cache::remember', $metrics);
+        $this->assertStringContainsString('Cache::remember', $navigationMetrics);
+        $this->assertStringContainsString('forgetForUser', $navigationMetrics);
     }
 
     public function test_realtime_assets_are_not_loaded_globally(): void
