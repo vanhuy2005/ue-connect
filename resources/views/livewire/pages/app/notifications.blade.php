@@ -162,10 +162,18 @@ new #[Layout('layouts.app')] class extends Component
             <button
                 type="button"
                 wire:click="markAllAsRead"
+                wire:loading.attr="disabled"
+                wire:target="markAllAsRead"
                 class="text-xxs font-bold text-ue-brand hover:text-ue-brand-dark transition-colors self-start sm:self-center mb-2 sm:mb-0 flex items-center gap-1"
             >
-                <x-ui.icon name="check-circle" size="xs" />
-                Đánh dấu tất cả đã đọc
+                <span wire:loading.remove wire:target="markAllAsRead" class="flex items-center gap-1">
+                    <x-ui.icon name="check-circle" size="xs" />
+                    Đánh dấu tất cả đã đọc
+                </span>
+                <span wire:loading wire:target="markAllAsRead" class="flex items-center gap-1">
+                    <span class="ue-spinner"></span>
+                    Đang xử lý...
+                </span>
             </button>
         @endif
     </div>
@@ -211,7 +219,12 @@ new #[Layout('layouts.app')] class extends Component
                 class="bg-white border rounded-2xl p-4 flex items-start justify-between gap-4 transition-all duration-sm hover:border-slate-350 hover:shadow-2xs
                        {{ $isUnread ? 'border-ue-brand-soft bg-ue-brand-soft/5' : 'border-slate-150' }}"
             >
-                <div class="flex items-start gap-3 min-w-0 flex-1 cursor-pointer" wire:click="readAndRedirect('{{ $notification->id }}')">
+                <div
+                    class="flex items-start gap-3 min-w-0 flex-1 cursor-pointer"
+                    wire:click="readAndRedirect('{{ $notification->id }}')"
+                    wire:loading.class="opacity-60 pointer-events-none"
+                    wire:target="readAndRedirect('{{ $notification->id }}')"
+                >
                     {{-- Avatar with Overlap Badge --}}
                     <div class="relative flex-shrink-0">
                         <span class="inline-flex items-center justify-center bg-ue-brand-soft border border-ue-border w-10 h-10 text-xs font-semibold rounded-full overflow-hidden">
@@ -268,16 +281,21 @@ new #[Layout('layouts.app')] class extends Component
                         <button
                             type="button"
                             wire:click="declineGreeting({{ $greeting->id }})"
-                            class="bg-slate-50 hover:bg-slate-100 text-slate-500 text-[10px] font-bold px-3 py-1.5 rounded-lg border border-slate-200 transition-colors"
+                            wire:loading.attr="disabled"
+                            wire:target="declineGreeting({{ $greeting->id }})"
+                            class="bg-slate-50 hover:bg-slate-100 text-slate-500 text-[10px] font-bold px-3 py-1.5 rounded-lg border border-slate-200 transition-colors disabled:opacity-60"
                         >
                             Ẩn
                         </button>
                         <button
                             type="button"
                             wire:click="acceptGreeting({{ $greeting->id }})"
-                            class="bg-ue-brand hover:bg-ue-brand-hover text-white text-[10px] font-bold px-3 py-1.5 rounded-lg shadow-2xs hover:shadow-xs transition-all"
+                            wire:loading.attr="disabled"
+                            wire:target="acceptGreeting({{ $greeting->id }})"
+                            class="bg-ue-brand hover:bg-ue-brand-hover text-white text-[10px] font-bold px-3 py-1.5 rounded-lg shadow-2xs hover:shadow-xs transition-all disabled:opacity-60"
                         >
-                            Xác nhận
+                            <span wire:loading.remove wire:target="acceptGreeting({{ $greeting->id }})">Xác nhận</span>
+                            <span wire:loading wire:target="acceptGreeting({{ $greeting->id }})">Đang xử lý...</span>
                         </button>
                     </div>
                 @else
@@ -285,7 +303,9 @@ new #[Layout('layouts.app')] class extends Component
                         <button
                             type="button"
                             wire:click="markAsRead('{{ $notification->id }}')"
-                            class="p-1.5 text-slate-400 hover:text-ue-brand hover:bg-slate-50 rounded-lg transition-colors flex-shrink-0 self-center"
+                            wire:loading.attr="disabled"
+                            wire:target="markAsRead('{{ $notification->id }}')"
+                            class="p-1.5 text-slate-400 hover:text-ue-brand hover:bg-slate-50 rounded-lg transition-colors flex-shrink-0 self-center disabled:opacity-50"
                             aria-label="Đánh dấu là đã đọc"
                             title="Đánh dấu là đã đọc"
                         >

@@ -554,12 +554,17 @@ new #[Layout('layouts.app')] class extends Component
                                         </div>
                                         <div class="flex items-center gap-2 self-end sm:self-center">
                                             <button type="button" wire:click="declineGreeting({{ $greeting->id }})"
-                                                class="bg-slate-50 hover:bg-slate-100 text-slate-600 text-xxs font-bold px-3 py-1.5 rounded-lg border border-slate-200 transition-colors">
+                                                wire:loading.attr="disabled"
+                                                wire:target="declineGreeting({{ $greeting->id }})"
+                                                class="bg-slate-50 hover:bg-slate-100 text-slate-600 text-xxs font-bold px-3 py-1.5 rounded-lg border border-slate-200 transition-colors disabled:opacity-60">
                                                 Từ chối
                                             </button>
                                             <button type="button" wire:click="acceptGreeting({{ $greeting->id }})"
-                                                class="bg-ue-brand hover:bg-ue-brand-dark text-white text-xxs font-bold px-3 py-1.5 rounded-lg shadow-2xs hover:shadow-3xs transition-all">
-                                                Chấp nhận
+                                                wire:loading.attr="disabled"
+                                                wire:target="acceptGreeting({{ $greeting->id }})"
+                                                class="bg-ue-brand hover:bg-ue-brand-dark text-white text-xxs font-bold px-3 py-1.5 rounded-lg shadow-2xs hover:shadow-3xs transition-all disabled:opacity-60">
+                                                <span wire:loading.remove wire:target="acceptGreeting({{ $greeting->id }})">Chấp nhận</span>
+                                                <span wire:loading wire:target="acceptGreeting({{ $greeting->id }})">Đang xử lý...</span>
                                             </button>
                                         </div>
                                     </div>
@@ -612,8 +617,16 @@ new #[Layout('layouts.app')] class extends Component
 
                                         <div class="mt-3 pt-2.5 border-t border-slate-200/60 flex justify-end">
                                             <button type="button" wire:click="startGreeting({{ $profile->user_id }})"
-                                                class="w-full bg-white hover:bg-ue-brand-soft text-ue-brand border border-slate-200 hover:border-ue-brand-border text-[10px] font-bold py-1.5 px-2.5 rounded-lg shadow-3xs transition flex items-center justify-center gap-1.5">
-                                                <x-ui.icon name="user-plus" size="xs" /> Gửi lời chào
+                                                wire:loading.attr="disabled"
+                                                wire:target="startGreeting({{ $profile->user_id }})"
+                                                class="w-full bg-white hover:bg-ue-brand-soft text-ue-brand border border-slate-200 hover:border-ue-brand-border text-[10px] font-bold py-1.5 px-2.5 rounded-lg shadow-3xs transition flex items-center justify-center gap-1.5 disabled:opacity-60 disabled:cursor-not-allowed">
+                                                <span wire:loading.remove wire:target="startGreeting({{ $profile->user_id }})" class="flex items-center gap-1.5">
+                                                    <x-ui.icon name="user-plus" size="xs" /> Gửi lời chào
+                                                </span>
+                                                <span wire:loading wire:target="startGreeting({{ $profile->user_id }})" class="flex items-center gap-1.5">
+                                                    <span class="ue-spinner"></span>
+                                                    Đang mở...
+                                                </span>
                                             </button>
                                         </div>
                                     </div>
@@ -741,8 +754,10 @@ new #[Layout('layouts.app')] class extends Component
                                         <button
                                             type="button"
                                             wire:click="removeConnection({{ $item['id'] }})"
+                                            wire:loading.attr="disabled"
+                                            wire:target="removeConnection({{ $item['id'] }})"
                                             @click="openOptions = false"
-                                            class="w-full text-left px-3 py-2 text-xxs font-semibold text-slate-700 hover:bg-slate-50 flex items-center gap-2 transition-colors"
+                                            class="w-full text-left px-3 py-2 text-xxs font-semibold text-slate-700 hover:bg-slate-50 flex items-center gap-2 transition-colors disabled:opacity-60"
                                         >
                                             <x-ui.icon name="user-minus" size="xs" class="text-slate-400" />
                                             Hủy kết nối
@@ -758,8 +773,10 @@ new #[Layout('layouts.app')] class extends Component
                                         <button
                                             type="button"
                                             wire:click="blockUser({{ $item['user']->id }})"
+                                            wire:loading.attr="disabled"
+                                            wire:target="blockUser({{ $item['user']->id }})"
                                             @click="openOptions = false"
-                                            class="w-full text-left px-3 py-2 text-xxs font-semibold text-red-650 hover:bg-red-50 flex items-center gap-2 transition-colors border-t border-slate-100"
+                                            class="w-full text-left px-3 py-2 text-xxs font-semibold text-red-650 hover:bg-red-50 flex items-center gap-2 transition-colors border-t border-slate-100 disabled:opacity-60"
                                         >
                                             <x-ui.icon name="slash" size="xs" class="text-red-400" />
                                             Chặn thành viên
@@ -820,16 +837,21 @@ new #[Layout('layouts.app')] class extends Component
                                 <button
                                     type="button"
                                     wire:click="declineGreeting({{ $greeting->id }})"
-                                    class="bg-slate-50 hover:bg-slate-100 text-slate-500 hover:text-slate-700 text-xxs font-bold px-3 py-2 rounded-xl border border-slate-250 transition-colors"
+                                    wire:loading.attr="disabled"
+                                    wire:target="declineGreeting({{ $greeting->id }})"
+                                    class="bg-slate-50 hover:bg-slate-100 text-slate-500 hover:text-slate-700 text-xxs font-bold px-3 py-2 rounded-xl border border-slate-250 transition-colors disabled:opacity-60"
                                 >
                                     Từ chối
                                 </button>
                                 <button
                                     type="button"
                                     wire:click="acceptGreeting({{ $greeting->id }})"
-                                    class="bg-ue-brand hover:bg-ue-brand-dark text-white text-xxs font-bold px-4 py-2 rounded-xl shadow-2xs hover:shadow-3xs transition-all"
+                                    wire:loading.attr="disabled"
+                                    wire:target="acceptGreeting({{ $greeting->id }})"
+                                    class="bg-ue-brand hover:bg-ue-brand-dark text-white text-xxs font-bold px-4 py-2 rounded-xl shadow-2xs hover:shadow-3xs transition-all disabled:opacity-60"
                                 >
-                                    Chấp nhận
+                                    <span wire:loading.remove wire:target="acceptGreeting({{ $greeting->id }})">Chấp nhận</span>
+                                    <span wire:loading wire:target="acceptGreeting({{ $greeting->id }})">Đang xử lý...</span>
                                 </button>
                             </div>
                         </div>
@@ -877,9 +899,12 @@ new #[Layout('layouts.app')] class extends Component
                             <button
                                 type="button"
                                 wire:click="cancelGreeting({{ $greeting->id }})"
-                                class="bg-slate-50 hover:bg-red-50 text-slate-500 hover:text-red-700 text-xxs font-bold px-3 py-1.5 rounded-lg border border-slate-200 hover:border-red-200 transition-colors self-end md:self-center flex-shrink-0"
+                                wire:loading.attr="disabled"
+                                wire:target="cancelGreeting({{ $greeting->id }})"
+                                class="bg-slate-50 hover:bg-red-50 text-slate-500 hover:text-red-700 text-xxs font-bold px-3 py-1.5 rounded-lg border border-slate-200 hover:border-red-200 transition-colors self-end md:self-center flex-shrink-0 disabled:opacity-60"
                             >
-                                Hủy yêu cầu
+                                <span wire:loading.remove wire:target="cancelGreeting({{ $greeting->id }})">Hủy yêu cầu</span>
+                                <span wire:loading wire:target="cancelGreeting({{ $greeting->id }})">Đang hủy...</span>
                             </button>
                         </div>
                     @empty
@@ -945,9 +970,12 @@ new #[Layout('layouts.app')] class extends Component
                             <button
                                 type="button"
                                 wire:click="unblockUser({{ $item->blocked_id }})"
-                                class="bg-slate-50 hover:bg-slate-100 text-slate-600 text-xxs font-bold px-3 py-1.5 rounded-lg border border-slate-250 transition-colors"
+                                wire:loading.attr="disabled"
+                                wire:target="unblockUser({{ $item->blocked_id }})"
+                                class="bg-slate-50 hover:bg-slate-100 text-slate-600 text-xxs font-bold px-3 py-1.5 rounded-lg border border-slate-250 transition-colors disabled:opacity-60"
                             >
-                                Bỏ chặn
+                                <span wire:loading.remove wire:target="unblockUser({{ $item->blocked_id }})">Bỏ chặn</span>
+                                <span wire:loading wire:target="unblockUser({{ $item->blocked_id }})">Đang xử lý...</span>
                             </button>
                         </div>
                     @empty
@@ -1019,9 +1047,12 @@ new #[Layout('layouts.app')] class extends Component
                     <button
                         type="button"
                         wire:click="submitGreeting"
-                        class="px-4 py-2 text-xxs font-bold text-white bg-ue-brand hover:bg-ue-brand-dark rounded-xl shadow-2xs hover:shadow-sm transition-all"
+                        wire:loading.attr="disabled"
+                        wire:target="submitGreeting"
+                        class="px-4 py-2 text-xxs font-bold text-white bg-ue-brand hover:bg-ue-brand-dark rounded-xl shadow-2xs hover:shadow-sm transition-all disabled:opacity-60 disabled:cursor-not-allowed"
                     >
-                        Xác nhận gửi
+                        <span wire:loading.remove wire:target="submitGreeting">Xác nhận gửi</span>
+                        <span wire:loading wire:target="submitGreeting">Đang gửi...</span>
                     </button>
                 </div>
             </div>

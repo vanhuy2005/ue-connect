@@ -253,6 +253,8 @@
                     :selected="$isLiked"
                     danger="true"
                     wireClick="toggleLike({{ $post->id }})"
+                    wire:loading.attr="disabled"
+                    wire:target="toggleLike({{ $post->id }})"
                 />
 
                 {{-- Comments Link --}}
@@ -269,6 +271,8 @@
                     icon="send"
                     label="Chia sẻ"
                     wireClick="startShare({{ $post->id }})"
+                    wire:loading.attr="disabled"
+                    wire:target="startShare({{ $post->id }})"
                 />
 
                 {{-- Save Toggle --}}
@@ -279,6 +283,8 @@
                         label="Lưu"
                         :selected="$isSaved"
                         wireClick="toggleSave({{ $post->id }})"
+                        wire:loading.attr="disabled"
+                        wire:target="toggleSave({{ $post->id }})"
                     />
                 </div>
             </div>
