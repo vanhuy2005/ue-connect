@@ -1134,8 +1134,8 @@ new class extends Component
                 @foreach ($this->joinedCommunities as $c)
                     <a href="{{ route('community.show', $c->id) }}" wire:navigate
                         class="flex items-center gap-3 p-2 rounded-xl transition group {{ $c->id === $community->id ? 'bg-ue-brand-soft text-ue-brand' : 'hover:bg-slate-100' }}">
-                        <div class="w-9 h-9 rounded-lg bg-gradient-to-br from-ue-brand/20 to-ue-brand/5 border border-slate-150 flex items-center justify-center text-ue-brand font-black text-sm flex-shrink-0">
-                            {{ mb_strtoupper(mb_substr($c->name, 0, 2)) }}
+                        <div class="w-9 h-9 rounded-lg bg-gradient-to-br from-ue-brand/20 to-ue-brand/5 border border-slate-150 flex items-center justify-center text-ue-brand flex-shrink-0">
+                            <x-ui.icon name="users" size="sm" class="text-ue-brand" />
                         </div>
                         <div class="min-w-0 flex-1">
                             <p class="text-xs font-bold truncate {{ $c->id === $community->id ? 'text-ue-brand' : 'text-slate-800 group-hover:text-ue-brand' }}">{{ $c->name }}</p>
@@ -1157,7 +1157,9 @@ new class extends Component
                 @if ($this->coverUrl)
                     <img src="{{ $this->coverUrl }}" class="w-full h-full object-cover absolute inset-0" alt="{{ $community->name }}">
                 @else
-                    <span class="text-8xl font-black text-white/10 select-none">{{ mb_strtoupper(mb_substr($community->name, 0, 2)) }}</span>
+                    <div class="w-full h-full flex items-center justify-center">
+                        <x-ui.icon name="users" class="w-24 h-24 text-white/10 select-none" />
+                    </div>
                 @endif
                 
                 @if ($this->canManage)
@@ -1177,7 +1179,7 @@ new class extends Component
                         @if ($this->avatarUrl)
                             <img src="{{ $this->avatarUrl }}" class="w-full h-full object-cover" alt="{{ $community->name }}">
                         @else
-                            {{ mb_strtoupper(mb_substr($community->name, 0, 2)) }}
+                            <x-ui.icon name="users" class="w-12 h-12 sm:w-16 sm:h-16 text-white" />
                         @endif
 
                         @if ($this->canManage)
