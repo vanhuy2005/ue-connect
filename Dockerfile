@@ -68,6 +68,9 @@ RUN composer dump-autoload --optimize \
     && mkdir -p storage/framework/cache storage/framework/sessions storage/framework/views storage/logs bootstrap/cache \
     && chmod -R 775 storage bootstrap/cache
 
+COPY docker/start.sh /usr/local/bin/start-container
+RUN chmod +x /usr/local/bin/start-container
+
 EXPOSE 10000
 
-CMD php artisan migrate --force && php artisan optimize:clear && php artisan serve --host=0.0.0.0 --port=${PORT:-10000}
+CMD ["/usr/local/bin/start-container"]
