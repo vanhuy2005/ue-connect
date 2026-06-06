@@ -51,7 +51,7 @@ new #[Layout('layouts.app')] class extends Component
     public bool $showShareModal = false;
     public ?int $sharingPostId = null;
     public string $shareSearch = '';
-    public ?int $selectedShareUserId = null;
+    public array $selectedShareUserIds = [];
     public string $shareOptionalMessage = '';
 
     /**
@@ -289,43 +289,93 @@ new #[Layout('layouts.app')] class extends Component
 
         $this->sharingPostId = $postId;
         $this->shareSearch = '';
-        $this->selectedShareUserId = null;
+        $this->selectedShareUserIds = [];
         $this->shareOptionalMessage = '';
         $this->showShareModal = true;
     }
 
     /**
-     * Execute post sharing to conversation.
+     * Toggle a recipient in the share modal.
+     */
+    public function toggleShareRecipient(int $userId): void
+    {
+        $selectedUserIds = collect($this->selectedShareUserIds)
+            ->map(fn ($selectedUserId) => (int) $selectedUserId)
+            ->unique()
+            ->values();
+
+        if ($selectedUserIds->contains($userId)) {
+            $this->selectedShareUserIds = $selectedUserIds
+                ->reject(fn ($selectedUserId) => $selectedUserId === $userId)
+                ->values()
+                ->all();
+
+            return;
+        }
+
+        $this->selectedShareUserIds = $selectedUserIds
+            ->push($userId)
+            ->unique()
+            ->values()
+            ->all();
+    }
+
+    /**
+     * Execute post sharing to selected conversations.
      */
     public function executeShare(
         SendSharedPostMessage $sendSharedPostMessage,
         FindOrCreateDirectConversation $findOrCreateDirectConversation
     ): void {
-        if (! $this->sharingPostId || ! $this->selectedShareUserId) {
+        $selectedUserIds = collect($this->selectedShareUserIds)
+            ->map(fn ($selectedUserId) => (int) $selectedUserId)
+            ->filter()
+            ->unique()
+            ->values();
+
+        if (! $this->sharingPostId || $selectedUserIds->isEmpty()) {
             return;
         }
 
-        try {
-            $post = Post::findOrFail($this->sharingPostId);
-            $recipient = User::findOrFail($this->selectedShareUserId);
+        $post = Post::findOrFail($this->sharingPostId);
+        $sentCount = 0;
+        $failedRecipients = [];
 
-            // Find or create conversation
-            $conversation = $findOrCreateDirectConversation->execute(Auth::user(), $recipient);
+        foreach ($selectedUserIds as $recipientId) {
+            try {
+                $recipient = User::findOrFail($recipientId);
 
-            // Send share post message
-            $sendSharedPostMessage->execute(Auth::user(), $conversation, $post, [
-                'body' => $this->shareOptionalMessage ?: null,
-            ]);
+                $conversation = $findOrCreateDirectConversation->execute(Auth::user(), $recipient);
 
+                $sendSharedPostMessage->execute(Auth::user(), $conversation, $post, [
+                    'body' => $this->shareOptionalMessage ?: null,
+                ]);
+
+                $sentCount++;
+            } catch (\Exception $e) {
+                $failedRecipients[] = User::find($recipientId)?->name ?? "ID {$recipientId}";
+            }
+        }
+
+        if ($sentCount > 0) {
             $this->showShareModal = false;
             $this->sharingPostId = null;
-            $this->selectedShareUserId = null;
+            $this->selectedShareUserIds = [];
             $this->shareOptionalMessage = '';
-            
-            $this->feedbackMessage = 'Đã chia sẻ bài viết qua tin nhắn thành công.';
-        } catch (\Exception $e) {
-            $this->feedbackMessage = $e->getMessage();
+            $this->shareSearch = '';
+
+            if ($failedRecipients === []) {
+                $this->feedbackMessage = "Đã chia sẻ bài viết qua tin nhắn cho {$sentCount} người nhận.";
+
+                return;
+            }
+
+            $this->feedbackMessage = "Đã gửi cho {$sentCount} người nhận. Không gửi được cho: ".implode(', ', $failedRecipients).'.';
+
+            return;
         }
+
+        $this->feedbackMessage = 'Không gửi được bài viết cho người nhận đã chọn: '.implode(', ', $failedRecipients).'.';
     }
 
     /**
@@ -367,6 +417,7 @@ new #[Layout('layouts.app')] class extends Component
         $saves = PostSave::with([
             'post' => function ($query) use ($user): void {
                 $query->with(['user.profile', 'media.variants'])
+                    ->visibleTo($user)
                     ->withCount([
                         'likes',
                         'comments as published_comments_count' => function ($query): void {
@@ -381,6 +432,7 @@ new #[Layout('layouts.app')] class extends Component
             ->where('user_id', $user->id)
             ->whereHas('post', function ($query) use ($user) {
                 $query->whereIn('status', [PostStatus::PUBLISHED, PostStatus::EDITED])
+                    ->visibleTo($user)
                     ->where(function ($q) use ($user) {
                         $q->whereDoesntHave('hides', function ($h) use ($user) {
                             $h->where('user_id', $user->id);
@@ -404,9 +456,12 @@ new #[Layout('layouts.app')] class extends Component
     <div class="ue-feed-column">
 
         {{-- Header title --}}
-        <div class="flex items-center gap-2 border-b border-slate-150 pb-4 mb-2">
+        <div class="flex items-start gap-3 border-b border-slate-150 pb-4 mb-2">
             <x-ui.icon name="bookmark" size="lg" class="text-ue-brand" />
-            <h1 class="text-xl font-bold text-slate-800">Bài viết đã lưu</h1>
+            <div>
+                <h1 class="text-xl font-bold text-slate-800">Bài viết đã lưu</h1>
+                <p class="mt-1 text-xs font-medium text-slate-400">Chỉ bạn mới xem được danh sách lưu trữ cá nhân này.</p>
+            </div>
         </div>
 
         {{-- System feedback alerts --}}
@@ -645,10 +700,13 @@ new #[Layout('layouts.app')] class extends Component
                             $shareConnections = $this->getShareConnections();
                         @endphp
                         @forelse ($shareConnections as $connUser)
+                            @php
+                                $isSelectedShareRecipient = in_array($connUser->id, $selectedShareUserIds, true);
+                            @endphp
                             <button
                                 type="button"
-                                wire:click="$set('selectedShareUserId', {{ $connUser->id }})"
-                                class="w-full text-left p-3 hover:bg-slate-50 flex items-center justify-between transition-colors {{ $selectedShareUserId === $connUser->id ? 'bg-slate-50' : '' }}"
+                                wire:click="toggleShareRecipient({{ $connUser->id }})"
+                                class="w-full text-left p-3 hover:bg-slate-50 flex items-center justify-between transition-colors {{ $isSelectedShareRecipient ? 'bg-slate-50' : '' }}"
                             >
                                 <div class="flex items-center gap-3">
                                     <x-ui.avatar :user="$connUser" size="xs" />
@@ -659,7 +717,7 @@ new #[Layout('layouts.app')] class extends Component
                                         @endif
                                     </div>
                                 </div>
-                                @if ($selectedShareUserId === $connUser->id)
+                                @if ($isSelectedShareRecipient)
                                     <x-ui.icon name="check" size="xs" class="text-ue-brand fill-ue-brand" />
                                 @endif
                             </button>
@@ -685,6 +743,9 @@ new #[Layout('layouts.app')] class extends Component
                 </div>
 
                 <div class="flex items-center justify-end gap-3 px-6 py-4 bg-slate-50 border-t border-slate-100 flex-shrink-0">
+                    <p class="mr-auto text-[11px] font-semibold text-slate-400">
+                        Đã chọn {{ count($selectedShareUserIds) }} người nhận
+                    </p>
                     <button type="button" wire:click="$set('showShareModal', false)" class="px-4 py-2 text-xs font-bold text-slate-500 hover:text-slate-700 transition-colors">
                         Hủy bỏ
                     </button>
@@ -693,7 +754,7 @@ new #[Layout('layouts.app')] class extends Component
                         wire:click="executeShare"
                         wire:loading.attr="disabled"
                         wire:target="executeShare"
-                        @if (! $selectedShareUserId) disabled @endif
+                        @if (empty($selectedShareUserIds)) disabled @endif
                         class="px-4 py-2 text-xs font-bold text-white bg-ue-brand hover:bg-ue-brand-dark rounded-xl shadow-2xs hover:shadow-sm transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1.5"
                     >
                         <span wire:loading.remove wire:target="executeShare" class="flex items-center gap-1.5">

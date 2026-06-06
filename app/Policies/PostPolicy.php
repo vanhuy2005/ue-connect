@@ -2,9 +2,11 @@
 
 namespace App\Policies;
 
+use App\Enums\CommunityMemberStatus;
 use App\Enums\ConnectionStatus;
 use App\Enums\PostStatus;
 use App\Enums\PostVisibility;
+use App\Models\CommunityMember;
 use App\Models\Connection;
 use App\Models\Post;
 use App\Models\User;
@@ -54,6 +56,17 @@ class PostPolicy
             return Connection::where('user_one_id', $userOneId)
                 ->where('user_two_id', $userTwoId)
                 ->where('status', ConnectionStatus::ACTIVE)
+                ->exists();
+        }
+
+        if ($post->visibility === PostVisibility::COMMUNITY) {
+            if ($post->scope_type !== 'community' || ! $post->scope_id) {
+                return false;
+            }
+
+            return CommunityMember::where('community_id', $post->scope_id)
+                ->where('user_id', $user->id)
+                ->where('status', CommunityMemberStatus::Active->value)
                 ->exists();
         }
 
