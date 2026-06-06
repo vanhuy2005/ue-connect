@@ -41,7 +41,12 @@ class OpenRouterStudentCardAnalyzer implements EvidenceAnalyzer
         }
 
         try {
-            $imageBase64 = base64_encode(Storage::disk('private')->get($mediaFile->path));
+            $diskName = config('media.private_disk', 'private');
+            $fileContents = Storage::disk($diskName)->get($mediaFile->path);
+            if ($fileContents === null) {
+                throw new \Exception("File not found on private storage disk [{$diskName}]: {$mediaFile->path}");
+            }
+            $imageBase64 = base64_encode($fileContents);
             $mimeType = $mediaFile->mime_type ?? 'image/jpeg';
             $dataUri = "data:{$mimeType};base64,{$imageBase64}";
 

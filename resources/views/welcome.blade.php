@@ -245,7 +245,7 @@
                     {{-- Slide 1: Student Communities & Clubs --}}
                     <div x-show="activeSlide === 1" x-transition:enter="transition ease-out duration-300 transform" x-transition:enter-start="opacity-0 translate-x-4" x-transition:enter-end="opacity-100 translate-x-0" class="flex-1 flex flex-col justify-between" style="display: none;">
                         <div>
-                            <span class="inline-flex px-2.5 py-0.5 rounded-md bg-blue-50 text-blue-700 border border-blue-100 text-[10px] font-bold uppercase tracking-wider select-none">
+                            <span class="inline-flex px-2.5 py-0.5 rounded-md bg-[#F0F5FA] text-[#2B5B84] border border-[#D0E1F0] text-[10px] font-bold uppercase tracking-wider select-none">
                                 Cộng đồng học tập
                             </span>
                             <h2 class="text-xl sm:text-2xl font-bold text-slate-850 tracking-tight mt-3 mb-2">Thảo luận môn học và hoạt động CLB</h2>
@@ -254,7 +254,7 @@
                             </p>
                             <ul class="space-y-3">
                                 <li class="flex items-start gap-3 text-xs text-slate-700">
-                                    <div class="w-5 h-5 rounded-full bg-blue-50 text-blue-700 flex items-center justify-center flex-shrink-0 mt-0.5">
+                                    <div class="w-5 h-5 rounded-full bg-[#F0F5FA] text-[#2B5B84] flex items-center justify-center flex-shrink-0 mt-0.5">
                                         <x-ui.icon name="community" size="xs" />
                                     </div>
                                     <div>
@@ -263,7 +263,7 @@
                                     </div>
                                 </li>
                                 <li class="flex items-start gap-3 text-xs text-slate-700">
-                                    <div class="w-5 h-5 rounded-full bg-blue-50 text-blue-700 flex items-center justify-center flex-shrink-0 mt-0.5">
+                                    <div class="w-5 h-5 rounded-full bg-[#F0F5FA] text-[#2B5B84] flex items-center justify-center flex-shrink-0 mt-0.5">
                                         <x-ui.icon name="users" size="xs" />
                                     </div>
                                     <div>
@@ -275,10 +275,10 @@
                         </div>
                     </div>
 
-                    {{-- Slide 2: Mentoring and Cố vấn học tập --}}
+                    {{-- Slide 2: Mentoring and Cố cố vấn học tập --}}
                     <div x-show="activeSlide === 2" x-transition:enter="transition ease-out duration-300 transform" x-transition:enter-start="opacity-0 translate-x-4" x-transition:enter-end="opacity-100 translate-x-0" class="flex-1 flex flex-col justify-between" style="display: none;">
                         <div>
-                            <span class="inline-flex px-2.5 py-0.5 rounded-md bg-purple-50 text-purple-700 border border-purple-100 text-[10px] font-bold uppercase tracking-wider select-none">
+                            <span class="inline-flex px-2.5 py-0.5 rounded-md bg-[#F5F6FE] text-[#4F52B2] border border-[#E1E3FB] text-[10px] font-bold uppercase tracking-wider select-none">
                                 Chương trình Mentor
                             </span>
                             <h2 class="text-xl sm:text-2xl font-bold text-slate-850 tracking-tight mt-3 mb-2">Định hướng nghiên cứu & học thuật</h2>
@@ -287,7 +287,7 @@
                             </p>
                             <ul class="space-y-3">
                                 <li class="flex items-start gap-3 text-xs text-slate-700">
-                                    <div class="w-5 h-5 rounded-full bg-purple-50 text-purple-700 flex items-center justify-center flex-shrink-0 mt-0.5">
+                                    <div class="w-5 h-5 rounded-full bg-[#F5F6FE] text-[#4F52B2] flex items-center justify-center flex-shrink-0 mt-0.5">
                                         <x-ui.icon name="graduation-cap" size="xs" />
                                     </div>
                                     <div>
@@ -296,7 +296,7 @@
                                     </div>
                                 </li>
                                 <li class="flex items-start gap-3 text-xs text-slate-700">
-                                    <div class="w-5 h-5 rounded-full bg-purple-50 text-purple-700 flex items-center justify-center flex-shrink-0 mt-0.5">
+                                    <div class="w-5 h-5 rounded-full bg-[#F5F6FE] text-[#4F52B2] flex items-center justify-center flex-shrink-0 mt-0.5">
                                         <x-ui.icon name="star" size="xs" />
                                     </div>
                                     <div>
@@ -311,7 +311,7 @@
                     {{-- Slide 3: Alumni (Cựu sinh viên kết nối) --}}
                     <div x-show="activeSlide === 3" x-transition:enter="transition ease-out duration-300 transform" x-transition:enter-start="opacity-0 translate-x-4" x-transition:enter-end="opacity-100 translate-x-0" class="flex-1 flex flex-col justify-between" style="display: none;">
                         <div>
-                            <span class="inline-flex px-2.5 py-0.5 rounded-md bg-amber-50 text-amber-700 border border-amber-100 text-[10px] font-bold uppercase tracking-wider select-none">
+                            <span class="inline-flex px-2.5 py-0.5 rounded-md bg-[#FAF7F2] text-[#845E35] border border-[#EADCC9] text-[10px] font-bold uppercase tracking-wider select-none">
                                 Mạng lưới Alumni
                             </span>
                             <h2 class="text-xl sm:text-2xl font-bold text-slate-850 tracking-tight mt-3 mb-2">Học hỏi kinh nghiệm từ các thế hệ đi trước</h2>
@@ -320,7 +320,7 @@
                             </p>
                             <ul class="space-y-3">
                                 <li class="flex items-start gap-3 text-xs text-slate-700">
-                                    <div class="w-5 h-5 rounded-full bg-amber-50 text-amber-700 flex items-center justify-center flex-shrink-0 mt-0.5">
+                                    <div class="w-5 h-5 rounded-full bg-[#FAF7F2] text-[#845E35] flex items-center justify-center flex-shrink-0 mt-0.5">
                                         <x-ui.icon name="users" size="xs" />
                                     </div>
                                     <div>
@@ -329,7 +329,7 @@
                                     </div>
                                 </li>
                                 <li class="flex items-start gap-3 text-xs text-slate-700">
-                                    <div class="w-5 h-5 rounded-full bg-amber-50 text-amber-700 flex items-center justify-center flex-shrink-0 mt-0.5">
+                                    <div class="w-5 h-5 rounded-full bg-[#FAF7F2] text-[#845E35] flex items-center justify-center flex-shrink-0 mt-0.5">
                                         <x-ui.icon name="search" size="xs" />
                                     </div>
                                     <div>
@@ -344,7 +344,7 @@
                     {{-- Slide 4: Verification & Safe Environment --}}
                     <div x-show="activeSlide === 4" x-transition:enter="transition ease-out duration-300 transform" x-transition:enter-start="opacity-0 translate-x-4" x-transition:enter-end="opacity-100 translate-x-0" class="flex-1 flex flex-col justify-between" style="display: none;">
                         <div>
-                            <span class="inline-flex px-2.5 py-0.5 rounded-md bg-emerald-50 text-emerald-700 border border-emerald-100 text-[10px] font-bold uppercase tracking-wider select-none">
+                            <span class="inline-flex px-2.5 py-0.5 rounded-md bg-[#F0F7F6] text-[#2D6A66] border border-[#D2E6E4] text-[10px] font-bold uppercase tracking-wider select-none">
                                 Cam kết An toàn & Bảo mật
                             </span>
                             <h2 class="text-xl sm:text-2xl font-bold text-slate-850 tracking-tight mt-3 mb-2">Quyền riêng tư được bảo vệ tuyệt đối</h2>
@@ -353,7 +353,7 @@
                             </p>
                             <ul class="space-y-3">
                                 <li class="flex items-start gap-3 text-xs text-slate-700">
-                                    <div class="w-5 h-5 rounded-full bg-emerald-50 text-emerald-700 flex items-center justify-center flex-shrink-0 mt-0.5">
+                                    <div class="w-5 h-5 rounded-full bg-[#F0F7F6] text-[#2D6A66] flex items-center justify-center flex-shrink-0 mt-0.5">
                                         <x-ui.icon name="shield" size="xs" />
                                     </div>
                                     <div>
@@ -362,7 +362,7 @@
                                     </div>
                                 </li>
                                 <li class="flex items-start gap-3 text-xs text-slate-700">
-                                    <div class="w-5 h-5 rounded-full bg-emerald-50 text-emerald-700 flex items-center justify-center flex-shrink-0 mt-0.5">
+                                    <div class="w-5 h-5 rounded-full bg-[#F0F7F6] text-[#2D6A66] flex items-center justify-center flex-shrink-0 mt-0.5">
                                         <x-ui.icon name="eye-off" size="xs" />
                                     </div>
                                     <div>

@@ -346,7 +346,7 @@ new #[Layout('layouts.app')] class extends Component
     }
 }; ?>
 
-<div class="flex flex-col lg:flex-row min-h-screen bg-[#f0f2f5] w-full">
+<div class="flex flex-col lg:flex-row min-h-screen bg-white w-full">
     
     {{-- 1. Desktop Left Sidebar --}}
     <aside class="hidden lg:flex flex-col w-80 bg-white border-r border-slate-200 flex-shrink-0 p-4 sticky top-0 h-screen overflow-y-auto">
@@ -361,16 +361,16 @@ new #[Layout('layouts.app')] class extends Component
         <nav class="space-y-1 mb-6">
             {{-- Trang chủ --}}
             <a href="{{ route('connections.index', ['activeTab' => 'home']) }}" wire:navigate
-                class="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-bold transition-all text-slate-700 hover:bg-slate-50">
-                <x-ui.icon name="home" size="xs" class="text-slate-500" />
+                class="ue-sidebar-subnav-link">
+                <x-ui.icon name="home" size="xs" />
                 <span class="flex-1 text-left">Trang chủ</span>
             </a>
 
             {{-- Lời mời kết bạn --}}
             <a href="{{ route('connections.index', ['activeTab' => 'received']) }}" wire:navigate
-                class="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-bold transition-all text-slate-700 hover:bg-slate-50">
+                class="ue-sidebar-subnav-link">
                 <div class="relative">
-                    <x-ui.icon name="user-check" size="xs" class="text-slate-500" />
+                    <x-ui.icon name="user-check" size="xs" />
                     @if($receivedCount > 0)
                         <span class="absolute -top-1 -right-1 flex h-2 w-2 items-center justify-center rounded-full bg-red-500 ring-2 ring-white"></span>
                     @endif
@@ -383,39 +383,39 @@ new #[Layout('layouts.app')] class extends Component
 
             {{-- Gợi ý (Active here) --}}
             <button wire:click="reset()"
-                class="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-bold transition-all bg-ue-brand-soft text-ue-brand">
-                <x-ui.icon name="user-plus" size="xs" class="text-ue-brand" />
+                class="ue-sidebar-subnav-link active">
+                <x-ui.icon name="user-plus" size="xs" />
                 <span class="flex-1 text-left">Gợi ý</span>
-                <x-ui.icon name="chevron-right" size="xs" class="text-ue-brand" />
+                <x-ui.icon name="chevron-right" size="xs" />
             </button>
 
             {{-- Tất cả bạn bè --}}
             <a href="{{ route('connections.index', ['activeTab' => 'connections']) }}" wire:navigate
-                class="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-bold transition-all text-slate-700 hover:bg-slate-50">
-                <x-ui.icon name="users" size="xs" class="text-slate-500" />
+                class="ue-sidebar-subnav-link">
+                <x-ui.icon name="users" size="xs" />
                 <span class="flex-1 text-left">Tất cả bạn bè</span>
                 <span class="text-xs text-slate-400 mr-1">{{ $connectionsCount }}</span>
             </a>
 
             {{-- Lời mời đã gửi --}}
             <a href="{{ route('connections.index', ['activeTab' => 'sent']) }}" wire:navigate
-                class="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-bold transition-all text-slate-700 hover:bg-slate-50">
-                <x-ui.icon name="send" size="xs" class="text-slate-500" />
+                class="ue-sidebar-subnav-link">
+                <x-ui.icon name="send" size="xs" />
                 <span class="flex-1 text-left">Lời mời đã gửi</span>
                 <span class="text-xs text-slate-400 mr-1">{{ $sentCount }}</span>
             </a>
 
             {{-- Sinh nhật --}}
             <a href="{{ route('connections.index', ['activeTab' => 'birthday']) }}" wire:navigate
-                class="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-bold transition-all text-slate-700 hover:bg-slate-50">
-                <x-ui.icon name="calendar" size="xs" class="text-slate-500" />
+                class="ue-sidebar-subnav-link">
+                <x-ui.icon name="calendar" size="xs" />
                 <span class="flex-1 text-left">Sinh nhật</span>
             </a>
 
             {{-- Danh sách chặn --}}
             <a href="{{ route('connections.index', ['activeTab' => 'blocked']) }}" wire:navigate
-                class="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-bold transition-all text-slate-700 hover:bg-slate-50">
-                <x-ui.icon name="slash" size="xs" class="text-slate-500" />
+                class="ue-sidebar-subnav-link">
+                <x-ui.icon name="slash" size="xs" />
                 <span class="flex-1 text-left">Đã chặn</span>
                 <span class="text-xs text-slate-400 mr-1">{{ $blockedCount }}</span>
             </a>
