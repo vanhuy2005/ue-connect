@@ -44,15 +44,21 @@ class Community extends Model
         'archived_at',
     ];
 
-    protected $casts = [
-        'settings' => 'array',
-        'type' => CommunityType::class,
-        'status' => CommunityStatus::class,
-        'visibility' => CommunityVisibility::class,
-        'join_policy' => CommunityJoinPolicy::class,
-        'suspended_at' => 'datetime',
-        'archived_at' => 'datetime',
-    ];
+    /**
+     * @return array<string, mixed>
+     */
+    protected function casts(): array
+    {
+        return [
+            'settings' => 'array',
+            'type' => CommunityType::class,
+            'status' => CommunityStatus::class,
+            'visibility' => CommunityVisibility::class,
+            'join_policy' => CommunityJoinPolicy::class,
+            'suspended_at' => 'datetime',
+            'archived_at' => 'datetime',
+        ];
+    }
 
     // ─── Relationships ───────────────────────────────────────────────────────
 

@@ -413,7 +413,7 @@ new class extends Component
                     <a href="{{ route('community.show', $c->id) }}" wire:navigate
                         class="flex items-center gap-3 p-2 rounded-xl hover:bg-slate-100 transition group">
                         <div class="w-9 h-9 rounded-lg bg-gradient-to-br from-ue-brand/20 to-ue-brand/5 border border-slate-150 flex items-center justify-center text-ue-brand font-black text-sm flex-shrink-0 group-hover:scale-105 transition-transform duration-200">
-                            {{ strtoupper(mb_substr($c->name, 0, 2)) }}
+                            {{ mb_strtoupper(mb_substr($c->name, 0, 2)) }}
                         </div>
                         <div class="min-w-0 flex-1">
                             <p class="text-xs font-bold text-slate-800 truncate group-hover:text-ue-brand transition-colors">{{ $c->name }}</p>
@@ -500,7 +500,7 @@ new class extends Component
                                     <div class="px-4 py-2 bg-slate-50/70 border-b border-slate-150 flex items-center justify-between">
                                         <div class="flex items-center gap-2">
                                             <div class="w-5 h-5 rounded bg-ue-brand-soft text-ue-brand flex items-center justify-center text-[10px] font-black">
-                                                {{ strtoupper(mb_substr($postCommunity->name, 0, 1)) }}
+                                                {{ mb_strtoupper(mb_substr($postCommunity->name, 0, 1)) }}
                                             </div>
                                             <a href="{{ route('community.show', $postCommunity->id) }}" wire:navigate
                                                 class="text-xs font-bold text-slate-700 hover:text-ue-brand truncate max-w-[200px] sm:max-w-sm">
@@ -589,13 +589,13 @@ new class extends Component
                         <div class="bg-white border border-slate-200 rounded-2xl overflow-hidden hover:shadow-md transition duration-200 flex flex-col group relative">
                             {{-- Header Gradient Fallback --}}
                             <div class="h-20 bg-gradient-to-br from-ue-brand/35 to-ue-brand/10 relative flex items-center justify-center">
-                                <span class="text-3xl font-black text-ue-brand/20 select-none">{{ strtoupper(mb_substr($c->name, 0, 2)) }}</span>
+                                <span class="text-3xl font-black text-ue-brand/20 select-none">{{ mb_strtoupper(mb_substr($c->name, 0, 2)) }}</span>
                             </div>
 
                             <div class="p-4 flex-1 flex flex-col pt-6 relative">
                                 {{-- Overlapping Group Avatar --}}
                                 <div class="w-12 h-12 rounded-xl bg-ue-brand text-white border-2 border-white shadow-sm flex items-center justify-center text-lg font-black absolute -top-6 left-4">
-                                    {{ strtoupper(mb_substr($c->name, 0, 2)) }}
+                                    {{ mb_strtoupper(mb_substr($c->name, 0, 2)) }}
                                 </div>
 
                                 <div class="min-w-0 mb-2 mt-1">
@@ -720,7 +720,7 @@ new class extends Component
                         <div class="bg-white border border-slate-200 rounded-2xl p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4 hover:shadow-2xs transition mb-3">
                             <div class="flex items-center gap-3">
                                 <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-ue-brand/20 to-ue-brand/5 flex items-center justify-center text-ue-brand font-black text-base flex-shrink-0">
-                                    {{ strtoupper(mb_substr($c->name, 0, 2)) }}
+                                    {{ mb_strtoupper(mb_substr($c->name, 0, 2)) }}
                                 </div>
                                 <div class="min-w-0">
                                     <a href="{{ route('community.show', $c->id) }}" wire:navigate
@@ -776,7 +776,7 @@ new class extends Component
                             <div class="bg-white border border-slate-200 rounded-2xl p-4 flex items-center justify-between hover:shadow-2xs transition">
                                 <div class="flex items-center gap-3 min-w-0">
                                     <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-ue-brand/20 to-ue-brand/5 flex items-center justify-center text-ue-brand font-black text-base flex-shrink-0">
-                                        {{ strtoupper(mb_substr($c->name, 0, 2)) }}
+                                        {{ mb_strtoupper(mb_substr($c->name, 0, 2)) }}
                                     </div>
                                     <div class="min-w-0 flex-1">
                                         <a href="{{ route('community.show', $c->id) }}" wire:navigate
@@ -920,14 +920,14 @@ new class extends Component
                             {{-- cover mockup --}}
                             <div class="h-16 bg-gradient-to-br from-ue-brand/30 to-ue-brand/10 flex items-center justify-center">
                                 <span class="text-2xl font-black text-ue-brand/20 select-none">
-                                    {{ strtoupper(mb_substr($suggestName ?: 'AB', 0, 2)) }}
+                                    {{ mb_strtoupper(mb_substr($suggestName ?: 'AB', 0, 2)) }}
                                 </span>
                             </div>
                             
                             <div class="p-3 pt-5 relative">
                                 {{-- Overlapping logo mockup --}}
                                 <div class="w-9 h-9 rounded-lg bg-ue-brand text-white border-2 border-white shadow-sm flex items-center justify-center text-sm font-black absolute -top-[18px] left-3">
-                                    {{ strtoupper(mb_substr($suggestName ?: 'AB', 0, 2)) }}
+                                    {{ mb_strtoupper(mb_substr($suggestName ?: 'AB', 0, 2)) }}
                                 </div>
 
                                 <h4 class="font-bold text-xs text-slate-800 truncate mt-1">

@@ -7,6 +7,7 @@ use App\Enums\CommunityResourceType;
 use App\Models\Community;
 use App\Models\CommunityMember;
 use App\Models\CommunityResource;
+use App\Models\PermissionGrant;
 use App\Models\User;
 use Illuminate\Validation\ValidationException;
 
@@ -57,7 +58,23 @@ class SubmitCommunityResourceAction
             ]);
         }
 
-        return CommunityResource::create([
+        $status = CommunityResourceStatus::PendingReview->value;
+        $hasReviewPrivilege = $user->hasRole('admin')
+            || $user->can('manage_communities')
+            || $community->isOwnedBy($user)
+            || PermissionGrant::where('user_id', $user->id)
+                ->whereIn('permission_key', ['manage_community_resources', 'manage_community'])
+                ->where('scope_type', 'community')
+                ->where('scope_id', $community->id)
+                ->where('status', 'active')
+                ->where(fn ($q) => $q->whereNull('expires_at')->orWhere('expires_at', '>', now()))
+                ->exists();
+
+        if ($hasReviewPrivilege) {
+            $status = CommunityResourceStatus::Published->value;
+        }
+
+        $resource = CommunityResource::create([
             'community_id' => $community->id,
             'title' => $data['title'],
             'description' => $data['description'] ?? null,
@@ -66,8 +83,14 @@ class SubmitCommunityResourceAction
             'url' => $data['url'] ?? null,
             'category' => $data['category'] ?? null,
             'copyright_attestation' => true,
-            'status' => CommunityResourceStatus::PendingReview->value,
+            'status' => $status,
             'submitted_by' => $user->id,
         ]);
+
+        if ($status === CommunityResourceStatus::Published->value) {
+            $community->increment('resource_count');
+        }
+
+        return $resource;
     }
 }

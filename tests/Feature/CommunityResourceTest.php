@@ -90,6 +90,7 @@ class CommunityResourceTest extends TestCase
         $resource = app(SubmitCommunityResourceAction::class)->execute($owner, $community, [
             'title' => 'Owner Guide',
             'resource_type' => 'document',
+            'url' => 'https://example.com/guide',
             'file_id' => $mediaFile->id,
             'copyright_attestation' => true,
         ]);
@@ -123,6 +124,7 @@ class CommunityResourceTest extends TestCase
         $resource = app(SubmitCommunityResourceAction::class)->execute($user, $community, [
             'title' => 'Template nhập môn',
             'resource_type' => 'template',
+            'url' => 'https://example.com/template',
             'file_id' => $mediaFile->id,
             'copyright_attestation' => true,
         ]);
@@ -189,6 +191,22 @@ class CommunityResourceTest extends TestCase
             'url' => 'https://php.net',
             'copyright_attestation' => false,
         ]);
+    }
+
+    public function test_resource_is_auto_published_if_submitted_by_owner_or_admin(): void
+    {
+        $owner = User::factory()->create();
+        $community = Community::factory()->active()->forOwner($owner)->create();
+
+        $resource = app(SubmitCommunityResourceAction::class)->execute($owner, $community, [
+            'title' => 'Important Links',
+            'resource_type' => 'link',
+            'url' => 'https://example.com',
+            'copyright_attestation' => true,
+        ]);
+
+        $this->assertSame(CommunityResourceStatus::Published->value, $resource->status->value);
+        $this->assertSame(1, $community->fresh()->resource_count);
     }
 
     // ─── ReviewCommunityResourceAction ────────────────────────────────────────
