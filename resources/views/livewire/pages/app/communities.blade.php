@@ -353,7 +353,7 @@ new class extends Component
 };
 ?>
 
-<div class="flex flex-col lg:flex-row min-h-screen bg-[#f0f2f5] w-full">
+<div class="flex flex-col lg:flex-row min-h-screen bg-white w-full">
     
     {{-- 1. Desktop Left Sidebar --}}
     <aside class="hidden lg:flex flex-col w-80 bg-white border-r border-slate-200 flex-shrink-0 p-4 sticky top-0 h-screen overflow-y-auto">
@@ -376,18 +376,18 @@ new class extends Component
         {{-- Navigation Menu --}}
         <nav class="space-y-1 mb-6">
             <button wire:click="setSubTab('feed')"
-                class="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-bold transition-all {{ $subTab === 'feed' ? 'bg-ue-brand-soft text-ue-brand' : 'text-slate-700 hover:bg-slate-50' }}">
-                <x-ui.icon name="message-square" size="xs" class="{{ $subTab === 'feed' ? 'text-ue-brand' : 'text-slate-500' }}" />
+                class="ue-sidebar-subnav-link {{ $subTab === 'feed' ? 'active' : '' }}">
+                <x-ui.icon name="message-square" size="xs" />
                 <span class="flex-1 text-left">Bảng feed của bạn</span>
             </button>
             <button wire:click="setSubTab('discover')"
-                class="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-bold transition-all {{ $subTab === 'discover' ? 'bg-ue-brand-soft text-ue-brand' : 'text-slate-700 hover:bg-slate-50' }}">
-                <x-ui.icon name="users" size="xs" class="{{ $subTab === 'discover' ? 'text-ue-brand' : 'text-slate-500' }}" />
+                class="ue-sidebar-subnav-link {{ $subTab === 'discover' ? 'active' : '' }}">
+                <x-ui.icon name="users" size="xs" />
                 <span class="flex-1 text-left">Khám phá</span>
             </button>
             <button wire:click="setSubTab('mine')"
-                class="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-bold transition-all {{ $subTab === 'mine' ? 'bg-ue-brand-soft text-ue-brand' : 'text-slate-700 hover:bg-slate-50' }}">
-                <x-ui.icon name="user" size="xs" class="{{ $subTab === 'mine' ? 'text-ue-brand' : 'text-slate-500' }}" />
+                class="ue-sidebar-subnav-link {{ $subTab === 'mine' ? 'active' : '' }}">
+                <x-ui.icon name="user" size="xs" />
                 <span class="flex-1 text-left">Nhóm của bạn</span>
             </button>
         </nav>

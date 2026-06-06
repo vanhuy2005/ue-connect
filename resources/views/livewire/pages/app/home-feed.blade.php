@@ -15,6 +15,7 @@ use App\Actions\Media\DeleteMediaAction;
 use App\Actions\Media\GenerateMediaUrlAction;
 use App\Actions\Media\StoreTemporaryMediaAction;
 use App\Actions\Follows\FollowUser;
+use App\Actions\Follows\UnfollowUser;
 use App\Enums\CommentStatus;
 use App\Enums\PostStatus;
 use App\Enums\PostVisibility;
@@ -400,6 +401,36 @@ new #[Layout('layouts.app')] class extends Component
     public function copyLinkFeedback(): void
     {
         $this->feedbackMessage = 'Đã sao chép liên kết bài viết vào bộ nhớ tạm.';
+    }
+
+    /**
+     * Toggle follow status for a user.
+     */
+    public function toggleFollow(int $userId, FollowUser $followUser, UnfollowUser $unfollowUser): void
+    {
+        try {
+            $targetUser = User::findOrFail($userId);
+            $currentUser = Auth::user();
+
+            if ($currentUser->id === $targetUser->id) {
+                $this->feedbackMessage = 'Bạn không thể tự theo dõi chính mình.';
+                return;
+            }
+
+            $isFollowing = \App\Models\UserFollow::where('follower_id', $currentUser->id)
+                ->where('following_id', $targetUser->id)
+                ->exists();
+
+            if ($isFollowing) {
+                $unfollowUser->execute($currentUser, $targetUser);
+                $this->feedbackMessage = 'Đã bỏ theo dõi ' . $targetUser->name . '.';
+            } else {
+                $followUser->execute($currentUser, $targetUser);
+                $this->feedbackMessage = 'Đã theo dõi ' . $targetUser->name . '.';
+            }
+        } catch (\Exception $e) {
+            $this->feedbackMessage = $e->getMessage();
+        }
     }
 
     /**

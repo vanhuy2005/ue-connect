@@ -329,7 +329,7 @@ new #[Layout('layouts.app')] class extends Component
     }
 }; ?>
 
-<div class="flex flex-col lg:flex-row min-h-screen bg-[#f0f2f5] w-full">
+<div class="flex flex-col lg:flex-row min-h-screen bg-white w-full">
     
     {{-- 1. Desktop Left Sidebar --}}
     <aside class="hidden lg:flex flex-col w-80 bg-white border-r border-slate-200 flex-shrink-0 p-4 sticky top-0 h-screen overflow-y-auto">
@@ -344,16 +344,16 @@ new #[Layout('layouts.app')] class extends Component
         <nav class="space-y-1 mb-6">
             {{-- Trang chủ --}}
             <button wire:click="$set('activeTab', 'home')"
-                class="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-bold transition-all {{ $activeTab === 'home' ? 'bg-ue-brand-soft text-ue-brand' : 'text-slate-700 hover:bg-slate-50' }}">
-                <x-ui.icon name="home" size="xs" class="{{ $activeTab === 'home' ? 'text-ue-brand' : 'text-slate-500' }}" />
+                class="ue-sidebar-subnav-link {{ $activeTab === 'home' ? 'active' : '' }}">
+                <x-ui.icon name="home" size="xs" />
                 <span class="flex-1 text-left">Trang chủ</span>
             </button>
 
             {{-- Lời mời kết bạn --}}
             <button wire:click="$set('activeTab', 'received')"
-                class="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-bold transition-all {{ $activeTab === 'received' ? 'bg-ue-brand-soft text-ue-brand' : 'text-slate-700 hover:bg-slate-50' }}">
+                class="ue-sidebar-subnav-link {{ $activeTab === 'received' ? 'active' : '' }}">
                 <div class="relative">
-                    <x-ui.icon name="user-check" size="xs" class="{{ $activeTab === 'received' ? 'text-ue-brand' : 'text-slate-500' }}" />
+                    <x-ui.icon name="user-check" size="xs" />
                     @if(count($received) > 0)
                         <span class="absolute -top-1 -right-1 flex h-2 w-2 items-center justify-center rounded-full bg-red-500 ring-2 ring-white"></span>
                     @endif
@@ -366,39 +366,39 @@ new #[Layout('layouts.app')] class extends Component
 
             {{-- Gợi ý (Links to Discovery page) --}}
             <a href="{{ route('discovery.index') }}" wire:navigate
-                class="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-bold transition-all text-slate-700 hover:bg-slate-50">
-                <x-ui.icon name="user-plus" size="xs" class="text-slate-500" />
+                class="ue-sidebar-subnav-link">
+                <x-ui.icon name="user-plus" size="xs" />
                 <span class="flex-1 text-left">Gợi ý</span>
-                <x-ui.icon name="chevron-right" size="xs" class="text-slate-400" />
+                <x-ui.icon name="chevron-right" size="xs" />
             </a>
 
             {{-- Tất cả bạn bè --}}
             <button wire:click="$set('activeTab', 'connections')"
-                class="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-bold transition-all {{ $activeTab === 'connections' ? 'bg-ue-brand-soft text-ue-brand' : 'text-slate-700 hover:bg-slate-50' }}">
-                <x-ui.icon name="users" size="xs" class="{{ $activeTab === 'connections' ? 'text-ue-brand' : 'text-slate-500' }}" />
+                class="ue-sidebar-subnav-link {{ $activeTab === 'connections' ? 'active' : '' }}">
+                <x-ui.icon name="users" size="xs" />
                 <span class="flex-1 text-left">Bạn bè/kết nối</span>
                 <span class="text-xs text-slate-400 mr-1">{{ count($connections) }}</span>
             </button>
 
             {{-- Lời mời đã gửi --}}
             <button wire:click="$set('activeTab', 'sent')"
-                class="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-bold transition-all {{ $activeTab === 'sent' ? 'bg-ue-brand-soft text-ue-brand' : 'text-slate-700 hover:bg-slate-50' }}">
-                <x-ui.icon name="send" size="xs" class="{{ $activeTab === 'sent' ? 'text-ue-brand' : 'text-slate-500' }}" />
+                class="ue-sidebar-subnav-link {{ $activeTab === 'sent' ? 'active' : '' }}">
+                <x-ui.icon name="send" size="xs" />
                 <span class="flex-1 text-left">Lời mời đã gửi</span>
                 <span class="text-xs text-slate-400 mr-1">{{ count($sent) }}</span>
             </button>
 
             {{-- Sinh nhật --}}
             <button wire:click="$set('activeTab', 'birthday')"
-                class="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-bold transition-all {{ $activeTab === 'birthday' ? 'bg-ue-brand-soft text-ue-brand' : 'text-slate-700 hover:bg-slate-50' }}">
-                <x-ui.icon name="calendar" size="xs" class="{{ $activeTab === 'birthday' ? 'text-ue-brand' : 'text-slate-500' }}" />
+                class="ue-sidebar-subnav-link {{ $activeTab === 'birthday' ? 'active' : '' }}">
+                <x-ui.icon name="calendar" size="xs" />
                 <span class="flex-1 text-left">Sinh nhật</span>
             </button>
 
             {{-- Danh sách tùy chỉnh (Đã chặn) --}}
             <button wire:click="$set('activeTab', 'blocked')"
-                class="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-bold transition-all {{ $activeTab === 'blocked' ? 'bg-ue-brand-soft text-ue-brand' : 'text-slate-700 hover:bg-slate-50' }}">
-                <x-ui.icon name="slash" size="xs" class="{{ $activeTab === 'blocked' ? 'text-ue-brand' : 'text-slate-500' }}" />
+                class="ue-sidebar-subnav-link {{ $activeTab === 'blocked' ? 'active' : '' }}">
+                <x-ui.icon name="slash" size="xs" />
                 <span class="flex-1 text-left">Đã chặn</span>
                 <span class="text-xs text-slate-400 mr-1">{{ count($blocked) }}</span>
             </button>

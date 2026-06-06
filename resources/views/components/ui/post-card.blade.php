@@ -55,7 +55,6 @@
     @endif
 
     <div class="ue-post-card__body">
-        {{-- Left Avatar Column --}}
         <div class="flex-shrink-0">
             <div class="relative">
                 <a href="{{ $authorProfileUrl }}" class="block rounded-full focus:outline-none focus:ring-2 focus:ring-ue-brand/30" aria-label="Xem trang cá nhân của {{ $author->name }}">
@@ -75,7 +74,6 @@
                     </button>
                 @endif
             </div>
-        </div>
 
         {{-- Right Content Column --}}
         <div class="flex-1 min-w-0">

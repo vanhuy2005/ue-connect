@@ -101,47 +101,47 @@
         --success-border:     #86EFAC;
 
         /* Warning */
-        --warning:            #D97706;
-        --warning-text:       #92400E;
+        --warning:            #B45309;
+        --warning-text:       #78350F;
         --warning-bg:         #FEF3C7;
-        --warning-bg-soft:    #FFFBEB;
-        --warning-border:     #FCD34D;
+        --warning-bg-soft:    #FFFDF5;
+        --warning-border:     #FDE68A;
 
         /* Danger */
-        --danger:             #DC2626;
-        --danger-text:        #991B1B;
-        --danger-bg:          #FEE2E2;
-        --danger-bg-soft:     #FEF2F2;
-        --danger-border:      #FCA5A5;
+        --danger:             #E11D48;
+        --danger-text:        #9F1239;
+        --danger-bg:          #FFE4E6;
+        --danger-bg-soft:     #FFF1F2;
+        --danger-border:      #FECDD3;
 
         /* Info */
-        --info:               #2563EB;
-        --info-text:          #1E40AF;
-        --info-bg:            #DBEAFE;
-        --info-bg-soft:       #EFF6FF;
-        --info-border:        #93C5FD;
+        --info:               #1E40AF;
+        --info-text:          #1E3A8A;
+        --info-bg:            #EFF6FF;
+        --info-bg-soft:       #F8FAFC;
+        --info-border:        #DBEAFE;
 
         /* Mentor */
-        --mentor:             #7C5CFF;
-        --mentor-text:        #5B3FD6;
-        --mentor-bg:          rgba(124, 92, 255, 0.10);
-        --mentor-border:      rgba(124, 92, 255, 0.20);
+        --mentor:             #1E40AF;
+        --mentor-text:        #1D4ED8;
+        --mentor-bg:          rgba(30, 64, 175, 0.08);
+        --mentor-border:      rgba(30, 64, 175, 0.16);
 
         /* -----------------------------------------------------------------------
            Role Colors (for badges — subtle, not page backgrounds)
            ----------------------------------------------------------------------- */
-        --role-student-bg:       #EEF7FF;
-        --role-student-text:     #124874;
-        --role-alumni-bg:        #EEF2FF;
-        --role-alumni-text:      #3730A3;
-        --role-advisor-bg:       #ECFEFF;
-        --role-advisor-text:     #155E75;
-        --role-mentor-bg:        #EAF4FF;
-        --role-mentor-text:      #124874;
-        --role-club-bg:          #F0FDF4;
-        --role-club-text:        #166534;
-        --role-admin-bg:         #F1F5F9;
-        --role-admin-text:       #334155;
+        --role-student-bg:       #F1F5F9;
+        --role-student-text:     #475569;
+        --role-alumni-bg:        #F1F5F9;
+        --role-alumni-text:      #334155;
+        --role-advisor-bg:       #EFF6FF;
+        --role-advisor-text:     #1D4ED8;
+        --role-mentor-bg:        #EEF2FF;
+        --role-mentor-text:      #4F46E5;
+        --role-club-bg:          #F8FAFC;
+        --role-club-text:        #64748B;
+        --role-admin-bg:         #0F172A;
+        --role-admin-text:       #F8FAFC;
 
         /* -----------------------------------------------------------------------
            Interaction Colors
@@ -1769,3 +1769,78 @@
         animation: none !important;
     }
 }
+
+/* =============================================================================
+   Collapsible Social Sidebar, Subnav & White Background Redesigns
+   ============================================================================= */
+
+.ue-shell__sidebar {
+    transition: width 350ms cubic-bezier(0.4, 0, 0.2, 1), padding 350ms cubic-bezier(0.4, 0, 0.2, 1);
+    will-change: width, padding;
+}
+
+.ue-shell__sidebar--expanded {
+    width: var(--layout-sidebar-w) !important;
+}
+
+.ue-shell__sidebar--collapsed {
+    width: var(--layout-sidebar-w-collapsed) !important;
+}
+
+/* Center logo, icons, and menu button inside collapsed sidebar */
+.ue-shell__sidebar--collapsed .ue-nav-link {
+    justify-content: center;
+    padding-left: 0;
+    padding-right: 0;
+    gap: 0;
+}
+
+/* Sub-navigation links styles (larger typography and premium states) */
+.ue-sidebar-subnav-link {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.625rem 0.75rem;
+    border-radius: 0.75rem;
+    font-size: var(--text-md); /* 14px */
+    font-weight: 600;
+    line-height: var(--leading-normal);
+    color: var(--ue-text-secondary);
+    text-decoration: none;
+    transition: background-color var(--duration-sm) var(--ease-out), color var(--duration-sm) var(--ease-out);
+    cursor: pointer;
+}
+
+.ue-sidebar-subnav-link svg {
+    color: var(--ue-text-muted);
+    transition: color var(--duration-sm) var(--ease-out);
+}
+
+.ue-sidebar-subnav-link:hover {
+    background-color: var(--ue-surface-hover);
+    color: var(--ue-text);
+}
+
+.ue-sidebar-subnav-link:hover svg {
+    color: var(--ue-text);
+}
+
+.ue-sidebar-subnav-link.active,
+.ue-sidebar-subnav-link[aria-current="page"] {
+    background-color: var(--ue-brand-soft);
+    color: var(--ue-brand);
+    font-weight: 700;
+}
+
+.ue-sidebar-subnav-link.active svg,
+.ue-sidebar-subnav-link[aria-current="page"] svg {
+    color: var(--ue-brand);
+}
+
+/* Social Shell backgrounds unified to clean pure white */
+.ue-shell--social,
+.ue-shell--social .ue-shell__main,
+.ue-shell--social main {
+    background-color: #ffffff !important;
+}
+

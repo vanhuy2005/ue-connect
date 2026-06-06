@@ -1095,7 +1095,7 @@ new class extends Component
 };
 ?>
 
-<div class="flex flex-col lg:flex-row min-h-screen bg-[#f0f2f5] w-full">
+<div class="flex flex-col lg:flex-row min-h-screen bg-white w-full">
     
     {{-- 1. Persistent Left Sidebar (matching communities index for consistent UX) --}}
     <aside class="hidden lg:flex flex-col w-80 bg-white border-r border-slate-200 flex-shrink-0 p-4 sticky top-0 h-screen overflow-y-auto">
@@ -1106,18 +1106,18 @@ new class extends Component
 
         <nav class="space-y-1 mb-6">
             <a href="{{ route('community.index') }}?subTab=feed"
-                class="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-bold text-slate-700 hover:bg-slate-55 transition-all">
-                <x-ui.icon name="message-square" size="xs" class="text-slate-500" />
+                class="ue-sidebar-subnav-link">
+                <x-ui.icon name="message-square" size="xs" />
                 <span>Bảng feed của bạn</span>
             </a>
             <a href="{{ route('community.index') }}?subTab=discover"
-                class="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-bold text-slate-700 hover:bg-slate-55 transition-all">
-                <x-ui.icon name="users" size="xs" class="text-slate-500" />
+                class="ue-sidebar-subnav-link">
+                <x-ui.icon name="users" size="xs" />
                 <span>Khám phá</span>
             </a>
             <a href="{{ route('community.index') }}?subTab=mine"
-                class="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-bold text-slate-700 hover:bg-slate-55 transition-all">
-                <x-ui.icon name="user" size="xs" class="text-slate-500" />
+                class="ue-sidebar-subnav-link">
+                <x-ui.icon name="user" size="xs" />
                 <span>Nhóm của bạn</span>
             </a>
         </nav>

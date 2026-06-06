@@ -15,10 +15,15 @@ class PaddleOcrServiceClient
             throw new \RuntimeException('PaddleOCR service URL is not configured.');
         }
 
-        $absolutePath = Storage::disk('private')->path($privateDiskPath);
+        $diskName = config('media.private_disk', 'private');
+        $fileContents = Storage::disk($diskName)->get($privateDiskPath);
+
+        if ($fileContents === null) {
+            throw new \RuntimeException("File not found on private storage disk [{$diskName}]: {$privateDiskPath}");
+        }
 
         $response = Http::timeout(30)
-            ->attach('file', file_get_contents($absolutePath), basename($absolutePath))
+            ->attach('file', $fileContents, basename($privateDiskPath))
             ->post($serviceUrl.'/ocr');
 
         $response->throw();
