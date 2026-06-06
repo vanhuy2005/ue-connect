@@ -5,6 +5,19 @@
  * custom actions (e.g., Undo), and accessibility.
  */
 export function initToastSystem() {
+    if (!window.__ue_toast_event_listener_registered) {
+        window.__ue_toast_event_listener_registered = true;
+
+        window.addEventListener('ue:toast', (event) => {
+            const detail = event.detail || {};
+
+            window.UEToast?.show({
+                ...detail,
+                type: detail.type === 'error' ? 'danger' : detail.type,
+            });
+        });
+    }
+
     window.UEToast = {
         show: function (options = {}) {
             const {

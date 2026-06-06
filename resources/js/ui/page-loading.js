@@ -23,7 +23,10 @@ export function initPageLoading() {
         window.clearTimeout(hideTimer);
         hideTimer = window.setTimeout(() => {
             document.body.classList.remove('ue-is-navigating');
-            document.body.removeAttribute('aria-busy');
+
+            if (!document.body.classList.contains('ue-livewire-busy')) {
+                document.body.removeAttribute('aria-busy');
+            }
         }, 180);
     };
 

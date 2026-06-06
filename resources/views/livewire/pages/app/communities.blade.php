@@ -636,13 +636,19 @@ new class extends Component
                                         </a>
                                     @elseif ($c->join_policy?->value === 'open')
                                         <button wire:click="joinCommunity({{ $c->id }})"
-                                            class="px-3.5 py-1.5 bg-ue-brand hover:bg-opacity-95 text-white rounded-xl text-xs font-bold transition shadow-2xs">
-                                            Tham gia
+                                            wire:loading.attr="disabled"
+                                            wire:target="joinCommunity({{ $c->id }})"
+                                            class="px-3.5 py-1.5 bg-ue-brand hover:bg-opacity-95 text-white rounded-xl text-xs font-bold transition shadow-2xs disabled:opacity-60 disabled:cursor-not-allowed">
+                                            <span wire:loading.remove wire:target="joinCommunity({{ $c->id }})">Tham gia</span>
+                                            <span wire:loading wire:target="joinCommunity({{ $c->id }})">Đang xử lý...</span>
                                         </button>
                                     @else
                                         <button wire:click="joinCommunity({{ $c->id }})"
-                                            class="px-3.5 py-1.5 bg-ue-brand hover:bg-opacity-95 text-white rounded-xl text-xs font-bold transition shadow-2xs">
-                                            Gửi yêu cầu
+                                            wire:loading.attr="disabled"
+                                            wire:target="joinCommunity({{ $c->id }})"
+                                            class="px-3.5 py-1.5 bg-ue-brand hover:bg-opacity-95 text-white rounded-xl text-xs font-bold transition shadow-2xs disabled:opacity-60 disabled:cursor-not-allowed">
+                                            <span wire:loading.remove wire:target="joinCommunity({{ $c->id }})">Gửi yêu cầu</span>
+                                            <span wire:loading wire:target="joinCommunity({{ $c->id }})">Đang gửi...</span>
                                         </button>
                                     @endif
                                 </div>
@@ -687,8 +693,11 @@ new class extends Component
                                             Xem nhóm
                                         </a>
                                         <button wire:click="cancelRequest({{ $req->id }})"
-                                            class="px-2.5 py-1.5 bg-red-50 text-red-700 hover:bg-red-100 text-[10px] font-bold rounded-lg transition border border-red-200">
-                                            Hủy yêu cầu
+                                            wire:loading.attr="disabled"
+                                            wire:target="cancelRequest({{ $req->id }})"
+                                            class="px-2.5 py-1.5 bg-red-50 text-red-700 hover:bg-red-100 text-[10px] font-bold rounded-lg transition border border-red-200 disabled:opacity-60">
+                                            <span wire:loading.remove wire:target="cancelRequest({{ $req->id }})">Hủy yêu cầu</span>
+                                            <span wire:loading wire:target="cancelRequest({{ $req->id }})">Đang hủy...</span>
                                         </button>
                                     </div>
                                 </div>
@@ -891,8 +900,11 @@ new class extends Component
                             Hủy bỏ
                         </button>
                         <button wire:click="submitSuggestion"
-                            class="px-5 py-2 bg-ue-brand hover:bg-opacity-95 text-white text-xs font-bold rounded-xl transition shadow-sm">
-                            Gửi đề xuất
+                            wire:loading.attr="disabled"
+                            wire:target="submitSuggestion"
+                            class="px-5 py-2 bg-ue-brand hover:bg-opacity-95 text-white text-xs font-bold rounded-xl transition shadow-sm disabled:opacity-60 disabled:cursor-not-allowed">
+                            <span wire:loading.remove wire:target="submitSuggestion">Gửi đề xuất</span>
+                            <span wire:loading wire:target="submitSuggestion">Đang gửi...</span>
                         </button>
                     </div>
                 </div>
@@ -1024,9 +1036,10 @@ new class extends Component
                     <button type="button" wire:click="$set('showShareModal', false)" class="px-4 py-2 text-xs font-bold text-slate-500 hover:text-slate-700 transition">
                         Hủy
                     </button>
-                    <button type="button" wire:click="executeShare" @disabled(!$selectedShareUserId)
+                    <button type="button" wire:click="executeShare" wire:loading.attr="disabled" wire:target="executeShare" @disabled(!$selectedShareUserId)
                         class="px-4 py-2 bg-ue-brand text-white text-xs font-bold rounded-xl transition hover:bg-opacity-95 disabled:opacity-50 disabled:cursor-not-allowed shadow-2xs">
-                        Gửi tin nhắn
+                        <span wire:loading.remove wire:target="executeShare">Gửi tin nhắn</span>
+                        <span wire:loading wire:target="executeShare">Đang gửi...</span>
                     </button>
                 </div>
             </div>

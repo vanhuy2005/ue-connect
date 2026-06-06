@@ -620,9 +620,10 @@ new #[Layout('layouts.app')] class extends Component
                                         size="sm"
                                         icon="send"
                                         wire:loading.attr="disabled"
-                                        wire:target="imageFiles"
+                                        wire:target="submitPost,imageFiles"
                                     >
-                                        Đăng bài
+                                        <span wire:loading.remove wire:target="submitPost">Đăng bài</span>
+                                        <span wire:loading wire:target="submitPost">Đang đăng...</span>
                                     </x-ui.button>
                                 </div>
                             </form>
@@ -789,8 +790,11 @@ new #[Layout('layouts.app')] class extends Component
                             variant="danger"
                             size="sm"
                             icon="flag"
+                            wire:loading.attr="disabled"
+                            wire:target="submitReport"
                         >
-                            Gửi báo cáo
+                            <span wire:loading.remove wire:target="submitReport">Gửi báo cáo</span>
+                            <span wire:loading wire:target="submitReport">Đang gửi...</span>
                         </x-ui.button>
                     </div>
                 </form>
@@ -824,8 +828,11 @@ new #[Layout('layouts.app')] class extends Component
                         variant="danger"
                         size="sm"
                         icon="trash"
+                        wire:loading.attr="disabled"
+                        wire:target="executeDelete"
                     >
-                        Xóa bài viết
+                        <span wire:loading.remove wire:target="executeDelete">Xóa bài viết</span>
+                        <span wire:loading wire:target="executeDelete">Đang xóa...</span>
                     </x-ui.button>
                 </div>
             </div>
@@ -916,11 +923,19 @@ new #[Layout('layouts.app')] class extends Component
                     <button
                         type="button"
                         wire:click="executeShare"
+                        wire:loading.attr="disabled"
+                        wire:target="executeShare"
                         @if (! $selectedShareUserId) disabled @endif
                         class="px-4 py-2 text-xs font-bold text-white bg-ue-brand hover:bg-ue-brand-dark rounded-xl shadow-2xs hover:shadow-sm transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1.5"
                     >
-                        <x-ui.icon name="send" size="xs" />
-                        Gửi chia sẻ
+                        <span wire:loading.remove wire:target="executeShare" class="flex items-center gap-1.5">
+                            <x-ui.icon name="send" size="xs" />
+                            Gửi chia sẻ
+                        </span>
+                        <span wire:loading wire:target="executeShare" class="flex items-center gap-1.5">
+                            <span class="ue-spinner"></span>
+                            Đang gửi...
+                        </span>
                     </button>
                 </div>
             </div>

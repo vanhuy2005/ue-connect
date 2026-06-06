@@ -1656,8 +1656,9 @@ new class extends Component
                                     </div>
 
                                     <div class="flex justify-end pt-3 border-t border-slate-100">
-                                        <button type="submit" class="px-5 py-2 bg-ue-brand hover:bg-opacity-95 text-white text-xs font-bold rounded-xl transition shadow-2xs">
-                                            Lưu cài đặt
+                                        <button type="submit" wire:loading.attr="disabled" wire:target="saveSettings" class="px-5 py-2 bg-ue-brand hover:bg-opacity-95 text-white text-xs font-bold rounded-xl transition shadow-2xs disabled:opacity-60 disabled:cursor-not-allowed">
+                                            <span wire:loading.remove wire:target="saveSettings">Lưu cài đặt</span>
+                                            <span wire:loading wire:target="saveSettings">Đang lưu...</span>
                                         </button>
                                     </div>
                                 </form>
@@ -1707,8 +1708,11 @@ new class extends Component
                                                 </div>
                                                 <div class="flex gap-1.5 flex-shrink-0 self-end sm:self-center">
                                                     <button wire:click="approveJoinRequest({{ $req->id }})"
-                                                        class="px-3 py-1.5 bg-green-600 hover:bg-green-700 text-white rounded-lg text-[10px] font-bold transition">
-                                                        Duyệt
+                                                        wire:loading.attr="disabled"
+                                                        wire:target="approveJoinRequest({{ $req->id }})"
+                                                        class="px-3 py-1.5 bg-green-600 hover:bg-green-700 text-white rounded-lg text-[10px] font-bold transition disabled:opacity-60">
+                                                        <span wire:loading.remove wire:target="approveJoinRequest({{ $req->id }})">Duyệt</span>
+                                                        <span wire:loading wire:target="approveJoinRequest({{ $req->id }})">Đang duyệt...</span>
                                                     </button>
                                                     <button wire:click="startRejection({{ $req->id }})"
                                                         class="px-3 py-1.5 border border-red-200 text-red-600 hover:bg-red-50 rounded-lg text-[10px] font-bold transition">
@@ -1776,8 +1780,11 @@ new class extends Component
                     <button wire:click="closeTransientUi"
                         class="px-4 py-2 border border-slate-250 text-slate-600 hover:bg-slate-50 text-xs font-bold rounded-xl transition">Hủy</button>
                     <button wire:click="confirmJoin"
-                        class="px-5 py-2 bg-ue-brand text-white text-xs font-bold rounded-xl hover:bg-opacity-95 transition shadow-sm">
-                        Gửi yêu cầu
+                        wire:loading.attr="disabled"
+                        wire:target="confirmJoin"
+                        class="px-5 py-2 bg-ue-brand text-white text-xs font-bold rounded-xl hover:bg-opacity-95 transition shadow-sm disabled:opacity-60 disabled:cursor-not-allowed">
+                        <span wire:loading.remove wire:target="confirmJoin">Gửi yêu cầu</span>
+                        <span wire:loading wire:target="confirmJoin">Đang gửi...</span>
                     </button>
                 </div>
             </div>
@@ -1795,8 +1802,11 @@ new class extends Component
                     <button wire:click="closeTransientUi"
                         class="px-4 py-2 border border-slate-200 text-slate-700 hover:bg-slate-50 text-xs font-bold rounded-xl transition">Quay lại</button>
                     <button wire:click="confirmLeave"
-                        class="px-5 py-2 bg-red-600 hover:bg-red-700 text-white text-xs font-bold rounded-xl transition shadow-sm">
-                        Rời nhóm
+                        wire:loading.attr="disabled"
+                        wire:target="confirmLeave"
+                        class="px-5 py-2 bg-red-600 hover:bg-red-700 text-white text-xs font-bold rounded-xl transition shadow-sm disabled:opacity-60 disabled:cursor-not-allowed">
+                        <span wire:loading.remove wire:target="confirmLeave">Rời nhóm</span>
+                        <span wire:loading wire:target="confirmLeave">Đang xử lý...</span>
                     </button>
                 </div>
             </div>
@@ -1864,9 +1874,10 @@ new class extends Component
                 <div class="flex justify-end gap-2 pt-3 border-t border-slate-100">
                     <button type="button" wire:click="closeTransientUi"
                         class="px-4 py-2 border border-slate-250 text-slate-600 hover:bg-slate-50 text-xs font-bold rounded-xl transition">Hủy</button>
-                    <button type="button" wire:click="submitResource" wire:loading.attr="disabled" wire:target="resourceFile"
-                        class="px-5 py-2 bg-ue-brand text-white text-xs font-bold rounded-xl hover:bg-opacity-95 transition shadow-sm">
-                        Đăng tài nguyên
+                    <button type="button" wire:click="submitResource" wire:loading.attr="disabled" wire:target="submitResource,resourceFile"
+                        class="px-5 py-2 bg-ue-brand text-white text-xs font-bold rounded-xl hover:bg-opacity-95 transition shadow-sm disabled:opacity-60 disabled:cursor-not-allowed">
+                        <span wire:loading.remove wire:target="submitResource">Đăng tài nguyên</span>
+                        <span wire:loading wire:target="submitResource">Đang đăng...</span>
                     </button>
                 </div>
             </div>
@@ -1978,8 +1989,11 @@ new class extends Component
                     <button type="button" wire:click="closeTransientUi"
                         class="px-4 py-2 border border-slate-250 text-slate-600 hover:bg-slate-50 text-xs font-bold rounded-xl transition">Hủy</button>
                     <button type="button" wire:click="submitEvent"
-                        class="px-5 py-2 bg-ue-brand text-white text-xs font-bold rounded-xl hover:bg-opacity-95 transition shadow-sm">
-                        Đăng sự kiện
+                        wire:loading.attr="disabled"
+                        wire:target="submitEvent"
+                        class="px-5 py-2 bg-ue-brand text-white text-xs font-bold rounded-xl hover:bg-opacity-95 transition shadow-sm disabled:opacity-60 disabled:cursor-not-allowed">
+                        <span wire:loading.remove wire:target="submitEvent">Đăng sự kiện</span>
+                        <span wire:loading wire:target="submitEvent">Đang đăng...</span>
                     </button>
                 </div>
             </div>
@@ -2004,8 +2018,11 @@ new class extends Component
                     <button type="button" wire:click="cancelRejection"
                         class="px-4 py-2 border border-slate-200 text-slate-700 hover:bg-slate-50 text-xs font-bold rounded-xl transition">Hủy</button>
                     <button type="button" wire:click="confirmRejectJoinRequest"
-                        class="px-5 py-2 bg-red-600 hover:bg-red-700 text-white text-xs font-bold rounded-xl transition shadow-sm">
-                        Xác nhận từ chối
+                        wire:loading.attr="disabled"
+                        wire:target="confirmRejectJoinRequest"
+                        class="px-5 py-2 bg-red-600 hover:bg-red-700 text-white text-xs font-bold rounded-xl transition shadow-sm disabled:opacity-60 disabled:cursor-not-allowed">
+                        <span wire:loading.remove wire:target="confirmRejectJoinRequest">Xác nhận từ chối</span>
+                        <span wire:loading wire:target="confirmRejectJoinRequest">Đang xử lý...</span>
                     </button>
                 </div>
             </div>
@@ -2142,9 +2159,10 @@ new class extends Component
                     <button type="button" wire:click="closeTransientUi" class="px-4 py-2 text-xs font-bold text-slate-500 hover:text-slate-700 transition">
                         Hủy
                     </button>
-                    <button type="button" wire:click="executeShareCommunity" @disabled(!$selectedShareUserId)
+                    <button type="button" wire:click="executeShareCommunity" wire:loading.attr="disabled" wire:target="executeShareCommunity" @disabled(!$selectedShareUserId)
                         class="px-4 py-2 bg-ue-brand text-white text-xs font-bold rounded-xl transition hover:bg-opacity-95 disabled:opacity-50 disabled:cursor-not-allowed shadow-2xs">
-                        Gửi tin nhắn
+                        <span wire:loading.remove wire:target="executeShareCommunity">Gửi tin nhắn</span>
+                        <span wire:loading wire:target="executeShareCommunity">Đang gửi...</span>
                     </button>
                 </div>
             </div>

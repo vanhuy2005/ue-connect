@@ -5,9 +5,12 @@ use App\Models\Profile;
 use App\Models\Connection;
 use App\Models\BlockedUser;
 use App\Models\Media;
+use App\Models\UserFollow;
 use App\Enums\ConnectionStatus;
 use App\Actions\Connections\SendGreeting;
 use App\Actions\Connections\BlockUser;
+use App\Actions\Follows\FollowUser;
+use App\Actions\Follows\UnfollowUser;
 use App\Actions\Media\StoreTemporaryMediaAction;
 use App\Actions\Media\AttachMediaToModelAction;
 use App\Actions\Media\DeleteMediaAction;
@@ -24,6 +27,9 @@ new class extends Component
     public User $user;
     public string $activeTab = 'posts'; // posts, replies, media, communities
     public ?string $feedbackMessage = null;
+    public bool $isFollowing = false;
+    public int $followersCount = 0;
+    public int $followingCount = 0;
 
     // Files inputs
     public $avatarFile;
@@ -47,6 +53,24 @@ new class extends Component
         }
         
         $this->user->load(['profile.media.variants', 'profile.studentProfile.faculty', 'profile.studentProfile.academicProgram', 'profile.alumniProfile', 'profile.advisorProfile']);
+        $this->refreshFollowState();
+    }
+
+    /**
+     * Refresh follow aggregate state for the displayed profile.
+     */
+    public function refreshFollowState(): void
+    {
+        $viewerId = Auth::id();
+
+        $this->isFollowing = $viewerId !== null
+            && $viewerId !== $this->user->id
+            && UserFollow::where('follower_id', $viewerId)
+                ->where('following_id', $this->user->id)
+                ->exists();
+
+        $this->followersCount = UserFollow::where('following_id', $this->user->id)->count();
+        $this->followingCount = UserFollow::where('follower_id', $this->user->id)->count();
     }
 
     /**
@@ -230,6 +254,46 @@ new class extends Component
     }
 
     /**
+     * Follow the displayed user.
+     */
+    public function followUser(FollowUser $followUser): void
+    {
+        try {
+            $followUser->execute(Auth::user(), $this->user);
+
+            $this->isFollowing = true;
+            $this->followersCount++;
+            $this->feedbackMessage = 'Đã theo dõi người dùng này.';
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            $this->refreshFollowState();
+            $this->feedbackMessage = collect($e->errors())->flatten()->first() ?: 'Không thể theo dõi người dùng này.';
+        } catch (\Exception $e) {
+            $this->refreshFollowState();
+            $this->feedbackMessage = $e->getMessage();
+        }
+    }
+
+    /**
+     * Unfollow the displayed user.
+     */
+    public function unfollowUser(UnfollowUser $unfollowUser): void
+    {
+        try {
+            $unfollowUser->execute(Auth::user(), $this->user);
+
+            $this->isFollowing = false;
+            $this->followersCount = max(0, $this->followersCount - 1);
+            $this->feedbackMessage = 'Đã bỏ theo dõi người dùng này.';
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            $this->refreshFollowState();
+            $this->feedbackMessage = collect($e->errors())->flatten()->first() ?: 'Không thể bỏ theo dõi người dùng này.';
+        } catch (\Exception $e) {
+            $this->refreshFollowState();
+            $this->feedbackMessage = $e->getMessage();
+        }
+    }
+
+    /**
      * Determine if I blocked this user.
      */
     public function getIsBlockedByMeProperty(): bool
@@ -391,9 +455,12 @@ new class extends Component
                 <button 
                     type="button" 
                     wire:click="unblockUser"
-                    class="bg-slate-900 hover:bg-slate-850 text-white text-xxs font-bold px-4 py-2 rounded-xl shadow-2xs transition-colors"
+                    wire:loading.attr="disabled"
+                    wire:target="unblockUser"
+                    class="bg-slate-900 hover:bg-slate-850 text-white text-xxs font-bold px-4 py-2 rounded-xl shadow-2xs transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
                 >
-                    Bỏ chặn tài khoản
+                    <span wire:loading.remove wire:target="unblockUser">Bỏ chặn tài khoản</span>
+                    <span wire:loading wire:target="unblockUser">Đang xử lý...</span>
                 </button>
             </div>
         </div>
@@ -467,6 +534,34 @@ new class extends Component
                     @endif
                 </div>
 
+                @if (! $isOwn && ! $this->isBlockingMe && ! $this->isBlockedByMe)
+                    <div class="mt-2 flex justify-center md:absolute md:left-6 md:top-20 md:w-32 md:mt-0">
+                        @if ($isFollowing)
+                            <button
+                                type="button"
+                                wire:click="unfollowUser"
+                                wire:loading.attr="disabled"
+                                wire:target="unfollowUser"
+                                class="inline-flex items-center justify-center gap-1.5 rounded-xl border border-slate-250 bg-white px-3 py-1.5 text-[10px] font-bold text-slate-650 shadow-2xs transition-colors hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
+                            >
+                                <span wire:loading.remove wire:target="unfollowUser">Đang theo dõi</span>
+                                <span wire:loading wire:target="unfollowUser">Đang xử lý...</span>
+                            </button>
+                        @else
+                            <button
+                                type="button"
+                                wire:click="followUser"
+                                wire:loading.attr="disabled"
+                                wire:target="followUser"
+                                class="inline-flex items-center justify-center gap-1.5 rounded-xl bg-ue-brand px-3 py-1.5 text-[10px] font-bold text-white shadow-2xs transition-colors hover:bg-ue-brand-dark disabled:cursor-not-allowed disabled:opacity-60"
+                            >
+                                <span wire:loading.remove wire:target="followUser">Theo dõi</span>
+                                <span wire:loading wire:target="followUser">Đang xử lý...</span>
+                            </button>
+                        @endif
+                    </div>
+                @endif
+
                 {{-- Profile Info Section --}}
                 <div class="space-y-3.5 w-full mt-4 md:mt-0 md:pl-40 min-w-0">
                     <div class="flex flex-col sm:flex-row sm:items-center gap-3 justify-center md:justify-start">
@@ -526,13 +621,15 @@ new class extends Component
                                         <x-ui.icon name="more-horizontal" size="xs" />
                                     </button>
                                     <div x-show="openOptions" x-transition class="absolute right-0 mt-1 bg-white border border-slate-150 rounded-xl shadow-lg py-1 z-30 w-40 text-left" style="display: none;">
-                                        <button type="button" wire:click="blockUser" class="w-full text-left px-3 py-2 text-xxs font-semibold text-red-600 hover:bg-red-50 flex items-center gap-1.5 transition-colors">
+                                        <button type="button" wire:click="blockUser" wire:loading.attr="disabled" wire:target="blockUser" class="w-full text-left px-3 py-2 text-xxs font-semibold text-red-600 hover:bg-red-50 flex items-center gap-1.5 transition-colors disabled:opacity-60">
                                             <x-ui.icon name="shield-x" size="xs" class="text-red-400" />
-                                            Chặn thành viên
+                                            <span wire:loading.remove wire:target="blockUser">Chặn thành viên</span>
+                                            <span wire:loading wire:target="blockUser">Đang chặn...</span>
                                         </button>
-                                        <button type="button" wire:click="reportUser" class="w-full text-left px-3 py-2 text-xxs font-semibold text-slate-700 hover:bg-slate-50 flex items-center gap-1.5 transition-colors">
+                                        <button type="button" wire:click="reportUser" wire:loading.attr="disabled" wire:target="reportUser" class="w-full text-left px-3 py-2 text-xxs font-semibold text-slate-700 hover:bg-slate-50 flex items-center gap-1.5 transition-colors disabled:opacity-60">
                                             <x-ui.icon name="flag" size="xs" class="text-slate-400" />
-                                            Báo cáo tài khoản
+                                            <span wire:loading.remove wire:target="reportUser">Báo cáo tài khoản</span>
+                                            <span wire:loading wire:target="reportUser">Đang gửi...</span>
                                         </button>
                                     </div>
                                 </div>
@@ -549,6 +646,14 @@ new class extends Component
                         <div class="flex items-baseline gap-1">
                             <span class="text-xs font-bold">{{ $this->connectionsCount }}</span>
                             <span class="text-xxs text-slate-400 font-medium">Bạn bè</span>
+                        </div>
+                        <div class="flex items-baseline gap-1">
+                            <span class="text-xs font-bold">{{ $followersCount }}</span>
+                            <span class="text-xxs text-slate-400 font-medium">Người theo dõi</span>
+                        </div>
+                        <div class="flex items-baseline gap-1">
+                            <span class="text-xs font-bold">{{ $followingCount }}</span>
+                            <span class="text-xxs text-slate-400 font-medium">Đang theo dõi</span>
                         </div>
                     </div>
 
