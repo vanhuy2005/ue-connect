@@ -178,7 +178,7 @@ new class extends Component
         return Post::where('scope_type', 'community')
             ->whereIn('scope_id', $joinedIds)
             ->whereIn('status', [PostStatus::PUBLISHED->value, PostStatus::EDITED->value])
-            ->with(['user.profile', 'media.variants'])
+            ->with(['user.profile', 'media.variants', 'community'])
             ->withCount([
                 'likes',
                 'comments as published_comments_count' => function ($query): void {
@@ -495,7 +495,7 @@ new class extends Component
                         <article class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden" wire:key="post-feed-{{ $post->id }}">
                             {{-- Community Source Header --}}
                             @if ($post->scope_id && $post->scope_type === 'community')
-                                @php $postCommunity = \App\Models\Community::find($post->scope_id); @endphp
+                                @php $postCommunity = $post->community; @endphp
                                 @if ($postCommunity)
                                     <div class="px-4 py-2 bg-slate-50/70 border-b border-slate-150 flex items-center justify-between">
                                         <div class="flex items-center gap-2">

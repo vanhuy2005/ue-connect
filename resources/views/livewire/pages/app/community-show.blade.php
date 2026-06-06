@@ -1163,9 +1163,9 @@ new class extends Component
                 @endif
                 
                 @if ($this->canManage)
-                    <label class="absolute bottom-4 right-4 bg-white/80 backdrop-blur-xs text-slate-800 text-xs font-bold px-3 py-1.5 rounded-lg border border-slate-250 hover:bg-white transition flex items-center gap-1.5 shadow-sm cursor-pointer">
+                    <label class="absolute bottom-4 right-4 bg-white/80 backdrop-blur-xs text-slate-800 text-xs font-bold p-2 sm:px-3 sm:py-1.5 rounded-lg border border-slate-250 hover:bg-white transition flex items-center gap-1.5 shadow-sm cursor-pointer z-10">
                         <x-ui.icon name="camera" size="xs" />
-                        <span>Chỉnh sửa ảnh bìa</span>
+                        <span class="hidden sm:inline">Chỉnh sửa ảnh bìa</span>
                         <input type="file" wire:model="coverFile" class="hidden" accept="image/jpeg,image/png,image/webp">
                     </label>
                 @endif
