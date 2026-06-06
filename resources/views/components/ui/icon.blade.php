@@ -259,6 +259,15 @@ $sizeClass = match($size) {
             <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
             @break
 
+        {{-- 🔁 repost / repeat --}}
+        @case('repost')
+        @case('repeat-2')
+            <path d="m17 2 4 4-4 4"></path>
+            <path d="M3 11v-1a4 4 0 0 1 4-4h14"></path>
+            <path d="m7 22-4-4 4-4"></path>
+            <path d="M21 13v1a4 4 0 0 1-4 4H3"></path>
+            @break
+
         {{-- + plus --}}
         @case('plus')
             <line x1="12" y1="5" x2="12" y2="19"></line>

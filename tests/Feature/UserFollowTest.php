@@ -5,10 +5,12 @@ namespace Tests\Feature;
 use App\Actions\Follows\FollowUser;
 use App\Actions\Follows\UnfollowUser;
 use App\Enums\AccountStatus;
+use App\Enums\PostStatus;
 use App\Models\Connection;
 use App\Models\Greeting;
 use App\Models\MentorAccessRequest;
 use App\Models\MentorRequest;
+use App\Models\Post;
 use App\Models\User;
 use App\Models\UserFollow;
 use Database\Seeders\Reference\AccessControlReferenceSeeder;
@@ -146,6 +148,62 @@ class UserFollowTest extends TestCase
             ->call('unfollowUser')
             ->assertSet('isFollowing', false)
             ->assertSet('followersCount', 0);
+    }
+
+    public function test_profile_follow_action_is_rendered_in_header_actions_not_below_avatar(): void
+    {
+        $this->actingAs($this->user);
+
+        Volt::test('pages.app.profile', ['user' => $this->otherUser])
+            ->assertSee('wire:click="followUser"', false)
+            ->assertDontSee('md:absolute md:left-6 md:top-20', false);
+    }
+
+    public function test_feed_quick_follow_button_follows_author_without_reload(): void
+    {
+        Post::factory()->create([
+            'user_id' => $this->otherUser->id,
+            'body' => 'Quick follow feed post.',
+            'status' => PostStatus::PUBLISHED,
+            'published_at' => now(),
+        ]);
+
+        $this->actingAs($this->user);
+
+        Volt::test('pages.app.home-feed')
+            ->assertSee('Quick follow feed post.')
+            ->assertSee('wire:click="quickFollowAuthor('.$this->otherUser->id.')"', false)
+            ->call('quickFollowAuthor', $this->otherUser->id)
+            ->assertSet('feedbackMessage', 'Đã theo dõi '.$this->otherUser->name.'.')
+            ->assertDontSee('wire:click="quickFollowAuthor('.$this->otherUser->id.')"', false);
+
+        $this->assertDatabaseHas('user_follows', [
+            'follower_id' => $this->user->id,
+            'following_id' => $this->otherUser->id,
+        ]);
+    }
+
+    public function test_feed_quick_follow_button_is_hidden_for_friend_authors(): void
+    {
+        Connection::create([
+            'user_one_id' => min($this->user->id, $this->otherUser->id),
+            'user_two_id' => max($this->user->id, $this->otherUser->id),
+            'status' => 'active',
+            'connected_at' => now(),
+        ]);
+
+        Post::factory()->create([
+            'user_id' => $this->otherUser->id,
+            'body' => 'Friend author feed post.',
+            'status' => PostStatus::PUBLISHED,
+            'published_at' => now(),
+        ]);
+
+        $this->actingAs($this->user);
+
+        Volt::test('pages.app.home-feed')
+            ->assertSee('Friend author feed post.')
+            ->assertDontSee('wire:click="quickFollowAuthor('.$this->otherUser->id.')"', false);
     }
 
     public function test_user_follow_relations_return_aggregate_counts_without_loading_rows(): void

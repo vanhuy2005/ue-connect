@@ -2,6 +2,8 @@
 
 namespace App\Models;
 
+use App\Enums\CommunityMemberStatus;
+use App\Enums\ConnectionStatus;
 use App\Enums\PostStatus;
 use App\Enums\PostVisibility;
 use Illuminate\Database\Eloquent\Builder;
@@ -69,6 +71,47 @@ class Post extends Model
     }
 
     /**
+     * Scope posts visible to the given viewer.
+     */
+    public function scopeVisibleTo(Builder $query, User $viewer): Builder
+    {
+        if (! $viewer->isActive()) {
+            return $query->whereRaw('1 = 0');
+        }
+
+        $friendUserIds = Connection::where(function (Builder $query) use ($viewer): void {
+            $query->where('user_one_id', $viewer->id)
+                ->orWhere('user_two_id', $viewer->id);
+        })
+            ->where('status', ConnectionStatus::ACTIVE)
+            ->get(['user_one_id', 'user_two_id'])
+            ->map(fn (Connection $connection): int => $connection->user_one_id === $viewer->id
+            ? (int) $connection->user_two_id
+            : (int) $connection->user_one_id)
+            ->all();
+
+        $communityIds = CommunityMember::where('user_id', $viewer->id)
+            ->where('status', CommunityMemberStatus::Active->value)
+            ->pluck('community_id')
+            ->map(fn ($id): int => (int) $id)
+            ->all();
+
+        return $query->where(function (Builder $query) use ($viewer, $friendUserIds, $communityIds): void {
+            $query->where('user_id', $viewer->id)
+                ->orWhere('visibility', PostVisibility::VERIFIED_USERS->value)
+                ->orWhere(function (Builder $query) use ($friendUserIds): void {
+                    $query->where('visibility', PostVisibility::CONNECTIONS_ONLY->value)
+                        ->whereIn('user_id', $friendUserIds);
+                })
+                ->orWhere(function (Builder $query) use ($communityIds): void {
+                    $query->where('visibility', PostVisibility::COMMUNITY->value)
+                        ->where('scope_type', 'community')
+                        ->whereIn('scope_id', $communityIds);
+                });
+        });
+    }
+
+    /**
      * Relationship to the user who pinned this post.
      */
     public function pinnedByUser(): BelongsTo
@@ -127,6 +170,16 @@ class Post extends Model
     public function saves(): HasMany
     {
         return $this->hasMany(PostSave::class);
+    }
+
+    /**
+     * Get the reposts of the post.
+     *
+     * @return HasMany<PostRepost, $this>
+     */
+    public function reposts(): HasMany
+    {
+        return $this->hasMany(PostRepost::class);
     }
 
     /**

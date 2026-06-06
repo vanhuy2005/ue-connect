@@ -153,6 +153,16 @@ class User extends Authenticatable implements MustVerifyEmail
     }
 
     /**
+     * Get the user's reposts.
+     *
+     * @return HasMany<PostRepost, $this>
+     */
+    public function postReposts(): HasMany
+    {
+        return $this->hasMany(PostRepost::class);
+    }
+
+    /**
      * Get users followed by this user.
      *
      * @return BelongsToMany<User, $this>
