@@ -8,6 +8,7 @@ use App\Models\Conversation;
 use App\Models\Message;
 use App\Models\Post;
 use App\Models\User;
+use App\Support\Navigation\UserNavigationMetrics;
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Gate;
@@ -41,7 +42,7 @@ class SendSharedPostMessage
             throw new \Exception('Người nhận không có quyền xem bài viết này.');
         }
 
-        return DB::transaction(function () use ($sender, $conversation, $post, $data) {
+        return DB::transaction(function () use ($sender, $conversation, $post, $recipient, $data) {
             // 4. Create shared_post message
             $message = Message::create([
                 'conversation_id' => $conversation->id,
@@ -62,6 +63,9 @@ class SendSharedPostMessage
                 'last_message_id' => $message->id,
                 'last_message_at' => now(),
             ]);
+
+            app(UserNavigationMetrics::class)->forgetForUser($sender);
+            app(UserNavigationMetrics::class)->forgetForUser($recipient);
 
             return $message;
         });

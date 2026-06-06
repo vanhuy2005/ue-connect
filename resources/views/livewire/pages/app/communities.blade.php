@@ -7,6 +7,7 @@ use App\Actions\Messaging\SendSharedPostMessage;
 use App\Actions\Posts\HidePostFromFeed;
 use App\Actions\Posts\TogglePostLike;
 use App\Actions\Posts\TogglePostSave;
+use App\Enums\CommentStatus;
 use App\Enums\CommunityJoinPolicy;
 use App\Enums\CommunityMemberRole;
 use App\Enums\CommunityType;
@@ -177,7 +178,19 @@ new class extends Component
         return Post::where('scope_type', 'community')
             ->whereIn('scope_id', $joinedIds)
             ->whereIn('status', [PostStatus::PUBLISHED->value, PostStatus::EDITED->value])
-            ->with(['author.profile', 'mediaFiles', 'reactions', 'comments'])
+            ->with(['user.profile', 'media.variants'])
+            ->withCount([
+                'likes',
+                'comments as published_comments_count' => function ($query): void {
+                    $query->where('status', CommentStatus::PUBLISHED->value);
+                },
+                'likes as liked_by_current_user_count' => function ($query): void {
+                    $query->where('user_id', auth()->id());
+                },
+                'saves as saved_by_current_user_count' => function ($query): void {
+                    $query->where('user_id', auth()->id());
+                },
+            ])
             ->latest('published_at')
             ->paginate(10, pageName: 'feedPage');
     }
@@ -456,10 +469,10 @@ new class extends Component
 
                 @forelse ($this->feedPosts as $post)
                     @php
-                        $isLiked = $post->likes->where('user_id', auth()->id())->isNotEmpty();
-                        $isSaved = $post->saves->where('user_id', auth()->id())->isNotEmpty();
-                        $likeCount = $post->likes->count();
-                        $commentCount = $post->comments->where('status', \App\Enums\CommentStatus::PUBLISHED->value)->count();
+                        $isLiked = (int) $post->liked_by_current_user_count > 0;
+                        $isSaved = (int) $post->saved_by_current_user_count > 0;
+                        $likeCount = (int) $post->likes_count;
+                        $commentCount = (int) $post->published_comments_count;
                     @endphp
 
                     @if (in_array($post->id, $locallyHiddenPostIds))

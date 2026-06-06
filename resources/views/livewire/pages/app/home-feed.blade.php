@@ -13,6 +13,7 @@ use App\Actions\Media\AttachMediaToModelAction;
 use App\Actions\Media\DeleteMediaAction;
 use App\Actions\Media\GenerateMediaUrlAction;
 use App\Actions\Media\StoreTemporaryMediaAction;
+use App\Enums\CommentStatus;
 use App\Enums\PostStatus;
 use App\Enums\PostVisibility;
 use App\Enums\ReportReason;
@@ -21,6 +22,7 @@ use App\Models\Post;
 use App\Models\User;
 use App\Models\Connection;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Gate;
 use Livewire\Attributes\Layout;
 use Livewire\Volt\Component;
 use Livewire\WithPagination;
@@ -183,7 +185,7 @@ new #[Layout('layouts.app')] class extends Component
     {
         $post = Post::findOrFail($postId);
         
-        if (! Auth::user()->can('update', $post)) {
+        if (! Gate::allows('update', $post)) {
             $this->feedbackMessage = 'Bạn không có quyền chỉnh sửa bài viết này.';
             return;
         }
@@ -375,7 +377,7 @@ new #[Layout('layouts.app')] class extends Component
     {
         $post = Post::findOrFail($postId);
         
-        if (! Auth::user()->can('share', $post)) {
+        if (! Gate::allows('share', $post)) {
             $this->feedbackMessage = 'Bạn không có quyền chia sẻ bài viết này.';
             return;
         }
@@ -457,7 +459,21 @@ new #[Layout('layouts.app')] class extends Component
         $user = Auth::user();
 
         // Get latest verified active posts (Strictly PUBLISHED and EDITED only, excluding hidden posts, except those hidden in current session)
-        $posts = Post::with(['user.profile', 'comments', 'likes', 'saves'])
+        $posts = Post::with(['user.profile', 'media.variants'])
+            ->withCount([
+                'likes',
+                'comments as published_comments_count' => function ($query): void {
+                    $query->where('status', CommentStatus::PUBLISHED->value);
+                },
+            ])
+            ->withCount([
+                'likes as liked_by_current_user_count' => function ($query) use ($user): void {
+                    $query->where('user_id', $user->id);
+                },
+                'saves as saved_by_current_user_count' => function ($query) use ($user): void {
+                    $query->where('user_id', $user->id);
+                },
+            ])
             ->whereIn('status', [PostStatus::PUBLISHED, PostStatus::EDITED])
             ->where(function ($query) use ($user) {
                 $query->whereDoesntHave('hides', function ($q) use ($user) {
@@ -617,12 +633,28 @@ new #[Layout('layouts.app')] class extends Component
 
             {{-- Posts list loop --}}
             <div class="ue-feed-list">
+                <div wire:loading.delay wire:target="gotoPage,nextPage,previousPage" class="p-4 sm:p-5 space-y-4">
+                    <div class="ue-skeleton-card">
+                        <div class="flex items-start gap-3">
+                            <div class="ue-skeleton-avatar ue-skeleton"></div>
+                            <div class="flex-1 space-y-2">
+                                <div class="ue-skeleton-line ue-skeleton w-1/2"></div>
+                                <div class="ue-skeleton-line ue-skeleton w-full"></div>
+                                <div class="ue-skeleton-line ue-skeleton w-5/6"></div>
+                            </div>
+                        </div>
+                    </div>
+                    @for ($i = 0; $i < 3; $i++)
+                        <x-ui.skeleton-card />
+                    @endfor
+                </div>
+
                 @forelse ($posts as $post)
                     @php
-                        $isLiked = $post->likes->where('user_id', $currentUser->id)->isNotEmpty();
-                        $isSaved = $post->saves->where('user_id', $currentUser->id)->isNotEmpty();
-                        $likeCount = $post->likes->count();
-                        $commentCount = $post->comments->where('status', \App\Enums\CommentStatus::PUBLISHED->value)->count();
+                        $isLiked = (int) $post->liked_by_current_user_count > 0;
+                        $isSaved = (int) $post->saved_by_current_user_count > 0;
+                        $likeCount = (int) $post->likes_count;
+                        $commentCount = (int) $post->published_comments_count;
                     @endphp
 
                     @if (in_array($post->id, $locallyHiddenPostIds))

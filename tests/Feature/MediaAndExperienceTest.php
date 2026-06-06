@@ -15,6 +15,7 @@ use App\Models\Connection;
 use App\Models\Conversation;
 use App\Models\ConversationParticipant;
 use App\Models\Media;
+use App\Models\MediaVariant;
 use App\Models\Message;
 use App\Models\Post;
 use App\Models\Profile;
@@ -338,6 +339,57 @@ class MediaAndExperienceTest extends TestCase
         $this->assertNotNull($url);
         $this->assertStringContainsString(route('media.preview', ['media' => $media], false), $url);
         $this->assertStringContainsString('variant=detail', $url);
+    }
+
+    public function test_media_url_generation_uses_eager_loaded_variants(): void
+    {
+        $user = User::factory()->create(['account_status' => AccountStatus::ACTIVE]);
+
+        $media = Media::create([
+            'uuid' => (string) str()->uuid(),
+            'user_id' => $user->id,
+            'collection' => 'post_image',
+            'primary_provider' => 'local',
+            'primary_disk' => 'public',
+            'primary_path' => 'posts/original.jpg',
+            'storage_strategy' => 'local_only',
+            'visibility' => 'public',
+            'original_filename' => 'original.jpg',
+            'mime_type' => 'image/jpeg',
+            'extension' => 'jpg',
+            'size_bytes' => 1024,
+            'checksum_sha256' => hash('sha256', 'original.jpg'),
+            'status' => 'ready',
+        ]);
+
+        MediaVariant::create([
+            'media_id' => $media->id,
+            'variant_name' => 'feed',
+            'provider' => 'local',
+            'disk' => 'public',
+            'path' => 'posts/feed.jpg',
+            'url' => '/storage/posts/feed.jpg',
+            'mime_type' => 'image/jpeg',
+            'size_bytes' => 512,
+            'width' => 320,
+            'height' => 240,
+        ]);
+
+        $media = Media::with('variants')->findOrFail($media->id);
+
+        DB::flushQueryLog();
+        DB::enableQueryLog();
+
+        $url = app(GenerateMediaUrlAction::class)->execute($media, 'feed', $user);
+
+        $queries = DB::getQueryLog();
+        DB::disableQueryLog();
+
+        $this->assertSame('/storage/posts/feed.jpg', $url);
+        $this->assertFalse(
+            collect($queries)->contains(fn (array $query): bool => str_contains($query['query'], 'media_variants')),
+            'Expected eager-loaded variants to avoid querying media_variants while generating URLs.'
+        );
     }
 
     public function test_hybrid_public_cloudinary_syncs_public_variant_and_prefers_cloudinary_url(): void

@@ -10,6 +10,7 @@ use App\Actions\Community\RsvpCommunityEventAction;
 use App\Actions\Community\SubmitCommunityResourceAction;
 use App\Actions\Messaging\FindOrCreateDirectConversation;
 use App\Actions\Messaging\SendSharedPostMessage;
+use App\Enums\CommentStatus;
 use App\Enums\CommunityEventRsvpStatus;
 use App\Enums\CommunityJoinPolicy;
 use App\Enums\CommunityMemberRole;
@@ -243,7 +244,19 @@ new class extends Component
     {
         return Post::inCommunity($this->community->id)
             ->where('status', PostStatus::PUBLISHED->value)
-            ->with('author', 'mediaFiles', 'reactions')
+            ->with(['user.profile', 'media.variants'])
+            ->withCount([
+                'likes',
+                'comments as published_comments_count' => function ($query): void {
+                    $query->where('status', CommentStatus::PUBLISHED->value);
+                },
+                'likes as liked_by_current_user_count' => function ($query): void {
+                    $query->where('user_id', auth()->id());
+                },
+                'saves as saved_by_current_user_count' => function ($query): void {
+                    $query->where('user_id', auth()->id());
+                },
+            ])
             ->latest('published_at')
             ->paginate(15, pageName: 'feedPage');
     }
@@ -896,11 +909,16 @@ new class extends Component
             $shareLink = route('community.show', $this->community->id);
             $messageBody = "Chào {$friend->name}! Mình muốn mời bạn tham gia cộng đồng: {$this->community->name}\nTham gia tại đây: {$shareLink}";
 
-            $conversation->messages()->create([
+            $message = $conversation->messages()->create([
                 'sender_id' => auth()->id(),
                 'body' => $messageBody,
             ]);
-            $conversation->update(['last_message_at' => now()]);
+            $conversation->update([
+                'last_message_id' => $message->id,
+                'last_message_at' => $message->created_at ?? now(),
+            ]);
+            app(\App\Support\Navigation\UserNavigationMetrics::class)->forgetForUser(auth()->id());
+            app(\App\Support\Navigation\UserNavigationMetrics::class)->forgetForUser($friend);
         }
 
         $this->showInviteModal = false;
@@ -934,11 +952,16 @@ new class extends Component
                 $messageBody .= "\n\nLời nhắn: ".$this->shareOptionalMessage;
             }
 
-            $conversation->messages()->create([
+            $message = $conversation->messages()->create([
                 'sender_id' => auth()->id(),
                 'body' => $messageBody,
             ]);
-            $conversation->update(['last_message_at' => now()]);
+            $conversation->update([
+                'last_message_id' => $message->id,
+                'last_message_at' => $message->created_at ?? now(),
+            ]);
+            app(\App\Support\Navigation\UserNavigationMetrics::class)->forgetForUser(auth()->id());
+            app(\App\Support\Navigation\UserNavigationMetrics::class)->forgetForUser($recipient);
 
             $this->showShareModal = false;
             $this->dispatch('notify', type: 'success', message: 'Đã chia sẻ cộng đồng qua tin nhắn thành công.');
@@ -1304,14 +1327,14 @@ new class extends Component
                         <div class="space-y-4">
                             @forelse ($this->feedPosts as $post)
                                 <article class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden" wire:key="detail-post-{{ $post->id }}">
-                                    <x-ui.post-card
-                                        :post="$post"
-                                        :currentUser="auth()->user()"
-                                        :isSaved="$post->saves->where('user_id', auth()->id())->isNotEmpty()"
-                                        :isLiked="$post->likes->where('user_id', auth()->id())->isNotEmpty()"
-                                        :likeCount="$post->likes->count()"
-                                        :commentCount="$post->comments->where('status', \App\Enums\CommentStatus::PUBLISHED->value)->count()"
-                                    />
+                                        <x-ui.post-card
+                                            :post="$post"
+                                            :currentUser="auth()->user()"
+                                            :isSaved="(int) $post->saved_by_current_user_count > 0"
+                                            :isLiked="(int) $post->liked_by_current_user_count > 0"
+                                            :likeCount="(int) $post->likes_count"
+                                            :commentCount="(int) $post->published_comments_count"
+                                        />
                                 </article>
                             @empty
                                 <div class="bg-white border border-slate-200 rounded-2xl p-12 text-center text-slate-450 italic text-sm">

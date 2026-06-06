@@ -19,6 +19,7 @@ use App\Actions\Messaging\ForwardMessage;
 use App\Actions\Messaging\ReportMessage;
 use App\Actions\Connections\BlockUser;
 use App\Actions\Connections\UnblockUser;
+use App\Support\Navigation\UserNavigationMetrics;
 use App\Models\ConversationUserSetting;
 use App\Models\ConversationPinnedMessage;
 use Illuminate\Support\Facades\Auth;
@@ -565,6 +566,8 @@ new #[Layout('layouts.app')] class extends Component
             ->update([
                 'last_read_at' => now(),
             ]);
+
+        app(UserNavigationMetrics::class)->forgetForUser(Auth::id());
     }
 
     /**
@@ -583,20 +586,42 @@ new #[Layout('layouts.app')] class extends Component
     {
         $userId = Auth::id();
 
-        // 1. Fetch conversations listing ordered directly in DB
-        $conversations = Conversation::whereHas('participants', function ($q) use ($userId) {
+        // 1. Fetch a bounded conversation listing ordered directly in DB.
+        $conversationQuery = Conversation::whereHas('participants', function ($q) use ($userId) {
                 $q->where('user_id', $userId);
+            })
+            ->when($this->activeInboxTab === 'restricted', function ($query) use ($userId): void {
+                $query->whereHas('conversationUserSettings', function ($settingsQuery) use ($userId): void {
+                    $settingsQuery->where('user_id', $userId)
+                        ->where('is_restricted', true);
+                });
+            })
+            ->when($this->activeInboxTab !== 'restricted', function ($query) use ($userId): void {
+                $query->where(function ($visibilityQuery) use ($userId): void {
+                    $visibilityQuery->whereDoesntHave('conversationUserSettings', function ($settingsQuery) use ($userId): void {
+                        $settingsQuery->where('user_id', $userId);
+                    })
+                    ->orWhereHas('conversationUserSettings', function ($settingsQuery) use ($userId): void {
+                        $settingsQuery->where('user_id', $userId)
+                            ->where('is_restricted', false);
+                    });
+                });
             })
             ->with([
                 'participants.user.profile',
-                'messages' => function($q) {
-                    $q->orderBy('created_at', 'desc');
-                },
+                'lastMessage',
+                'latestMessage',
                 'conversationUserSettings' => function($q) use ($userId) {
                     $q->where('user_id', $userId);
                 }
             ])
-            ->orderByRaw('COALESCE(last_message_at, created_at) DESC')
+            ->orderByRaw('COALESCE(last_message_at, created_at) DESC');
+
+        if (empty($this->conversationSearch)) {
+            $conversationQuery->limit(30);
+        }
+
+        $conversations = $conversationQuery
             ->get()
             ->map(function ($convo) use ($userId) {
                 $recipient = $convo->getRecipientFor(Auth::user());
@@ -607,15 +632,10 @@ new #[Layout('layouts.app')] class extends Component
                 $deletedAt = $settings ? $settings->deleted_at : null;
                 $nickname = ($settings && $settings->nickname) ? $settings->nickname : null;
 
-                // Get messages after local soft delete timestamp if set
-                $messagesQuery = $convo->messages;
-                if ($deletedAt) {
-                    $messagesQuery = $messagesQuery->filter(function ($msg) use ($deletedAt) {
-                        return $msg->created_at->gt($deletedAt);
-                    });
+                $lastMsg = $convo->lastMessage ?: $convo->latestMessage;
+                if ($deletedAt && $lastMsg && ! $lastMsg->created_at->gt($deletedAt)) {
+                    $lastMsg = null;
                 }
-
-                $lastMsg = $messagesQuery->sortByDesc('created_at')->first();
 
                 // Hide locally soft-deleted conversation if no new messages received since deletion, unless it is currently selected
                 if ($deletedAt && !$lastMsg && $convo->id !== $this->selectedConversationId) {
@@ -637,17 +657,6 @@ new #[Layout('layouts.app')] class extends Component
             })
             ->filter()
             ->values();
-
-        // Filter by inbox tab
-        if ($this->activeInboxTab === 'restricted') {
-            $conversations = $conversations->filter(function ($convo) {
-                return $convo['is_restricted'] === true;
-            });
-        } else {
-            $conversations = $conversations->filter(function ($convo) {
-                return $convo['is_restricted'] === false;
-            });
-        }
 
         if (!empty($this->conversationSearch)) {
             $search = mb_strtolower($this->conversationSearch);
@@ -680,7 +689,7 @@ new #[Layout('layouts.app')] class extends Component
 
             $messagesQuery = Message::where('conversation_id', $this->selectedConversationId)
                 ->withTrashed()
-                ->with(['sender.profile', 'sharedPost.user', 'replyTo', 'media']);
+                ->with(['sender.profile', 'sharedPost.user.profile', 'replyTo.sender', 'media.variants']);
 
             if ($deletedAt) {
                 $messagesQuery->where('created_at', '>', $deletedAt);
@@ -744,6 +753,10 @@ new #[Layout('layouts.app')] class extends Component
     }
 }; ?>
 
+@push('scripts')
+    @vite('resources/js/realtime.js')
+@endpush
+
 <div class="h-[calc(100dvh-64px)] lg:h-dvh flex overflow-hidden bg-slate-50 relative">
     {{-- Feedback Message Toast --}}
     @if ($feedbackMessage)
@@ -768,7 +781,7 @@ new #[Layout('layouts.app')] class extends Component
     @endif
 
     {{-- Left Pane: Conversation List --}}
-    <div class="w-full lg:w-80 border-r border-slate-150 bg-white flex flex-col flex-shrink-0 {{ $selectedConversationId ? 'hidden lg:flex' : 'flex' }}" wire:poll.30s>
+    <div class="w-full lg:w-80 border-r border-slate-150 bg-white flex flex-col flex-shrink-0 {{ $selectedConversationId ? 'hidden lg:flex' : 'flex' }}" wire:poll.visible.60s>
         {{-- Header --}}
         <div class="p-4 border-b border-slate-100 flex items-center justify-between flex-shrink-0">
             <h1 class="text-sm font-bold text-slate-800 tracking-tight">Hộp thư</h1>
@@ -817,6 +830,18 @@ new #[Layout('layouts.app')] class extends Component
 
         {{-- List --}}
         <div class="flex-1 overflow-y-auto divide-y divide-slate-100">
+            <div wire:loading.delay wire:target="activeInboxTab,conversationSearch" class="p-4 space-y-3">
+                @for ($i = 0; $i < 6; $i++)
+                    <div class="flex items-center gap-3">
+                        <div class="ue-skeleton-avatar ue-skeleton"></div>
+                        <div class="min-w-0 flex-1 space-y-2">
+                            <div class="ue-skeleton-line ue-skeleton w-1/2"></div>
+                            <div class="ue-skeleton-line ue-skeleton w-4/5"></div>
+                        </div>
+                    </div>
+                @endfor
+            </div>
+
             @forelse ($conversations as $convo)
                 <button
                     type="button"
@@ -1042,7 +1067,22 @@ new #[Layout('layouts.app')] class extends Component
             @endif
 
             {{-- Message Thread Bubble Container --}}
-            <div class="flex-1 overflow-y-auto p-4 space-y-4 flex flex-col" wire:poll.10s>
+            <div class="flex-1 overflow-y-auto p-4 space-y-4 flex flex-col" wire:poll.visible.20s>
+                <div wire:loading.delay wire:target="selectConversation" class="space-y-4">
+                    <div class="ue-skeleton-line ue-skeleton w-32 mx-auto"></div>
+                    <div class="ue-skeleton-card max-w-[70%]">
+                        <div class="ue-skeleton-line ue-skeleton w-full"></div>
+                        <div class="ue-skeleton-line ue-skeleton w-2/3"></div>
+                    </div>
+                    <div class="ue-skeleton-card max-w-[70%] ml-auto">
+                        <div class="ue-skeleton-line ue-skeleton w-full"></div>
+                        <div class="ue-skeleton-line ue-skeleton w-3/4"></div>
+                    </div>
+                    <div class="ue-skeleton-card max-w-[62%]">
+                        <div class="ue-skeleton-line ue-skeleton w-full"></div>
+                    </div>
+                </div>
+
                 <div class="text-center py-6">
                     <x-ui.icon name="shield-alert" size="md" class="text-slate-300 mx-auto" />
                     <p class="text-[10px] text-slate-400 font-medium max-w-xs mx-auto mt-2 leading-relaxed">
@@ -1135,13 +1175,22 @@ new #[Layout('layouts.app')] class extends Component
                                 @elseif ($message->message_type === MessageType::IMAGE)
                                     @php
                                         $mediaItem = $message->media->first();
-                                        $imageUrl = $mediaItem ? app(\App\Actions\Media\GenerateMediaUrlAction::class)->execute($mediaItem, 'original', Auth::user()) : null;
+                                        $imageUrl = $mediaItem ? app(\App\Actions\Media\GenerateMediaUrlAction::class)->execute($mediaItem, 'detail', Auth::user()) : null;
+                                        $originalUrl = $mediaItem ? app(\App\Actions\Media\GenerateMediaUrlAction::class)->execute($mediaItem, 'original', Auth::user()) : null;
+                                        $messageImageVariant = $mediaItem?->relationLoaded('variants') ? $mediaItem->variants->firstWhere('variant_name', 'detail') : null;
                                     @endphp
                                     @if ($imageUrl)
                                         <div class="flex flex-col gap-2">
                                             <div class="rounded-2xl overflow-hidden border border-slate-150 max-w-[280px] bg-slate-100 shadow-2xs">
-                                                <a href="{{ $imageUrl }}" target="_blank" class="block cursor-zoom-in">
-                                                    <img src="{{ $imageUrl }}" alt="Attachment" class="w-full h-auto object-cover max-h-64 hover:opacity-95 transition-opacity" />
+                                                <a href="{{ $originalUrl ?? $imageUrl }}" target="_blank" class="block cursor-zoom-in">
+                                                    <img
+                                                        src="{{ $imageUrl }}"
+                                                        alt="Attachment"
+                                                        class="w-full h-auto object-cover max-h-64 hover:opacity-95 transition-opacity"
+                                                        loading="lazy"
+                                                        @if($messageImageVariant?->width) width="{{ $messageImageVariant->width }}" @endif
+                                                        @if($messageImageVariant?->height) height="{{ $messageImageVariant->height }}" @endif
+                                                    />
                                                 </a>
                                             </div>
                                             @if ($message->body)
@@ -1224,6 +1273,12 @@ new #[Layout('layouts.app')] class extends Component
 
             {{-- Message Composer or Restricted Banner --}}
             <div class="p-3 border-t border-slate-150 bg-white flex-shrink-0">
+                <div wire:loading.delay wire:target="selectConversation" class="flex items-center gap-2">
+                    <div class="ue-skeleton h-10 w-10 rounded-xl"></div>
+                    <div class="ue-skeleton h-10 flex-1 rounded-xl"></div>
+                    <div class="ue-skeleton h-10 w-10 rounded-xl"></div>
+                </div>
+
                 @if ($isRestricted)
                     <div class="bg-slate-50 border border-slate-150 rounded-xl p-3.5 flex items-center gap-3 text-xxs font-semibold text-slate-500">
                         <x-ui.icon name="shield-alert" size="sm" class="text-slate-400 flex-shrink-0" />

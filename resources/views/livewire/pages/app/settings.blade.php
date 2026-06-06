@@ -401,7 +401,7 @@ new class extends Component
                     </li>
 
                     {{-- Admin system moderator shortcuts --}}
-                    @if (Auth::user()->can('review_verification') || Auth::user()->can('manage_reports'))
+                    @if (Gate::any(['review_verification', 'manage_reports']))
                         <div class="border-t border-slate-100 my-2 pt-2">
                             <span class="px-3 text-[9px] font-bold text-slate-400 uppercase tracking-wider block mb-1">Quản lý hệ thống</span>
                             <li>

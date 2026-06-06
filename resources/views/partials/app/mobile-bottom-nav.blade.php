@@ -13,54 +13,42 @@
 
 @php
 $currentUser = auth()->user();
-$unreadNotificationsCount = $currentUser ? $currentUser->unreadNotifications()->count() : 0;
-$unreadMessagesCount = $currentUser ? \App\Models\ConversationParticipant::where('user_id', $currentUser->id)
-    ->where(function ($q) {
-        $q->whereNull('last_read_at')
-            ->orWhereHas('conversation', function ($q2) {
-                $q2->whereColumn('last_message_at', '>', 'conversation_participants.last_read_at');
-            });
-    })
-    ->whereHas('conversation', function ($q3) {
-        $q3->whereNotNull('last_message_at');
-    })
-    ->count() : 0;
-
+$metrics = app(\App\Support\Navigation\UserNavigationMetrics::class)->forUser($currentUser);
 $mobileNavItems = [
     [
-        'icon'   => 'home',
-        'label'  => 'Trang chủ',
-        'href'   => route('dashboard'),
+        'icon' => 'home',
+        'label' => 'Trang chủ',
+        'href' => route('dashboard'),
         'active' => request()->routeIs('dashboard'),
-        'badge'  => 0,
+        'badge' => 0,
     ],
     [
-        'icon'   => 'users',
-        'label'  => 'Khám phá',
-        'href'   => route('discovery.index'),
+        'icon' => 'users',
+        'label' => 'Khám phá',
+        'href' => route('discovery.index'),
         'active' => request()->routeIs('discovery.*'),
-        'badge'  => 0,
+        'badge' => 0,
     ],
     [
-        'icon'   => 'message',
-        'label'  => 'Tin nhắn',
-        'href'   => route('messages.index'),
+        'icon' => 'message',
+        'label' => 'Tin nhắn',
+        'href' => route('messages.index'),
         'active' => request()->routeIs('messages.*'),
-        'badge'  => $unreadMessagesCount,
+        'badge' => $metrics['unread_messages'],
     ],
     [
-        'icon'   => 'heart',
-        'label'  => 'Hoạt động',
-        'href'   => route('notifications.index'),
+        'icon' => 'heart',
+        'label' => 'Hoạt động',
+        'href' => route('notifications.index'),
         'active' => request()->routeIs('notifications.*'),
-        'badge'  => $unreadNotificationsCount,
+        'badge' => $metrics['unread_notifications'],
     ],
     [
-        'icon'   => 'user',
-        'label'  => 'Hồ sơ',
-        'href'   => route('profile'),
+        'icon' => 'user',
+        'label' => 'Hồ sơ',
+        'href' => route('profile'),
         'active' => request()->routeIs('profile'),
-        'badge'  => 0,
+        'badge' => 0,
     ],
 ];
 @endphp
