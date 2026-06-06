@@ -991,12 +991,32 @@
         transform: translateX(-100%);
     }
 
-    .ue-is-navigating .ue-page-progress {
+    .ue-is-navigating .ue-page-progress,
+    .ue-livewire-busy .ue-page-progress {
         opacity: 1;
     }
 
-    .ue-is-navigating .ue-page-progress__bar {
+    .ue-is-navigating .ue-page-progress__bar,
+    .ue-livewire-busy .ue-page-progress__bar {
         animation: ue-page-progress 1.05s var(--ease-out) infinite;
+    }
+
+    .ue-is-navigating,
+    .ue-livewire-busy {
+        cursor: progress;
+    }
+
+    .ue-livewire-busy [data-disable-while-busy="true"] {
+        pointer-events: none;
+    }
+
+    .ue-livewire-busy .ue-shell__main,
+    .ue-is-navigating .ue-shell__main {
+        transition: opacity var(--duration-sm) var(--ease-out);
+    }
+
+    .ue-is-navigating .ue-shell__main {
+        opacity: 0.97;
     }
 
     @keyframes ue-page-progress {

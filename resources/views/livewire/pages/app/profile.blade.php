@@ -391,9 +391,12 @@ new class extends Component
                 <button 
                     type="button" 
                     wire:click="unblockUser"
-                    class="bg-slate-900 hover:bg-slate-850 text-white text-xxs font-bold px-4 py-2 rounded-xl shadow-2xs transition-colors"
+                    wire:loading.attr="disabled"
+                    wire:target="unblockUser"
+                    class="bg-slate-900 hover:bg-slate-850 text-white text-xxs font-bold px-4 py-2 rounded-xl shadow-2xs transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
                 >
-                    Bỏ chặn tài khoản
+                    <span wire:loading.remove wire:target="unblockUser">Bỏ chặn tài khoản</span>
+                    <span wire:loading wire:target="unblockUser">Đang xử lý...</span>
                 </button>
             </div>
         </div>
@@ -526,13 +529,15 @@ new class extends Component
                                         <x-ui.icon name="more-horizontal" size="xs" />
                                     </button>
                                     <div x-show="openOptions" x-transition class="absolute right-0 mt-1 bg-white border border-slate-150 rounded-xl shadow-lg py-1 z-30 w-40 text-left" style="display: none;">
-                                        <button type="button" wire:click="blockUser" class="w-full text-left px-3 py-2 text-xxs font-semibold text-red-600 hover:bg-red-50 flex items-center gap-1.5 transition-colors">
+                                        <button type="button" wire:click="blockUser" wire:loading.attr="disabled" wire:target="blockUser" class="w-full text-left px-3 py-2 text-xxs font-semibold text-red-600 hover:bg-red-50 flex items-center gap-1.5 transition-colors disabled:opacity-60">
                                             <x-ui.icon name="shield-x" size="xs" class="text-red-400" />
-                                            Chặn thành viên
+                                            <span wire:loading.remove wire:target="blockUser">Chặn thành viên</span>
+                                            <span wire:loading wire:target="blockUser">Đang chặn...</span>
                                         </button>
-                                        <button type="button" wire:click="reportUser" class="w-full text-left px-3 py-2 text-xxs font-semibold text-slate-700 hover:bg-slate-50 flex items-center gap-1.5 transition-colors">
+                                        <button type="button" wire:click="reportUser" wire:loading.attr="disabled" wire:target="reportUser" class="w-full text-left px-3 py-2 text-xxs font-semibold text-slate-700 hover:bg-slate-50 flex items-center gap-1.5 transition-colors disabled:opacity-60">
                                             <x-ui.icon name="flag" size="xs" class="text-slate-400" />
-                                            Báo cáo tài khoản
+                                            <span wire:loading.remove wire:target="reportUser">Báo cáo tài khoản</span>
+                                            <span wire:loading wire:target="reportUser">Đang gửi...</span>
                                         </button>
                                     </div>
                                 </div>
