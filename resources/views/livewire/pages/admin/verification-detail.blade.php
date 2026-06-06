@@ -381,8 +381,8 @@ new class extends Component {
                                             @if ($hasAiResult)
                                                 <span class="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold bg-purple-50 text-purple-700 border border-purple-200">
                                                     {{ match($aiResult->analysisJob?->provider) {
-                                                        'local_hybrid' => 'Local (Tesseract + Ollama)',
-                                                        'local_ocr' => 'Local (Tesseract)',
+                                                        'local_hybrid' => str_contains($aiResult->analysisJob?->model_name ?? '', 'ocr_space') ? 'OCR Space (Rule-based)' : 'Local (' . ($aiResult->analysisJob?->model_name ?: 'Tesseract + Ollama') . ')',
+                                                        'local_ocr' => str_contains($aiResult->analysisJob?->model_name ?? '', 'ocr_space') ? 'OCR Space' : 'Local (' . ($aiResult->analysisJob?->model_name ?: 'Tesseract') . ')',
                                                         'gemini_flash' => 'Gemini 2.0 Flash',
                                                         'openrouter' => 'OpenRouter Vision',
                                                         'mock' => 'Mock AI Analyzer',
@@ -506,7 +506,7 @@ new class extends Component {
                                                         <tbody class="divide-y divide-ue-border dark:divide-gray-700">
                                                             @php
                                                                 $ext = $aiResult->extracted_fields_json ?? [];
-                                                                $matchDetails = $aiResult->match_result_json['details'] ?? [];
+                                                                $matchDetails = $aiResult->match_result_json ?? [];
                                                             @endphp
                                                             {{-- Họ tên --}}
                                                             <tr>
@@ -544,7 +544,16 @@ new class extends Component {
                                                                 <td class="p-2">{{ $request->submittedFaculty ? $request->submittedFaculty->name : 'N/A' }}</td>
                                                                 <td class="p-2 text-ue-brand font-bold dark:text-blue-400">{{ $ext['faculty'] ?? 'N/A' }}</td>
                                                                 <td class="p-2 text-center">
-                                                                    <span class="text-ue-text-muted">{{ isset($ext['faculty']) ? 'Trích xuất được' : 'N/A' }}</span>
+                                                                    @php
+                                                                        $facMatch = isset($ext['faculty']) && $request->submittedFaculty && (str_contains(mb_strtolower($ext['faculty'], 'UTF-8'), mb_strtolower($request->submittedFaculty->name, 'UTF-8')) || str_contains(mb_strtolower($request->submittedFaculty->name, 'UTF-8'), mb_strtolower($ext['faculty'], 'UTF-8')));
+                                                                    @endphp
+                                                                    @if(isset($ext['faculty']))
+                                                                        <span class="px-1.5 py-0.5 rounded text-[10px] font-bold {{ $facMatch ? 'bg-green-50 text-green-700 border border-green-200 dark:bg-green-950/20 dark:text-green-400' : 'bg-gray-100 text-gray-700 border border-gray-200 dark:bg-gray-800 dark:text-gray-300' }}">
+                                                                            {{ $facMatch ? 'Khớp khoa' : 'Trích xuất được' }}
+                                                                        </span>
+                                                                    @else
+                                                                        <span class="text-ue-text-muted">—</span>
+                                                                    @endif
                                                                 </td>
                                                             </tr>
                                                             {{-- Khóa học --}}
@@ -553,7 +562,16 @@ new class extends Component {
                                                                 <td class="p-2">{{ $request->submitted_cohort }}</td>
                                                                 <td class="p-2 text-ue-brand font-bold dark:text-blue-400">{{ $ext['cohort'] ?? 'N/A' }}</td>
                                                                 <td class="p-2 text-center">
-                                                                    <span class="text-ue-text-muted">{{ isset($ext['cohort']) ? 'Trích xuất được' : 'N/A' }}</span>
+                                                                    @php
+                                                                        $cohMatch = isset($ext['cohort']) && $request->submitted_cohort && str_contains($ext['cohort'], $request->submitted_cohort);
+                                                                    @endphp
+                                                                    @if(isset($ext['cohort']))
+                                                                        <span class="px-1.5 py-0.5 rounded text-[10px] font-bold {{ $cohMatch ? 'bg-green-50 text-green-700 border border-green-200 dark:bg-green-950/20 dark:text-green-400' : 'bg-gray-100 text-gray-700 border border-gray-200 dark:bg-gray-800 dark:text-gray-300' }}">
+                                                                            {{ $cohMatch ? 'Khớp khóa' : 'Trích xuất được' }}
+                                                                        </span>
+                                                                    @else
+                                                                        <span class="text-ue-text-muted">—</span>
+                                                                    @endif
                                                                 </td>
                                                             </tr>
                                                             {{-- Trường học --}}

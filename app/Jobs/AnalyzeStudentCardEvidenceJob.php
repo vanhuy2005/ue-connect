@@ -46,9 +46,10 @@ class AnalyzeStudentCardEvidenceJob implements ShouldQueue
             return;
         }
 
-        // 1. Create/Check if skipped
+        $cameraRequired = config('ai-verification.camera_capture_required_for_ai', true);
+        
         $isEligible = $evidence->evidence_type === 'student_card'
-            && $evidence->capture_method === EvidenceCaptureMethod::Camera;
+            && (!$cameraRequired || $evidence->capture_method === EvidenceCaptureMethod::Camera);
 
         $provider = config('ai-verification.provider', 'mock');
 
