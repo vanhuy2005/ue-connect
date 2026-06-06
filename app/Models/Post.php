@@ -138,4 +138,14 @@ class Post extends Model
     {
         return $this->hasMany(PostHide::class);
     }
+
+    /**
+     * Get the community that the post belongs to.
+     *
+     * @return BelongsTo<Community, $this>
+     */
+    public function community(): BelongsTo
+    {
+        return $this->belongsTo(Community::class, 'scope_id');
+    }
 }

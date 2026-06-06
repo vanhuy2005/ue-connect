@@ -511,9 +511,9 @@ new class extends Component
 
                 {{-- Change Cover Button (Own Profile) --}}
                 @if ($isOwn)
-                    <label class="absolute bottom-3 right-3 bg-slate-900/60 hover:bg-slate-900/80 text-white p-2 rounded-xl cursor-pointer backdrop-blur-xs transition-colors flex items-center gap-1.5 text-[10px] font-bold">
+                    <label class="absolute bottom-3 right-3 bg-slate-900/60 hover:bg-slate-900/80 text-white p-2 sm:px-3 sm:py-1.5 rounded-xl cursor-pointer backdrop-blur-xs transition-colors flex items-center gap-1.5 text-[10px] font-bold z-10">
                         <x-ui.icon name="camera" size="xs" />
-                        Thay đổi ảnh bìa
+                        <span class="hidden sm:inline">Thay đổi ảnh bìa</span>
                         <input type="file" wire:model="coverFile" class="hidden" accept="image/*" />
                     </label>
                 @endif

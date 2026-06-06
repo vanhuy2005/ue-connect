@@ -61,7 +61,7 @@ $shapeClass = match($shape) {
 };
 
 $initials = $fallback
-    ? strtoupper(mb_substr($fallback, 0, 2))
+    ? mb_strtoupper(mb_substr($fallback, 0, 2))
     : null;
 @endphp
 

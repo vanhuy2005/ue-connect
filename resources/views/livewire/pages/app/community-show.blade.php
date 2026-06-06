@@ -417,7 +417,7 @@ new class extends Component
             $fileId = $mediaFile->id;
         }
 
-        $action->execute(auth()->user(), $this->community, [
+        $resource = $action->execute(auth()->user(), $this->community, [
             'title' => $this->resourceTitle,
             'description' => $this->resourceDescription,
             'resource_type' => $this->resourceType,
@@ -427,8 +427,9 @@ new class extends Component
         ]);
 
         $this->showResourceModal = false;
+        $isPublished = $resource->status === App\Enums\CommunityResourceStatus::Published;
         $this->reset(['resourceTitle', 'resourceDescription', 'resourceType', 'resourceUrl', 'resourceFile', 'resourceCopyright']);
-        $this->dispatch('notify', type: 'success', message: 'Tài nguyên đã được gửi để xét duyệt.');
+        $this->dispatch('notify', type: 'success', message: $isPublished ? 'Tài nguyên đã được đăng thành công.' : 'Tài nguyên đã được gửi để xét duyệt.');
     }
 
     // ─── Event RSVP ───────────────────────────────────────────────────────────
@@ -1133,8 +1134,8 @@ new class extends Component
                 @foreach ($this->joinedCommunities as $c)
                     <a href="{{ route('community.show', $c->id) }}" wire:navigate
                         class="flex items-center gap-3 p-2 rounded-xl transition group {{ $c->id === $community->id ? 'bg-ue-brand-soft text-ue-brand' : 'hover:bg-slate-100' }}">
-                        <div class="w-9 h-9 rounded-lg bg-gradient-to-br from-ue-brand/20 to-ue-brand/5 border border-slate-150 flex items-center justify-center text-ue-brand font-black text-sm flex-shrink-0">
-                            {{ strtoupper(substr($c->name, 0, 2)) }}
+                        <div class="w-9 h-9 rounded-lg bg-gradient-to-br from-ue-brand/20 to-ue-brand/5 border border-slate-150 flex items-center justify-center text-ue-brand flex-shrink-0">
+                            <x-ui.icon name="users" size="sm" class="text-ue-brand" />
                         </div>
                         <div class="min-w-0 flex-1">
                             <p class="text-xs font-bold truncate {{ $c->id === $community->id ? 'text-ue-brand' : 'text-slate-800 group-hover:text-ue-brand' }}">{{ $c->name }}</p>
@@ -1156,13 +1157,15 @@ new class extends Component
                 @if ($this->coverUrl)
                     <img src="{{ $this->coverUrl }}" class="w-full h-full object-cover absolute inset-0" alt="{{ $community->name }}">
                 @else
-                    <span class="text-8xl font-black text-white/10 select-none">{{ strtoupper(substr($community->name, 0, 2)) }}</span>
+                    <div class="w-full h-full flex items-center justify-center">
+                        <x-ui.icon name="users" class="w-24 h-24 text-white/10 select-none" />
+                    </div>
                 @endif
                 
                 @if ($this->canManage)
-                    <label class="absolute bottom-4 right-4 bg-white/80 backdrop-blur-xs text-slate-800 text-xs font-bold px-3 py-1.5 rounded-lg border border-slate-250 hover:bg-white transition flex items-center gap-1.5 shadow-sm cursor-pointer">
+                    <label class="absolute bottom-4 right-4 bg-white/80 backdrop-blur-xs text-slate-800 text-xs font-bold p-2 sm:px-3 sm:py-1.5 rounded-lg border border-slate-250 hover:bg-white transition flex items-center gap-1.5 shadow-sm cursor-pointer z-10">
                         <x-ui.icon name="camera" size="xs" />
-                        <span>Chỉnh sửa ảnh bìa</span>
+                        <span class="hidden sm:inline">Chỉnh sửa ảnh bìa</span>
                         <input type="file" wire:model="coverFile" class="hidden" accept="image/jpeg,image/png,image/webp">
                     </label>
                 @endif
@@ -1176,7 +1179,7 @@ new class extends Component
                         @if ($this->avatarUrl)
                             <img src="{{ $this->avatarUrl }}" class="w-full h-full object-cover" alt="{{ $community->name }}">
                         @else
-                            {{ strtoupper(substr($community->name, 0, 2)) }}
+                            <x-ui.icon name="users" class="w-12 h-12 sm:w-16 sm:h-16 text-white" />
                         @endif
 
                         @if ($this->canManage)
@@ -1195,7 +1198,7 @@ new class extends Component
 
                         <div class="flex flex-wrap items-center justify-center sm:justify-start gap-2 text-xs text-slate-600 font-semibold mt-1">
                             <span class="flex items-center gap-1">
-                                <x-ui.icon name="lock" size="2xs" />
+                                <x-ui.icon name="{{ $community->visibility?->value === 'public' ? 'unlock' : 'lock' }}" size="2xs" />
                                 {{ $community->visibility?->label() }}
                             </span>
                             <span>·</span>
@@ -1252,25 +1255,25 @@ new class extends Component
                             class="p-2 border border-slate-250 bg-white hover:bg-slate-50 text-slate-700 rounded-xl transition shadow-2xs flex items-center justify-center">
                             <x-ui.icon name="more-horizontal" size="xs" />
                         </button>
-                        <div x-show="openMenu" x-transition class="absolute right-0 mt-1.5 w-48 bg-white border border-slate-200 rounded-xl shadow-lg py-1.5 z-40 text-xs font-bold" style="display:none;">
+                        <div x-show="openMenu" x-transition class="absolute right-0 mt-1.5 w-48 bg-white border border-slate-200 rounded-xl shadow-lg py-1.5 z-40 text-xs font-bold text-slate-700" style="display:none;">
                             <button type="button" @click="navigator.clipboard.writeText('{{ route('community.show', $community->id) }}'); alert('Đã sao chép liên kết vào bộ nhớ tạm!'); openMenu = false"
-                                class="w-full text-left px-4 py-2 hover:bg-slate-100 flex items-center gap-2"
-                                style="color: #334155 !important;">
-                                <x-ui.icon name="send" size="xs" style="color: #64748b !important;" />
-                                <span>Sao chép liên kết</span>
+                                class="w-full text-left px-4 py-2 hover:bg-slate-100 flex items-center gap-2 text-black"
+                                style="color: #000000 !important;">
+                                <x-ui.icon name="send" size="xs" class="text-slate-400" style="color: #000000 !important;" />
+                                <span style="color: #000000 !important;">Sao chép liên kết</span>
                             </button>
                             <button type="button" @click="alert('Đã bật thông báo từ nhóm này.'); openMenu = false"
-                                class="w-full text-left px-4 py-2 hover:bg-slate-100 flex items-center gap-2"
-                                style="color: #334155 !important;">
-                                <x-ui.icon name="bell" size="xs" style="color: #64748b !important;" />
-                                <span>Bật thông báo</span>
+                                class="w-full text-left px-4 py-2 hover:bg-slate-100 flex items-center gap-2 text-black"
+                                style="color: #000000 !important;">
+                                <x-ui.icon name="bell" size="xs" class="text-slate-400" style="color: #000000 !important;" />
+                                <span style="color: #000000 !important;">Bật thông báo</span>
                             </button>
                             @if ($this->isActiveMember && $community->owner_id !== auth()->id())
                                 <button type="button" wire:click="openLeaveModal" @click="openMenu = false"
-                                    class="w-full text-left px-4 py-2 hover:bg-red-50 flex items-center gap-2 border-t border-slate-100"
+                                    class="w-full text-left px-4 py-2 hover:bg-red-50 flex items-center gap-2 border-t border-slate-100 text-red-600"
                                     style="color: #dc2626 !important;">
-                                    <x-ui.icon name="log-out" size="xs" style="color: #ef4444 !important;" />
-                                    <span>Rời nhóm</span>
+                                    <x-ui.icon name="log-out" size="xs" class="text-red-500" style="color: #ef4444 !important;" />
+                                    <span style="color: #dc2626 !important;">Rời nhóm</span>
                                 </button>
                             @endif
                         </div>
@@ -2032,7 +2035,10 @@ new class extends Component
     {{-- Invite Friends Modal --}}
     @if ($showInviteModal)
         <div class="fixed inset-0 bg-slate-900/60 backdrop-blur-xs z-50 flex items-center justify-center p-4">
-            <div class="bg-white rounded-3xl border border-slate-200 shadow-2xl max-w-lg w-full overflow-hidden flex flex-col max-h-[85vh]">
+            <div class="bg-white rounded-3xl border border-slate-200 shadow-2xl max-w-lg w-full overflow-hidden flex flex-col max-h-[85vh]"
+                x-data="{
+                    selectedIds: @entangle('selectedInviteUserIds')
+                }">
                 <div class="px-5 py-4 border-b border-slate-100 flex items-center justify-between">
                     <h3 class="text-sm font-extrabold text-slate-800 flex items-center gap-2">
                         <x-ui.icon name="user-plus" size="xs" class="text-ue-brand" />
@@ -2053,11 +2059,39 @@ new class extends Component
                             class="w-full pl-9 pr-4 py-2 text-xs rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-ue-brand transition" />
                     </div>
 
+                    {{-- Quick Select Actions --}}
+                    @if ($this->inviteConnections->isNotEmpty())
+                        <div class="flex items-center justify-between text-[11px] px-2.5 py-1.5 bg-slate-50/70 border border-slate-150 rounded-xl">
+                            <span class="text-slate-500 font-medium">Chọn nhanh kết quả:</span>
+                            <div class="flex gap-2.5">
+                                <button type="button" 
+                                    @click="
+                                        let visibleIds = [{{ $this->inviteConnections->pluck('id')->join(',') }}];
+                                        visibleIds.forEach(id => {
+                                            if (!selectedIds.includes(id)) selectedIds.push(id);
+                                        });
+                                    "
+                                    class="text-ue-brand hover:underline font-bold transition">
+                                    Chọn tất cả
+                                </button>
+                                <span class="text-slate-300">|</span>
+                                <button type="button" 
+                                    @click="
+                                        let visibleIds = [{{ $this->inviteConnections->pluck('id')->join(',') }}];
+                                        selectedIds = selectedIds.filter(id => !visibleIds.includes(id));
+                                    "
+                                    class="text-slate-500 hover:underline font-semibold transition">
+                                    Bỏ chọn
+                                </button>
+                            </div>
+                        </div>
+                    @endif
+
                     {{-- Connections list --}}
                     <div class="space-y-1.5 max-h-60 overflow-y-auto pr-1">
                         @forelse ($this->inviteConnections as $friend)
-                            @php $selected = in_array($friend->id, $selectedInviteUserIds); @endphp
-                            <label class="flex items-center justify-between p-2.5 hover:bg-slate-50 rounded-xl cursor-pointer border {{ $selected ? 'border-ue-brand bg-ue-brand-soft/20' : 'border-slate-150' }} transition">
+                            <label class="flex items-center justify-between p-2.5 hover:bg-slate-50 rounded-xl cursor-pointer border transition"
+                                :class="selectedIds.includes({{ $friend->id }}) ? 'border-ue-brand bg-ue-brand-soft/20' : 'border-slate-150'">
                                 <div class="flex items-center gap-2.5">
                                     <x-ui.avatar :user="$friend" size="xs" />
                                     <div>
@@ -2067,28 +2101,29 @@ new class extends Component
                                         @endif
                                     </div>
                                 </div>
-                                <input type="checkbox" wire:click="toggleInviteUser({{ $friend->id }})" @checked($selected)
-                                    class="text-ue-brand rounded focus:ring-ue-brand" />
+                                <input type="checkbox" :value="{{ $friend->id }}" x-model.number="selectedIds"
+                                    class="text-ue-brand rounded focus:ring-ue-brand cursor-pointer" />
                             </label>
                         @empty
                             <p class="text-[10px] text-slate-400 italic text-center py-6">Không tìm thấy bạn bè nào phù hợp hoặc tất cả bạn bè đã ở trong nhóm.</p>
                         @endforelse
                     </div>
 
-                    @if (!empty($selectedInviteUserIds))
-                        <div class="text-[11px] font-bold text-ue-brand">
-                            Đã chọn: {{ count($selectedInviteUserIds) }} người bạn
-                        </div>
-                    @endif
+                    <div x-show="selectedIds.length > 0" class="text-[11px] font-bold text-ue-brand" x-cloak>
+                        Đã chọn: <span x-text="selectedIds.length"></span> người bạn
+                    </div>
                 </div>
 
                 <div class="flex items-center justify-end gap-2 px-5 py-3.5 bg-slate-50 border-t border-slate-100">
                     <button type="button" wire:click="closeTransientUi" class="px-4 py-2 text-xs font-bold text-slate-500 hover:text-slate-700 transition">
                         Hủy
                     </button>
-                    <button type="button" wire:click="sendInvites" @disabled(empty($selectedInviteUserIds))
-                        class="px-5 py-2 bg-ue-brand text-white text-xs font-bold rounded-xl transition hover:bg-opacity-95 disabled:opacity-50 disabled:cursor-not-allowed shadow-2xs">
-                        Gửi lời mời
+                    <button type="button" wire:click="sendInvites" wire:loading.attr="disabled" wire:target="sendInvites"
+                        :disabled="selectedIds.length === 0"
+                        class="px-5 py-2 bg-ue-brand text-white text-xs font-bold rounded-xl transition shadow-2xs disabled:opacity-60 disabled:cursor-not-allowed"
+                        :class="selectedIds.length === 0 ? 'opacity-50 cursor-not-allowed' : 'hover:bg-opacity-95'">
+                        <span wire:loading.remove wire:target="sendInvites">Gửi lời mời</span>
+                        <span wire:loading wire:target="sendInvites">Đang gửi...</span>
                     </button>
                 </div>
             </div>
