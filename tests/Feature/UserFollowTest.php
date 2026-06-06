@@ -15,6 +15,7 @@ use App\Models\User;
 use App\Models\UserFollow;
 use Database\Seeders\Reference\AccessControlReferenceSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
 use Livewire\Volt\Volt;
 use Tests\TestCase;
@@ -159,7 +160,7 @@ class UserFollowTest extends TestCase
             ->assertDontSee('md:absolute md:left-6 md:top-20', false);
     }
 
-    public function test_feed_quick_follow_button_follows_author_without_reload(): void
+    public function test_feed_quick_follow_button_opens_modal_and_follows_author(): void
     {
         Post::factory()->create([
             'user_id' => $this->otherUser->id,
@@ -172,10 +173,14 @@ class UserFollowTest extends TestCase
 
         Volt::test('pages.app.home-feed')
             ->assertSee('Quick follow feed post.')
-            ->assertSee('wire:click="quickFollowAuthor('.$this->otherUser->id.')"', false)
-            ->call('quickFollowAuthor', $this->otherUser->id)
-            ->assertSet('feedbackMessage', 'Đã theo dõi '.$this->otherUser->name.'.')
-            ->assertDontSee('wire:click="quickFollowAuthor('.$this->otherUser->id.')"', false);
+            ->assertSee('wire:click="openQuickFollowModal('.$this->otherUser->id.')"', false)
+            ->call('openQuickFollowModal', $this->otherUser->id)
+            ->assertSet('showQuickFollowModal', true)
+            ->assertSet('quickFollowUserId', $this->otherUser->id)
+            ->assertSet('quickFollowCompleted', false)
+            ->call('confirmQuickFollow')
+            ->assertSet('quickFollowCompleted', true)
+            ->assertSet('feedbackMessage', 'Đã theo dõi '.$this->otherUser->name.'.');
 
         $this->assertDatabaseHas('user_follows', [
             'follower_id' => $this->user->id,
@@ -203,7 +208,38 @@ class UserFollowTest extends TestCase
 
         Volt::test('pages.app.home-feed')
             ->assertSee('Friend author feed post.')
-            ->assertDontSee('wire:click="quickFollowAuthor('.$this->otherUser->id.')"', false);
+            ->assertDontSee('wire:click="openQuickFollowModal('.$this->otherUser->id.')"', false);
+    }
+
+    public function test_feed_quick_follow_and_unfollow_flow(): void
+    {
+        Post::factory()->create([
+            'user_id' => $this->otherUser->id,
+            'body' => 'Quick follow and unfollow feed post.',
+            'status' => PostStatus::PUBLISHED,
+            'published_at' => now(),
+        ]);
+
+        $this->actingAs($this->user);
+
+        Volt::test('pages.app.home-feed')
+            ->assertSee('Quick follow and unfollow feed post.')
+            ->assertSee('wire:click="openQuickFollowModal('.$this->otherUser->id.')"', false)
+            ->call('openQuickFollowModal', $this->otherUser->id)
+            ->assertSet('showQuickFollowModal', true)
+            ->assertSet('quickFollowUserId', $this->otherUser->id)
+            ->assertSet('quickFollowCompleted', false)
+            ->call('confirmQuickFollow')
+            ->assertSet('quickFollowCompleted', true)
+            ->assertSet('feedbackMessage', 'Đã theo dõi '.$this->otherUser->name.'.')
+            ->call('confirmQuickUnfollow')
+            ->assertSet('quickFollowCompleted', false)
+            ->assertSet('feedbackMessage', 'Đã bỏ theo dõi '.$this->otherUser->name.'.');
+
+        $this->assertDatabaseMissing('user_follows', [
+            'follower_id' => $this->user->id,
+            'following_id' => $this->otherUser->id,
+        ]);
     }
 
     public function test_user_follow_relations_return_aggregate_counts_without_loading_rows(): void
@@ -217,6 +253,15 @@ class UserFollowTest extends TestCase
         $this->assertTrue($this->otherUser->followers()->whereKey($this->user->id)->exists());
         $this->assertSame(1, UserFollow::where('following_id', $this->otherUser->id)->count());
         $this->assertSame(1, UserFollow::where('follower_id', $this->user->id)->count());
+    }
+
+    public function test_profile_page_renders_username_without_raw_blade_braces(): void
+    {
+        $this->actingAs($this->user);
+
+        Volt::test('pages.app.profile', ['user' => $this->user])
+            ->assertSee('@'.($this->user->username ?? Str::slug($this->user->name, '')))
+            ->assertDontSee('{{ $user->username');
     }
 
     private function activeUser(string $name): User
