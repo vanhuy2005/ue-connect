@@ -25,7 +25,7 @@ class Post extends Model
      */
     protected $fillable = [
         'user_id',
-'scope_type',
+        'scope_type',
         'scope_id',
         'community_post_type',
         'pinned_at',
