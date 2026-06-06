@@ -289,4 +289,47 @@ class CommunityDetailTest extends TestCase
         $this->assertNotNull($community->cover()->first());
         $this->assertNotNull($community->avatar()->first());
     }
+
+    public function test_member_can_invite_multiple_friends_simultaneously(): void
+    {
+        $user = $this->createActiveUser();
+        $community = Community::factory()->active()->create();
+        CommunityMember::factory()->active()->for($community)->for($user)->create();
+
+        $friend1 = $this->createActiveUser();
+        $friend2 = $this->createActiveUser();
+
+        // Establish connections
+        \App\Models\Connection::create([
+            'user_one_id' => min($user->id, $friend1->id),
+            'user_two_id' => max($user->id, $friend1->id),
+            'status' => \App\Enums\ConnectionStatus::ACTIVE,
+        ]);
+        \App\Models\Connection::create([
+            'user_one_id' => min($user->id, $friend2->id),
+            'user_two_id' => max($user->id, $friend2->id),
+            'status' => \App\Enums\ConnectionStatus::ACTIVE,
+        ]);
+
+        Volt::actingAs($user)
+            ->test('pages.app.community-show', ['community' => $community])
+            ->set('showInviteModal', true)
+            ->set('selectedInviteUserIds', [$friend1->id, $friend2->id])
+            ->call('sendInvites')
+            ->assertHasNoErrors()
+            ->assertSet('selectedInviteUserIds', [])
+            ->assertSet('showInviteModal', false)
+            ->assertDispatched('notify', type: 'success', message: 'Đã gửi lời mời tham gia cộng đồng.');
+
+        // Check if messages were sent
+        $this->assertDatabaseHas('messages', [
+            'sender_id' => $user->id,
+            'body' => "Chào {$friend1->name}! Mình muốn mời bạn tham gia cộng đồng: {$community->name}\nTham gia tại đây: " . route('community.show', $community->id),
+        ]);
+
+        $this->assertDatabaseHas('messages', [
+            'sender_id' => $user->id,
+            'body' => "Chào {$friend2->name}! Mình muốn mời bạn tham gia cộng đồng: {$community->name}\nTham gia tại đây: " . route('community.show', $community->id),
+        ]);
+    }
 }

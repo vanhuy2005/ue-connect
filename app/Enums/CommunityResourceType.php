@@ -32,13 +32,13 @@ enum CommunityResourceType: string
     /** Whether this type requires a URL instead of a file upload. */
     public function requiresUrl(): bool
     {
-        return in_array($this, [self::Link, self::VideoLink, self::OfficialLink]);
+        return true;
     }
 
     /** Whether this type requires a file upload. */
     public function requiresFile(): bool
     {
-        return in_array($this, [self::Document, self::Image, self::Template]);
+        return false;
     }
 
     /** @return array<string, string> */

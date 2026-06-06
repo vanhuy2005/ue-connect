@@ -846,6 +846,8 @@ new #[Layout('layouts.app')] class extends Component
                 <button
                     type="button"
                     wire:click="selectConversation({{ $convo['id'] }})"
+                    wire:loading.attr="disabled"
+                    wire:target="selectConversation({{ $convo['id'] }})"
                     class="w-full p-4 flex items-center justify-between hover:bg-slate-50/80 transition-colors text-left {{ $selectedConversationId === $convo['id'] ? 'bg-slate-50 font-bold' : '' }}"
                 >
                     <div class="flex items-center gap-3 min-w-0 flex-1">
@@ -989,8 +991,10 @@ new #[Layout('layouts.app')] class extends Component
                                 <button
                                     type="button"
                                     wire:click="toggleMute"
+                                    wire:loading.attr="disabled"
+                                    wire:target="toggleMute"
                                     @click="openMenu = false"
-                                    class="w-full text-left px-3 py-1.5 text-xxs font-semibold text-slate-700 hover:bg-slate-50 flex items-center gap-1.5 transition-colors"
+                                    class="w-full text-left px-3 py-1.5 text-xxs font-semibold text-slate-700 hover:bg-slate-50 flex items-center gap-1.5 transition-colors disabled:opacity-60"
                                 >
                                     <x-ui.icon name="bell" size="xs" class="text-slate-400" />
                                     {{ $isMuted ? 'Bật thông báo' : 'Tắt thông báo' }}
@@ -998,8 +1002,10 @@ new #[Layout('layouts.app')] class extends Component
                                 <button
                                     type="button"
                                     wire:click="toggleRestrict"
+                                    wire:loading.attr="disabled"
+                                    wire:target="toggleRestrict"
                                     @click="openMenu = false"
-                                    class="w-full text-left px-3 py-1.5 text-xxs font-semibold text-slate-700 hover:bg-slate-50 flex items-center gap-1.5 transition-colors"
+                                    class="w-full text-left px-3 py-1.5 text-xxs font-semibold text-slate-700 hover:bg-slate-50 flex items-center gap-1.5 transition-colors disabled:opacity-60"
                                 >
                                     <x-ui.icon name="shield" size="xs" class="text-slate-400" />
                                     {{ $isRestricted ? 'Bỏ hạn chế' : 'Hạn chế' }}
@@ -1007,8 +1013,10 @@ new #[Layout('layouts.app')] class extends Component
                                 <button
                                     type="button"
                                     wire:click="toggleBlock"
+                                    wire:loading.attr="disabled"
+                                    wire:target="toggleBlock"
                                     @click="openMenu = false"
-                                    class="w-full text-left px-3 py-1.5 text-xxs font-semibold text-slate-700 hover:bg-slate-50 flex items-center gap-1.5 transition-colors"
+                                    class="w-full text-left px-3 py-1.5 text-xxs font-semibold text-slate-700 hover:bg-slate-50 flex items-center gap-1.5 transition-colors disabled:opacity-60"
                                 >
                                     <x-ui.icon name="shield-x" size="xs" class="text-slate-400" />
                                     {{ $isBlockedByMe ? 'Bỏ chặn' : 'Chặn thành viên' }}
@@ -1016,8 +1024,10 @@ new #[Layout('layouts.app')] class extends Component
                                 <button
                                     type="button"
                                     wire:click="deleteConversationLocally"
+                                    wire:loading.attr="disabled"
+                                    wire:target="deleteConversationLocally"
                                     @click="openMenu = false"
-                                    class="w-full text-left px-3 py-1.5 text-xxs font-semibold text-red-650 hover:bg-red-50 flex items-center gap-1.5 transition-colors border-t border-slate-100"
+                                    class="w-full text-left px-3 py-1.5 text-xxs font-semibold text-red-650 hover:bg-red-50 flex items-center gap-1.5 transition-colors border-t border-slate-100 disabled:opacity-60"
                                 >
                                     <x-ui.icon name="trash" size="xs" class="text-red-400" />
                                     Xóa đoạn chat
@@ -1056,6 +1066,8 @@ new #[Layout('layouts.app')] class extends Component
                                 <button 
                                     type="button" 
                                     wire:click="unpinMessage({{ $pinned->message_id }})"
+                                    wire:loading.attr="disabled"
+                                    wire:target="unpinMessage({{ $pinned->message_id }})"
                                     class="text-[10px] font-bold text-red-500 hover:text-red-700 transition-colors flex-shrink-0"
                                 >
                                     Bỏ ghim
@@ -1130,11 +1142,11 @@ new #[Layout('layouts.app')] class extends Component
                                 <button type="button" wire:click="startReply({{ $message->id }})" class="p-1 text-slate-400 hover:text-slate-600 rounded-lg transition-colors" title="Trả lời"><x-ui.icon name="reply" size="xs" /></button>
                                 <button type="button" wire:click="openForwardModal({{ $message->id }})" class="p-1 text-slate-400 hover:text-slate-600 rounded-lg transition-colors" title="Chuyển tiếp"><x-ui.icon name="arrow-right" size="xs" /></button>
                                 @if ($pinnedMessages->contains('message_id', $message->id))
-                                    <button type="button" wire:click="unpinMessage({{ $message->id }})" class="p-1 text-ue-brand rounded-lg transition-colors" title="Bỏ ghim"><x-ui.icon name="pin" size="xs" class="fill-ue-brand" /></button>
+                                    <button type="button" wire:click="unpinMessage({{ $message->id }})" wire:loading.attr="disabled" wire:target="unpinMessage({{ $message->id }})" class="p-1 text-ue-brand rounded-lg transition-colors disabled:opacity-50" title="Bỏ ghim"><x-ui.icon name="pin" size="xs" class="fill-ue-brand" /></button>
                                 @else
-                                    <button type="button" wire:click="pinMessage({{ $message->id }})" class="p-1 text-slate-400 hover:text-ue-brand rounded-lg transition-colors" title="Ghim"><x-ui.icon name="pin" size="xs" /></button>
+                                    <button type="button" wire:click="pinMessage({{ $message->id }})" wire:loading.attr="disabled" wire:target="pinMessage({{ $message->id }})" class="p-1 text-slate-400 hover:text-ue-brand rounded-lg transition-colors disabled:opacity-50" title="Ghim"><x-ui.icon name="pin" size="xs" /></button>
                                 @endif
-                                <button type="button" wire:click="recallMessage({{ $message->id }})" class="p-1 text-slate-400 hover:text-red-500 rounded-lg transition-colors" title="Thu hồi"><x-ui.icon name="trash" size="xs" /></button>
+                                <button type="button" wire:click="recallMessage({{ $message->id }})" wire:loading.attr="disabled" wire:target="recallMessage({{ $message->id }})" class="p-1 text-slate-400 hover:text-red-500 rounded-lg transition-colors disabled:opacity-50" title="Thu hồi"><x-ui.icon name="trash" size="xs" /></button>
                             </div>
                         @endif
 
@@ -1260,9 +1272,9 @@ new #[Layout('layouts.app')] class extends Component
                                 <button type="button" wire:click="startReply({{ $message->id }})" class="p-1 text-slate-400 hover:text-slate-600 rounded-lg transition-colors" title="Trả lời"><x-ui.icon name="reply" size="xs" /></button>
                                 <button type="button" wire:click="openForwardModal({{ $message->id }})" class="p-1 text-slate-400 hover:text-slate-600 rounded-lg transition-colors" title="Chuyển tiếp"><x-ui.icon name="arrow-right" size="xs" /></button>
                                 @if ($pinnedMessages->contains('message_id', $message->id))
-                                    <button type="button" wire:click="unpinMessage({{ $message->id }})" class="p-1 text-ue-brand rounded-lg transition-colors" title="Bỏ ghim"><x-ui.icon name="pin" size="xs" class="fill-ue-brand" /></button>
+                                    <button type="button" wire:click="unpinMessage({{ $message->id }})" wire:loading.attr="disabled" wire:target="unpinMessage({{ $message->id }})" class="p-1 text-ue-brand rounded-lg transition-colors disabled:opacity-50" title="Bỏ ghim"><x-ui.icon name="pin" size="xs" class="fill-ue-brand" /></button>
                                 @else
-                                    <button type="button" wire:click="pinMessage({{ $message->id }})" class="p-1 text-slate-400 hover:text-ue-brand rounded-lg transition-colors" title="Ghim"><x-ui.icon name="pin" size="xs" /></button>
+                                    <button type="button" wire:click="pinMessage({{ $message->id }})" wire:loading.attr="disabled" wire:target="pinMessage({{ $message->id }})" class="p-1 text-slate-400 hover:text-ue-brand rounded-lg transition-colors disabled:opacity-50" title="Ghim"><x-ui.icon name="pin" size="xs" /></button>
                                 @endif
                                 <button type="button" wire:click="openReportModal({{ $message->id }})" class="p-1 text-slate-400 hover:text-red-500 rounded-lg transition-colors" title="Báo cáo"><x-ui.icon name="flag" size="xs" /></button>
                             </div>
@@ -1364,16 +1376,23 @@ new #[Layout('layouts.app')] class extends Component
                         <input
                             type="text"
                             wire:model="newMessageBody"
+                            wire:loading.attr="disabled"
+                            wire:target="submitMessage"
                             placeholder="Nhập tin nhắn..."
                             class="flex-1 px-4 py-2.5 text-xxs rounded-xl border border-slate-200 focus:outline-none focus:ring-1 focus:ring-ue-brand/40 focus:border-ue-brand/40 placeholder-slate-400 text-slate-700 bg-slate-50/60"
                         />
                         <button
                             type="submit"
-                            class="bg-ue-brand hover:bg-ue-brand-dark text-white rounded-xl p-2.5 shadow-2xs hover:shadow-sm transition-all"
+                            wire:loading.attr="disabled"
+                            wire:target="submitMessage"
+                            class="bg-ue-brand hover:bg-ue-brand-dark text-white rounded-xl p-2.5 shadow-2xs hover:shadow-sm transition-all disabled:opacity-60 disabled:cursor-not-allowed"
                             aria-label="Gửi tin nhắn"
                             :disabled="uploading"
                         >
-                            <x-ui.icon name="send" size="sm" />
+                            <span wire:loading.remove wire:target="submitMessage">
+                                <x-ui.icon name="send" size="sm" />
+                            </span>
+                            <span wire:loading wire:target="submitMessage" class="ue-spinner"></span>
                         </button>
                     </form>
                 @endif
@@ -1416,8 +1435,9 @@ new #[Layout('layouts.app')] class extends Component
                     <button type="button" wire:click="$set('showNicknameModal', false)" class="px-4 py-2 rounded-xl text-slate-600 hover:bg-slate-100 text-xxs font-bold transition-colors">
                         Hủy
                     </button>
-                    <button type="button" wire:click="saveNickname" class="px-4 py-2 rounded-xl bg-ue-brand hover:bg-ue-brand-dark text-white text-xxs font-bold shadow-2xs hover:shadow-sm transition-all">
-                        Lưu thay đổi
+                    <button type="button" wire:click="saveNickname" wire:loading.attr="disabled" wire:target="saveNickname" class="px-4 py-2 rounded-xl bg-ue-brand hover:bg-ue-brand-dark text-white text-xxs font-bold shadow-2xs hover:shadow-sm transition-all disabled:opacity-60 disabled:cursor-not-allowed">
+                        <span wire:loading.remove wire:target="saveNickname">Lưu thay đổi</span>
+                        <span wire:loading wire:target="saveNickname">Đang lưu...</span>
                     </button>
                 </div>
             </div>
@@ -1461,9 +1481,12 @@ new #[Layout('layouts.app')] class extends Component
                             <button
                                 type="button"
                                 wire:click="forwardMessage({{ $fConvo['id'] }})"
+                                wire:loading.attr="disabled"
+                                wire:target="forwardMessage({{ $fConvo['id'] }})"
                                 class="bg-ue-brand hover:bg-ue-brand-dark text-white px-3 py-1.5 rounded-lg text-xxs font-bold shadow-3xs transition-all flex-shrink-0"
                             >
-                                Gửi
+                                <span wire:loading.remove wire:target="forwardMessage({{ $fConvo['id'] }})">Gửi</span>
+                                <span wire:loading wire:target="forwardMessage({{ $fConvo['id'] }})">Đang gửi...</span>
                             </button>
                         </div>
                     @empty
@@ -1523,8 +1546,9 @@ new #[Layout('layouts.app')] class extends Component
                     <button type="button" wire:click="$set('showReportModal', false)" class="px-4 py-2 rounded-xl text-slate-600 hover:bg-slate-100 text-xxs font-bold transition-colors">
                         Hủy
                     </button>
-                    <button type="button" wire:click="submitReport" class="px-4 py-2 rounded-xl bg-red-600 hover:bg-red-700 text-white text-xxs font-bold shadow-2xs hover:shadow-sm transition-all">
-                        Gửi báo cáo
+                    <button type="button" wire:click="submitReport" wire:loading.attr="disabled" wire:target="submitReport" class="px-4 py-2 rounded-xl bg-red-600 hover:bg-red-700 text-white text-xxs font-bold shadow-2xs hover:shadow-sm transition-all disabled:opacity-60 disabled:cursor-not-allowed">
+                        <span wire:loading.remove wire:target="submitReport">Gửi báo cáo</span>
+                        <span wire:loading wire:target="submitReport">Đang gửi...</span>
                     </button>
                 </div>
             </div>

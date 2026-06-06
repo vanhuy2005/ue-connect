@@ -646,9 +646,17 @@ new #[Layout('layouts.app')] class extends Component
                                     <button
                                         type="button"
                                         wire:click="startGreeting({{ $profile->user_id }})"
-                                        class="bg-ue-brand hover:bg-ue-brand-dark text-white text-xxs font-bold px-3 py-1.5 rounded-lg shadow-3xs hover:shadow-2xs transition-all flex items-center gap-1.5"
+                                        wire:loading.attr="disabled"
+                                        wire:target="startGreeting({{ $profile->user_id }})"
+                                        class="bg-ue-brand hover:bg-ue-brand-dark text-white text-xxs font-bold px-3 py-1.5 rounded-lg shadow-3xs hover:shadow-2xs transition-all flex items-center gap-1.5 disabled:opacity-60 disabled:cursor-not-allowed"
                                     >
-                                        <x-ui.icon name="user-plus" size="xs" /> Gửi lời chào
+                                        <span wire:loading.remove wire:target="startGreeting({{ $profile->user_id }})" class="flex items-center gap-1.5">
+                                            <x-ui.icon name="user-plus" size="xs" /> Gửi lời chào
+                                        </span>
+                                        <span wire:loading wire:target="startGreeting({{ $profile->user_id }})" class="flex items-center gap-1.5">
+                                            <span class="ue-spinner"></span>
+                                            Đang mở...
+                                        </span>
                                     </button>
                                 @elseif ($status === 'connected')
                                     <a
@@ -755,9 +763,12 @@ new #[Layout('layouts.app')] class extends Component
                     <button
                         type="button"
                         wire:click="submitGreeting"
-                        class="px-4 py-2 text-xxs font-bold text-white bg-ue-brand hover:bg-ue-brand-dark rounded-xl shadow-2xs hover:shadow-sm transition-all"
+                        wire:loading.attr="disabled"
+                        wire:target="submitGreeting"
+                        class="px-4 py-2 text-xxs font-bold text-white bg-ue-brand hover:bg-ue-brand-dark rounded-xl shadow-2xs hover:shadow-sm transition-all disabled:opacity-60 disabled:cursor-not-allowed"
                     >
-                        Xác nhận gửi
+                        <span wire:loading.remove wire:target="submitGreeting">Xác nhận gửi</span>
+                        <span wire:loading wire:target="submitGreeting">Đang gửi...</span>
                     </button>
                 </div>
             </div>

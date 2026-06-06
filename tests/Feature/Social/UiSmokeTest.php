@@ -87,12 +87,19 @@ class UiSmokeTest extends TestCase
         $layout = file_get_contents(resource_path('views/layouts/app.blade.php'));
         $uiEntrypoint = file_get_contents(resource_path('js/ui/index.js'));
         $pageLoading = file_get_contents(resource_path('js/ui/page-loading.js'));
+        $livewireFeedback = file_get_contents(resource_path('js/ui/livewire-request-feedback.js'));
         $css = file_get_contents(resource_path('css/app.css'));
 
         $this->assertStringContainsString('<x-ui.page-transition />', $layout);
         $this->assertStringContainsString('initPageLoading', $uiEntrypoint);
+        $this->assertStringContainsString('initLivewireRequestFeedback', $uiEntrypoint);
         $this->assertStringContainsString("document.addEventListener('livewire:navigating', show)", $pageLoading);
+        $this->assertStringContainsString("window.Livewire.hook('request'", $livewireFeedback);
+        $this->assertStringContainsString('ue-livewire-busy', $livewireFeedback);
+        $this->assertStringContainsString('livewire-upload-start', $livewireFeedback);
+        $this->assertStringContainsString('ue:toast', $livewireFeedback);
         $this->assertStringContainsString('.ue-page-progress', $css);
+        $this->assertStringContainsString('.ue-livewire-busy .ue-page-progress', $css);
         $this->assertStringNotContainsString('ue-show-route-skeleton', $pageLoading);
         $this->assertStringNotContainsString('.ue-route-skeleton', $css);
     }
@@ -151,5 +158,20 @@ class UiSmokeTest extends TestCase
         $this->assertStringContainsString('ue-loadable-card', $discoveryList);
         $this->assertStringNotContainsString('wire:loading.delay.grid', $mentorList);
         $this->assertStringNotContainsString('wire:loading.delay.grid', $discoveryList);
+    }
+
+    public function test_priority_livewire_actions_have_visible_feedback_targets(): void
+    {
+        $homeFeed = file_get_contents(resource_path('views/livewire/pages/app/home-feed.blade.php'));
+        $messages = file_get_contents(resource_path('views/livewire/pages/app/messages.blade.php'));
+        $notifications = file_get_contents(resource_path('views/livewire/pages/app/notifications.blade.php'));
+        $postCard = file_get_contents(resource_path('views/components/ui/post-card.blade.php'));
+
+        $this->assertStringContainsString('wire:target="submitPost,imageFiles"', $homeFeed);
+        $this->assertStringContainsString('Đang đăng...', $homeFeed);
+        $this->assertStringContainsString('wire:target="submitMessage"', $messages);
+        $this->assertStringContainsString('wire:target="markAllAsRead"', $notifications);
+        $this->assertStringContainsString('wire:target="toggleLike({{ $post->id }})"', $postCard);
+        $this->assertStringContainsString('wire:target="toggleSave({{ $post->id }})"', $postCard);
     }
 }

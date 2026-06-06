@@ -26,6 +26,7 @@ use App\Http\Controllers\Admin\UserManagementController;
 use App\Http\Controllers\Admin\VerificationActionController;
 use App\Http\Controllers\Admin\VerificationEvidenceController;
 use App\Http\Controllers\MediaController;
+use App\Http\Controllers\UserFollowController;
 use App\Http\Middleware\EnsureAdminAccess;
 use App\Models\AuditLog;
 use App\Models\BlockedUser;
@@ -103,6 +104,12 @@ Route::middleware(['auth', 'active.account', 'verified.identity'])->group(functi
 
         return view('app.profile', ['user' => $user]);
     })->name('profile.show');
+
+    Route::post('users/{user}/follow', [UserFollowController::class, 'store'])
+        ->name('users.follow');
+
+    Route::delete('users/{user}/follow', [UserFollowController::class, 'destroy'])
+        ->name('users.unfollow');
 
     Route::get('app/settings/{section?}/{subSection?}', function (?string $section = 'index', ?string $subSection = null) {
         $user = Auth::user();
