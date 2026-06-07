@@ -38,7 +38,7 @@ class EvidenceAnalyzerManager
             }
         }
 
-        $provider = config('ai-verification.provider', 'mock');
+        $provider = config('ai-verification.provider', 'local_hybrid');
         $analyzer = $this->resolveProvider($provider);
 
         try {
@@ -117,7 +117,7 @@ class EvidenceAnalyzerManager
             'local_hybrid' => $this->localHybridAnalyzer,
             'gemini_flash' => $this->resolveExternalProvider('gemini_flash'),
             'openrouter' => $this->resolveExternalProvider('openrouter'),
-            default => $this->mockAnalyzer,
+            default => $this->localHybridAnalyzer,
         };
     }
 
@@ -144,7 +144,7 @@ class EvidenceAnalyzerManager
         return match ($provider) {
             'gemini_flash' => $this->geminiAnalyzer,
             'openrouter' => $this->openRouterAnalyzer,
-            default => $this->mockAnalyzer,
+            default => $this->localHybridAnalyzer,
         };
     }
 }

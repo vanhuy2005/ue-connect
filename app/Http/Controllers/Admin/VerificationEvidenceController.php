@@ -7,13 +7,14 @@ use App\Models\VerificationEvidence;
 use App\Services\AuditLogService;
 use Illuminate\Support\Facades\Storage;
 use Symfony\Component\HttpFoundation\BinaryFileResponse;
+use Symfony\Component\HttpFoundation\Response;
 
 class VerificationEvidenceController extends Controller
 {
     /**
      * Stream a private verification evidence file securely for admin review.
      */
-    public function show(VerificationEvidence $evidence): BinaryFileResponse
+    public function show(VerificationEvidence $evidence): Response
     {
         // 1. Authorization: check if the authenticated user has the 'review_verification' permission
         if (! auth()->user() || ! auth()->user()->can('review_verification')) {
@@ -46,9 +47,27 @@ class VerificationEvidenceController extends Controller
             ]
         );
 
-        $filePath = Storage::disk($mediaFile->disk)->path($mediaFile->path);
+        $disk = $mediaFile->disk;
+        $path = $mediaFile->path;
 
-        return response()->file($filePath, [
+        // Local storage can return direct BinaryFileResponse
+        if ($disk === 'local' || $disk === 'private' || $disk === 'public') {
+            $filePath = Storage::disk($disk)->path($path);
+
+            return response()->file($filePath, [
+                'Content-Type' => $mediaFile->mime_type,
+                'Content-Disposition' => 'inline; filename="'.$mediaFile->original_name.'"',
+            ]);
+        }
+
+        // Cloud storage stream download
+        return response()->stream(function () use ($disk, $path) {
+            $stream = Storage::disk($disk)->readStream($path);
+            if ($stream) {
+                fpassthru($stream);
+                fclose($stream);
+            }
+        }, 200, [
             'Content-Type' => $mediaFile->mime_type,
             'Content-Disposition' => 'inline; filename="'.$mediaFile->original_name.'"',
         ]);

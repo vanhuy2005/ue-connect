@@ -7,6 +7,14 @@
     'commentCount' => 0,
     'editingPostId' => null,
     'editingBody' => '',
+    'showQuickFollow' => false,
+    'showFollowCheck' => false,
+    'repostCount' => 0,
+    'isReposted' => false,
+    'repostedBy' => null,
+    'repostedAt' => null,
+    'feedItemKey' => null,
+    'showRepostAction' => false,
 ])
 
 @php
@@ -18,6 +26,7 @@
     $postType = $post->post_type?->value ?? 'standard';
     $opportunity = $post->opportunityDetail;
     $mediaUrlAction = app(\App\Actions\Media\GenerateMediaUrlAction::class);
+    $reposterName = $repostedBy?->profile?->display_name ?? $repostedBy?->name;
     $mediaItems = $post->relationLoaded('media')
         ? $post->media->where('status', 'ready')->values()
         : $post->media()->where('status', 'ready')->with('variants')->get();
@@ -36,14 +45,51 @@
 
 <div
     class="ue-post-card ue-post-card--interactive"
-    wire:key="post-card-{{ $post->id }}"
+    wire:key="post-card-{{ $feedItemKey ?? $post->id }}"
 >
+    @if ($repostedBy)
+        <div class="flex items-center gap-1.5 px-4 pt-3 text-[11px] font-bold text-slate-400 sm:px-5">
+            <x-ui.icon name="repost" size="xs" class="text-slate-400" />
+            <span>{{ $reposterName }} đã đăng lại</span>
+            @if ($repostedAt)
+                <span class="font-semibold">· {{ $repostedAt->diffForHumans() }}</span>
+            @endif
+        </div>
+    @endif
+
     <div class="ue-post-card__body">
         {{-- Left Avatar Column --}}
         <div class="flex-shrink-0">
-            <a href="{{ $authorProfileUrl }}" class="block rounded-full focus:outline-none focus:ring-2 focus:ring-ue-brand/30" aria-label="Xem trang cá nhân của {{ $author->name }}">
-                <x-ui.avatar :user="$author" size="md" />
-            </a>
+            <div class="relative">
+                <a href="{{ $authorProfileUrl }}" class="block rounded-full focus:outline-none focus:ring-2 focus:ring-ue-brand/30" aria-label="Xem trang cá nhân của {{ $author->name }}">
+                    <x-ui.avatar :user="$author" size="md" />
+                </a>
+                @if ($showQuickFollow)
+                    <button
+                        type="button"
+                        wire:click="openQuickFollowModal({{ $author->id }})"
+                        wire:loading.attr="disabled"
+                        wire:target="openQuickFollowModal({{ $author->id }})"
+                        class="absolute -bottom-1 -right-1 bg-white text-slate-700 w-5 h-5 rounded-full flex items-center justify-center border border-slate-200 hover:scale-110 active:scale-95 transition-all shadow-xs z-10"
+                        title="Theo dõi nhanh {{ $author->name }}"
+                        aria-label="Theo dõi nhanh {{ $author->name }}"
+                    >
+                        <x-ui.icon name="plus" size="xxs" class="text-slate-750 font-bold" />
+                    </button>
+                @elseif ($showFollowCheck)
+                    <button
+                        type="button"
+                        wire:click="openQuickFollowModal({{ $author->id }})"
+                        wire:loading.attr="disabled"
+                        wire:target="openQuickFollowModal({{ $author->id }})"
+                        class="absolute -bottom-1 -right-1 bg-white text-slate-700 w-5 h-5 rounded-full flex items-center justify-center border border-slate-200 hover:scale-110 active:scale-95 transition-all shadow-xs z-10"
+                        title="Đang theo dõi {{ $author->name }}"
+                        aria-label="Đang theo dõi {{ $author->name }}"
+                    >
+                        <x-ui.icon name="check" size="xxs" class="text-slate-750 font-bold" />
+                    </button>
+                @endif
+            </div>
         </div>
 
         {{-- Right Content Column --}}
@@ -311,6 +357,8 @@
                     :selected="$isLiked"
                     danger="true"
                     wireClick="toggleLike({{ $post->id }})"
+                    wire:loading.attr="disabled"
+                    wire:target="toggleLike({{ $post->id }})"
                 />
 
                 {{-- Comments Link --}}
@@ -327,7 +375,23 @@
                     icon="send"
                     label="Chia sẻ"
                     wireClick="startShare({{ $post->id }})"
+                    wire:loading.attr="disabled"
+                    wire:target="startShare({{ $post->id }})"
                 />
+
+                {{-- Repost --}}
+                @if ($showRepostAction && ! $isOwner)
+                    <x-ui.post-action-button
+                        icon="repost"
+                        activeIcon="repost"
+                        label="Đăng lại"
+                        :count="$repostCount"
+                        :selected="$isReposted"
+                        wireClick="toggleRepost({{ $post->id }})"
+                        wire:loading.attr="disabled"
+                        wire:target="toggleRepost({{ $post->id }})"
+                    />
+                @endif
 
                 {{-- Save Toggle --}}
                 <div class="ml-auto">
@@ -337,6 +401,8 @@
                         label="Lưu"
                         :selected="$isSaved"
                         wireClick="toggleSave({{ $post->id }})"
+                        wire:loading.attr="disabled"
+                        wire:target="toggleSave({{ $post->id }})"
                     />
                 </div>
             </div>

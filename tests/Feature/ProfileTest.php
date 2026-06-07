@@ -3,7 +3,10 @@
 namespace Tests\Feature;
 
 use App\Enums\AccountStatus;
+use App\Enums\ConnectionStatus;
+use App\Enums\GreetingStatus;
 use App\Models\User;
+use Database\Seeders\Reference\AccessControlReferenceSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Livewire\Volt\Volt;
 use Tests\TestCase;
@@ -100,5 +103,84 @@ class ProfileTest extends TestCase
             ->assertNoRedirect();
 
         $this->assertNotNull($user->fresh());
+    }
+
+    public function test_profile_connection_actions(): void
+    {
+        $this->artisan('db:seed', ['--class' => AccessControlReferenceSeeder::class]);
+
+        $user = User::factory()->create([
+            'account_status' => AccountStatus::ACTIVE,
+        ]);
+        $user->assignRole('student');
+        $user->profile()->create([
+            'display_name' => $user->name,
+            'role_type' => 'student',
+            'profile_status' => 'complete',
+            'discoverable' => true,
+        ]);
+
+        $otherUser = User::factory()->create([
+            'account_status' => AccountStatus::ACTIVE,
+        ]);
+        $otherUser->assignRole('student');
+        $otherUser->profile()->create([
+            'display_name' => $otherUser->name,
+            'role_type' => 'student',
+            'profile_status' => 'complete',
+            'discoverable' => true,
+        ]);
+
+        $this->actingAs($user);
+
+        // Test none state (initiate greeting)
+        $component = Volt::test('pages.app.profile', ['user' => $otherUser])
+            ->assertSet('connectionStatus', 'none')
+            ->call('sendGreeting')
+            ->assertSet('connectionStatus', 'pending_sent');
+
+        $this->assertDatabaseHas('greetings', [
+            'sender_id' => $user->id,
+            'receiver_id' => $otherUser->id,
+            'status' => GreetingStatus::PENDING,
+        ]);
+
+        // Test cancel greeting
+        $component->call('cancelGreeting')
+            ->assertSet('connectionStatus', 'none');
+
+        $this->assertDatabaseHas('greetings', [
+            'sender_id' => $user->id,
+            'receiver_id' => $otherUser->id,
+            'status' => GreetingStatus::CANCELLED,
+        ]);
+
+        // Re-send greeting
+        $component->call('sendGreeting')
+            ->assertSet('connectionStatus', 'pending_sent');
+
+        // Login as otherUser to accept greeting
+        $this->actingAs($otherUser);
+
+        $otherComponent = Volt::test('pages.app.profile', ['user' => $user])
+            ->assertSet('connectionStatus', 'pending_received')
+            ->call('acceptGreeting')
+            ->assertSet('connectionStatus', 'connected');
+
+        $this->assertDatabaseHas('connections', [
+            'user_one_id' => min($user->id, $otherUser->id),
+            'user_two_id' => max($user->id, $otherUser->id),
+            'status' => ConnectionStatus::ACTIVE,
+        ]);
+
+        // Unfriend (remove connection)
+        $otherComponent->call('removeConnection')
+            ->assertSet('connectionStatus', 'none');
+
+        $this->assertSoftDeleted('connections', [
+            'user_one_id' => min($user->id, $otherUser->id),
+            'user_two_id' => max($user->id, $otherUser->id),
+            'status' => ConnectionStatus::REMOVED,
+        ]);
     }
 }

@@ -11,6 +11,7 @@ import { initOptimisticActions } from './optimistic-actions';
 import { initLayoutGuards } from './layout-guards';
 import { initReducedMotion } from './reduced-motion';
 import { initPageLoading } from './page-loading';
+import { initLivewireRequestFeedback } from './livewire-request-feedback';
 import { initCustomSelects } from './custom-select';
 
 function initAllUI() {
@@ -36,6 +37,7 @@ function initAllUI() {
     initToastSystem();
     initOptimisticActions();
     initPageLoading();
+    initLivewireRequestFeedback();
     initCustomSelects();
     initLayoutGuards();
 

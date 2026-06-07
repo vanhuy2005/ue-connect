@@ -135,7 +135,9 @@ new #[Layout('layouts.app')] class extends Component
             'evidence_notes.*' => ['nullable', 'string', 'max:500'],
         ]);
 
-        DB::transaction(function () use ($user) {
+        $privateDisk = config('media.private_disk', 'private');
+
+        DB::transaction(function () use ($user, $privateDisk) {
             // Update Verification Request
             $this->request->update([
                 'status' => VerificationStatus::PENDING_REVIEW,
@@ -151,11 +153,11 @@ new #[Layout('layouts.app')] class extends Component
             // Save new evidences
             foreach ($this->evidence_files as $index => $file) {
                 if ($file) {
-                    $path = $file->store('verifications/' . $user->id, 'private');
+                    $path = $file->store('verifications/' . $user->id, $privateDisk);
 
                     $mediaFile = MediaFile::create([
                         'owner_id' => $user->id,
-                        'disk' => 'private',
+                        'disk' => $privateDisk,
                         'path' => $path,
                         'original_name' => $file->getClientOriginalName(),
                         'mime_type' => $file->getMimeType(),

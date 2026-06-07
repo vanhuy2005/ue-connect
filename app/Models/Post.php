@@ -2,6 +2,8 @@
 
 namespace App\Models;
 
+use App\Enums\CommunityMemberStatus;
+use App\Enums\ConnectionStatus;
 use App\Enums\PostStatus;
 use App\Enums\PostType;
 use App\Enums\PostVisibility;
@@ -49,6 +51,8 @@ class Post extends Model
     {
         return [
             'post_type' => PostType::class,
+            'user_id' => 'integer',
+            'scope_id' => 'integer',
             'visibility' => PostVisibility::class,
             'status' => PostStatus::class,
             'metadata' => 'array',
@@ -72,6 +76,47 @@ class Post extends Model
     public function scopeHomeFeed(Builder $query): Builder
     {
         return $query->whereNull('scope_type');
+    }
+
+    /**
+     * Scope posts visible to the given viewer.
+     */
+    public function scopeVisibleTo(Builder $query, User $viewer): Builder
+    {
+        if (! $viewer->isActive()) {
+            return $query->whereRaw('1 = 0');
+        }
+
+        $friendUserIds = Connection::where(function (Builder $query) use ($viewer): void {
+            $query->where('user_one_id', $viewer->id)
+                ->orWhere('user_two_id', $viewer->id);
+        })
+            ->where('status', ConnectionStatus::ACTIVE)
+            ->get(['user_one_id', 'user_two_id'])
+            ->map(fn (Connection $connection): int => $connection->user_one_id === $viewer->id
+            ? (int) $connection->user_two_id
+            : (int) $connection->user_one_id)
+            ->all();
+
+        $communityIds = CommunityMember::where('user_id', $viewer->id)
+            ->where('status', CommunityMemberStatus::Active->value)
+            ->pluck('community_id')
+            ->map(fn ($id): int => (int) $id)
+            ->all();
+
+        return $query->where(function (Builder $query) use ($viewer, $friendUserIds, $communityIds): void {
+            $query->where('user_id', $viewer->id)
+                ->orWhere('visibility', PostVisibility::VERIFIED_USERS->value)
+                ->orWhere(function (Builder $query) use ($friendUserIds): void {
+                    $query->where('visibility', PostVisibility::CONNECTIONS_ONLY->value)
+                        ->whereIn('user_id', $friendUserIds);
+                })
+                ->orWhere(function (Builder $query) use ($communityIds): void {
+                    $query->where('visibility', PostVisibility::COMMUNITY->value)
+                        ->where('scope_type', 'community')
+                        ->whereIn('scope_id', $communityIds);
+                });
+        });
     }
 
     /**
@@ -136,6 +181,16 @@ class Post extends Model
     }
 
     /**
+     * Get the reposts of the post.
+     *
+     * @return HasMany<PostRepost, $this>
+     */
+    public function reposts(): HasMany
+    {
+        return $this->hasMany(PostRepost::class);
+    }
+
+    /**
      * Get the hide exclusions of the post.
      *
      * @return HasMany<PostHide, $this>
@@ -145,13 +200,13 @@ class Post extends Model
         return $this->hasMany(PostHide::class);
     }
 
-    /**
-     * Get the opportunity details if this is an opportunity post.
-     *
-     * @return HasOne<OpportunityDetail, $this>
-     */
     public function opportunityDetail(): HasOne
     {
         return $this->hasOne(OpportunityDetail::class);
+    }
+
+    public function community(): BelongsTo
+    {
+        return $this->belongsTo(Community::class, 'scope_id');
     }
 }

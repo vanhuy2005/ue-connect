@@ -1,6 +1,8 @@
 @props([
     'body' => '',
     'visibility' => 'verified_users',
+    'selectedCommunityId' => null,
+    'communities' => collect(),
 ])
 
 <div
@@ -68,13 +70,20 @@
             </div>
 
             <div class="flex flex-col sm:flex-row sm:items-center justify-between pt-4 border-t border-slate-100 gap-3">
-                <div class="flex items-center gap-3 justify-between sm:justify-start">
+                <div class="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-start">
                     {{-- Character counter --}}
                     <span class="text-xxs text-slate-400 font-semibold">
                         {{ mb_strlen($body) }}/3000
                     </span>
 
                     {{-- Visibility chip --}}
+                    @php
+                        $visibilityLabel = match ($visibility) {
+                            'connections_only' => 'Chỉ bạn bè',
+                            'community' => 'Cộng đồng',
+                            default => 'Chỉ sinh viên xác thực',
+                        };
+                    @endphp
                     <div class="relative">
                         <label for="modal-post-visibility" class="sr-only">Quyền xem</label>
                         <select
@@ -83,16 +92,35 @@
                             class="absolute inset-0 w-full h-full opacity-0 z-10 cursor-pointer"
                         >
                             <option value="verified_users">Chỉ sinh viên xác thực</option>
-                            <option value="connections_only" disabled>Bạn bè (Sắp ra mắt)</option>
-                            <option value="community" disabled>Cộng đồng (Sắp ra mắt)</option>
+                            <option value="connections_only">Chỉ bạn bè</option>
+                            <option value="community">Chỉ cộng đồng</option>
                         </select>
                         <div class="flex items-center gap-1.5 px-2.5 py-1 bg-slate-50 text-slate-500 rounded-lg select-none pointer-events-none">
                             <x-ui.icon name="shield-check" size="xs" class="text-ue-brand fill-ue-brand/10" />
-                            <span class="hidden sm:inline text-xxs font-bold">Chỉ sinh viên xác thực</span>
-                            <span class="sm:hidden text-[10px] font-bold">Xác thực</span>
+                            <span class="hidden sm:inline text-xxs font-bold">{{ $visibilityLabel }}</span>
+                            <span class="sm:hidden text-[10px] font-bold">{{ $visibility === 'verified_users' ? 'Xác thực' : $visibilityLabel }}</span>
                             <x-ui.icon name="chevron-down" size="xs" class="text-slate-400" />
                         </div>
                     </div>
+
+                    @if ($visibility === 'community')
+                        <div>
+                            <label for="modal-post-community" class="sr-only">Chọn cộng đồng</label>
+                            <select
+                                id="modal-post-community"
+                                wire:model="selectedCommunityId"
+                                class="w-full rounded-lg border border-slate-200 bg-slate-50 px-2.5 py-1 text-xxs font-bold text-slate-600 focus:border-ue-brand/40 focus:ring-ue-brand/20"
+                            >
+                                <option value="">Chọn cộng đồng</option>
+                                @foreach ($communities as $community)
+                                    <option value="{{ $community->id }}">{{ $community->name }}</option>
+                                @endforeach
+                            </select>
+                            @error('selectedCommunityId')
+                                <p class="text-xs text-red-600 mt-1 font-semibold">{{ $message }}</p>
+                            @enderror
+                        </div>
+                    @endif
                 </div>
 
                 <div class="flex items-center justify-end gap-2.5">

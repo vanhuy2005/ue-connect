@@ -178,7 +178,7 @@ new class extends Component
         return Post::where('scope_type', 'community')
             ->whereIn('scope_id', $joinedIds)
             ->whereIn('status', [PostStatus::PUBLISHED->value, PostStatus::EDITED->value])
-            ->with(['user.profile', 'media.variants'])
+            ->with(['user.profile', 'media.variants', 'community'])
             ->withCount([
                 'likes',
                 'comments as published_comments_count' => function ($query): void {
@@ -353,7 +353,7 @@ new class extends Component
 };
 ?>
 
-<div class="flex flex-col lg:flex-row min-h-screen bg-[#f0f2f5] w-full">
+<div class="flex flex-col lg:flex-row min-h-screen bg-white w-full">
     
     {{-- 1. Desktop Left Sidebar --}}
     <aside class="hidden lg:flex flex-col w-80 bg-white border-r border-slate-200 flex-shrink-0 p-4 sticky top-0 h-screen overflow-y-auto">
@@ -376,18 +376,18 @@ new class extends Component
         {{-- Navigation Menu --}}
         <nav class="space-y-1 mb-6">
             <button wire:click="setSubTab('feed')"
-                class="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-bold transition-all {{ $subTab === 'feed' ? 'bg-ue-brand-soft text-ue-brand' : 'text-slate-700 hover:bg-slate-50' }}">
-                <x-ui.icon name="message-square" size="xs" class="{{ $subTab === 'feed' ? 'text-ue-brand' : 'text-slate-500' }}" />
+                class="ue-sidebar-subnav-link {{ $subTab === 'feed' ? 'active' : '' }}">
+                <x-ui.icon name="message-square" size="xs" />
                 <span class="flex-1 text-left">Bảng feed của bạn</span>
             </button>
             <button wire:click="setSubTab('discover')"
-                class="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-bold transition-all {{ $subTab === 'discover' ? 'bg-ue-brand-soft text-ue-brand' : 'text-slate-700 hover:bg-slate-50' }}">
-                <x-ui.icon name="users" size="xs" class="{{ $subTab === 'discover' ? 'text-ue-brand' : 'text-slate-500' }}" />
+                class="ue-sidebar-subnav-link {{ $subTab === 'discover' ? 'active' : '' }}">
+                <x-ui.icon name="users" size="xs" />
                 <span class="flex-1 text-left">Khám phá</span>
             </button>
             <button wire:click="setSubTab('mine')"
-                class="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-bold transition-all {{ $subTab === 'mine' ? 'bg-ue-brand-soft text-ue-brand' : 'text-slate-700 hover:bg-slate-50' }}">
-                <x-ui.icon name="user" size="xs" class="{{ $subTab === 'mine' ? 'text-ue-brand' : 'text-slate-500' }}" />
+                class="ue-sidebar-subnav-link {{ $subTab === 'mine' ? 'active' : '' }}">
+                <x-ui.icon name="user" size="xs" />
                 <span class="flex-1 text-left">Nhóm của bạn</span>
             </button>
         </nav>
@@ -412,8 +412,8 @@ new class extends Component
                 @forelse ($this->joinedCommunities as $c)
                     <a href="{{ route('community.show', $c->id) }}" wire:navigate
                         class="flex items-center gap-3 p-2 rounded-xl hover:bg-slate-100 transition group">
-                        <div class="w-9 h-9 rounded-lg bg-gradient-to-br from-ue-brand/20 to-ue-brand/5 border border-slate-150 flex items-center justify-center text-ue-brand font-black text-sm flex-shrink-0 group-hover:scale-105 transition-transform duration-200">
-                            {{ strtoupper(mb_substr($c->name, 0, 2)) }}
+                        <div class="w-9 h-9 rounded-lg bg-gradient-to-br from-ue-brand/20 to-ue-brand/5 border border-slate-150 flex items-center justify-center text-ue-brand flex-shrink-0 group-hover:scale-105 transition-transform duration-200">
+                            <x-ui.icon name="users" size="sm" class="text-ue-brand" />
                         </div>
                         <div class="min-w-0 flex-1">
                             <p class="text-xs font-bold text-slate-800 truncate group-hover:text-ue-brand transition-colors">{{ $c->name }}</p>
@@ -495,12 +495,12 @@ new class extends Component
                         <article class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden" wire:key="post-feed-{{ $post->id }}">
                             {{-- Community Source Header --}}
                             @if ($post->scope_id && $post->scope_type === 'community')
-                                @php $postCommunity = \App\Models\Community::find($post->scope_id); @endphp
+                                @php $postCommunity = $post->community; @endphp
                                 @if ($postCommunity)
                                     <div class="px-4 py-2 bg-slate-50/70 border-b border-slate-150 flex items-center justify-between">
                                         <div class="flex items-center gap-2">
-                                            <div class="w-5 h-5 rounded bg-ue-brand-soft text-ue-brand flex items-center justify-center text-[10px] font-black">
-                                                {{ strtoupper(mb_substr($postCommunity->name, 0, 1)) }}
+                                            <div class="w-5 h-5 rounded bg-ue-brand-soft text-ue-brand flex items-center justify-center">
+                                                <x-ui.icon name="users" size="xxs" class="text-ue-brand" />
                                             </div>
                                             <a href="{{ route('community.show', $postCommunity->id) }}" wire:navigate
                                                 class="text-xs font-bold text-slate-700 hover:text-ue-brand truncate max-w-[200px] sm:max-w-sm">
@@ -589,13 +589,13 @@ new class extends Component
                         <div class="bg-white border border-slate-200 rounded-2xl overflow-hidden hover:shadow-md transition duration-200 flex flex-col group relative">
                             {{-- Header Gradient Fallback --}}
                             <div class="h-20 bg-gradient-to-br from-ue-brand/35 to-ue-brand/10 relative flex items-center justify-center">
-                                <span class="text-3xl font-black text-ue-brand/20 select-none">{{ strtoupper(mb_substr($c->name, 0, 2)) }}</span>
+                                <x-ui.icon name="users" class="w-8 h-8 text-ue-brand/20 select-none" />
                             </div>
 
                             <div class="p-4 flex-1 flex flex-col pt-6 relative">
                                 {{-- Overlapping Group Avatar --}}
-                                <div class="w-12 h-12 rounded-xl bg-ue-brand text-white border-2 border-white shadow-sm flex items-center justify-center text-lg font-black absolute -top-6 left-4">
-                                    {{ strtoupper(mb_substr($c->name, 0, 2)) }}
+                                <div class="w-12 h-12 rounded-xl bg-ue-brand text-white border-2 border-white shadow-sm flex items-center justify-center absolute -top-6 left-4">
+                                    <x-ui.icon name="users" size="sm" class="text-white" />
                                 </div>
 
                                 <div class="min-w-0 mb-2 mt-1">
@@ -636,13 +636,19 @@ new class extends Component
                                         </a>
                                     @elseif ($c->join_policy?->value === 'open')
                                         <button wire:click="joinCommunity({{ $c->id }})"
-                                            class="px-3.5 py-1.5 bg-ue-brand hover:bg-opacity-95 text-white rounded-xl text-xs font-bold transition shadow-2xs">
-                                            Tham gia
+                                            wire:loading.attr="disabled"
+                                            wire:target="joinCommunity({{ $c->id }})"
+                                            class="px-3.5 py-1.5 bg-ue-brand hover:bg-opacity-95 text-white rounded-xl text-xs font-bold transition shadow-2xs disabled:opacity-60 disabled:cursor-not-allowed">
+                                            <span wire:loading.remove wire:target="joinCommunity({{ $c->id }})">Tham gia</span>
+                                            <span wire:loading wire:target="joinCommunity({{ $c->id }})">Đang xử lý...</span>
                                         </button>
                                     @else
                                         <button wire:click="joinCommunity({{ $c->id }})"
-                                            class="px-3.5 py-1.5 bg-ue-brand hover:bg-opacity-95 text-white rounded-xl text-xs font-bold transition shadow-2xs">
-                                            Gửi yêu cầu
+                                            wire:loading.attr="disabled"
+                                            wire:target="joinCommunity({{ $c->id }})"
+                                            class="px-3.5 py-1.5 bg-ue-brand hover:bg-opacity-95 text-white rounded-xl text-xs font-bold transition shadow-2xs disabled:opacity-60 disabled:cursor-not-allowed">
+                                            <span wire:loading.remove wire:target="joinCommunity({{ $c->id }})">Gửi yêu cầu</span>
+                                            <span wire:loading wire:target="joinCommunity({{ $c->id }})">Đang gửi...</span>
                                         </button>
                                     @endif
                                 </div>
@@ -687,8 +693,11 @@ new class extends Component
                                             Xem nhóm
                                         </a>
                                         <button wire:click="cancelRequest({{ $req->id }})"
-                                            class="px-2.5 py-1.5 bg-red-50 text-red-700 hover:bg-red-100 text-[10px] font-bold rounded-lg transition border border-red-200">
-                                            Hủy yêu cầu
+                                            wire:loading.attr="disabled"
+                                            wire:target="cancelRequest({{ $req->id }})"
+                                            class="px-2.5 py-1.5 bg-red-50 text-red-700 hover:bg-red-100 text-[10px] font-bold rounded-lg transition border border-red-200 disabled:opacity-60">
+                                            <span wire:loading.remove wire:target="cancelRequest({{ $req->id }})">Hủy yêu cầu</span>
+                                            <span wire:loading wire:target="cancelRequest({{ $req->id }})">Đang hủy...</span>
                                         </button>
                                     </div>
                                 </div>
@@ -710,8 +719,8 @@ new class extends Component
                     @forelse ($this->managedCommunities as $c)
                         <div class="bg-white border border-slate-200 rounded-2xl p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4 hover:shadow-2xs transition mb-3">
                             <div class="flex items-center gap-3">
-                                <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-ue-brand/20 to-ue-brand/5 flex items-center justify-center text-ue-brand font-black text-base flex-shrink-0">
-                                    {{ strtoupper(mb_substr($c->name, 0, 2)) }}
+                                <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-ue-brand/20 to-ue-brand/5 flex items-center justify-center text-ue-brand flex-shrink-0">
+                                    <x-ui.icon name="users" size="sm" class="text-ue-brand" />
                                 </div>
                                 <div class="min-w-0">
                                     <a href="{{ route('community.show', $c->id) }}" wire:navigate
@@ -766,8 +775,8 @@ new class extends Component
                         @forelse ($this->joinedCommunities as $c)
                             <div class="bg-white border border-slate-200 rounded-2xl p-4 flex items-center justify-between hover:shadow-2xs transition">
                                 <div class="flex items-center gap-3 min-w-0">
-                                    <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-ue-brand/20 to-ue-brand/5 flex items-center justify-center text-ue-brand font-black text-base flex-shrink-0">
-                                        {{ strtoupper(mb_substr($c->name, 0, 2)) }}
+                                    <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-ue-brand/20 to-ue-brand/5 flex items-center justify-center text-ue-brand flex-shrink-0">
+                                        <x-ui.icon name="users" size="sm" class="text-ue-brand" />
                                     </div>
                                     <div class="min-w-0 flex-1">
                                         <a href="{{ route('community.show', $c->id) }}" wire:navigate
@@ -891,8 +900,11 @@ new class extends Component
                             Hủy bỏ
                         </button>
                         <button wire:click="submitSuggestion"
-                            class="px-5 py-2 bg-ue-brand hover:bg-opacity-95 text-white text-xs font-bold rounded-xl transition shadow-sm">
-                            Gửi đề xuất
+                            wire:loading.attr="disabled"
+                            wire:target="submitSuggestion"
+                            class="px-5 py-2 bg-ue-brand hover:bg-opacity-95 text-white text-xs font-bold rounded-xl transition shadow-sm disabled:opacity-60 disabled:cursor-not-allowed">
+                            <span wire:loading.remove wire:target="submitSuggestion">Gửi đề xuất</span>
+                            <span wire:loading wire:target="submitSuggestion">Đang gửi...</span>
                         </button>
                     </div>
                 </div>
@@ -907,15 +919,13 @@ new class extends Component
                         <div class="bg-white border border-slate-150 rounded-2xl overflow-hidden shadow-2xs mt-4">
                             {{-- cover mockup --}}
                             <div class="h-16 bg-gradient-to-br from-ue-brand/30 to-ue-brand/10 flex items-center justify-center">
-                                <span class="text-2xl font-black text-ue-brand/20 select-none">
-                                    {{ strtoupper(mb_substr($suggestName ?: 'AB', 0, 2)) }}
-                                </span>
+                                <x-ui.icon name="users" class="w-6 h-6 text-ue-brand/20 select-none" />
                             </div>
                             
                             <div class="p-3 pt-5 relative">
                                 {{-- Overlapping logo mockup --}}
-                                <div class="w-9 h-9 rounded-lg bg-ue-brand text-white border-2 border-white shadow-sm flex items-center justify-center text-sm font-black absolute -top-[18px] left-3">
-                                    {{ strtoupper(mb_substr($suggestName ?: 'AB', 0, 2)) }}
+                                <div class="w-9 h-9 rounded-lg bg-ue-brand text-white border-2 border-white shadow-sm flex items-center justify-center absolute -top-[18px] left-3">
+                                    <x-ui.icon name="users" size="xs" class="text-white" />
                                 </div>
 
                                 <h4 class="font-bold text-xs text-slate-800 truncate mt-1">
@@ -1024,9 +1034,10 @@ new class extends Component
                     <button type="button" wire:click="$set('showShareModal', false)" class="px-4 py-2 text-xs font-bold text-slate-500 hover:text-slate-700 transition">
                         Hủy
                     </button>
-                    <button type="button" wire:click="executeShare" @disabled(!$selectedShareUserId)
+                    <button type="button" wire:click="executeShare" wire:loading.attr="disabled" wire:target="executeShare" @disabled(!$selectedShareUserId)
                         class="px-4 py-2 bg-ue-brand text-white text-xs font-bold rounded-xl transition hover:bg-opacity-95 disabled:opacity-50 disabled:cursor-not-allowed shadow-2xs">
-                        Gửi tin nhắn
+                        <span wire:loading.remove wire:target="executeShare">Gửi tin nhắn</span>
+                        <span wire:loading wire:target="executeShare">Đang gửi...</span>
                     </button>
                 </div>
             </div>

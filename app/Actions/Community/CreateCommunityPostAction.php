@@ -45,8 +45,8 @@ class CreateCommunityPostAction
                 'scope_id' => $community->id,
                 'community_post_type' => $data['community_post_type'] ?? 'standard_post',
                 'body' => $data['body'],
-                'visibility' => PostVisibility::Public,
-                'status' => PostStatus::Published,
+                'visibility' => PostVisibility::COMMUNITY,
+                'status' => PostStatus::PUBLISHED,
                 'published_at' => now(),
             ]);
 

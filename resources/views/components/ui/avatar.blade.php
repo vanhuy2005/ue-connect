@@ -25,15 +25,15 @@
 ])
 
 @php
-// When a User model is provided, resolve src and fallback automatically.
+$displayName = '';
 if ($user) {
     $profile = $user->profile;
     $avatarMedia = $profile?->avatar()->first();
     if ($avatarMedia) {
         $src = app(\App\Actions\Media\GenerateMediaUrlAction::class)->execute($avatarMedia, 'thumb', auth()->user());
     }
+    $displayName = $profile?->display_name ?? $user->name ?? '';
     if (! $fallback) {
-        $displayName = $profile?->display_name ?? $user->name ?? '';
         // Build up to 2 initials from the name
         $parts = array_filter(explode(' ', trim($displayName)));
         $fallback = count($parts) >= 2
@@ -42,6 +42,11 @@ if ($user) {
     }
     if (! $alt) {
         $alt = $user->name ?? 'Ảnh đại diện';
+    }
+} else {
+    $displayName = $fallback ?? '';
+    if (! $alt) {
+        $alt = $fallback ? "Ảnh đại diện của {$fallback}" : 'Ảnh đại diện';
     }
 }
 
@@ -60,9 +65,18 @@ $shapeClass = match($shape) {
     default          => 'rounded-full',
 };
 
-$initials = $fallback
-    ? strtoupper(mb_substr($fallback, 0, 2))
-    : null;
+// Deterministic color palette based on seed
+$seed = $user?->email ?? $user?->id ?? $displayName ?? $fallback ?? 'guest';
+$palettes = [
+    ['bg' => '#EAEBED', 'fg' => '#8E98A5'], // Cool Slate (matches reference image exactly)
+    ['bg' => '#EEF7FF', 'fg' => '#124874'], // Brand Cerulean
+    ['bg' => '#EFF6FF', 'fg' => '#1D4ED8'], // Info Blue
+    ['bg' => '#F0FDF4', 'fg' => '#16A34A'], // Success Green
+    ['bg' => '#FFFDF5', 'fg' => '#B45309'], // Warning Amber
+    ['bg' => '#F5F3FF', 'fg' => '#6D28D9'], // Soft Indigo/Purple
+];
+$paletteIndex = ($seed === 'guest') ? 0 : (abs(crc32((string) $seed)) % count($palettes));
+$palette = $palettes[$paletteIndex];
 @endphp
 
 
@@ -83,15 +97,13 @@ $initials = $fallback
             class="w-full h-full object-cover"
             loading="lazy"
         />
-    @elseif($initials)
-        <span
-            class="font-semibold text-ue-brand select-none leading-none"
-            aria-hidden="true"
-        >
-            {{ $initials }}
-        </span>
     @else
-        {{-- Default user icon fallback --}}
-        <x-ui.icon name="user" size="{{ $size === 'xs' || $size === 'sm' ? 'xs' : 'sm' }}" class="text-ue-brand opacity-70" aria-hidden="true" />
+        <svg viewBox="0 0 100 100" class="w-full h-full text-current" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+            <rect width="100" height="100" fill="{{ $palette['bg'] }}"/>
+            <!-- Head (rounder vertical oval) -->
+            <ellipse cx="50" cy="38" rx="19" ry="21" fill="{{ $palette['fg'] }}"/>
+            <!-- Body (curved shoulders reaching bottom) -->
+            <path d="M8 105 C8 76 25 63 50 63 C75 63 92 76 92 105 Z" fill="{{ $palette['fg'] }}"/>
+        </svg>
     @endif
 </span>

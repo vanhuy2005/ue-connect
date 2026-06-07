@@ -3,6 +3,7 @@
 namespace App\AI\Evidence\Services;
 
 use App\Enums\EvidenceRiskFlag;
+use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
 use Symfony\Component\Process\Exception\ProcessFailedException;
@@ -21,9 +22,10 @@ class StudentCardOcrService
      */
     public function extractText(string $privateDiskPath): array
     {
-        $engine = config('ai-verification.local_hybrid.ocr_engine', 'tesseract');
+        $engine = config('ai-verification.local_hybrid.ocr_engine', 'ocr_space');
 
         return match ($engine) {
+            'ocr_space' => $this->runOcrSpace($privateDiskPath),
             'paddleocr' => $this->runPaddleOcr($privateDiskPath),
             default => $this->runTesseract($privateDiskPath),
         };
@@ -32,29 +34,128 @@ class StudentCardOcrService
     /**
      * @return array{text: string, engine: string, flags: list<EvidenceRiskFlag>}
      */
-    private function runTesseract(string $privateDiskPath): array
+    private function runOcrSpace(string $privateDiskPath): array
     {
-        $absolutePath = Storage::disk('private')->path($privateDiskPath);
+        $diskName = config('media.private_disk', 'private');
+        $apiKey = config('ai-verification.local_hybrid.ocr_space_api_key');
+        $apiUrl = config('ai-verification.local_hybrid.ocr_space_api_url', 'https://api.ocr.space/parse/image');
 
-        $binary = config('ai-verification.local_hybrid.tesseract_binary', 'tesseract');
-        $langs = config('ai-verification.local_hybrid.tesseract_langs', 'vie+eng');
-        $psm = config('ai-verification.local_hybrid.tesseract_psm', '6');
+        if (empty($apiKey)) {
+            Log::warning('StudentCardOcrService: OCR Space API Key is missing.');
 
-        $process = new Process([
-            $binary,
-            $absolutePath,
-            'stdout',
-            '-l', $langs,
-            '--psm', $psm,
-        ]);
-        $process->setTimeout(30);
+            return [
+                'text' => '',
+                'engine' => 'ocr_space',
+                'flags' => [EvidenceRiskFlag::OcrUnavailable],
+            ];
+        }
 
         try {
+            $fileContents = Storage::disk($diskName)->get($privateDiskPath);
+            if ($fileContents === null) {
+                throw new \Exception("File not found on private storage disk [{$diskName}]: {$privateDiskPath}");
+            }
+
+            $response = Http::timeout(30)
+                ->attach('file', $fileContents, basename($privateDiskPath))
+                ->post($apiUrl, [
+                    'apikey' => $apiKey,
+                    'language' => 'eng',
+                    'OCREngine' => 2,
+                ]);
+
+            if ($response->failed()) {
+                Log::warning('StudentCardOcrService: OCR Space request failed.', [
+                    'status' => $response->status(),
+                    'body' => config('ai-verification.privacy.redact_sensitive_fields_in_logs') ? 'REDACTED' : $response->body(),
+                ]);
+
+                return [
+                    'text' => '',
+                    'engine' => 'ocr_space',
+                    'flags' => [EvidenceRiskFlag::OcrUnavailable],
+                ];
+            }
+
+            $data = $response->json();
+
+            if (! empty($data['IsErroredOnProcessing'])) {
+                Log::warning('StudentCardOcrService: OCR Space processing error.', [
+                    'error' => $data['ErrorMessage'] ?? 'Unknown error',
+                ]);
+
+                return [
+                    'text' => '',
+                    'engine' => 'ocr_space',
+                    'flags' => [EvidenceRiskFlag::OcrUnavailable],
+                ];
+            }
+
+            $text = '';
+            if (! empty($data['ParsedResults']) && is_array($data['ParsedResults'])) {
+                foreach ($data['ParsedResults'] as $result) {
+                    $text .= ($result['ParsedText'] ?? '')."\n";
+                }
+            }
+
+            return [
+                'text' => trim($text),
+                'engine' => 'ocr_space',
+                'flags' => [],
+            ];
+        } catch (\Throwable $e) {
+            Log::warning('StudentCardOcrService: OCR Space service unavailable.', [
+                'error' => $e->getMessage(),
+            ]);
+
+            return [
+                'text' => '',
+                'engine' => 'ocr_space',
+                'flags' => [EvidenceRiskFlag::OcrUnavailable],
+            ];
+        }
+    }
+
+    /**
+     * @return array{text: string, engine: string, flags: list<EvidenceRiskFlag>}
+     */
+    private function runTesseract(string $privateDiskPath): array
+    {
+        $diskName = config('media.private_disk', 'private');
+        $disk = Storage::disk($diskName);
+        $tempFile = null;
+
+        try {
+            if ($diskName === 'private' || $diskName === 'local') {
+                $absolutePath = $disk->path($privateDiskPath);
+            } else {
+                $tempFile = tempnam(sys_get_temp_dir(), 'ocr_');
+                $contents = $disk->get($privateDiskPath);
+                if ($contents === null) {
+                    throw new \Exception("File not found on private storage disk [{$diskName}]: {$privateDiskPath}");
+                }
+                file_put_contents($tempFile, $contents);
+                $absolutePath = $tempFile;
+            }
+
+            $binary = config('ai-verification.local_hybrid.tesseract_binary', 'tesseract');
+            $langs = config('ai-verification.local_hybrid.tesseract_langs', 'vie+eng');
+            $psm = config('ai-verification.local_hybrid.tesseract_psm', '6');
+
+            $process = new Process([
+                $binary,
+                $absolutePath,
+                'stdout',
+                '-l', $langs,
+                '--psm', $psm,
+            ]);
+            $process->setTimeout(30);
+
             $process->mustRun();
 
             $text = trim($process->getOutput());
 
-            return [
+            $result = [
                 'text' => $text,
                 'engine' => 'tesseract',
                 'flags' => [],
@@ -72,7 +173,7 @@ class StudentCardOcrService
                 $flag = EvidenceRiskFlag::OcrLanguageMissing;
             }
 
-            return [
+            $result = [
                 'text' => '',
                 'engine' => 'tesseract',
                 'flags' => [$flag],
@@ -82,12 +183,18 @@ class StudentCardOcrService
                 'error' => $e->getMessage(),
             ]);
 
-            return [
+            $result = [
                 'text' => '',
                 'engine' => 'tesseract',
                 'flags' => [EvidenceRiskFlag::OcrUnavailable],
             ];
+        } finally {
+            if ($tempFile !== null && file_exists($tempFile)) {
+                @unlink($tempFile);
+            }
         }
+
+        return $result;
     }
 
     /**

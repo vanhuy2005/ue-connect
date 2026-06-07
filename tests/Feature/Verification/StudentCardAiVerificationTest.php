@@ -123,6 +123,8 @@ class StudentCardAiVerificationTest extends TestCase
 
     public function test_upload_fallback_is_skipped_by_manager(): void
     {
+        config(['ai-verification.camera_capture_required_for_ai' => true]);
+
         $this->evidence->update(['capture_method' => EvidenceCaptureMethod::UploadFallback]);
 
         $job = new AnalyzeStudentCardEvidenceJob($this->evidence->id);

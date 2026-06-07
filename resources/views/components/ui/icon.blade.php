@@ -259,6 +259,15 @@ $sizeClass = match($size) {
             <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
             @break
 
+        {{-- 🔁 repost / repeat --}}
+        @case('repost')
+        @case('repeat-2')
+            <path d="m17 2 4 4-4 4"></path>
+            <path d="M3 11v-1a4 4 0 0 1 4-4h14"></path>
+            <path d="m7 22-4-4 4-4"></path>
+            <path d="M21 13v1a4 4 0 0 1-4 4H3"></path>
+            @break
+
         {{-- + plus --}}
         @case('plus')
             <line x1="12" y1="5" x2="12" y2="19"></line>
@@ -323,6 +332,13 @@ $sizeClass = match($size) {
             <path d="M7 11V7a5 5 0 0110 0v4"></path>
             @break
 
+        {{-- 🔓 unlock --}}
+        @case('unlock')
+        @case('lock-open')
+            <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
+            <path d="M7 11V7a5 5 0 0 1 9.9-1"></path>
+            @break
+
         {{-- ⭐ star --}}
         @case('star')
             <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon>
@@ -339,6 +355,16 @@ $sizeClass = match($size) {
         @case('copy')
             <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
             <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+            @break
+
+        {{-- 🔗 share / share-2 --}}
+        @case('share-2')
+        @case('share')
+            <circle cx="18" cy="5" r="3"></circle>
+            <circle cx="6" cy="12" r="3"></circle>
+            <circle cx="18" cy="19" r="3"></circle>
+            <line x1="8.59" y1="13.51" x2="15.42" y2="17.49"></line>
+            <line x1="15.41" y1="6.51" x2="8.59" y2="10.49"></line>
             @break
 
         {{-- 🔗 link-external --}}

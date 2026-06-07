@@ -345,6 +345,8 @@ new #[Layout('layouts.app')] class extends Component
             return;
         }
 
+        $privateDisk = config('media.private_disk', 'private');
+
         $this->syncLockedRole();
 
         // Only one active verification request per user
@@ -493,11 +495,11 @@ new #[Layout('layouts.app')] class extends Component
                 $targetExtension = $mimeToExtension[$mimeType] ?? 'jpg';
 
                 $capturedPath = 'verifications/' . $user->id . '/captures/' . Str::uuid() . '.' . $targetExtension;
-                Storage::disk('private')->put($capturedPath, $rawImage);
+                Storage::disk($privateDisk)->put($capturedPath, $rawImage);
                 
                 $capturedMedia = [
                     'owner_id' => $user->id,
-                    'disk' => 'private',
+                    'disk' => $privateDisk,
                     'path' => $capturedPath,
                     'original_name' => 'camera_capture_' . time() . '.' . $targetExtension,
                     'mime_type' => $mimeType ?? 'image/jpeg',
@@ -533,7 +535,7 @@ new #[Layout('layouts.app')] class extends Component
         }
 
         try {
-            DB::transaction(function () use ($user, &$uploadedPaths, $session, $capturedMedia) {
+            DB::transaction(function () use ($user, &$uploadedPaths, $session, $capturedMedia, $privateDisk) {
                 // 1. Create Verification Request
                 $request = VerificationRequest::create([
                     'user_id' => $user->id,
@@ -585,12 +587,12 @@ new #[Layout('layouts.app')] class extends Component
                 // 3. Upload Files & Create Evidences
                 foreach ($this->evidence_files as $index => $file) {
                     if ($file) {
-                        $path = $file->store('verifications/'.$user->id, 'private');
+                        $path = $file->store('verifications/'.$user->id, $privateDisk);
                         $uploadedPaths[] = $path;
 
                         $mediaFile = MediaFile::create([
                             'owner_id' => $user->id,
-                            'disk' => 'private',
+                            'disk' => $privateDisk,
                             'path' => $path,
                             'original_name' => $file->getClientOriginalName(),
                             'mime_type' => $file->getMimeType(),
@@ -603,7 +605,7 @@ new #[Layout('layouts.app')] class extends Component
                         VerificationEvidence::create([
                             'verification_request_id' => $request->id,
                             'media_file_id' => $mediaFile->id,
-                            'evidence_type' => $this->evidence_types[$index] ?? 'other',
+                            'evidence_type' => $this->evidence_types[$index] ?? array_key_first($this->evidenceTypeOptions()),
                             'user_note' => $this->evidence_notes[$index] ?? 'Minh chứng tải lên.',
                             'status' => 'uploaded',
                             'capture_method' => EvidenceCaptureMethod::UploadFallback,
@@ -619,7 +621,7 @@ new #[Layout('layouts.app')] class extends Component
                         VerificationEvidence::create([
                             'verification_request_id' => $request->id,
                             'media_file_id' => null,
-                            'evidence_type' => $this->evidence_types[$index] ?? 'other',
+                            'evidence_type' => $this->evidence_types[$index] ?? array_key_first($this->evidenceTypeOptions()),
                             'evidence_link' => $link,
                             'user_note' => $this->evidence_notes[$index] ?? 'Liên kết minh chứng.',
                             'status' => 'uploaded',
@@ -637,22 +639,28 @@ new #[Layout('layouts.app')] class extends Component
                 if (
                     config('ai-verification.enabled')
                     && $this->role_requested === 'student'
-                    && $this->evidenceMethod === 'camera'
                 ) {
-                    // Find the verification evidence we just created to pass its ID
-                    $evidence = $request->evidences()
-                        ->where('capture_method', EvidenceCaptureMethod::Camera)
-                        ->first();
+                    $cameraRequired = config('ai-verification.camera_capture_required_for_ai', true);
                     
-                    if ($evidence) {
-                        AnalyzeStudentCardEvidenceJob::dispatch($evidence->id)->afterCommit();
+                    if (!$cameraRequired || $this->evidenceMethod === 'camera') {
+                        $evidenceQuery = $request->evidences()->where('evidence_type', 'student_card');
+                        
+                        if ($cameraRequired) {
+                            $evidenceQuery->where('capture_method', EvidenceCaptureMethod::Camera);
+                        }
+                        
+                        $evidence = $evidenceQuery->first();
+                        
+                        if ($evidence) {
+                            AnalyzeStudentCardEvidenceJob::dispatch($evidence->id)->afterCommit();
+                        }
                     }
                 }
             });
         } catch (\Throwable $e) {
             // Clean up files on error
             foreach ($uploadedPaths as $orphanedPath) {
-                Storage::disk('private')->delete($orphanedPath);
+                Storage::disk($privateDisk)->delete($orphanedPath);
             }
 
             if ($session) {
@@ -948,7 +956,7 @@ new #[Layout('layouts.app')] class extends Component
                                     </div>
                                     <span class="font-semibold text-gray-900 dark:text-white">Upload file minh chứng</span>
                                 </div>
-                                <p class="text-sm text-gray-500 dark:text-gray-400">Dùng khi bạn không thể mở camera. Hồ sơ upload sẽ được quản trị viên kiểm tra thủ công.</p>
+                                <p class="text-sm text-gray-500 dark:text-gray-400">Dùng khi bạn không thể mở camera. Hồ sơ upload cũng sẽ được AI hỗ trợ phân tích và trích xuất thông tin tự động.</p>
                             </button>
                         </div>
                     </div>
@@ -1108,7 +1116,7 @@ new #[Layout('layouts.app')] class extends Component
                                 Đổi phương thức
                             </button>
                             <div class="mt-2 rounded-lg bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 p-3">
-                                <p class="text-xs text-amber-700 dark:text-amber-300">📁 Hồ sơ upload sẽ được quản trị viên kiểm tra thủ công (không phân tích AI tự động).</p>
+                                <p class="text-xs text-amber-700 dark:text-amber-300">📁 Hệ thống AI sẽ tự động phân tích và đối sánh thẻ sinh viên được tải lên.</p>
                             </div>
                         </div>
                         @endif
