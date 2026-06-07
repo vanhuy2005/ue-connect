@@ -5,6 +5,8 @@ namespace App\Actions\Messaging;
 use App\Actions\Media\AttachMediaToModelAction;
 use App\Enums\MessageStatus;
 use App\Enums\MessageType;
+use App\Events\Messaging\ConversationUpdated;
+use App\Events\Messaging\MessageSent;
 use App\Models\Conversation;
 use App\Models\Message;
 use App\Models\User;
@@ -33,6 +35,7 @@ class SendMessage
         Validator::make($data, [
             'body' => ['nullable', 'string', 'max:2000'],
             'media_id' => ['nullable', 'integer', 'exists:media,id'],
+            'client_message_id' => ['nullable', 'string', 'max:100'],
         ])->validate();
 
         $trimmedBody = isset($data['body']) ? trim($data['body']) : '';
@@ -46,7 +49,7 @@ class SendMessage
 
         $messageType = $mediaId ? MessageType::IMAGE : MessageType::TEXT;
 
-        return DB::transaction(function () use ($sender, $conversation, $trimmedBody, $messageType, $mediaId) {
+        $message = DB::transaction(function () use ($sender, $conversation, $trimmedBody, $messageType, $mediaId, $data) {
             // 1. Create message
             $message = Message::create([
                 'conversation_id' => $conversation->id,
@@ -54,6 +57,7 @@ class SendMessage
                 'body' => $trimmedBody ?: null,
                 'message_type' => $messageType,
                 'status' => MessageStatus::SENT,
+                'client_message_id' => $data['client_message_id'] ?? null,
             ]);
 
             // 2. Attach media if provided
@@ -78,5 +82,18 @@ class SendMessage
 
             return $message;
         });
+
+        // Eager-load relations for broadcasting
+        $message->load(['sender.profile', 'replyTo.sender']);
+
+        // Dispatch broadcast events
+        MessageSent::dispatch($message);
+
+        $recipient = $conversation->getRecipientFor($sender);
+        if ($recipient) {
+            ConversationUpdated::dispatch($conversation, $message, $recipient->id);
+        }
+
+        return $message;
     }
 }

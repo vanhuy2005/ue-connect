@@ -237,16 +237,12 @@ $secondaryNav = [
                         >
                             <div class="relative flex items-center justify-center">
                                 <x-ui.icon :name="$item['icon']" size="md" aria-hidden="true" class="flex-shrink-0" />
-                                @if (!empty($item['badge']) && $item['badge'] > 0)
-                                    <span x-show="collapsed" class="absolute -top-1 -right-1 flex h-2 w-2 rounded-full bg-red-500 ring-2 ring-white"></span>
-                                @endif
+                                <span x-show="collapsed" class="absolute -top-1 -right-1 h-2 w-2 rounded-full bg-red-500 ring-2 ring-white {{ !empty($item['badge']) && $item['badge'] > 0 ? '' : 'hidden' }} js-badge-dot-{{ $item['icon'] }}"></span>
                             </div>
                             <span x-show="!collapsed" x-transition:enter="transition ease-out duration-200 delay-75" x-transition:enter-start="opacity-0 translate-x-[-8px]" x-transition:enter-end="opacity-100 translate-x-0" x-transition:leave="transition ease-in duration-100" x-transition:leave-start="opacity-100" x-transition:leave-end="opacity-0" class="whitespace-nowrap">{{ $item['label'] }}</span>
-                            @if (!empty($item['badge']) && $item['badge'] > 0)
-                                <span x-show="!collapsed" x-transition:enter="transition ease-out duration-200 delay-75" x-transition:enter-start="opacity-0" x-transition:enter-end="opacity-100" x-transition:leave="transition ease-in duration-100" x-transition:leave-start="opacity-100" x-transition:leave-end="opacity-0" class="ml-auto px-2 py-0.5 rounded-full bg-ue-brand text-white text-[10px] font-bold">
-                                    {{ $item['badge'] }}
-                                </span>
-                            @endif
+                            <span x-show="!collapsed" x-transition:enter="transition ease-out duration-200 delay-75" x-transition:enter-start="opacity-0" x-transition:enter-end="opacity-100" x-transition:leave="transition ease-in duration-100" x-transition:leave-start="opacity-100" x-transition:leave-end="opacity-0" class="ml-auto px-2 py-0.5 rounded-full bg-ue-brand text-white text-[10px] font-bold {{ !empty($item['badge']) && $item['badge'] > 0 ? '' : 'hidden' }} js-badge-count-{{ $item['icon'] }}">
+                                {{ $item['badge'] }}
+                            </span>
                         </a>
                     </li>
                 @endforeach

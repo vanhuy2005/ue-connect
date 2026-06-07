@@ -4,6 +4,8 @@ namespace App\Actions\Messaging;
 
 use App\Enums\MessageStatus;
 use App\Enums\MessageType;
+use App\Events\Messaging\ConversationUpdated;
+use App\Events\Messaging\MessageSent;
 use App\Models\Conversation;
 use App\Models\Message;
 use App\Models\Post;
@@ -42,7 +44,7 @@ class SendSharedPostMessage
             throw new \Exception('Người nhận không có quyền xem bài viết này.');
         }
 
-        return DB::transaction(function () use ($sender, $conversation, $post, $recipient, $data) {
+        $message = DB::transaction(function () use ($sender, $conversation, $post, $recipient, $data) {
             // 4. Create shared_post message
             $message = Message::create([
                 'conversation_id' => $conversation->id,
@@ -51,6 +53,7 @@ class SendSharedPostMessage
                 'message_type' => MessageType::SHARED_POST,
                 'status' => MessageStatus::SENT,
                 'shared_post_id' => $post->id,
+                'client_message_id' => $data['client_message_id'] ?? null,
                 'metadata_json' => [
                     'shared_at' => now()->toIso8601String(),
                     'snapshot_version' => '1.0',
@@ -69,5 +72,17 @@ class SendSharedPostMessage
 
             return $message;
         });
+
+        // Eager-load relations for broadcasting
+        $message->load(['sender.profile', 'replyTo.sender']);
+
+        // Dispatch broadcast events
+        MessageSent::dispatch($message);
+
+        if ($recipient) {
+            ConversationUpdated::dispatch($conversation, $message, $recipient->id);
+        }
+
+        return $message;
     }
 }

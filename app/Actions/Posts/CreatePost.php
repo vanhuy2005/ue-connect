@@ -5,6 +5,7 @@ namespace App\Actions\Posts;
 use App\Enums\CommunityMemberStatus;
 use App\Enums\PostStatus;
 use App\Enums\PostVisibility;
+use App\Events\Feed\PostCreated;
 use App\Models\Community;
 use App\Models\CommunityMember;
 use App\Models\Post;
@@ -62,7 +63,7 @@ class CreatePost
             $scopeId = $community->id;
         }
 
-        return Post::create([
+        $post = Post::create([
             'user_id' => $user->id,
             'scope_type' => $scopeType,
             'scope_id' => $scopeId,
@@ -71,5 +72,9 @@ class CreatePost
             'status' => PostStatus::PUBLISHED->value,
             'published_at' => now(),
         ]);
+
+        PostCreated::dispatch($post);
+
+        return $post;
     }
 }

@@ -2,6 +2,7 @@
 
 namespace App\Providers;
 
+use App\Events\Notifications\UserNotificationCreated;
 use App\Models\Announcement;
 use App\Models\AuditLog;
 use App\Models\BlockedUser;
@@ -46,6 +47,7 @@ use App\Policies\UserBlockPolicy;
 use App\Policies\VerificationReviewPolicy;
 use Illuminate\Auth\Notifications\VerifyEmail;
 use Illuminate\Database\Eloquent\Relations\Relation;
+use Illuminate\Notifications\DatabaseNotification;
 use Illuminate\Notifications\Messages\MailMessage;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Gate;
@@ -115,5 +117,9 @@ class AppServiceProvider extends ServiceProvider
         if (config('app.env') === 'production') {
             URL::forceScheme('https');
         }
+
+        DatabaseNotification::created(function (DatabaseNotification $notification) {
+            UserNotificationCreated::dispatch($notification);
+        });
     }
 }

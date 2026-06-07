@@ -1216,6 +1216,35 @@ new #[Layout('layouts.app')] class extends Component
                 </div>
             @endif
 
+            {{-- Real-time New Posts Banner --}}
+            <div 
+                x-data="{ showBanner: false, count: 0 }"
+                x-init="
+                    if (window.Echo) {
+                        window.Echo.private('feed')
+                            .listen('.PostCreated', (e) => {
+                                if (e.author_id != {{ Auth::id() }}) {
+                                    count++;
+                                    showBanner = true;
+                                }
+                            });
+                    }
+                }"
+                x-show="showBanner"
+                x-collapse
+                class="mb-4"
+                style="display: none;"
+            >
+                <button 
+                    type="button"
+                    @click="showBanner = false; count = 0; $wire.$refresh();"
+                    class="w-full py-2 px-4 bg-ue-brand text-white font-bold text-xxs rounded-xl shadow-md hover:bg-ue-brand-dark transition-all flex items-center justify-center gap-2 animate-bounce"
+                >
+                    <x-ui.icon name="arrow-up" size="xs" />
+                    <span>Có <span x-text="count"></span> bài viết mới. Nhấn để tải lại</span>
+                </button>
+            </div>
+
             {{-- Posts list loop --}}
             <div class="ue-feed-list">
                 @forelse ($posts as $post)

@@ -138,12 +138,33 @@ new #[Layout('layouts.app')] class extends Component
     }
 
     /**
+     * Refresh component messages.
+     */
+    public function refreshMessages(): void
+    {
+        // This triggers a Livewire component re-render
+    }
+
+    /**
      * Send a text or image message inside the selected conversation.
      */
-    public function submitMessage(SendMessage $sendMessage, ReplyToMessage $replyToMessageAction): void
-    {
-        if ((empty(trim($this->newMessageBody)) && !$this->messageAttachment) || ! $this->selectedConversationId) {
-            return;
+    public function submitMessage(
+        SendMessage $sendMessage, 
+        ReplyToMessage $replyToMessageAction, 
+        ?string $body = null, 
+        ?int $mediaId = null, 
+        ?string $clientMessageId = null
+    ): array {
+        $body = $body ?? $this->newMessageBody;
+        $mediaId = $mediaId ?? ($this->messageAttachment ? $this->messageAttachment['id'] : null);
+        
+        $trimmedBody = trim((string) $body);
+        if (empty($trimmedBody) && !$mediaId) {
+            return ['status' => 'error', 'message' => 'Nội dung tin nhắn không được để trống.'];
+        }
+
+        if (! $this->selectedConversationId) {
+            return ['status' => 'error', 'message' => 'Không có cuộc trò chuyện nào được chọn.'];
         }
 
         try {
@@ -152,23 +173,43 @@ new #[Layout('layouts.app')] class extends Component
             
             // Check if restricted
             if ($this->isRestricted($conversation)) {
-                $this->feedbackMessage = 'Không thể gửi tin nhắn trong cuộc trò chuyện bị giới hạn.';
-                return;
+                return ['status' => 'error', 'message' => 'Không thể gửi tin nhắn trong cuộc trò chuyện bị giới hạn.'];
             }
 
-            $mediaId = $this->messageAttachment ? $this->messageAttachment['id'] : null;
+            // Deduplication: If client_message_id is provided, check if it already exists
+            if ($clientMessageId) {
+                $existingMessage = Message::where('conversation_id', $conversation->id)
+                    ->where('sender_id', Auth::id())
+                    ->where('client_message_id', $clientMessageId)
+                    ->first();
+                if ($existingMessage) {
+                    return [
+                        'id' => $existingMessage->id,
+                        'client_message_id' => $existingMessage->client_message_id,
+                        'conversation_id' => $existingMessage->conversation_id,
+                        'sender_id' => $existingMessage->sender_id,
+                        'body' => $existingMessage->body,
+                        'message_type' => $existingMessage->message_type instanceof MessageType ? $existingMessage->message_type->value : $existingMessage->message_type,
+                        'created_at' => $existingMessage->created_at->toISOString(),
+                        'status' => 'sent',
+                    ];
+                }
+            }
 
+            $message = null;
             if ($this->replyingToMessageId) {
                 $replyToMsg = Message::findOrFail($this->replyingToMessageId);
-                $replyToMessageAction->execute(Auth::user(), $conversation, $replyToMsg, [
-                    'body' => $this->newMessageBody,
+                $message = $replyToMessageAction->execute(Auth::user(), $conversation, $replyToMsg, [
+                    'body' => $trimmedBody,
                     'media_id' => $mediaId,
+                    'client_message_id' => $clientMessageId,
                 ]);
                 $this->replyingToMessageId = null;
             } else {
-                $sendMessage->execute(Auth::user(), $conversation, [
-                    'body' => $this->newMessageBody,
+                $message = $sendMessage->execute(Auth::user(), $conversation, [
+                    'body' => $trimmedBody,
                     'media_id' => $mediaId,
+                    'client_message_id' => $clientMessageId,
                 ]);
             }
 
@@ -176,8 +217,19 @@ new #[Layout('layouts.app')] class extends Component
             $this->messageAttachment = null;
             $this->markAsRead($conversation->id);
             $this->dispatch('scroll-bottom');
+
+            return [
+                'id' => $message->id,
+                'client_message_id' => $message->client_message_id,
+                'conversation_id' => $message->conversation_id,
+                'sender_id' => $message->sender_id,
+                'body' => $message->body,
+                'message_type' => $message->message_type instanceof MessageType ? $message->message_type->value : $message->message_type,
+                'created_at' => $message->created_at->toISOString(),
+                'status' => 'sent',
+            ];
         } catch (\Exception $e) {
-            $this->feedbackMessage = $e->getMessage();
+            return ['status' => 'error', 'message' => $e->getMessage()];
         }
     }
 
@@ -764,7 +816,20 @@ new #[Layout('layouts.app')] class extends Component
     @vite('resources/js/realtime.js')
 @endpush
 
-<div class="h-[calc(100dvh-64px)] lg:h-dvh flex overflow-hidden bg-slate-50 relative">
+<div 
+    class="h-[calc(100dvh-64px)] lg:h-dvh flex overflow-hidden bg-slate-50 relative"
+    x-data="{
+        initUserChannel() {
+            if (window.Echo) {
+                window.Echo.private('user.{{ Auth::id() }}')
+                    .listen('.ConversationUpdated', (e) => {
+                        @this.call('refreshMessages');
+                    });
+            }
+        }
+    }"
+    x-init="initUserChannel()"
+>
     {{-- Feedback Message Toast --}}
     @if ($feedbackMessage)
         <div 
@@ -913,7 +978,171 @@ new #[Layout('layouts.app')] class extends Component
     </div>
 
     {{-- Right Pane: Conversation Details --}}
-    <div class="flex-1 bg-slate-50 flex flex-col min-w-0 {{ ! $selectedConversationId ? 'hidden lg:flex' : 'flex' }}">
+    <div 
+        class="flex-1 bg-slate-50 flex flex-col min-w-0 {{ ! $selectedConversationId ? 'hidden lg:flex' : 'flex' }}"
+        x-data="{
+            pendingMessages: [],
+            recipientTyping: false,
+            typingTimeout: null,
+            isCurrentlyTyping: false,
+            submitForm() {
+                let body = @this.newMessageBody;
+                let attachment = @this.messageAttachment;
+                if (!body.trim() && !attachment) return;
+
+                let clientMsgId = 'client-' + Date.now() + '-' + Math.random().toString(36).substr(2, 9);
+                
+                // Clear inputs immediately on frontend
+                @this.newMessageBody = '';
+                @this.messageAttachment = null;
+
+                // Push optimistic message
+                let tempMessage = {
+                    client_message_id: clientMsgId,
+                    body: body,
+                    imageUrl: attachment ? attachment.url : null,
+                    mediaId: attachment ? attachment.id : null,
+                    status: 'sending',
+                    error: null
+                };
+                this.pendingMessages.push(tempMessage);
+                this.scrollToBottom();
+
+                let mediaId = attachment ? attachment.id : null;
+                @this.call('submitMessage', body, mediaId, clientMsgId)
+                    .then(response => {
+                        if (response && response.status === 'sent') {
+                            this.pendingMessages = this.pendingMessages.filter(pm => pm.client_message_id !== clientMsgId);
+                        } else if (response && response.status === 'error') {
+                            let msg = this.pendingMessages.find(pm => pm.client_message_id === clientMsgId);
+                            if (msg) {
+                                msg.status = 'failed';
+                                msg.error = response.message;
+                            }
+                        }
+                    })
+                    .catch(err => {
+                        let msg = this.pendingMessages.find(pm => pm.client_message_id === clientMsgId);
+                        if (msg) {
+                            msg.status = 'failed';
+                            msg.error = 'Không thể kết nối máy chủ.';
+                        }
+                    });
+            },
+            retryMessage(clientMsgId) {
+                let msg = this.pendingMessages.find(pm => pm.client_message_id === clientMsgId);
+                if (!msg) return;
+
+                msg.status = 'sending';
+                msg.error = null;
+
+                let body = msg.body;
+                let mediaId = msg.mediaId || null;
+
+                @this.call('submitMessage', body, mediaId, clientMsgId)
+                    .then(response => {
+                        if (response && response.status === 'sent') {
+                            this.pendingMessages = this.pendingMessages.filter(pm => pm.client_message_id !== clientMsgId);
+                        } else if (response && response.status === 'error') {
+                            msg.status = 'failed';
+                            msg.error = response.message;
+                        }
+                    })
+                    .catch(err => {
+                        msg.status = 'failed';
+                        msg.error = 'Không thể kết nối máy chủ.';
+                    });
+            },
+            reconcile() {
+                let serverIdsEl = document.getElementById('server-message-client-ids');
+                if (serverIdsEl) {
+                    let serverIds = JSON.parse(serverIdsEl.getAttribute('data-ids') || '[]');
+                    this.pendingMessages = this.pendingMessages.filter(pm => !serverIds.includes(pm.client_message_id));
+                }
+            },
+            scrollToBottom() {
+                setTimeout(() => {
+                    let container = document.getElementById('message-container');
+                    if (container) container.scrollTop = container.scrollHeight;
+                }, 50);
+            },
+            handleTyping() {
+                if (!window.Echo || !@this.selectedConversationId) return;
+                
+                if (!this.isCurrentlyTyping) {
+                    this.isCurrentlyTyping = true;
+                    window.Echo.private('conversation.' + @this.selectedConversationId)
+                        .whisper('typing', {
+                            typing: true,
+                            userId: {{ Auth::id() }}
+                        });
+                }
+                
+                clearTimeout(this.typingTimeout);
+                this.typingTimeout = setTimeout(() => {
+                    this.isCurrentlyTyping = false;
+                    if (window.Echo && @this.selectedConversationId) {
+                        window.Echo.private('conversation.' + @this.selectedConversationId)
+                            .whisper('typing', {
+                                typing: false,
+                                userId: {{ Auth::id() }}
+                            });
+                    }
+                }, 2000);
+            },
+            setupChannel(convoId) {
+                if (!window.Echo || !convoId) return;
+                
+                let channel = window.Echo.private('conversation.' + convoId);
+                
+                channel.listen('.MessageSent', (e) => {
+                    if (e.sender_id != {{ Auth::id() }}) {
+                        @this.call('refreshMessages');
+                    } else {
+                        // Sync multiple tabs of same user
+                        let serverIdsEl = document.getElementById('server-message-client-ids');
+                        let serverIds = JSON.parse(serverIdsEl ? serverIdsEl.getAttribute('data-ids') || '[]' : '[]');
+                        if (e.client_message_id && !serverIds.includes(e.client_message_id)) {
+                            @this.call('refreshMessages');
+                        }
+                    }
+                });
+                
+                channel.listenForWhisper('typing', (e) => {
+                    if (e.userId != {{ Auth::id() }}) {
+                        this.recipientTyping = e.typing;
+                    }
+                });
+            }
+        }"
+        x-init="
+            if ($wire.selectedConversationId) {
+                setupChannel($wire.selectedConversationId);
+            }
+            
+            $watch('$wire.selectedConversationId', (newId, oldId) => {
+                pendingMessages = [];
+                recipientTyping = false;
+                scrollToBottom();
+                
+                if (oldId && window.Echo) {
+                    window.Echo.leave('conversation.' + oldId);
+                }
+                
+                if (newId) {
+                    setupChannel(newId);
+                }
+            });
+            $watch('pendingMessages', () => scrollToBottom());
+            
+            // Listen to livewire load/update
+            Livewire.hook('commit', ({ component, succeed }) => {
+                succeed(() => {
+                    $nextTick(() => reconcile());
+                });
+            });
+        "
+    >
         @if ($selectedConversationId && $activeConvo)
             @php
                 $recipient = $activeConvo->getRecipientFor(Auth::user());
@@ -1086,7 +1315,7 @@ new #[Layout('layouts.app')] class extends Component
             @endif
 
             {{-- Message Thread Bubble Container --}}
-            <div class="flex-1 overflow-y-auto p-4 space-y-4 flex flex-col" wire:poll.visible.20s>
+            <div id="message-container" class="flex-1 overflow-y-auto p-4 space-y-4 flex flex-col" wire:poll.visible.20s>
                 <div wire:loading.delay wire:target="selectConversation" class="space-y-4">
                     <div class="ue-skeleton-line ue-skeleton w-32 mx-auto"></div>
                     <div class="ue-skeleton-card max-w-[70%]">
@@ -1288,6 +1517,72 @@ new #[Layout('layouts.app')] class extends Component
                         @endif
                     </div>
                 @endforeach
+
+                {{-- Alpine Pending Messages (Optimistic UI) --}}
+                <template x-for="msg in pendingMessages" :key="msg.client_message_id">
+                    <div class="flex justify-end items-center gap-2 group w-full opacity-80 animate-pulse">
+                        <div class="flex flex-col max-w-[70%] gap-1">
+                            <template x-if="msg.imageUrl">
+                                <div class="flex flex-col gap-2">
+                                    <div class="rounded-2xl overflow-hidden border border-slate-150 max-w-[280px] bg-slate-100 shadow-2xs flex items-center justify-center">
+                                        <div class="block w-full h-full">
+                                            <img
+                                                :src="msg.imageUrl"
+                                                alt="Uploading Attachment"
+                                                class="ue-message-attachment-media hover:opacity-95 transition-opacity"
+                                                loading="lazy"
+                                            />
+                                        </div>
+                                    </div>
+                                    <template x-if="msg.body">
+                                        <div class="px-3.5 py-2 rounded-2xl text-xxs font-medium leading-relaxed bg-ue-brand text-white rounded-br-xs shadow-2xs">
+                                            <span x-text="msg.body"></span>
+                                        </div>
+                                    </template>
+                                </div>
+                            </template>
+                            <template x-if="!msg.imageUrl">
+                                <div class="px-3.5 py-2 rounded-2xl text-xxs font-medium leading-relaxed bg-ue-brand text-white rounded-br-xs shadow-2xs">
+                                    <span x-text="msg.body"></span>
+                                </div>
+                            </template>
+                            <div class="text-[8px] font-semibold px-1 self-end flex items-center gap-1 select-none">
+                                <template x-if="msg.status === 'sending'">
+                                    <span class="text-slate-400 flex items-center gap-1">
+                                        <span>Đang gửi...</span>
+                                        <span class="block w-1.5 h-1.5 border border-slate-400 border-t-transparent rounded-full animate-spin"></span>
+                                    </span>
+                                </template>
+                                <template x-if="msg.status === 'failed'">
+                                    <span class="text-red-550 flex items-center gap-1.5">
+                                        <span x-text="msg.error || 'Lỗi gửi tin'"></span>
+                                        <button 
+                                            type="button" 
+                                            @click="retryMessage(msg.client_message_id)"
+                                            class="font-bold text-ue-brand hover:underline focus:outline-none"
+                                        >
+                                            Thử lại
+                                        </button>
+                                    </span>
+                                </template>
+                            </div>
+                        </div>
+                    </div>
+                </template>
+
+                {{-- Typing Indicator --}}
+                <div x-show="recipientTyping" class="flex justify-start items-center gap-2 w-full animate-pulse" style="display: none;">
+                    @if ($recipient)
+                        <x-ui.avatar :user="$recipient" size="xs" />
+                    @endif
+                    <div class="px-3.5 py-2 rounded-2xl bg-white border border-slate-150 text-slate-500 rounded-bl-xs flex items-center gap-1">
+                        <span class="w-1.5 h-1.5 bg-slate-400 rounded-full animate-bounce" style="animation-delay: 0.1s"></span>
+                        <span class="w-1.5 h-1.5 bg-slate-400 rounded-full animate-bounce" style="animation-delay: 0.2s"></span>
+                        <span class="w-1.5 h-1.5 bg-slate-400 rounded-full animate-bounce" style="animation-delay: 0.3s"></span>
+                    </div>
+                </div>
+
+                <div id="server-message-client-ids" data-ids="{{ json_encode($messages->pluck('client_message_id')->filter()->values()->toArray()) }}" class="hidden"></div>
             </div>
 
             {{-- Message Composer or Restricted Banner --}}
@@ -1354,7 +1649,7 @@ new #[Layout('layouts.app')] class extends Component
                         </div>
                     @enderror
 
-                    <form wire:submit.prevent="submitMessage" class="flex gap-2 items-center" x-data="{ uploading: false }" x-on:livewire-upload-start="uploading = true" x-on:livewire-upload-finish="uploading = false" x-on:livewire-upload-error="uploading = false">
+                    <form @submit.prevent="submitForm()" class="flex gap-2 items-center" x-data="{ uploading: false }" x-on:livewire-upload-start="uploading = true" x-on:livewire-upload-finish="uploading = false" x-on:livewire-upload-error="uploading = false">
                         {{-- Hidden File Input --}}
                         <input
                             type="file"
@@ -1383,23 +1678,20 @@ new #[Layout('layouts.app')] class extends Component
                         <input
                             type="text"
                             wire:model="newMessageBody"
-                            wire:loading.attr="disabled"
-                            wire:target="submitMessage"
                             placeholder="Nhập tin nhắn..."
                             class="flex-1 px-4 py-2.5 text-xxs rounded-xl border border-slate-200 focus:outline-none focus:ring-1 focus:ring-ue-brand/40 focus:border-ue-brand/40 placeholder-slate-400 text-slate-700 bg-slate-50/60"
+                            @input="handleTyping()"
                         />
                         <button
                             type="submit"
-                            wire:loading.attr="disabled"
                             wire:target="submitMessage"
                             class="bg-ue-brand hover:bg-ue-brand-dark text-white rounded-xl p-2.5 shadow-2xs hover:shadow-sm transition-all disabled:opacity-60 disabled:cursor-not-allowed"
                             aria-label="Gửi tin nhắn"
                             :disabled="uploading"
                         >
-                            <span wire:loading.remove wire:target="submitMessage">
+                            <span>
                                 <x-ui.icon name="send" size="sm" />
                             </span>
-                            <span wire:loading wire:target="submitMessage" class="ue-spinner"></span>
                         </button>
                     </form>
                 @endif

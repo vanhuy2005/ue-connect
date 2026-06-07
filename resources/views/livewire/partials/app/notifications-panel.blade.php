@@ -12,6 +12,8 @@ new class extends Component
     public string $activeTab = 'all'; // all, requests, messages, system
     public ?string $feedbackMessage = null;
 
+    protected $listeners = ['refreshNotifications' => '$refresh'];
+
     /**
      * Mark a single notification as read and redirect.
      */
