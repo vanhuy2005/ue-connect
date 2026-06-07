@@ -33,14 +33,29 @@ class ValidateMediaUploadAction
         // 1. Extension validation (reject SVGs, GIFs, videos, HEIC)
         $extension = strtolower($file->getClientOriginalExtension());
         $allowedExtensions = ['jpg', 'jpeg', 'png', 'webp'];
+        if ($collection === 'verification_evidence') {
+            $allowedExtensions = array_merge($allowedExtensions, ['pdf', 'docx', 'zip']);
+        }
 
         if (! in_array($extension, $allowedExtensions, true)) {
-            $this->throwError('file', 'Định dạng file không được hỗ trợ. Chỉ cho phép các file jpg, jpeg, png, webp.');
+            $msg = $collection === 'verification_evidence'
+                ? 'Định dạng file không được hỗ trợ. Chỉ cho phép các file jpg, jpeg, png, webp, pdf, docx, zip.'
+                : 'Định dạng file không được hỗ trợ. Chỉ cho phép các file jpg, jpeg, png, webp.';
+            $this->throwError('file', $msg);
         }
 
         // 2. Strict content sniffing (real MIME/content verification)
         $realMime = $file->getMimeType();
         $allowedMimes = ['image/jpeg', 'image/png', 'image/webp'];
+        if ($collection === 'verification_evidence') {
+            $allowedMimes = array_merge($allowedMimes, [
+                'application/pdf',
+                'application/msword',
+                'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+                'application/zip',
+                'application/x-zip-compressed',
+            ]);
+        }
 
         if (! in_array($realMime, $allowedMimes, true)) {
             $this->throwError('file', 'File tải lên không hợp lệ hoặc bị giả mạo định dạng.');
@@ -68,9 +83,11 @@ class ValidateMediaUploadAction
         }
 
         // 5. Image dimensions validation (ensure it is a readable image)
-        $dimensions = @getimagesizefromstring($file->get());
-        if (! $dimensions) {
-            $this->throwError('file', 'Không thể đọc thông tin kích thước của ảnh.');
+        if (str_starts_with($realMime, 'image/')) {
+            $dimensions = @getimagesizefromstring($file->get());
+            if (! $dimensions) {
+                $this->throwError('file', 'Không thể đọc thông tin kích thước của ảnh.');
+            }
         }
     }
 
