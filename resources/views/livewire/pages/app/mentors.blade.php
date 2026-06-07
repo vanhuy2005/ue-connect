@@ -100,7 +100,12 @@ new class extends Component
             <p class="mt-1 text-sm text-slate-500">Tìm mentor phù hợp và gửi yêu cầu cố vấn có cấu trúc.</p>
         </div>
         <div class="flex flex-wrap gap-2">
-            @if ($ownMentorProfile)
+            @unless ($ownMentorProfile && $ownMentorProfile->is_active)
+                <a href="{{ route('mentor.requests.index') }}" wire:navigate class="inline-flex items-center justify-center rounded-lg border border-ue-brand bg-white px-4 py-2 text-sm font-semibold text-ue-brand hover:bg-ue-brand-soft">
+                    Yêu cầu của tôi
+                </a>
+            @endunless
+            @if ($ownMentorProfile && $ownMentorProfile->is_active)
                 <a href="{{ route('mentor.setup') }}" wire:navigate class="inline-flex items-center justify-center rounded-lg bg-ue-brand px-4 py-2 text-sm font-semibold text-white hover:bg-ue-brand-dark">
                     Cập nhật hồ sơ mentor
                 </a>
@@ -115,7 +120,7 @@ new class extends Component
         </div>
     </div>
 
-    @if ($ownMentorProfile)
+    @if ($ownMentorProfile && $ownMentorProfile->is_active)
         <div class="mb-5 rounded-2xl border border-blue-100 bg-blue-50 px-4 py-3 text-sm text-blue-900">
             <span class="font-bold">Bạn đã là mentor.</span>
             <span>Muốn đổi ảnh, chủ đề hỗ trợ, trạng thái nhận yêu cầu hoặc visibility thì vào thiết lập hồ sơ mentor.</span>

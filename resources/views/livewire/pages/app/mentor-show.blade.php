@@ -87,7 +87,9 @@ new class extends Component
 };
 ?>
 
-<div class="mx-auto max-w-4xl px-4 py-6 sm:px-6 lg:px-8">
+<div class="mx-auto max-w-4xl px-4 py-6 sm:px-6 lg:px-8"
+    x-data
+    @mentor-request-sent.window="window.location.href = '/app/mentor/requests/' + $event.detail.mentorRequestId">
     <div class="flex items-center justify-between mb-2">
         <a href="{{ route('mentor.discovery') }}" class="text-sm font-semibold text-ue-brand hover:underline">← Quay lại danh sách mentor</a>
         <button
@@ -156,21 +158,25 @@ new class extends Component
                 @endif
 
                 <div>
-                    <input wire:model.live="topic" maxlength="255" placeholder="Chủ đề *" class="w-full rounded-lg border-slate-200 text-sm focus:border-ue-brand focus:ring-ue-brand/20">
+                    <label class="block text-xs font-bold text-slate-700 mb-1">Chủ đề <span class="text-red-500">*</span></label>
+                    <input wire:model.live="topic" maxlength="255" placeholder="Ví dụ: Luyện phỏng vấn, Định hướng nghề nghiệp, Kỹ năng mềm..." class="w-full rounded-lg border-slate-200 text-sm focus:border-ue-brand focus:ring-ue-brand/20">
                     @error('topic') <p class="mt-1 text-xs text-red-500">{{ $message }}</p> @enderror
                     <p class="mt-1 text-right text-[10px] text-slate-400">{{ strlen($topic) }}/255</p>
                 </div>
                 <div>
-                    <textarea wire:model.live="goal" rows="2" maxlength="5000" placeholder="Mục tiêu của bạn *" class="w-full rounded-lg border-slate-200 text-sm focus:border-ue-brand focus:ring-ue-brand/20"></textarea>
+                    <label class="block text-xs font-bold text-slate-700 mb-1">Mục tiêu của bạn <span class="text-red-500">*</span></label>
+                    <textarea wire:model.live="goal" rows="2" maxlength="5000" placeholder="Bạn muốn đạt được điều gì sau buổi cố vấn này?" class="w-full rounded-lg border-slate-200 text-sm focus:border-ue-brand focus:ring-ue-brand/20"></textarea>
                     @error('goal') <p class="mt-1 text-xs text-red-500">{{ $message }}</p> @enderror
                     <p class="mt-1 text-right text-[10px] text-slate-400">{{ strlen($goal) }}/5000</p>
                 </div>
                 <div>
-                    <textarea wire:model.live="question" rows="3" maxlength="5000" placeholder="Câu hỏi cụ thể muốn mentor hỗ trợ *" class="w-full rounded-lg border-slate-200 text-sm focus:border-ue-brand focus:ring-ue-brand/20"></textarea>
+                    <label class="block text-xs font-bold text-slate-700 mb-1">Câu hỏi cụ thể <span class="text-red-500">*</span></label>
+                    <textarea wire:model.live="question" rows="3" maxlength="5000" placeholder="Những điều bạn muốn mentor giải đáp hoặc hỗ trợ?" class="w-full rounded-lg border-slate-200 text-sm focus:border-ue-brand focus:ring-ue-brand/20"></textarea>
                     @error('question') <p class="mt-1 text-xs text-red-500">{{ $message }}</p> @enderror
                     <p class="mt-1 text-right text-[10px] text-slate-400">{{ strlen($question) }}/5000</p>
                 </div>
                 <div>
+                    <label class="block text-xs font-bold text-slate-700 mb-1">Độ khẩn cấp</label>
                     <select wire:model.live="urgency" class="w-full rounded-lg border-slate-200 text-sm focus:border-ue-brand focus:ring-ue-brand/20">
                         <option value="normal">Bình thường</option>
                         <option value="low">Không gấp</option>
@@ -179,11 +185,13 @@ new class extends Component
                     </select>
                 </div>
                 <div>
-                    <textarea wire:model.live="context" rows="2" maxlength="5000" placeholder="Bối cảnh bổ sung (không bắt buộc)" class="w-full rounded-lg border-slate-200 text-sm focus:border-ue-brand focus:ring-ue-brand/20"></textarea>
+                    <label class="block text-xs font-bold text-slate-700 mb-1">Bối cảnh bổ sung</label>
+                    <textarea wire:model.live="context" rows="2" maxlength="5000" placeholder="Thông tin thêm giúp mentor hiểu rõ hoàn cảnh của bạn (không bắt buộc)" class="w-full rounded-lg border-slate-200 text-sm focus:border-ue-brand focus:ring-ue-brand/20"></textarea>
                     <p class="mt-1 text-right text-[10px] text-slate-400">{{ strlen($context) }}/5000</p>
                 </div>
                 <div>
-                    <textarea wire:model.live="expected_outcome" rows="2" maxlength="1000" placeholder="Kết quả mong đợi (không bắt buộc)" class="w-full rounded-lg border-slate-200 text-sm focus:border-ue-brand focus:ring-ue-brand/20"></textarea>
+                    <label class="block text-xs font-bold text-slate-700 mb-1">Kết quả mong đợi</label>
+                    <textarea wire:model.live="expected_outcome" rows="2" maxlength="1000" placeholder="Bạn kỳ vọng nhận được kết quả gì sau buổi cố vấn? (không bắt buộc)" class="w-full rounded-lg border-slate-200 text-sm focus:border-ue-brand focus:ring-ue-brand/20"></textarea>
                     <p class="mt-1 text-right text-[10px] text-slate-400">{{ strlen($expected_outcome) }}/1000</p>
                 </div>
 
