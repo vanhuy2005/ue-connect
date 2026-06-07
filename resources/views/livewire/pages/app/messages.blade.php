@@ -10,6 +10,7 @@ use App\Models\BlockedUser;
 use App\Enums\MessageType;
 use App\Enums\MessageStatus;
 use App\Enums\ConnectionStatus;
+use App\Enums\ConversationStatus;
 use App\Actions\Messaging\SendMessage;
 use App\Actions\Messaging\ReplyToMessage;
 use App\Actions\Messaging\RecallMessage;
@@ -346,6 +347,12 @@ new #[Layout('layouts.app')] class extends Component
             return true;
         }
 
+        // Mentor conversations bypass connection check
+        if ($conversation->mentor_request_id) {
+            // But respect archived status (completed requests)
+            return $conversation->status !== ConversationStatus::ACTIVE;
+        }
+
         // 2. Check if connected
         $userOneId = min($sender->id, $recipient->id);
         $userTwoId = max($sender->id, $recipient->id);
@@ -651,6 +658,7 @@ new #[Layout('layouts.app')] class extends Component
                     'last_message' => $lastMsg,
                     'is_unread' => $isUnread,
                     'is_restricted' => $isRestricted,
+                    'is_mentor' => (bool) $convo->mentor_request_id,
                     'nickname' => $nickname,
                     'updated_at' => $lastMsg ? $lastMsg->created_at : ($convo->last_message_at ?: $convo->created_at),
                 ];

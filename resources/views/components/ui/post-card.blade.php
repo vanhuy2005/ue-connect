@@ -23,6 +23,8 @@
     $authorProfileUrl = route('profile.show', $author);
     $isOwner = $post->user_id === $currentUser->id;
     $isAdmin = $currentUser && ($currentUser->can('review_verification') || $currentUser->can('manage_reports'));
+    $postType = $post->post_type?->value ?? 'standard';
+    $opportunity = $post->opportunityDetail;
     $mediaUrlAction = app(\App\Actions\Media\GenerateMediaUrlAction::class);
     $reposterName = $repostedBy?->profile?->display_name ?? $repostedBy?->name;
     $mediaItems = $post->relationLoaded('media')
@@ -109,10 +111,24 @@
                     
                     {{-- Faculty & Major --}}
                     @if ($profile)
-                        <div class="text-[10px] text-slate-400 font-medium mt-0.5 leading-none">
-                            {{ Str::ucfirst($profile->role_type) }}
+                        <div class="text-[10px] text-slate-400 font-medium mt-0.5 leading-none flex items-center flex-wrap gap-x-1.5">
+                            <span>{{ Str::ucfirst($profile->role_type) }}</span>
                             @if ($profile->faculty)
-                                · {{ $profile->faculty }}
+                                <span>· {{ $profile->faculty }}</span>
+                            @endif
+                            {{-- Post Type Badge --}}
+                            @if ($postType === 'experience_share')
+                                <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[9px] font-bold bg-white text-slate-500 border border-slate-200 leading-none">
+                                    Kinh nghiệm
+                                </span>
+                            @elseif ($postType === 'mentor_insight')
+                                <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[9px] font-bold bg-white text-slate-500 border border-slate-200 leading-none">
+                                    Career Insight
+                                </span>
+                            @elseif ($postType === 'opportunity')
+                                <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[9px] font-bold bg-white text-slate-500 border border-slate-200 leading-none">
+                                    Cơ hội
+                                </span>
                             @endif
                         </div>
                     @endif
@@ -182,7 +198,51 @@
                 </div>
             @else
                 <div class="ue-post-card__content mt-1">{{ $post->body }}</div>
+
                 
+                {{-- Opportunity Detail Card --}}
+                @if ($postType === 'opportunity' && $opportunity)
+                    <div class="mt-2.5 p-3 bg-white border border-slate-200 rounded-xl space-y-1.5">
+                        <div class="flex items-center gap-2">
+                            <x-ui.icon name="building" size="xs" class="text-ue-brand flex-shrink-0" />
+                            <span class="text-xs font-bold text-slate-800">{{ $opportunity->company }}</span>
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <x-ui.icon name="briefcase" size="xs" class="text-ue-brand flex-shrink-0" />
+                            <span class="text-xs font-semibold text-slate-700">{{ $opportunity->position }}</span>
+                        </div>
+                        @if ($opportunity->location)
+                            <div class="flex items-center gap-2">
+                                <x-ui.icon name="map-pin" size="xs" class="text-slate-400 flex-shrink-0" />
+                                <span class="text-xs text-slate-600">{{ $opportunity->location }}</span>
+                            </div>
+                        @endif
+                        @if ($opportunity->application_deadline)
+                            <div class="flex items-center gap-2">
+                                <x-ui.icon name="calendar" size="xs" class="text-slate-400 flex-shrink-0" />
+                                <span class="text-xs text-slate-600">
+                                    Hạn nộp: {{ $opportunity->application_deadline->format('d/m/Y') }}
+                                </span>
+                            </div>
+                        @endif
+                        @if ($opportunity->application_url)
+                            <div class="pt-1">
+                                <a href="{{ $opportunity->application_url }}" target="_blank" rel="noopener noreferrer" class="inline-flex items-center gap-1 px-2.5 py-1.5 bg-ue-brand hover:bg-ue-brand-dark text-white text-xxs font-bold rounded-lg transition-colors">
+                                    <x-ui.icon name="external-link" size="3xs" />
+                                    Ứng tuyển ngay
+                                </a>
+                            </div>
+                        @endif
+                        @if ($opportunity->field_tags)
+                            <div class="flex flex-wrap gap-1 pt-1">
+                                @foreach ($opportunity->field_tags as $tag)
+                                    <span class="inline-block px-2 py-0.5 bg-slate-100 text-slate-600 text-[9px] font-bold rounded-full leading-none">{{ $tag }}</span>
+                                @endforeach
+                            </div>
+                        @endif
+                    </div>
+                @endif
+
                 {{-- Polymorphic Media Grid --}}
                 @if ($mediaCount > 0)
                     <div class="mt-2.5 max-w-lg select-none">
@@ -202,7 +262,6 @@
                                 </a>
                             </div>
                         @elseif ($mediaCount === 2)
-                            {{-- 2 images: two columns --}}
                             <div class="grid grid-cols-2 gap-2 overflow-hidden rounded-2xl border border-slate-150 bg-slate-50">
                                 @foreach ($mediaItems as $mediaItem)
                                     @php($dimensions = $mediaDimensions($mediaItem))
@@ -249,7 +308,6 @@
                                 </div>
                             </div>
                         @elseif ($mediaCount >= 4)
-                            {{-- 4 images: 2x2 grid --}}
                             <div class="grid grid-cols-2 gap-2 overflow-hidden rounded-2xl border border-slate-150 bg-slate-50">
                                 @foreach ($mediaItems->take(4) as $mediaItem)
                                     @php($dimensions = $mediaDimensions($mediaItem))

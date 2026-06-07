@@ -1,10 +1,10 @@
 <?php
 
-use Livewire\Component;
 use App\Actions\Admin\BuildAdminDashboardAction;
+use Livewire\Volt\Component;
 
 new class extends Component {
-    public function getDataProperty(): array
+    public function getDashboardDataProperty(): array
     {
         return app(BuildAdminDashboardAction::class)->execute();
     }
@@ -25,7 +25,7 @@ new class extends Component {
     </div>
 
     @php
-        $data = $this->data;
+        $data = $this->dashboardData;
         $snapshot = $data['snapshot'];
         $priorityQueue = $data['priority_queue'];
         $systemHealth = $data['system_health'];

@@ -4,7 +4,6 @@ use App\Actions\Posts\CreatePost;
 use App\Actions\Posts\DeletePost;
 use App\Actions\Posts\UpdatePost;
 use App\Actions\Posts\TogglePostLike;
-use App\Actions\Posts\TogglePostRepost;
 use App\Actions\Posts\TogglePostSave;
 use App\Actions\Posts\HidePostFromFeed;
 use App\Actions\Reports\CreateReport;
@@ -14,19 +13,15 @@ use App\Actions\Media\AttachMediaToModelAction;
 use App\Actions\Media\DeleteMediaAction;
 use App\Actions\Media\GenerateMediaUrlAction;
 use App\Actions\Media\StoreTemporaryMediaAction;
-use App\Actions\Follows\FollowUser;
-use App\Actions\Follows\UnfollowUser;
 use App\Enums\CommentStatus;
 use App\Enums\PostStatus;
+use App\Enums\PostType;
 use App\Enums\PostVisibility;
 use App\Enums\ReportReason;
 use App\Enums\ConnectionStatus;
 use App\Models\Post;
-use App\Models\PostRepost;
 use App\Models\User;
 use App\Models\Connection;
-use Illuminate\Database\Eloquent\Builder;
-use Illuminate\Pagination\Paginator;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Gate;
 use Livewire\Attributes\Layout;
@@ -38,19 +33,21 @@ new #[Layout('layouts.app')] class extends Component
 {
     use WithPagination, WithFileUploads;
 
-    private const FEED_PAGE_SIZE = 10;
-
     // Composer properties
     public string $body = '';
     public string $visibility = 'verified_users';
-    public int $perPage = self::FEED_PAGE_SIZE;
-    public string $activeFeedTab = 'for_you';
-    public ?int $selectedCommunityId = null;
-    
-    // Quick follow properties
-    public bool $showQuickFollowModal = false;
-    public ?int $quickFollowUserId = null;
-    public bool $quickFollowCompleted = false;
+    public string $postType = 'standard';
+
+    // Opportunity-specific fields
+    public string $oppCompany = '';
+    public string $oppPosition = '';
+    public string $oppLocation = '';
+    public string $oppApplicationUrl = '';
+    public ?string $oppApplicationDeadline = null;
+    public array $oppFieldTags = [];
+
+    // Feed tab filter
+    public string $activeTab = 'for_you';
 
     // Multi-image upload properties
     public $imageFiles = [];
@@ -80,26 +77,30 @@ new #[Layout('layouts.app')] class extends Component
     public bool $showShareModal = false;
     public ?int $sharingPostId = null;
     public string $shareSearch = '';
-    public array $selectedShareUserIds = [];
+    public ?int $selectedShareUserId = null;
     public string $shareOptionalMessage = '';
 
     /**
      * Rules for validation.
      */
-    protected array $rules = [
-        'body' => 'required|string|max:3000',
-        'visibility' => 'required|string|in:verified_users,connections_only,community,private',
-        'selectedCommunityId' => 'nullable|integer|exists:communities,id',
-    ];
-
-    /**
-     * Clear community selection when switching away from community audience.
-     */
-    public function updatedVisibility(string $value): void
+    protected function rules(): array
     {
-        if ($value !== PostVisibility::COMMUNITY->value) {
-            $this->selectedCommunityId = null;
+        $rules = [
+            'body' => 'required|string|max:3000',
+            'visibility' => 'required|string|in:verified_users,connections_only,community,private',
+            'postType' => 'required|string|in:standard,experience_share,mentor_insight,opportunity',
+        ];
+
+        if ($this->postType === 'opportunity') {
+            $rules['oppCompany'] = ['required', 'string', 'max:255'];
+            $rules['oppPosition'] = ['required', 'string', 'max:255'];
+            $rules['oppLocation'] = ['nullable', 'string', 'max:255'];
+            $rules['oppApplicationUrl'] = ['nullable', 'url', 'max:500'];
+            $rules['oppApplicationDeadline'] = ['nullable', 'date', 'after:today'];
+            $rules['oppFieldTags'] = ['nullable', 'array'];
         }
+
+        return $rules;
     }
 
     /**
@@ -157,20 +158,26 @@ new #[Layout('layouts.app')] class extends Component
      */
     public function submitPost(CreatePost $createPost): void
     {
-        $this->validate([
-            'body' => 'required|string|max:3000',
-            'visibility' => 'required|string|in:verified_users,connections_only,community,private',
-            'selectedCommunityId' => 'nullable|required_if:visibility,community|integer|exists:communities,id',
-        ], [
-            'selectedCommunityId.required_if' => 'Vui lòng chọn cộng đồng để đăng bài.',
-            'selectedCommunityId.exists' => 'Cộng đồng đã chọn không khả dụng.',
-        ]);
+        $this->validate();
 
-        $post = $createPost->execute(Auth::user(), [
+        $data = [
             'body' => $this->body,
+            'post_type' => $this->postType,
             'visibility' => $this->visibility,
-            'community_id' => $this->selectedCommunityId,
-        ]);
+        ];
+
+        if ($this->postType === 'opportunity') {
+            $data['opportunity'] = [
+                'company' => $this->oppCompany,
+                'position' => $this->oppPosition,
+                'location' => $this->oppLocation ?: null,
+                'application_url' => $this->oppApplicationUrl ?: null,
+                'application_deadline' => $this->oppApplicationDeadline,
+                'field_tags' => $this->oppFieldTags,
+            ];
+        }
+
+        $post = $createPost->execute(Auth::user(), $data);
 
         // Attach composer images polymorphically
         if (!empty($this->composerImages)) {
@@ -179,14 +186,27 @@ new #[Layout('layouts.app')] class extends Component
         }
 
         $this->body = '';
-        $this->visibility = PostVisibility::VERIFIED_USERS->value;
-        $this->selectedCommunityId = null;
+        $this->postType = 'standard';
+        $this->oppCompany = '';
+        $this->oppPosition = '';
+        $this->oppLocation = '';
+        $this->oppApplicationUrl = '';
+        $this->oppApplicationDeadline = null;
+        $this->oppFieldTags = [];
         $this->composerImages = [];
         $this->imageFiles = [];
         $this->feedbackMessage = 'Đăng bài viết thành công.';
         $this->dispatch('post-created');
-        $this->perPage = self::FEED_PAGE_SIZE;
         $this->resetPage(); // Re-render feed at page 1
+    }
+
+    /**
+     * Switch feed tab filter.
+     */
+    public function setTab(string $tab): void
+    {
+        $this->activeTab = $tab;
+        $this->resetPage();
     }
 
     /**
@@ -409,36 +429,6 @@ new #[Layout('layouts.app')] class extends Component
     }
 
     /**
-     * Toggle follow status for a user.
-     */
-    public function toggleFollow(int $userId, FollowUser $followUser, UnfollowUser $unfollowUser): void
-    {
-        try {
-            $targetUser = User::findOrFail($userId);
-            $currentUser = Auth::user();
-
-            if ($currentUser->id === $targetUser->id) {
-                $this->feedbackMessage = 'Bạn không thể tự theo dõi chính mình.';
-                return;
-            }
-
-            $isFollowing = \App\Models\UserFollow::where('follower_id', $currentUser->id)
-                ->where('following_id', $targetUser->id)
-                ->exists();
-
-            if ($isFollowing) {
-                $unfollowUser->execute($currentUser, $targetUser);
-                $this->feedbackMessage = 'Đã bỏ theo dõi ' . $targetUser->name . '.';
-            } else {
-                $followUser->execute($currentUser, $targetUser);
-                $this->feedbackMessage = 'Đã theo dõi ' . $targetUser->name . '.';
-            }
-        } catch (\Exception $e) {
-            $this->feedbackMessage = $e->getMessage();
-        }
-    }
-
-    /**
      * Start post sharing flow.
      */
     public function startShare(int $postId): void
@@ -452,93 +442,43 @@ new #[Layout('layouts.app')] class extends Component
 
         $this->sharingPostId = $postId;
         $this->shareSearch = '';
-        $this->selectedShareUserIds = [];
+        $this->selectedShareUserId = null;
         $this->shareOptionalMessage = '';
         $this->showShareModal = true;
     }
 
     /**
-     * Toggle a recipient in the share modal.
-     */
-    public function toggleShareRecipient(int $userId): void
-    {
-        $selectedUserIds = collect($this->selectedShareUserIds)
-            ->map(fn ($selectedUserId) => (int) $selectedUserId)
-            ->unique()
-            ->values();
-
-        if ($selectedUserIds->contains($userId)) {
-            $this->selectedShareUserIds = $selectedUserIds
-                ->reject(fn ($selectedUserId) => $selectedUserId === $userId)
-                ->values()
-                ->all();
-
-            return;
-        }
-
-        $this->selectedShareUserIds = $selectedUserIds
-            ->push($userId)
-            ->unique()
-            ->values()
-            ->all();
-    }
-
-    /**
-     * Execute post sharing to selected conversations.
+     * Execute post sharing to conversation.
      */
     public function executeShare(
         SendSharedPostMessage $sendSharedPostMessage,
         FindOrCreateDirectConversation $findOrCreateDirectConversation
     ): void {
-        $selectedUserIds = collect($this->selectedShareUserIds)
-            ->map(fn ($selectedUserId) => (int) $selectedUserId)
-            ->filter()
-            ->unique()
-            ->values();
-
-        if (! $this->sharingPostId || $selectedUserIds->isEmpty()) {
+        if (! $this->sharingPostId || ! $this->selectedShareUserId) {
             return;
         }
 
-        $post = Post::findOrFail($this->sharingPostId);
-        $sentCount = 0;
-        $failedRecipients = [];
+        try {
+            $post = Post::findOrFail($this->sharingPostId);
+            $recipient = User::findOrFail($this->selectedShareUserId);
 
-        foreach ($selectedUserIds as $recipientId) {
-            try {
-                $recipient = User::findOrFail($recipientId);
+            // Find or create conversation
+            $conversation = $findOrCreateDirectConversation->execute(Auth::user(), $recipient);
 
-                $conversation = $findOrCreateDirectConversation->execute(Auth::user(), $recipient);
+            // Send share post message
+            $sendSharedPostMessage->execute(Auth::user(), $conversation, $post, [
+                'body' => $this->shareOptionalMessage ?: null,
+            ]);
 
-                $sendSharedPostMessage->execute(Auth::user(), $conversation, $post, [
-                    'body' => $this->shareOptionalMessage ?: null,
-                ]);
-
-                $sentCount++;
-            } catch (\Exception $e) {
-                $failedRecipients[] = User::find($recipientId)?->name ?? "ID {$recipientId}";
-            }
-        }
-
-        if ($sentCount > 0) {
             $this->showShareModal = false;
             $this->sharingPostId = null;
-            $this->selectedShareUserIds = [];
+            $this->selectedShareUserId = null;
             $this->shareOptionalMessage = '';
-            $this->shareSearch = '';
-
-            if ($failedRecipients === []) {
-                $this->feedbackMessage = "Đã chia sẻ bài viết qua tin nhắn cho {$sentCount} người nhận.";
-
-                return;
-            }
-
-            $this->feedbackMessage = "Đã gửi cho {$sentCount} người nhận. Không gửi được cho: ".implode(', ', $failedRecipients).'.';
-
-            return;
+            
+            $this->feedbackMessage = 'Đã chia sẻ bài viết qua tin nhắn thành công.';
+        } catch (\Exception $e) {
+            $this->feedbackMessage = $e->getMessage();
         }
-
-        $this->feedbackMessage = 'Không gửi được bài viết cho người nhận đã chọn: '.implode(', ', $failedRecipients).'.';
     }
 
     /**
@@ -570,451 +510,48 @@ new #[Layout('layouts.app')] class extends Component
     }
 
     /**
-     * Increase the feed window while keeping already-rendered posts in place.
-     */
-    public function loadMore(): void
-    {
-        $this->perPage += self::FEED_PAGE_SIZE;
-    }
-
-    /**
-     * Open quick follow modal for the specified user.
-     */
-    public function openQuickFollowModal(int $authorId): void
-    {
-        $author = User::findOrFail($authorId);
-        $currentUser = Auth::user();
-
-        if ($author->id === $currentUser->id) {
-            $this->feedbackMessage = 'Bạn không thể tự theo dõi chính mình.';
-            return;
-        }
-
-        // Check if already active connections/friends
-        $isFriend = Connection::where(function ($query) use ($currentUser, $author) {
-                $query->where('user_one_id', $currentUser->id)->where('user_two_id', $author->id);
-            })
-            ->orWhere(function ($query) use ($currentUser, $author) {
-                $query->where('user_one_id', $author->id)->where('user_two_id', $currentUser->id);
-            })
-            ->where('status', ConnectionStatus::ACTIVE)
-            ->exists();
-
-        if ($isFriend) {
-            $this->feedbackMessage = 'Người dùng này đã kết nối bạn bè với bạn.';
-            return;
-        }
-
-        $this->quickFollowUserId = $author->id;
-        $this->quickFollowCompleted = \App\Models\UserFollow::where('follower_id', $currentUser->id)
-            ->where('following_id', $author->id)
-            ->exists();
-        $this->showQuickFollowModal = true;
-    }
-
-    /**
-     * Confirm quick follow from within the modal.
-     */
-    public function confirmQuickFollow(FollowUser $followUser): void
-    {
-        if (! $this->quickFollowUserId) {
-            return;
-        }
-
-        $author = User::findOrFail($this->quickFollowUserId);
-
-        try {
-            $followUser->execute(Auth::user(), $author);
-            $this->quickFollowCompleted = true;
-            $this->feedbackMessage = 'Đã theo dõi ' . $author->name . '.';
-        } catch (\Illuminate\Validation\ValidationException $e) {
-            $this->feedbackMessage = collect($e->errors())->flatten()->first() ?: 'Không thể theo dõi người dùng này.';
-        } catch (\Exception $e) {
-            $this->feedbackMessage = $e->getMessage();
-        }
-    }
-
-    /**
-     * Confirm quick unfollow from within the modal.
-     */
-    public function confirmQuickUnfollow(UnfollowUser $unfollowUser): void
-    {
-        if (! $this->quickFollowUserId) {
-            return;
-        }
-
-        $author = User::findOrFail($this->quickFollowUserId);
-
-        try {
-            $unfollowUser->execute(Auth::user(), $author);
-            $this->quickFollowCompleted = false;
-            $this->feedbackMessage = 'Đã bỏ theo dõi ' . $author->name . '.';
-        } catch (\Exception $e) {
-            $this->feedbackMessage = $e->getMessage();
-        }
-    }
-
-    /**
-     * Close the quick follow modal.
-     */
-    public function closeQuickFollowModal(): void
-    {
-        $this->showQuickFollowModal = false;
-        $this->quickFollowUserId = null;
-        $this->quickFollowCompleted = false;
-    }
-
-    /**
-     * Toggle a public repost for the selected post.
-     */
-    public function toggleRepost(int $postId, TogglePostRepost $togglePostRepost): void
-    {
-        $post = Post::findOrFail($postId);
-
-        try {
-            $isReposted = $togglePostRepost->execute(Auth::user(), $post);
-            $this->feedbackMessage = $isReposted ? 'Đã đăng lại bài viết.' : 'Đã hủy đăng lại bài viết.';
-        } catch (\Illuminate\Auth\Access\AuthorizationException $e) {
-            $this->feedbackMessage = $e->getMessage();
-        }
-    }
-
-    /**
-     * Switch between the personalized and following-only feeds.
-     */
-    public function setFeedTab(string $tab): void
-    {
-        if (! in_array($tab, ['for_you', 'following'], true)) {
-            return;
-        }
-
-        if ($this->activeFeedTab === $tab) {
-            return;
-        }
-
-        $this->activeFeedTab = $tab;
-        $this->perPage = self::FEED_PAGE_SIZE;
-        $this->resetPage();
-    }
-
-    /**
-     * Build the base visible feed query shared by both tabs.
-     */
-    private function baseFeedQuery(User $user): Builder
-    {
-        $query = Post::with([
-            'user.profile',
-            'user' => function ($query) use ($user): void {
-                $query->withCount(['followers as is_followed_by_current_user' => function ($q) use ($user): void {
-                    $q->where('follower_id', $user->id);
-                }]);
-            },
-            'media.variants'
-        ])
-            ->withCount([
-                'likes',
-                'reposts',
-                'comments as published_comments_count' => function ($query): void {
-                    $query->where('status', CommentStatus::PUBLISHED->value);
-                },
-            ])
-            ->withCount([
-                'likes as liked_by_current_user_count' => function ($query) use ($user): void {
-                    $query->where('user_id', $user->id);
-                },
-                'saves as saved_by_current_user_count' => function ($query) use ($user): void {
-                    $query->where('user_id', $user->id);
-                },
-                'reposts as reposted_by_current_user_count' => function ($query) use ($user): void {
-                    $query->where('user_id', $user->id);
-                },
-            ]);
-
-        return $this->applyVisibleFeedPostConstraints($query, $user);
-    }
-
-    /**
-     * Apply post status, privacy, and local hide filters to a feed post query.
-     */
-    private function applyVisibleFeedPostConstraints($query, User $user)
-    {
-        return $query
-            ->whereIn('status', [PostStatus::PUBLISHED, PostStatus::EDITED])
-            ->visibleTo($user)
-            ->where(function ($query) use ($user) {
-                $query->whereDoesntHave('hides', function ($q) use ($user) {
-                    $q->where('user_id', $user->id);
-                })
-                ->orWhereIn('id', $this->locallyHiddenPostIds);
-            });
-    }
-
-    /**
-     * Build visible repost events for the feed.
-     */
-    private function baseRepostQuery(User $user): Builder
-    {
-        return PostRepost::with([
-            'user.profile',
-            'post' => function ($query) use ($user): void {
-                $query->with(['user.profile', 'media.variants'])
-                    ->withCount([
-                        'likes',
-                        'reposts',
-                        'comments as published_comments_count' => function ($query): void {
-                            $query->where('status', CommentStatus::PUBLISHED->value);
-                        },
-                    ])
-                    ->withCount([
-                        'likes as liked_by_current_user_count' => function ($query) use ($user): void {
-                            $query->where('user_id', $user->id);
-                        },
-                        'saves as saved_by_current_user_count' => function ($query) use ($user): void {
-                            $query->where('user_id', $user->id);
-                        },
-                        'reposts as reposted_by_current_user_count' => function ($query) use ($user): void {
-                            $query->where('user_id', $user->id);
-                        },
-                    ]);
-
-                $this->applyVisibleFeedPostConstraints($query, $user);
-            },
-        ])->whereHas('post', function (Builder $query) use ($user): void {
-            $this->applyVisibleFeedPostConstraints($query, $user);
-        });
-    }
-
-    /**
-     * @return list<int>
-     */
-    private function followingUserIds(User $user): array
-    {
-        return $user->following()
-            ->pluck('users.id')
-            ->map(fn ($id): int => (int) $id)
-            ->all();
-    }
-
-    /**
-     * @return list<int>
-     */
-    private function friendUserIds(User $user): array
-    {
-        return Connection::where(function ($query) use ($user) {
-                $query->where('user_one_id', $user->id)
-                    ->orWhere('user_two_id', $user->id);
-            })
-            ->where('status', ConnectionStatus::ACTIVE)
-            ->get(['user_one_id', 'user_two_id'])
-            ->map(fn (Connection $connection): int => $connection->user_one_id === $user->id
-                ? (int) $connection->user_two_id
-                : (int) $connection->user_one_id)
-            ->values()
-            ->all();
-    }
-
-    /**
-     * @return list<int>
-     */
-    private function joinedCommunityIds(User $user): array
-    {
-        return $user->activeCommunityMemberships()
-            ->pluck('community_id')
-            ->map(fn ($id): int => (int) $id)
-            ->all();
-    }
-
-    /**
-     * Rank For You items: friends, following, joined communities, then recent.
-     */
-    private function applyForYouRanking(Builder $query, User $user): Builder
-    {
-        $cases = [];
-        $bindings = [];
-
-        $friendIds = $this->friendUserIds($user);
-        if ($friendIds !== []) {
-            $cases[] = 'WHEN user_id IN ('.$this->placeholdersFor($friendIds).') THEN 0';
-            array_push($bindings, ...$friendIds);
-        }
-
-        $followingIds = $this->followingUserIds($user);
-        if ($followingIds !== []) {
-            $cases[] = 'WHEN user_id IN ('.$this->placeholdersFor($followingIds).') THEN 1';
-            array_push($bindings, ...$followingIds);
-        }
-
-        $communityIds = $this->joinedCommunityIds($user);
-        if ($communityIds !== []) {
-            $cases[] = 'WHEN scope_type = ? AND scope_id IN ('.$this->placeholdersFor($communityIds).') THEN 2';
-            $bindings[] = 'community';
-            array_push($bindings, ...$communityIds);
-        }
-
-        if ($cases !== []) {
-            $query->orderByRaw('CASE '.implode(' ', $cases).' ELSE 3 END', $bindings);
-        }
-
-        return $query->latest('published_at');
-    }
-
-    /**
-     * Rank a materialized feed item using the same For You buckets as the DB query.
-     *
-     * @param  list<int>  $friendIds
-     * @param  list<int>  $followingIds
-     * @param  list<int>  $communityIds
-     */
-    private function feedRankForPost(Post $post, array $friendIds, array $followingIds, array $communityIds): int
-    {
-        if (in_array((int) $post->user_id, $friendIds, true)) {
-            return 0;
-        }
-
-        if (in_array((int) $post->user_id, $followingIds, true)) {
-            return 1;
-        }
-
-        if ($post->scope_type === 'community' && in_array((int) $post->scope_id, $communityIds, true)) {
-            return 2;
-        }
-
-        return 3;
-    }
-
-    /**
-     * Rank a repost event by the user who reposted it.
-     *
-     * @param  list<int>  $friendIds
-     * @param  list<int>  $followingIds
-     */
-    private function feedRankForRepost(PostRepost $repost, array $friendIds, array $followingIds): int
-    {
-        if (in_array((int) $repost->user_id, $friendIds, true)) {
-            return 0;
-        }
-
-        if (in_array((int) $repost->user_id, $followingIds, true)) {
-            return 1;
-        }
-
-        return 3;
-    }
-
-    /**
-     * @param  list<int>  $values
-     */
-    private function placeholdersFor(array $values): string
-    {
-        return implode(', ', array_fill(0, count($values), '?'));
-    }
-
-    /**
      * Render the component view.
      */
     public function with(): array
     {
         $user = Auth::user();
 
-        $query = $this->baseFeedQuery($user);
-        $repostQuery = $this->baseRepostQuery($user);
-        $friendIds = $this->friendUserIds($user);
-        $followingIds = $this->followingUserIds($user);
-        $communityIds = $this->joinedCommunityIds($user);
+        $query = Post::with(['user.profile', 'media.variants', 'opportunityDetail'])
+            ->withCount([
+                'likes',
+                'comments as published_comments_count' => function ($query): void {
+                    $query->where('status', CommentStatus::PUBLISHED->value);
+                },
+                'likes as liked_by_current_user_count' => function ($query) use ($user): void {
+                    $query->where('user_id', $user->id);
+                },
+                'saves as saved_by_current_user_count' => function ($query) use ($user): void {
+                    $query->where('user_id', $user->id);
+                },
+            ])
+            ->whereIn('status', [PostStatus::PUBLISHED, PostStatus::EDITED])
+            ->where(function ($q) use ($user) {
+                $q->whereDoesntHave('hides', function ($h) use ($user) {
+                    $h->where('user_id', $user->id);
+                })
+                ->orWhereIn('id', $this->locallyHiddenPostIds);
+            });
 
-        if ($this->activeFeedTab === 'following') {
-            if ($followingIds === []) {
-                $query->whereRaw('1 = 0');
-                $repostQuery->whereRaw('1 = 0');
-            } else {
-                $query->whereIn('user_id', $followingIds);
-                $repostQuery->whereIn('user_id', $followingIds);
-            }
-
-            $query->latest('published_at');
-            $repostQuery->latest('created_at');
-        } else {
-            $this->applyForYouRanking($query, $user);
-            $repostQuery->latest('created_at');
+        // Apply tab filter
+        if ($this->activeTab === 'experience') {
+            $query->whereIn('post_type', [PostType::EXPERIENCE_SHARE->value, PostType::MENTOR_INSIGHT->value]);
+        } elseif ($this->activeTab === 'opportunities') {
+            $query->where('post_type', PostType::OPPORTUNITY->value);
+            $query->whereDoesntHave('opportunityDetail', function ($o) {
+                $o->where('is_expired', true);
+            });
         }
 
-        $originalPosts = $query
-            ->limit($this->perPage + 1)
-            ->get()
-            ->map(function (Post $post) use ($friendIds, $followingIds, $communityIds): Post {
-                $post->setAttribute('feed_item_key', "post-{$post->id}");
-                $post->setAttribute('feed_sort_at', $post->published_at ?? $post->created_at);
-                $post->setAttribute('feed_rank', $this->activeFeedTab === 'for_you'
-                    ? $this->feedRankForPost($post, $friendIds, $followingIds, $communityIds)
-                    : 0);
-
-                return $post;
-            });
-
-        $repostPosts = $repostQuery
-            ->limit($this->perPage + 1)
-            ->get()
-            ->filter(fn (PostRepost $repost): bool => $repost->post !== null)
-            ->map(function (PostRepost $repost) use ($friendIds, $followingIds): Post {
-                $post = $repost->post;
-                $post->setAttribute('feed_item_key', "repost-{$repost->id}");
-                $post->setAttribute('feed_sort_at', $repost->created_at);
-                $post->setAttribute('feed_rank', $this->activeFeedTab === 'for_you'
-                    ? $this->feedRankForRepost($repost, $friendIds, $followingIds)
-                    : 0);
-                $post->setRelation('feedRepostedBy', $repost->user);
-                $post->setAttribute('feed_reposted_at', $repost->created_at);
-
-                return $post;
-            });
-
-        $feedItems = $originalPosts
-            ->concat($repostPosts)
-            ->sort(function (Post $firstPost, Post $secondPost): int {
-                $rankComparison = (int) $firstPost->feed_rank <=> (int) $secondPost->feed_rank;
-
-                if ($rankComparison !== 0) {
-                    return $rankComparison;
-                }
-
-                return ($secondPost->feed_sort_at?->getTimestamp() ?? 0) <=> ($firstPost->feed_sort_at?->getTimestamp() ?? 0);
-            })
-            ->values();
-
-        $posts = new Paginator(
-            $feedItems->take($this->perPage + 1),
-            $this->perPage,
-            1,
-            ['path' => request()->url()]
-        );
-
-        $postAuthorIds = $posts->getCollection()
-            ->pluck('user_id')
-            ->map(fn ($id): int => (int) $id)
-            ->unique()
-            ->values()
-            ->all();
-        $followedAuthorIds = $postAuthorIds === []
-            ? []
-            : $user->following()
-                ->whereIn('users.id', $postAuthorIds)
-                ->pluck('users.id')
-                ->map(fn ($id): int => (int) $id)
-                ->all();
-        $friendAuthorIds = array_values(array_intersect($this->friendUserIds($user), $postAuthorIds));
-        $availableCommunities = $user->activeCommunityMemberships()
-            ->with('community')
-            ->get()
-            ->pluck('community')
-            ->filter(fn ($community): bool => $community?->isActive() ?? false)
-            ->values();
+        $posts = $query->latest('published_at')->paginate(10);
 
         return [
             'posts' => $posts,
             'currentUser' => $user,
-            'availableCommunities' => $availableCommunities,
-            'followedAuthorIds' => $followedAuthorIds,
-            'friendAuthorIds' => $friendAuthorIds,
         ];
     }
 };
@@ -1032,46 +569,28 @@ new #[Layout('layouts.app')] class extends Component
                 
                 {{-- Tabs --}}
                 <div class="ue-feed-tabs">
-                    <button
-                        type="button"
-                        wire:click="setFeedTab('for_you')"
-                        wire:loading.attr="disabled"
-                        wire:target="setFeedTab"
-                        class="px-3 py-1.5 rounded-full text-xxs font-bold transition-colors {{ $activeFeedTab === 'for_you' ? 'bg-ue-brand-soft text-ue-brand' : 'text-slate-400 hover:bg-slate-50' }}"
-                    >
+                    <button type="button" wire:click="setTab('for_you')" class="px-3 py-1.5 rounded-full text-xxs font-bold {{ $activeTab === 'for_you' ? 'bg-ue-brand-soft text-ue-brand' : 'text-slate-400 hover:bg-slate-50 transition-colors' }}">
                         Dành cho bạn
                     </button>
-                    <button
-                        type="button"
-                        wire:click="setFeedTab('following')"
-                        wire:loading.attr="disabled"
-                        wire:target="setFeedTab"
-                        class="px-3 py-1.5 rounded-full text-xxs font-bold transition-colors {{ $activeFeedTab === 'following' ? 'bg-ue-brand-soft text-ue-brand' : 'text-slate-400 hover:bg-slate-50' }}"
-                    >
-                        Theo dõi
+                    <button type="button" wire:click="setTab('experience')" class="px-3 py-1.5 rounded-full text-xxs font-bold {{ $activeTab === 'experience' ? 'bg-ue-brand-soft text-ue-brand' : 'text-slate-400 hover:bg-slate-50 transition-colors' }}">
+                        Kinh nghiệm
+                    </button>
+                    <button type="button" wire:click="setTab('opportunities')" class="px-3 py-1.5 rounded-full text-xxs font-bold {{ $activeTab === 'opportunities' ? 'bg-ue-brand-soft text-ue-brand' : 'text-slate-400 hover:bg-slate-50 transition-colors' }}">
+                        Cơ hội
                     </button>
                 </div>
             </div>
 
             {{-- Mobile: Threads-style centered tab strip only --}}
             <div class="flex sm:hidden items-center justify-center border-b border-slate-100 pb-1">
-                <button
-                    type="button"
-                    wire:click="setFeedTab('for_you')"
-                    wire:loading.attr="disabled"
-                    wire:target="setFeedTab"
-                    class="flex-1 py-2 text-xs text-center transition-colors {{ $activeFeedTab === 'for_you' ? 'font-bold text-slate-800 border-b-2 border-slate-800' : 'font-medium text-slate-400 border-b-2 border-transparent' }}"
-                >
+                <button type="button" wire:click="setTab('for_you')" class="flex-1 py-2 text-xs {{ $activeTab === 'for_you' ? 'font-bold text-slate-800 border-b-2 border-slate-800' : 'font-medium text-slate-400' }} text-center">
                     Dành cho bạn
                 </button>
-                <button
-                    type="button"
-                    wire:click="setFeedTab('following')"
-                    wire:loading.attr="disabled"
-                    wire:target="setFeedTab"
-                    class="flex-1 py-2 text-xs text-center transition-colors {{ $activeFeedTab === 'following' ? 'font-bold text-slate-800 border-b-2 border-slate-800' : 'font-medium text-slate-400 border-b-2 border-transparent' }}"
-                >
-                    Theo dõi
+                <button type="button" wire:click="setTab('experience')" class="flex-1 py-2 text-xs {{ $activeTab === 'experience' ? 'font-bold text-slate-800 border-b-2 border-slate-800' : 'font-medium text-slate-400' }} text-center">
+                    Kinh nghiệm
+                </button>
+                <button type="button" wire:click="setTab('opportunities')" class="flex-1 py-2 text-xs {{ $activeTab === 'opportunities' ? 'font-bold text-slate-800 border-b-2 border-slate-800' : 'font-medium text-slate-400' }} text-center">
+                    Cơ hội
                 </button>
             </div>
         </header>
@@ -1091,14 +610,69 @@ new #[Layout('layouts.app')] class extends Component
                         </div>
                         
                         {{-- Right Column: Form content --}}
-                        <div class="min-w-0">
+                        <div class="min-w-0 flex-1">
                             <form wire:submit.prevent="submitPost">
+                                {{-- Post Type Selector --}}
+                                <div class="flex items-center gap-2 mb-3">
+                                    <span class="text-xxs font-bold text-slate-400">Đăng:</span>
+                                    <div class="flex gap-1">
+                                        <button type="button" wire:click="$set('postType', 'standard')" class="px-2.5 py-1 text-[10px] font-bold rounded-lg border transition-colors {{ $postType === 'standard' ? 'bg-ue-brand-soft text-ue-brand border-ue-brand/20' : 'bg-slate-50 text-slate-500 border-slate-200 hover:bg-slate-100' }}">
+                                            Bài viết
+                                        </button>
+                                        <button type="button" wire:click="$set('postType', 'experience_share')" class="px-2.5 py-1 text-[10px] font-bold rounded-lg border transition-colors {{ $postType === 'experience_share' ? 'bg-ue-brand-soft text-ue-brand border-ue-brand/20' : 'bg-slate-50 text-slate-500 border-slate-200 hover:bg-slate-100' }}">
+                                            Kinh nghiệm
+                                        </button>
+                                        <button type="button" wire:click="$set('postType', 'mentor_insight')" class="px-2.5 py-1 text-[10px] font-bold rounded-lg border transition-colors {{ $postType === 'mentor_insight' ? 'bg-ue-brand-soft text-ue-brand border-ue-brand/20' : 'bg-slate-50 text-slate-500 border-slate-200 hover:bg-slate-100' }}">
+                                            Career Insight
+                                        </button>
+                                        <button type="button" wire:click="$set('postType', 'opportunity')" class="px-2.5 py-1 text-[10px] font-bold rounded-lg border transition-colors {{ $postType === 'opportunity' ? 'bg-ue-brand-soft text-ue-brand border-ue-brand/20' : 'bg-slate-50 text-slate-500 border-slate-200 hover:bg-slate-100' }}">
+                                            Cơ hội
+                                        </button>
+                                    </div>
+                                </div>
+
+                                {{-- Opportunity Fields --}}
+                                @if ($postType === 'opportunity')
+                                    <div class="mb-3 p-3 bg-white border border-slate-200 rounded-xl space-y-2.5">
+                                        <p class="text-[10px] font-bold text-slate-600 flex items-center gap-1.5">
+                                            <x-ui.icon name="briefcase" size="xs" class="text-ue-brand" />
+                                            Thông tin cơ hội
+                                        </p>
+                                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                                            <div>
+                                                <label for="opp-company" class="text-2xs font-bold text-slate-700">Công ty / Tổ chức <span class="text-red-500">*</span></label>
+                                                <input type="text" id="opp-company" wire:model="oppCompany" placeholder="Tên công ty..." class="mt-0.5 w-full rounded-lg border-slate-200 text-xs focus:border-ue-brand focus:ring-ue-brand-soft">
+                                                @error('oppCompany') <p class="text-2xs text-red-600 mt-0.5">{{ $message }}</p> @enderror
+                                            </div>
+                                            <div>
+                                                <label for="opp-position" class="text-2xs font-bold text-slate-700">Vị trí <span class="text-red-500">*</span></label>
+                                                <input type="text" id="opp-position" wire:model="oppPosition" placeholder="Ví dụ: Thực tập sinh PHP..." class="mt-0.5 w-full rounded-lg border-slate-200 text-xs focus:border-ue-brand focus:ring-ue-brand-soft">
+                                                @error('oppPosition') <p class="text-2xs text-red-600 mt-0.5">{{ $message }}</p> @enderror
+                                            </div>
+                                            <div>
+                                                <label for="opp-location" class="text-2xs font-bold text-slate-700">Địa điểm</label>
+                                                <input type="text" id="opp-location" wire:model="oppLocation" placeholder="TP. Hồ Chí Minh..." class="mt-0.5 w-full rounded-lg border-slate-200 text-xs focus:border-ue-brand focus:ring-ue-brand-soft">
+                                            </div>
+                                            <div>
+                                                <label for="opp-deadline" class="text-2xs font-bold text-slate-700">Hạn nộp</label>
+                                                <input type="date" id="opp-deadline" wire:model="oppApplicationDeadline" class="mt-0.5 w-full rounded-lg border-slate-200 text-xs focus:border-ue-brand focus:ring-ue-brand-soft">
+                                                @error('oppApplicationDeadline') <p class="text-2xs text-red-600 mt-0.5">{{ $message }}</p> @enderror
+                                            </div>
+                                            <div class="sm:col-span-2">
+                                                <label for="opp-url" class="text-2xs font-bold text-slate-700">Link ứng tuyển</label>
+                                                <input type="url" id="opp-url" wire:model="oppApplicationUrl" placeholder="https://..." class="mt-0.5 w-full rounded-lg border-slate-200 text-xs focus:border-ue-brand focus:ring-ue-brand-soft">
+                                                @error('oppApplicationUrl') <p class="text-2xs text-red-600 mt-0.5">{{ $message }}</p> @enderror
+                                            </div>
+                                        </div>
+                                    </div>
+                                @endif
+
                                 <div>
                                     <label for="post-body" class="sr-only">Nội dung bài viết</label>
                                     <textarea
                                         id="post-body"
                                         wire:model="body"
-                                        placeholder="Có gì mới trong cộng đồng HCMUE hôm nay?"
+                                        placeholder="{{ $postType === 'opportunity' ? 'Mô tả thêm về cơ hội này...' : ($postType === 'experience_share' ? 'Chia sẻ kinh nghiệm của bạn với cộng đồng...' : ($postType === 'mentor_insight' ? 'Chia sẻ góc nhìn nghề nghiệp, lời khuyên dành cho sinh viên...' : 'Có gì mới trong cộng đồng HCMUE hôm nay?')) }}"
                                         rows="2"
                                         class="ue-composer__textarea focus:outline-none"
                                         maxlength="3000"
@@ -1137,24 +711,17 @@ new #[Layout('layouts.app')] class extends Component
                                 </div>
 
                                 <div class="ue-composer__toolbar">
-                                    <div class="ue-composer__actions flex items-center gap-2 flex-shrink-0">
+                                    <div class="ue-composer__actions flex items-center gap-2">
                                         {{-- Image Upload Trigger Button --}}
-                                        <label class="ue-composer__media-btn p-1.5 text-slate-400 hover:text-slate-600 hover:bg-slate-50 border border-slate-200 rounded-lg cursor-pointer transition-colors shadow-2xs flex items-center justify-center flex-shrink-0">
-                                            <x-ui.icon name="image" size="md" />
+                                        <label class="p-1.5 text-slate-400 hover:text-slate-600 hover:bg-slate-50 border border-slate-200 rounded-lg cursor-pointer transition-colors shadow-2xs flex items-center justify-center">
+                                            <x-ui.icon name="image" size="xs" />
                                             <input type="file" wire:model="imageFiles" multiple class="hidden" accept="image/*" />
                                         </label>
 
-                                        <span class="ue-composer__counter text-slate-400 text-xxs font-semibold whitespace-nowrap flex-shrink-0">
+                                        <span class="ue-composer__counter text-slate-400 text-xxs font-semibold">
                                             {{ mb_strlen($body) }}/3000
                                         </span>
-                                        @php
-                                            $visibilityLabel = match ($visibility) {
-                                                'connections_only' => 'Chỉ bạn bè',
-                                                'community' => 'Cộng đồng',
-                                                default => 'Chỉ sinh viên xác thực',
-                                            };
-                                        @endphp
-                                        <div class="relative flex-shrink-0">
+                                        <div class="relative">
                                             <label for="post-visibility" class="sr-only">Quyền xem</label>
                                             <select
                                                 id="post-visibility"
@@ -1162,35 +729,17 @@ new #[Layout('layouts.app')] class extends Component
                                                 class="absolute inset-0 w-full h-full opacity-0 z-10 cursor-pointer"
                                             >
                                                 <option value="verified_users">Chỉ sinh viên xác thực</option>
-                                                <option value="connections_only">Chỉ bạn bè</option>
-                                                <option value="community">Chỉ cộng đồng</option>
+                                                <option value="connections_only" disabled>Bạn bè (Sắp ra mắt)</option>
+                                                <option value="community" disabled>Cộng đồng (Sắp ra mắt)</option>
                                             </select>
-                                            <div class="flex items-center gap-1 px-2 py-1 bg-slate-50 text-slate-500 rounded-lg select-none pointer-events-none whitespace-nowrap flex-shrink-0">
-                                                <x-ui.icon name="shield-check" size="xs" class="text-ue-brand fill-ue-brand/10 flex-shrink-0" />
-                                                <span class="hidden sm:inline text-xxs font-bold">{{ $visibilityLabel }}</span>
-                                                <span class="sm:hidden text-[10px] font-bold whitespace-nowrap flex-shrink-0">{{ $visibility === 'verified_users' ? 'Xác thực' : $visibilityLabel }}</span>
-                                                <x-ui.icon name="chevron-down" size="xs" class="text-slate-400 flex-shrink-0" />
+                                            <div class="flex items-center gap-1.5 px-2.5 py-1 bg-slate-50 text-slate-500 rounded-lg select-none pointer-events-none">
+                                                <x-ui.icon name="shield-check" size="xs" class="text-ue-brand fill-ue-brand/10" />
+                                                <span class="hidden sm:inline text-xxs font-bold">Chỉ sinh viên xác thực</span>
+                                                <span class="sm:hidden text-[10px] font-bold">Xác thực</span>
+                                                <x-ui.icon name="chevron-down" size="xs" class="text-slate-400" />
                                             </div>
                                         </div>
-                                        @if ($visibility === 'community')
-                                            <div class="relative min-w-[120px] flex-shrink-0">
-                                                <label for="post-community" class="sr-only">Chọn cộng đồng</label>
-                                                <select
-                                                    id="post-community"
-                                                    wire:model="selectedCommunityId"
-                                                    class="w-full rounded-lg border border-slate-200 bg-slate-50 px-2 py-1 text-xxs font-bold text-slate-600 focus:border-ue-brand/40 focus:ring-ue-brand/20"
-                                                >
-                                                    <option value="">Chọn cộng đồng</option>
-                                                    @foreach ($availableCommunities as $community)
-                                                        <option value="{{ $community->id }}">{{ $community->name }}</option>
-                                                    @endforeach
-                                                </select>
-                                            </div>
-                                        @endif
                                     </div>
-                                    @error('selectedCommunityId')
-                                        <p class="text-xs text-red-650 font-semibold mt-1">{{ $message }}</p>
-                                    @enderror
                                     <x-ui.button
                                         type="submit"
                                         variant="primary"
@@ -1198,9 +747,18 @@ new #[Layout('layouts.app')] class extends Component
                                         icon="send"
                                         wire:loading.attr="disabled"
                                         wire:target="submitPost,imageFiles"
-                                        class="ue-composer__submit-btn flex-shrink-0"
                                     >
-                                        <span wire:loading.remove wire:target="submitPost">Đăng bài</span>
+                                        <span wire:loading.remove wire:target="submitPost">
+                                            @if ($postType === 'opportunity')
+                                                Đăng cơ hội
+                                            @elseif ($postType === 'experience_share')
+                                                Chia sẻ
+                                            @elseif ($postType === 'mentor_insight')
+                                                Đăng insight
+                                            @else
+                                                Đăng bài
+                                            @endif
+                                        </span>
                                         <span wire:loading wire:target="submitPost">Đang đăng...</span>
                                     </x-ui.button>
                                 </div>
@@ -1212,15 +770,28 @@ new #[Layout('layouts.app')] class extends Component
 
             {{-- Posts list loop --}}
             <div class="ue-feed-list">
+                <div wire:loading.delay wire:target="gotoPage,nextPage,previousPage" class="p-4 sm:p-5 space-y-4">
+                    <div class="ue-skeleton-card">
+                        <div class="flex items-start gap-3">
+                            <div class="ue-skeleton-avatar ue-skeleton"></div>
+                            <div class="flex-1 space-y-2">
+                                <div class="ue-skeleton-line ue-skeleton w-1/2"></div>
+                                <div class="ue-skeleton-line ue-skeleton w-full"></div>
+                                <div class="ue-skeleton-line ue-skeleton w-5/6"></div>
+                            </div>
+                        </div>
+                    </div>
+                    @for ($i = 0; $i < 3; $i++)
+                        <x-ui.skeleton-card />
+                    @endfor
+                </div>
+
                 @forelse ($posts as $post)
                     @php
                         $isLiked = (int) $post->liked_by_current_user_count > 0;
                         $isSaved = (int) $post->saved_by_current_user_count > 0;
-                        $isReposted = (int) $post->reposted_by_current_user_count > 0;
                         $likeCount = (int) $post->likes_count;
                         $commentCount = (int) $post->published_comments_count;
-                        $repostCount = (int) $post->reposts_count;
-                        $repostedBy = $post->relationLoaded('feedRepostedBy') ? $post->feedRepostedBy : null;
                     @endphp
 
                     @if (in_array($post->id, $locallyHiddenPostIds))
@@ -1244,33 +815,16 @@ new #[Layout('layouts.app')] class extends Component
                             </button>
                         </article>
                     @else
-                        @php
-                            $authorId = (int) $post->user_id;
-                            $isSelfAuthor = $authorId === (int) $currentUser->id;
-                            $isFriendAuthor = in_array($authorId, $friendAuthorIds, true);
-                            $isFollowedAuthor = in_array($authorId, $followedAuthorIds, true);
-
-                            $showQuickFollow = ! $isSelfAuthor && ! $isFriendAuthor && ! $isFollowedAuthor;
-                            $showFollowCheck = ! $isSelfAuthor && ! $isFriendAuthor && $isFollowedAuthor;
-                        @endphp
-                        <article class="ue-feed-item" wire:key="post-item-{{ $post->feed_item_key ?? $post->id }}">
+                        <article class="ue-feed-item" wire:key="post-item-{{ $post->id }}">
                             <x-ui.post-card
                                 :post="$post"
                                 :currentUser="$currentUser"
                                 :isSaved="$isSaved"
                                 :isLiked="$isLiked"
-                                :isReposted="$isReposted"
                                 :likeCount="$likeCount"
                                 :commentCount="$commentCount"
-                                :repostCount="$repostCount"
                                 :editingPostId="$editingPostId"
                                 :editingBody="$editingBody"
-                                :showQuickFollow="$showQuickFollow"
-                                :showFollowCheck="$showFollowCheck"
-                                :repostedBy="$repostedBy"
-                                :repostedAt="$post->feed_reposted_at"
-                                :feedItemKey="$post->feed_item_key"
-                                :showRepostAction="true"
                             />
                         </article>
                     @endif
@@ -1297,25 +851,11 @@ new #[Layout('layouts.app')] class extends Component
                 @endforelse
             </div>
 
-            {{-- End state / Infinite scroll sentinel inside feed surface --}}
+            {{-- End state / Pagination Sentinel inside feed surface --}}
             <div class="ue-feed-end-state">
                 <div class="w-full flex flex-col items-center justify-center gap-2">
-                    @if ($posts->hasMorePages())
-                        <div
-                            wire:intersect="loadMore"
-                            class="flex flex-col items-center gap-2 py-2 text-center"
-                        >
-                            <span wire:loading.remove wire:target="loadMore" class="text-xxs text-slate-400 font-semibold">
-                                Đang tải thêm bài viết...
-                            </span>
-                            <span wire:loading wire:target="loadMore" class="inline-flex items-center gap-2 text-xxs text-slate-400 font-semibold">
-                                <span class="ue-spinner"></span>
-                                Đang tải...
-                            </span>
-                        </div>
-                    @else
-                        <span class="text-xxs text-slate-400 font-semibold mb-1">Bạn đã xem hết bài viết hiện có.</span>
-                    @endif
+                    <span class="text-xxs text-slate-400 font-semibold mb-1">Bạn đã xem hết bài viết hiện có.</span>
+                    {{ $posts->links() }}
                 </div>
             </div>
         </section>
@@ -1325,12 +865,7 @@ new #[Layout('layouts.app')] class extends Component
     <div class="ue-mobile-bottom-spacer"></div>
 
     {{-- Modals & Sheets --}}
-    <x-ui.create-post-modal
-        :body="$body"
-        :visibility="$visibility"
-        :selectedCommunityId="$selectedCommunityId"
-        :communities="$availableCommunities"
-    />
+    <x-ui.create-post-modal :body="$body" :visibility="$visibility" />
     <x-ui.floating-action-button />
 
     {{-- 4. REPORT MODAL --}}
@@ -1339,7 +874,7 @@ new #[Layout('layouts.app')] class extends Component
             <div class="bg-white rounded-2xl max-w-md w-full border border-slate-200 shadow-2xl overflow-hidden ue-animate-scale-in">
                 <div class="px-6 py-4 border-b border-slate-100 flex items-center justify-between">
                     <h3 id="report-modal-title" class="text-sm font-bold text-slate-800 flex items-center gap-2">
-                        <x-ui.icon name="alert-triangle" size="xs" class="text-yellow-600" />
+                        <x-ui.icon name="alert-triangle" size="xs" class="text-ue-brand" />
                         Báo cáo vi phạm cộng đồng
                     </h3>
                     <button type="button" wire:click="closeReport" class="text-slate-400 hover:text-slate-600 transition-colors">
@@ -1478,13 +1013,10 @@ new #[Layout('layouts.app')] class extends Component
                             $shareConnections = $this->getShareConnections();
                         @endphp
                         @forelse ($shareConnections as $connUser)
-                            @php
-                                $isSelectedShareRecipient = in_array($connUser->id, $selectedShareUserIds, true);
-                            @endphp
                             <button
                                 type="button"
-                                wire:click="toggleShareRecipient({{ $connUser->id }})"
-                                class="w-full text-left p-3 hover:bg-slate-50 flex items-center justify-between transition-colors {{ $isSelectedShareRecipient ? 'bg-slate-50' : '' }}"
+                                wire:click="$set('selectedShareUserId', {{ $connUser->id }})"
+                                class="w-full text-left p-3 hover:bg-slate-50 flex items-center justify-between transition-colors {{ $selectedShareUserId === $connUser->id ? 'bg-slate-50' : '' }}"
                             >
                                 <div class="flex items-center gap-3">
                                     <x-ui.avatar :user="$connUser" size="xs" />
@@ -1495,7 +1027,7 @@ new #[Layout('layouts.app')] class extends Component
                                         @endif
                                     </div>
                                 </div>
-                                @if ($isSelectedShareRecipient)
+                                @if ($selectedShareUserId === $connUser->id)
                                     <x-ui.icon name="check" size="xs" class="text-ue-brand fill-ue-brand" />
                                 @endif
                             </button>
@@ -1521,9 +1053,6 @@ new #[Layout('layouts.app')] class extends Component
                 </div>
 
                 <div class="flex items-center justify-end gap-3 px-6 py-4 bg-slate-50 border-t border-slate-100 flex-shrink-0">
-                    <p class="mr-auto text-[11px] font-semibold text-slate-400">
-                        Đã chọn {{ count($selectedShareUserIds) }} người nhận
-                    </p>
                     <button type="button" wire:click="$set('showShareModal', false)" class="px-4 py-2 text-xs font-bold text-slate-500 hover:text-slate-700 transition-colors">
                         Hủy bỏ
                     </button>
@@ -1532,7 +1061,7 @@ new #[Layout('layouts.app')] class extends Component
                         wire:click="executeShare"
                         wire:loading.attr="disabled"
                         wire:target="executeShare"
-                        @if (empty($selectedShareUserIds)) disabled @endif
+                        @if (! $selectedShareUserId) disabled @endif
                         class="px-4 py-2 text-xs font-bold text-white bg-ue-brand hover:bg-ue-brand-dark rounded-xl shadow-2xs hover:shadow-sm transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1.5"
                     >
                         <span wire:loading.remove wire:target="executeShare" class="flex items-center gap-1.5">
@@ -1547,110 +1076,5 @@ new #[Layout('layouts.app')] class extends Component
                 </div>
             </div>
         </div>
-    @endif
-
-    {{-- QUICK FOLLOW MODAL --}}
-    @if ($showQuickFollowModal && $quickFollowUserId)
-        @php
-            $quickFollowUser = \App\Models\User::find($quickFollowUserId);
-        @endphp
-        @if ($quickFollowUser)
-            @php
-                $quickFollowFollowersCount = \App\Models\UserFollow::where('following_id', $quickFollowUser->id)->count();
-                $quickFollowUserFaculty = $quickFollowUser->profile?->faculty;
-                $quickFollowDisplayName = $quickFollowUser->profile?->display_name ?? $quickFollowUser->name;
-                $quickFollowUsername = $quickFollowUser->username ?? \Illuminate\Support\Str::slug($quickFollowUser->name, '');
-            @endphp
-            <div
-                class="fixed inset-0 z-50 overflow-y-auto flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs ue-animate-fade-in"
-                role="dialog"
-                aria-modal="true"
-                aria-labelledby="follow-modal-title"
-                x-data
-                @keydown.escape.window="$wire.closeQuickFollowModal()"
-            >
-                <div 
-                    class="bg-white rounded-2xl max-w-sm w-full border border-slate-200 shadow-2xl overflow-hidden ue-animate-scale-in"
-                    @click.outside="$wire.closeQuickFollowModal()"
-                >
-                    {{-- Header with Close button --}}
-                    <div class="px-5 py-3 border-b border-slate-100 flex items-center justify-between">
-                        <span class="text-xs font-bold text-slate-400 uppercase tracking-wider">Thông tin người dùng</span>
-                        <button 
-                            type="button" 
-                            wire:click="closeQuickFollowModal" 
-                            class="text-slate-400 hover:text-slate-600 transition-colors p-1 rounded-lg hover:bg-slate-50"
-                            aria-label="Đóng modal"
-                        >
-                            <x-ui.icon name="x" size="xs" />
-                        </button>
-                    </div>
-
-                    {{-- Body with user details --}}
-                    <div class="p-6 flex flex-col items-center text-center">
-                        <x-ui.avatar :user="$quickFollowUser" size="xl" class="mb-4 shadow-sm" />
-                        
-                        <h3 id="follow-modal-title" class="text-lg font-bold text-slate-800 flex items-center gap-1.5 justify-center leading-tight">
-                            <span>{{ $quickFollowDisplayName }}</span>
-                            @if ($quickFollowUser->isActive())
-                                <x-ui.icon name="shield-check" size="xs" class="text-ue-brand fill-ue-brand" />
-                            @endif
-                        </h3>
-                        
-                        <p class="text-xs text-slate-400 font-semibold mt-1">
-                            @<span>{{ $quickFollowUsername }}</span>
-                        </p>
-
-                        @if ($quickFollowUserFaculty)
-                            <p class="text-[10px] text-slate-500 font-bold bg-slate-50 border border-slate-150 px-2 py-0.5 rounded-full mt-2.5">
-                                Khoa {{ $quickFollowUserFaculty }}
-                            </p>
-                        @endif
-
-                        <div class="mt-4 flex items-center gap-1 text-xs text-slate-500 font-medium">
-                            <span class="font-bold text-slate-800">{{ $quickFollowFollowersCount }}</span>
-                            <span>{{ $quickFollowFollowersCount > 1 ? 'người theo dõi' : 'người theo dõi' }}</span>
-                        </div>
-                    </div>
-
-                    {{-- Footer with actions --}}
-                    <div class="px-6 py-4 bg-slate-50 border-t border-slate-100 flex flex-col gap-2">
-                        @if ($quickFollowCompleted)
-                            <button
-                                type="button"
-                                wire:click="confirmQuickUnfollow"
-                                wire:loading.attr="disabled"
-                                wire:target="confirmQuickUnfollow"
-                                class="w-full py-2.5 px-4 text-xs font-bold text-slate-700 bg-slate-100 hover:bg-slate-200 border border-slate-200 rounded-xl transition-all flex items-center justify-center gap-1.5"
-                            >
-                                <span wire:loading.remove wire:target="confirmQuickUnfollow" class="flex items-center gap-1.5 justify-center w-full">
-                                    Bỏ theo dõi
-                                </span>
-                                <span wire:loading wire:target="confirmQuickUnfollow" class="flex items-center gap-1.5 justify-center w-full">
-                                    <span class="animate-spin rounded-full h-3 w-3 border border-slate-500 border-t-transparent"></span>
-                                    Đang xử lý...
-                                </span>
-                            </button>
-                        @else
-                            <button
-                                type="button"
-                                wire:click="confirmQuickFollow"
-                                wire:loading.attr="disabled"
-                                wire:target="confirmQuickFollow"
-                                class="w-full py-2.5 px-4 text-xs font-bold text-white bg-ue-brand hover:bg-ue-brand-dark rounded-xl shadow-2xs hover:shadow-sm transition-all flex items-center justify-center gap-1.5"
-                            >
-                                <span wire:loading.remove wire:target="confirmQuickFollow" class="flex items-center gap-1.5 justify-center w-full">
-                                    Theo dõi
-                                </span>
-                                <span wire:loading wire:target="confirmQuickFollow" class="flex items-center gap-1.5 justify-center w-full">
-                                    <span class="animate-spin rounded-full h-3 w-3 border border-white border-t-transparent"></span>
-                                    Đang xử lý...
-                                </span>
-                            </button>
-                        @endif
-                    </div>
-                </div>
-            </div>
-        @endif
     @endif
 </div>
