@@ -453,7 +453,6 @@
         background-color: var(--ue-surface);
         border: 1px solid var(--ue-border);
         border-radius: var(--radius-card);
-        overflow: hidden;
     }
 
     /* -------------------------------------------------------------------------

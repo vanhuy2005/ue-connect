@@ -13,7 +13,6 @@ use App\Actions\Mentor\ToggleMentorAvailabilityAction;
 use App\Actions\Mentor\UpdateMentorProfileAction;
 use App\Actions\Mentor\UpdateMentorRequestAction;
 use App\Actions\Settings\EnsureUserSettingsExistAction;
-use App\Enums\MentorAccessStatus;
 use App\Enums\MentorAvailabilityStatus;
 use App\Http\Controllers\Admin\AdminSearchController;
 use App\Http\Controllers\Admin\AnnouncementController;
@@ -34,7 +33,6 @@ use App\Models\BlockedUser;
 use App\Models\Community;
 use App\Models\Conversation;
 use App\Models\Media;
-use App\Models\MentorAccessRequest;
 use App\Models\MentorProfile;
 use App\Models\MentorRequest;
 use App\Models\Post;
@@ -146,8 +144,7 @@ Route::middleware(['auth', 'active.account', 'verified.identity'])->group(functi
         ->name('mentor.apply');
 
     Route::post('app/mentor/apply', function (RequestMentorAccessAction $action) {
-        $user = Auth::user();
-        $eligibleRoleContexts = RequestMentorAccessAction::eligibleRoleContextsFor($user);
+        $eligibleRoleContexts = RequestMentorAccessAction::eligibleRoleContextsFor(Auth::user());
 
         if (empty($eligibleRoleContexts)) {
             throw ValidationException::withMessages([
@@ -176,28 +173,11 @@ Route::middleware(['auth', 'active.account', 'verified.identity'])->group(functi
             'preferred_request_types.*' => ['string', 'max:80'],
             'response_expectation_text' => ['required', 'string', 'max:255'],
             'office_hours_text' => ['nullable', 'string', 'max:255'],
-            'evidence_media_id' => ['nullable', 'integer', 'exists:media,id'],
+            'evidence_media_id' => ['nullable', 'integer', 'exists:media_files,id'],
         ]);
 
-        $existing = MentorAccessRequest::where('user_id', $user->id)
-            ->where('status', MentorAccessStatus::NeedMoreInfo)
-            ->latest()
-            ->first();
-
-        if ($existing) {
-            $existing->update(array_merge($data, [
-                'status' => MentorAccessStatus::Submitted,
-                'reviewed_by' => null,
-                'reviewed_at' => null,
-                'review_reason' => null,
-                'admin_notes' => null,
-            ]));
-
-            return to_route('mentor.dashboard')->with('status', 'Yêu cầu mentor đã được cập nhật và gửi lại.');
-        }
-
         try {
-            $action->execute($user, $data);
+            $action->execute(Auth::user(), $data);
         } catch (Exception $exception) {
             throw ValidationException::withMessages([
                 'requested_role_context' => $exception->getMessage(),
@@ -502,14 +482,6 @@ Route::prefix('admin')
 
         Route::view('verifications', 'admin.verification-queue')
             ->name('verifications.queue');
-
-        // Opportunities
-        Route::view('opportunities', 'admin.opportunity-queue')
-            ->name('opportunities.queue');
-
-        Route::get('opportunities/{post}', function (Post $post) {
-            return view('admin.opportunity-detail', ['post' => $post]);
-        })->name('opportunities.detail');
 
         Route::get('verifications/{id}', function ($id) {
             return view('admin.verification-detail', ['id' => $id]);

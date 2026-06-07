@@ -84,7 +84,6 @@ new #[Layout('layouts.app', ['shell' => 'admin'])] class extends Component {
                     <option value="">-- Tất cả --</option>
                     <option value="post">Bài viết (Post)</option>
                     <option value="comment">Bình luận (Comment)</option>
-                    <option value="mentor_profile">Hồ sơ Mentor</option>
                 </x-ui.select>
             </div>
 
@@ -143,7 +142,7 @@ new #[Layout('layouts.app', ['shell' => 'admin'])] class extends Component {
                                 'action_taken' => 'success',
                                 default => 'neutral',
                             };
-                            $targetBadgeVariant = $report->target_type === 'post' ? 'info' : ($report->target_type === 'mentor_profile' ? 'warning' : 'neutral');
+                            $targetBadgeVariant = $report->target_type === 'post' ? 'info' : 'neutral';
                         @endphp
                         <tr class="hover:bg-ue-surface-hover transition-colors">
                             <td class="px-6 py-4 text-ue-text-muted">#{{ $report->id }}</td>
@@ -153,11 +152,7 @@ new #[Layout('layouts.app', ['shell' => 'admin'])] class extends Component {
                             </td>
                             <td class="px-6 py-4 whitespace-nowrap">
                                 <x-ui.badge :variant="$targetBadgeVariant" size="sm">
-                                    @switch($report->target_type)
-                                        @case('post') Bài viết @break
-                                        @case('mentor_profile') Hồ sơ Mentor @break
-                                        @default Bình luận
-                                    @endswitch
+                                    {{ $report->target_type === 'post' ? 'Bài viết' : 'Bình luận' }}
                                 </x-ui.badge>
                             </td>
                             <td class="px-6 py-4">
@@ -208,7 +203,7 @@ new #[Layout('layouts.app', ['shell' => 'admin'])] class extends Component {
                         'action_taken' => 'success',
                         default => 'neutral',
                     };
-                    $targetBadgeVariant = $report->target_type === 'post' ? 'info' : ($report->target_type === 'mentor_profile' ? 'warning' : 'neutral');
+                    $targetBadgeVariant = $report->target_type === 'post' ? 'info' : 'neutral';
                 @endphp
                 <x-ui.card class="space-y-3" variant="admin">
                     <div class="flex items-center justify-between">
