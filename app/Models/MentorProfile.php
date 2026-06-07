@@ -5,13 +5,11 @@ namespace App\Models;
 use App\Enums\AccountStatus;
 use App\Enums\MentorAccessStatus;
 use App\Enums\MentorAvailabilityStatus;
-use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
-use Illuminate\Support\Facades\Cache;
 
 class MentorProfile extends Model
 {
@@ -160,57 +158,5 @@ class MentorProfile extends Model
         }
 
         return $score;
-    }
-
-    public function scopeFilterByExpertise(Builder $query, ?string $topic): Builder
-    {
-        if (blank($topic)) {
-            return $query;
-        }
-
-        return $query->where(function (Builder $q) use ($topic) {
-            $q->whereJsonContains('expertise_topics', $topic)
-                ->orWhereJsonContains('help_topics', $topic);
-        });
-    }
-
-    public function scopeSearchFulltext(Builder $query, string $term): Builder
-    {
-        $like = '%'.$term.'%';
-
-        return $query->where(function (Builder $q) use ($term, $like) {
-            $q->where('headline', 'like', $like)
-                ->orWhere('bio', 'like', $like)
-                ->orWhereHas('user', fn (Builder $u) => $u->where('name', 'like', $like))
-                ->orWhereJsonContains('expertise_topics', $term)
-                ->orWhereJsonContains('help_topics', $term);
-        });
-    }
-
-    public static function getAllTopics(): array
-    {
-        return Cache::remember('mentor:all-topics', 3600, function () {
-            return self::discoverable()
-                ->get()
-                ->flatMap(fn (self $p) => array_merge(
-                    $p->expertise_topics ?? [],
-                    $p->help_topics ?? [],
-                ))
-                ->unique()
-                ->sort()
-                ->values()
-                ->toArray();
-        });
-    }
-
-    public static function flushTopicsCache(): void
-    {
-        Cache::forget('mentor:all-topics');
-    }
-
-    protected static function booted(): void
-    {
-        static::saved(fn () => static::flushTopicsCache());
-        static::deleted(fn () => static::flushTopicsCache());
     }
 }

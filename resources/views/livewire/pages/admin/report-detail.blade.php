@@ -3,7 +3,6 @@
 use App\Models\Report;
 use App\Models\Post;
 use App\Models\Comment;
-use App\Models\MentorProfile;
 use App\Enums\ReportStatus;
 use App\Enums\PostStatus;
 use App\Enums\CommentStatus;
@@ -78,18 +77,13 @@ new class extends Component {
             return;
         }
 
-        if (! ($target instanceof Post || $target instanceof Comment || $target instanceof MentorProfile)) {
+        if (! ($target instanceof Post || $target instanceof Comment)) {
             $this->feedbackMessage = 'Loại nội dung mục tiêu không được hỗ trợ để ẩn kiểm duyệt.';
             return;
         }
 
         // Idempotency check
-        if ($target instanceof MentorProfile) {
-            if (! $target->is_active) {
-                $this->feedbackMessage = 'Hồ sơ mentor này đã bị ẩn trước đó.';
-                return;
-            }
-        } elseif ($this->report->status === ReportStatus::ACTION_TAKEN && $target->status->value === 'hidden_by_moderation') {
+        if ($this->report->status === ReportStatus::ACTION_TAKEN && $target->status->value === 'hidden_by_moderation') {
             $this->feedbackMessage = 'Nội dung mục tiêu đã được ẩn trước đó.';
             return;
         }
@@ -100,11 +94,8 @@ new class extends Component {
         // Hide target content based on type (do not hard delete)
         if ($target instanceof Post) {
             $target->status = PostStatus::HIDDEN_BY_MODERATION;
-        } elseif ($target instanceof Comment) {
-            $target->status = CommentStatus::HIDDEN_BY_MODERATION;
         } else {
-            $target->is_active = false;
-            $target->mentor_visibility = false;
+            $target->status = CommentStatus::HIDDEN_BY_MODERATION;
         }
         $target->save();
 
@@ -141,9 +132,10 @@ new class extends Component {
 
 <div class="max-w-4xl mx-auto py-8 px-4 sm:px-6 lg:px-8">
     {{-- Back button --}}
-        <a href="{{ route('admin.reports.index') }}" class="inline-flex items-center gap-2 text-sm text-slate-500 hover:text-ue-brand mb-6 transition-colors font-semibold">
-            ← Quay lại hàng chờ báo cáo
-        </a>
+    <a href="{{ route('admin.reports.index') }}" class="inline-flex items-center gap-2 text-sm text-slate-500 hover:text-ue-brand mb-6 transition-colors font-semibold">
+        <x-ui.icon name="arrow-left" size="xs" />
+        Quay lại hàng chờ báo cáo
+    </a>
 
     {{-- System feedback alerts --}}
     @if ($feedbackMessage)
@@ -161,7 +153,8 @@ new class extends Component {
         <div class="lg:col-span-2 space-y-6">
             {{-- Target Content Card --}}
             <x-ui.card class="p-6">
-                <h3 class="text-sm font-bold text-slate-800 border-b border-slate-100 pb-3 mb-4">
+                <h3 class="text-sm font-bold text-slate-800 border-b border-slate-100 pb-3 mb-4 flex items-center gap-2">
+                    <x-ui.icon name="file-text" size="xs" class="text-ue-brand" />
                     Xem trước nội dung bị báo cáo
                 </h3>
 
@@ -223,52 +216,33 @@ new class extends Component {
                                 <span>Trạng thái hiện tại: <span class="uppercase font-bold text-slate-600">{{ $target->status->value }}</span></span>
                             </div>
                         </div>
-                    @elseif ($report->target_type === 'mentor_profile')
-                        <div class="bg-slate-50 rounded-xl p-4 border border-slate-100 space-y-3">
-                            <div class="flex items-center gap-2 text-xs font-bold text-slate-700">
-                                <div class="w-8 h-8 rounded-full bg-amber-50 border border-slate-100 flex items-center justify-center font-bold text-amber-700 text-xs select-none">
-                                    {{ mb_substr($target->user->name, 0, 2) }}
-                                </div>
-                                <div>
-                                    <div class="font-bold text-slate-800">{{ $target->user->name }}</div>
-                                    <div class="text-xxs text-slate-400 font-medium">{{ $target->user->email }} · Hồ sơ mentor</div>
-                                </div>
-                            </div>
-                            <div class="text-slate-700 text-sm leading-relaxed border-t border-slate-200/60 pt-3 space-y-2">
-                                <p><span class="font-semibold">Headline:</span> {{ $target->headline ?: 'Chưa có' }}</p>
-                                <p><span class="font-semibold">Giới thiệu:</span> {{ $target->bio ?: 'Chưa có' }}</p>
-                                <p><span class="font-semibold">Chuyên môn:</span> {{ is_array($target->expertise_topics) ? implode(', ', $target->expertise_topics) : 'Chưa có' }}</p>
-                            </div>
-                            <div class="text-xxs font-semibold text-slate-400 pt-2">
-                                <span>Trạng thái: <span class="uppercase font-bold text-slate-600">{{ $target->is_active ? 'Đang hoạt động' : 'Không hoạt động' }}</span></span>
-                            </div>
-                        </div>
                     @endif
                 @endif
             </x-ui.card>
 
             {{-- Reporter Info --}}
             <x-ui.card class="p-6">
-                <h3 class="text-sm font-bold text-slate-800 border-b border-slate-100 pb-3 mb-4">
+                <h3 class="text-sm font-bold text-slate-800 border-b border-slate-100 pb-3 mb-4 flex items-center gap-2">
+                    <x-ui.icon name="user" size="xs" class="text-ue-brand" />
                     Thông tin người báo cáo & Lý do
                 </h3>
 
                 <div class="space-y-4 text-xs font-semibold text-slate-600">
-                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div class="grid grid-cols-2 gap-4">
                         <div>
                             <span class="text-slate-400 block mb-0.5">Tên người báo cáo</span>
                             <span class="text-slate-800 text-sm font-bold">{{ $report->reporter->name }}</span>
                         </div>
                         <div>
                             <span class="text-slate-400 block mb-0.5">Email liên hệ</span>
-                            <span class="text-slate-800 text-sm font-bold break-all">{{ $report->reporter->email }}</span>
+                            <span class="text-slate-800 text-sm font-bold">{{ $report->reporter->email }}</span>
                         </div>
                     </div>
 
-                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2">
+                    <div class="grid grid-cols-2 gap-4 pt-2">
                         <div>
                             <span class="text-slate-400 block mb-0.5">Lý do vi phạm</span>
-                            <span class="inline-block px-2 py-0.5 bg-red-50 text-red-700 font-bold border border-red-100 rounded-lg text-xxs uppercase">
+                            <span class="px-2 py-0.5 bg-red-50 text-red-700 font-bold border border-red-100 rounded-lg text-xxs uppercase">
                                 @switch($report->reason->value)
                                     @case('spam') Tin rác / Spam @break
                                     @case('harassment') Quấy rối / Công kích @break
@@ -300,38 +274,10 @@ new class extends Component {
         {{-- Action Panel column --}}
         <div class="space-y-6">
             <x-ui.card class="p-6">
-                <h3 class="text-sm font-bold text-slate-800 border-b border-slate-100 pb-3 mb-4">
+                <h3 class="text-sm font-bold text-slate-800 border-b border-slate-100 pb-3 mb-4 flex items-center gap-2">
+                    <x-ui.icon name="shield" size="xs" class="text-ue-brand" />
                     Trạng thái & Quyết định
                 </h3>
-
-                {{-- Reporter summary --}}
-                <div class="mb-4 rounded-xl bg-slate-50 border border-slate-100 p-3 sm:p-4 space-y-2.5 text-xs">
-                    <div class="flex flex-col sm:flex-row sm:items-start gap-0.5 sm:gap-2">
-                        <span class="font-semibold text-slate-500 shrink-0">Người báo cáo:</span>
-                        <span class="font-bold text-slate-800">{{ $report->reporter->name }}</span>
-                    </div>
-                    <div class="flex flex-col sm:flex-row sm:items-start gap-0.5 sm:gap-2">
-                        <span class="font-semibold text-slate-500 shrink-0">Email:</span>
-                        <span class="text-slate-700 break-all">{{ $report->reporter->email }}</span>
-                    </div>
-                    <div class="flex flex-col sm:flex-row sm:items-start gap-0.5 sm:gap-2">
-                        <span class="font-semibold text-slate-500 shrink-0">Lý do:</span>
-                        <span class="inline-flex self-start px-2 py-0.5 bg-red-50 text-red-700 font-bold border border-red-100 rounded-lg text-xxs uppercase">
-                            @switch($report->reason->value)
-                                @case('spam') Tin rác @break
-                                @case('harassment') Quấy rối @break
-                                @case('inappropriate_content') Nội dung không phù hợp @break
-                                @case('misinformation') Tin sai lệch @break
-                                @case('privacy_violation') Xâm phạm riêng tư @break
-                                @default Lý do khác
-                            @endswitch
-                        </span>
-                    </div>
-                    <div class="flex flex-col sm:flex-row sm:items-start gap-0.5 sm:gap-2">
-                        <span class="font-semibold text-slate-500 shrink-0">Thời gian:</span>
-                        <span class="text-slate-700">{{ $report->created_at->format('H:i d/m/Y') }}</span>
-                    </div>
-                </div>
 
                 <div class="space-y-4">
                     <div>
@@ -354,21 +300,25 @@ new class extends Component {
 
                     {{-- Actions block --}}
                     @if ($report->status === ReportStatus::PENDING || $report->status === ReportStatus::REVIEWED)
-                        <div class="pt-4 border-t border-slate-100 grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        <div class="pt-4 border-t border-slate-100 space-y-3">
                             <button 
                                 type="button"
                                 wire:click="hideTargetContent"
-                                class="inline-flex items-center justify-center px-4 py-2.5 bg-ue-brand hover:bg-ue-brand-dark text-white text-xs font-bold rounded-xl shadow-sm transition-all"
+                                class="w-full inline-flex items-center justify-center gap-2 px-4 py-2.5 bg-red-600 hover:bg-red-700 text-white text-xs font-bold rounded-xl shadow-sm transition-all"
+                                onclick="return confirm('Bạn có chắc chắn muốn ẩn nội dung này khỏi cộng đồng?') || event.stopImmediatePropagation()"
                             >
-                                Phê duyệt
+                                <x-ui.icon name="eye-off" size="xs" />
+                                Phê duyệt & Ẩn nội dung
                             </button>
 
                             <button 
                                 type="button"
                                 wire:click="dismissReport"
-                                class="inline-flex items-center justify-center px-4 py-2.5 bg-red-600 hover:bg-red-700 text-white text-xs font-bold rounded-xl shadow-sm transition-all"
+                                class="w-full inline-flex items-center justify-center gap-2 px-4 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold rounded-xl border border-slate-200 transition-all shadow-xs"
+                                onclick="return confirm('Bạn muốn từ chối/bỏ qua báo cáo vi phạm này?') || event.stopImmediatePropagation()"
                             >
-                                Từ chối
+                                <x-ui.icon name="slash" size="xs" />
+                                Từ chối / Bỏ qua báo cáo
                             </button>
                         </div>
                     @else

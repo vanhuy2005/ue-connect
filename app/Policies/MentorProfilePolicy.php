@@ -31,20 +31,4 @@ class MentorProfilePolicy
     {
         return $user->isActive() && $user->can('manage_mentor_access');
     }
-
-    /**
-     * Any active user can report a mentor profile (not their own).
-     */
-    public function report(User $user, MentorProfile $mentorProfile): bool
-    {
-        if (! $user->isActive()) {
-            return false;
-        }
-
-        if ((int) $mentorProfile->user_id === (int) $user->id) {
-            return false;
-        }
-
-        return $mentorProfile->is_active;
-    }
 }

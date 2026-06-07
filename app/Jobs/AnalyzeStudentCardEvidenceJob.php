@@ -47,9 +47,9 @@ class AnalyzeStudentCardEvidenceJob implements ShouldQueue
         }
 
         $cameraRequired = config('ai-verification.camera_capture_required_for_ai', true);
-
+        
         $isEligible = $evidence->evidence_type === 'student_card'
-            && (! $cameraRequired || $evidence->capture_method === EvidenceCaptureMethod::Camera);
+            && (!$cameraRequired || $evidence->capture_method === EvidenceCaptureMethod::Camera);
 
         $provider = config('ai-verification.provider', 'mock');
 

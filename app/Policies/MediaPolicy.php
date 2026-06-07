@@ -17,7 +17,7 @@ class MediaPolicy
     public function view(User $user, Media $media): bool
     {
         // 1. Admin/Moderator override
-        if ($user->can('review_verification') || $user->can('moderate_content') || $user->can('manage_mentor_access')) {
+        if ($user->can('review_verification') || $user->can('moderate_content')) {
             return true;
         }
 
@@ -59,14 +59,6 @@ class MediaPolicy
 
             case 'report_evidence':
                 // Visible only to owner reporter (or moderator handled above)
-                return $media->user_id === $user->id;
-
-            case 'mentor_evidence':
-                // Visible to owner or admin with manage_mentor_access
-                if ($user->can('manage_mentor_access')) {
-                    return true;
-                }
-
                 return $media->user_id === $user->id;
         }
 

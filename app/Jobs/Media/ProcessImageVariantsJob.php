@@ -209,7 +209,7 @@ class ProcessImageVariantsJob implements ShouldQueue
                 'thumb' => ['w' => 320, 'h' => 240],
                 'display' => ['w' => 1080, 'h' => 810],
             ],
-            'verification_evidence', 'report_evidence', 'mentor_evidence' => [
+            'verification_evidence', 'report_evidence' => [
                 'preview' => ['w' => 1600, 'h' => 1200],
             ],
             default => [
