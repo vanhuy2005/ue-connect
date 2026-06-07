@@ -61,10 +61,10 @@ return [
 
     'limits' => [
         'avatar_mb' => env('MEDIA_MAX_AVATAR_MB', 5),
-        'cover_mb' => env('MEDIA_MAX_COVER_MB', 8),
-        'post_image_mb' => env('MEDIA_MAX_POST_IMAGE_MB', 10),
-        'message_image_mb' => env('MEDIA_MAX_MESSAGE_IMAGE_MB', 10),
-        'verification_evidence_mb' => env('MEDIA_MAX_VERIFICATION_EVIDENCE_MB', 10),
+        'cover_mb' => env('MEDIA_MAX_COVER_MB', 5),
+        'post_image_mb' => env('MEDIA_MAX_POST_IMAGE_MB', 5),
+        'message_image_mb' => env('MEDIA_MAX_MESSAGE_IMAGE_MB', 5),
+        'verification_evidence_mb' => env('MEDIA_MAX_VERIFICATION_EVIDENCE_MB', 5),
         'post_max_images' => env('MEDIA_POST_MAX_IMAGES', 4),
         'verification_max_files' => env('MEDIA_VERIFICATION_MAX_FILES', 3),
     ],

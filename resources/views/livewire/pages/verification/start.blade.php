@@ -239,7 +239,12 @@ new #[Layout('layouts.app')] class extends Component
                 $rules['submitted_graduation_year'] = ['required', 'string', 'max:10'];
                 $rules['submitted_old_student_email'] = ['nullable', 'email', 'max:255', $this->domainRule(['student.hcmue.edu.vn'], 'Email sinh viên cũ phải có dạng mssv@student.hcmue.edu.vn.')];
             } elseif ($this->role_requested === 'teacher') {
-                $rules['submitted_email'][] = $this->domainRule(['teacher.hcmue.edu.vn'], 'Giảng viên phải dùng email dạng ten@teacher.hcmue.edu.vn.');
+                $rules['submitted_email'][] = function ($attribute, $value, $fail) {
+                    $studentDomains = config('ueconnect.identity.student_email_domains', ['student.hcmue.edu.vn']);
+                    if (AllowedEmailDomain::check((string) $value, $studentDomains)) {
+                        $fail('Email sinh viên không thể dùng để xác thực vai trò giảng viên.');
+                    }
+                };
                 $rules['submitted_faculty_id'] = ['nullable', 'integer', 'exists:faculties,id'];
                 $rules['submitted_position'] = ['nullable', 'string', 'max:100'];
                 $rules['submitted_is_academic_advisor'] = ['boolean'];
@@ -657,6 +662,8 @@ new #[Layout('layouts.app')] class extends Component
                     }
                 }
             });
+        } catch (ValidationException $e) {
+            throw $e;
         } catch (\Throwable $e) {
             // Clean up files on error
             foreach ($uploadedPaths as $orphanedPath) {
@@ -1151,7 +1158,22 @@ new #[Layout('layouts.app')] class extends Component
                                             <x-ui.icon name="upload" size="lg" class="text-ue-text-muted mb-2" />
                                             <label class="cursor-pointer bg-ue-brand-soft text-ue-brand px-3 py-1.5 rounded-lg text-xs font-semibold hover:bg-ue-brand-soft-hover transition-colors">
                                                 Chọn tệp
-                                                <input type="file" wire:model="evidence_files.{{ $i }}" class="hidden" accept="image/*,application/pdf" />
+                                                <input type="file" 
+                                                       wire:model="evidence_files.{{ $i }}" 
+                                                       class="hidden" 
+                                                       accept="image/*,application/pdf"
+                                                       x-on:change="
+                                                           if ($event.target.files.length > 0 && $event.target.files[0].size > 5120 * 1024) {
+                                                               $event.preventDefault();
+                                                               $event.target.value = '';
+                                                               window.dispatchEvent(new CustomEvent('ue:toast', {
+                                                                   detail: {
+                                                                       type: 'danger',
+                                                                       message: 'Kích thước tệp tin không được vượt quá 5MB.'
+                                                                   }
+                                                               }));
+                                                           }
+                                                       " />
                                             </label>
                                             <span class="text-[10px] text-ue-text-muted mt-2">JPEG, PNG, WEBP, PDF tối đa 5MB</span>
                                         @endif

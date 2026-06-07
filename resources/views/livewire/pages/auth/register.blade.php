@@ -43,10 +43,10 @@ new #[Layout('layouts.guest')] class extends Component
                 }
             };
         } elseif ($this->identity_type === 'teacher_advisor') {
-            $allowedDomains = config('ueconnect.identity.staff_email_domains', ['teacher.hcmue.edu.vn']);
-            $emailRules[] = function ($attribute, $value, $fail) use ($allowedDomains) {
-                if (! AllowedEmailDomain::check($value, $allowedDomains)) {
-                    $fail('Giảng viên cần sử dụng email công vụ HCMUE, ví dụ: ten@teacher.hcmue.edu.vn.');
+            $studentDomains = config('ueconnect.identity.student_email_domains', ['student.hcmue.edu.vn']);
+            $emailRules[] = function ($attribute, $value, $fail) use ($studentDomains) {
+                if (AllowedEmailDomain::check($value, $studentDomains)) {
+                    $fail('Email sinh viên không thể dùng để đăng ký tài khoản giảng viên.');
                 }
             };
         } else {
@@ -183,7 +183,7 @@ new #[Layout('layouts.guest')] class extends Component
                 @if ($identity_type === 'current_student')
                     Chỉ chấp nhận email sinh viên HCMUE (mssv@student.hcmue.edu.vn).
                 @elseif ($identity_type === 'teacher_advisor')
-                    Chỉ chấp nhận email công vụ HCMUE dạng ten@teacher.hcmue.edu.vn.
+                    Chấp nhận email công vụ hoặc email cá nhân.
                 @elseif ($identity_type === 'alumni')
                     Cho phép sử dụng email cá nhân. Cần cung cấp minh chứng sau.
                 @endif
