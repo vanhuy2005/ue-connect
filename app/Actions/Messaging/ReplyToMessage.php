@@ -5,6 +5,8 @@ namespace App\Actions\Messaging;
 use App\Actions\Media\AttachMediaToModelAction;
 use App\Enums\MessageStatus;
 use App\Enums\MessageType;
+use App\Events\Messaging\ConversationUpdated;
+use App\Events\Messaging\MessageSent;
 use App\Models\Conversation;
 use App\Models\Message;
 use App\Models\User;
@@ -42,6 +44,7 @@ class ReplyToMessage
         Validator::make($data, [
             'body' => ['nullable', 'string', 'max:2000'],
             'media_id' => ['nullable', 'integer', 'exists:media,id'],
+            'client_message_id' => ['nullable', 'string', 'max:100'],
         ])->validate();
 
         $trimmedBody = isset($data['body']) ? trim($data['body']) : '';
@@ -55,7 +58,7 @@ class ReplyToMessage
 
         $messageType = $mediaId ? MessageType::IMAGE : MessageType::TEXT;
 
-        return DB::transaction(function () use ($sender, $conversation, $replyToMessage, $trimmedBody, $messageType, $mediaId) {
+        $message = DB::transaction(function () use ($sender, $conversation, $replyToMessage, $trimmedBody, $messageType, $mediaId, $data) {
             // 4. Create message
             $message = Message::create([
                 'conversation_id' => $conversation->id,
@@ -64,6 +67,7 @@ class ReplyToMessage
                 'message_type' => $messageType,
                 'status' => MessageStatus::SENT,
                 'reply_to_message_id' => $replyToMessage->id,
+                'client_message_id' => $data['client_message_id'] ?? null,
             ]);
 
             // 5. Attach media if provided
@@ -89,5 +93,18 @@ class ReplyToMessage
 
             return $message;
         });
+
+        // Eager-load relations for broadcasting
+        $message->load(['sender.profile', 'replyTo.sender']);
+
+        // Dispatch broadcast events
+        MessageSent::dispatch($message);
+
+        $recipient = $conversation->getRecipientFor($sender);
+        if ($recipient) {
+            ConversationUpdated::dispatch($conversation, $message, $recipient->id);
+        }
+
+        return $message;
     }
 }

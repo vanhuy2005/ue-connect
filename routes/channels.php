@@ -23,3 +23,7 @@ Broadcast::channel('conversation.{conversationId}', function ($user, $conversati
 
     return $conversation->participants()->where('user_id', $user->id)->exists();
 });
+
+Broadcast::channel('feed', function ($user) {
+    return $user->isActive();
+});

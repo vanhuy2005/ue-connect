@@ -28,6 +28,7 @@ class Message extends Model
         'forwarded_from_message_id',
         'recalled_at',
         'recalled_by',
+        'client_message_id',
     ];
 
     protected function casts(): array

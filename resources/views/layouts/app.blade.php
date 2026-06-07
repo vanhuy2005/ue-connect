@@ -23,6 +23,9 @@
 
         {{-- Vite Assets --}}
         @vite(['resources/css/app.css', 'resources/js/app.js'])
+        @auth
+            @vite('resources/js/realtime.js')
+        @endauth
 
         {{-- Additional head slots --}}
         @stack('head')
@@ -207,6 +210,54 @@
 
         {{-- Additional script slots --}}
         @stack('scripts')
+
+        @auth
+            <script>
+                document.addEventListener('DOMContentLoaded', () => {
+                    function updateBadge(iconName, val) {
+                        let dotEls = document.querySelectorAll(`.js-badge-dot-${iconName}`);
+                        dotEls.forEach(el => el.classList.remove('hidden'));
+                        
+                        let countEls = document.querySelectorAll(`.js-badge-count-${iconName}`);
+                        countEls.forEach(el => {
+                            let currentVal = parseInt(el.textContent.trim()) || 0;
+                            let newVal = currentVal + val;
+                            el.textContent = newVal;
+                            el.classList.remove('hidden');
+                        });
+                    }
+
+                    if (window.Echo) {
+                        window.Echo.private('user.{{ Auth::id() }}')
+                            .listen('.UserNotificationCreated', (e) => {
+                                updateBadge('heart', 1);
+                                if (window.Livewire) {
+                                    Livewire.dispatch('refreshNotifications');
+                                }
+                            })
+                            .listen('.ConversationUpdated', (e) => {
+                                updateBadge('message', 1);
+                            });
+                    }
+
+                    // Presence Heartbeat Loop (throttled/visibility-aware)
+                    function sendHeartbeat() {
+                        if (document.visibilityState !== 'visible') return;
+
+                        fetch('{{ route('presence.heartbeat') }}', {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
+                            }
+                        }).catch(err => console.error('Heartbeat error:', err));
+                    }
+
+                    sendHeartbeat();
+                    setInterval(sendHeartbeat, 45000);
+                });
+            </script>
+        @endauth
 
     </body>
 </html>
