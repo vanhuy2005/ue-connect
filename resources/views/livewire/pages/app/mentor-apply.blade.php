@@ -98,7 +98,7 @@ new class extends Component {
         try {
             $user = Auth::user();
             $storeAction = app(StoreTemporaryMediaAction::class);
-            $media = $storeAction->execute($user, $this->evidenceFile, 'mentor_evidence', ['visibility' => 'private']);
+            $media = $storeAction->execute($user, $this->evidenceFile, 'verification_evidence', ['visibility' => 'private']);
             $this->evidenceMediaId = $media->id;
             $this->evidenceFileName = $this->evidenceFile->getClientOriginalName();
         } catch (Throwable $exception) {
