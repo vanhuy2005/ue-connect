@@ -66,39 +66,42 @@ class GenerateMediaUrlAction
             );
         }
 
+        $url = null;
+
         if ($this->shouldPreferCloudinary($asset)) {
-            return $asset instanceof MediaVariant
+            $url = $asset instanceof MediaVariant
                 ? $asset->cloudinary_secure_url
                 : $asset->delivery_url;
-        }
-
-        // If the asset has a delivery URL already populated, use it
-        if ($asset instanceof Media && ! empty($asset->delivery_url)) {
-            return $asset->delivery_url;
-        }
-
-        if ($asset instanceof MediaVariant && ! empty($asset->url)) {
-            return $asset->url;
-        }
-
-        // For public local disks
-        if ($asset->provider === 'local') {
-            return Storage::disk($asset->disk)->url($asset->path);
-        }
-
-        // For public R2/S3 disks
-        if ($asset->provider === 'r2') {
+        } elseif ($asset instanceof Media && ! empty($asset->delivery_url)) {
+            // If the asset has a delivery URL already populated, use it
+            $url = $asset->delivery_url;
+        } elseif ($asset instanceof MediaVariant && ! empty($asset->url)) {
+            $url = $asset->url;
+        } elseif ($asset->provider === 'local') {
+            // For public local disks
+            $url = Storage::disk($asset->disk)->url($asset->path);
+        } elseif ($asset->provider === 'r2') {
+            // For public R2/S3 disks
             if (empty(config("filesystems.disks.{$asset->disk}.url"))) {
-                return route('media.preview', [
+                $url = route('media.preview', [
                     'media' => $parentMedia,
                     'variant' => $asset instanceof MediaVariant ? $asset->variant_name : null,
                 ]);
+            } else {
+                $url = Storage::disk($asset->disk)->url($asset->path);
             }
-
-            return Storage::disk($asset->disk)->url($asset->path);
         }
 
-        return null;
+        // Dynamically match current request host and port for local assets to prevent connection errors
+        if ($url && ! app()->runningInConsole() && request()) {
+            $appUrl = config('app.url');
+            $requestHost = request()->getSchemeAndHttpHost();
+            if ($appUrl && str_starts_with($url, $appUrl)) {
+                $url = $requestHost.substr($url, strlen($appUrl));
+            }
+        }
+
+        return $url;
     }
 
     protected function shouldPreferCloudinary(Media|MediaVariant $asset): bool

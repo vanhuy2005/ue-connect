@@ -29,7 +29,13 @@ class ProcessImageVariantsJob implements ShouldQueue
 
     public function handle(MediaStorageRouter $router, MediaQuotaService $quota): void
     {
-        if ($this->media->status !== 'temporary') {
+        $originalStatus = $this->media->status;
+
+        if (! in_array($originalStatus, ['temporary', 'ready'])) {
+            return;
+        }
+
+        if ($originalStatus === 'ready' && $this->media->variants()->exists()) {
             return;
         }
 
@@ -151,8 +157,14 @@ class ProcessImageVariantsJob implements ShouldQueue
                 }
             }
 
+            $this->media->refresh();
+
+            $finalStatus = ($originalStatus === 'ready' || $this->media->status === 'ready' || $this->media->mediable_id !== null)
+                ? 'ready'
+                : 'temporary';
+
             $this->media->update([
-                'status' => 'temporary',
+                'status' => $finalStatus,
                 'primary_path' => $finalPath,
                 'primary_disk' => $finalDisk,
                 'primary_provider' => $finalProvider,

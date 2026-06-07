@@ -96,7 +96,15 @@ $palette = $palettes[$paletteIndex];
             alt="{{ $alt }}"
             class="w-full h-full object-cover"
             loading="lazy"
+            onerror="this.style.display='none'; this.nextElementSibling.classList.remove('hidden');"
         />
+        <svg viewBox="0 0 100 100" class="w-full h-full text-current hidden" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+            <rect width="100" height="100" fill="{{ $palette['bg'] }}"/>
+            <!-- Head (rounder vertical oval) -->
+            <ellipse cx="50" cy="38" rx="19" ry="21" fill="{{ $palette['fg'] }}"/>
+            <!-- Body (curved shoulders reaching bottom) -->
+            <path d="M8 105 C8 76 25 63 50 63 C75 63 92 76 92 105 Z" fill="{{ $palette['fg'] }}"/>
+        </svg>
     @else
         <svg viewBox="0 0 100 100" class="w-full h-full text-current" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
             <rect width="100" height="100" fill="{{ $palette['bg'] }}"/>
