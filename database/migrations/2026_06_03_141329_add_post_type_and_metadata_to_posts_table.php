@@ -9,8 +9,8 @@ return new class extends Migration
     public function up(): void
     {
         Schema::table('posts', function (Blueprint $table) {
-            $table->string('post_type')->default('standard')->after('user_id');
-            $table->json('metadata')->nullable()->after('status');
+            $table->string('post_type')->default('standard');
+            $table->json('metadata')->nullable();
 
             $table->index('post_type');
         });
