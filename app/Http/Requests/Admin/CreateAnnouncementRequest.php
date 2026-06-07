@@ -18,6 +18,7 @@ class CreateAnnouncementRequest extends FormRequest
             'title' => ['required', 'string', 'max:160'],
             'body' => ['required', 'string', 'max:5000'],
             'type' => ['required', 'string'],
+            'status' => ['required', 'string', 'in:draft,published'],
             'target' => ['nullable', 'array'],
             'priority' => ['nullable', 'string'],
             'starts_at' => ['nullable', 'date'],

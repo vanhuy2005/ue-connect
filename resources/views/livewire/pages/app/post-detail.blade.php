@@ -574,8 +574,67 @@ new #[Layout('layouts.app')] class extends Component
 
         return $connections->values();
     }
-};
 
+    /**
+     * Search users for mentions dropdown.
+     */
+    public function searchMentionUsers(string $search): array
+    {
+        $search = trim($search);
+        if ($search === '') {
+            return [];
+        }
+
+        $currentUserId = Auth::id();
+
+        // Get matching users
+        $users = User::where(function ($query) use ($search) {
+                $query->where('name', 'like', "%{$search}%")
+                    ->orWhereHas('profile', function ($q) use ($search) {
+                        $q->where('display_name', 'like', "%{$search}%");
+                    });
+            })
+            ->with(['profile', 'profilePrivacySetting'])
+            ->get();
+
+        // Filter based on their privacy preferences
+        $filteredUsers = $users->filter(function ($targetUser) use ($currentUserId) {
+            $privacy = $targetUser->profilePrivacySetting;
+            $preference = $privacy ? $privacy->mentions_preference : 'everyone';
+
+            if ($preference === 'nobody') {
+                return false;
+            }
+
+            if ($targetUser->id === $currentUserId) {
+                return true;
+            }
+
+            if ($preference === 'connections') {
+                return Connection::where('status', ConnectionStatus::ACTIVE)
+                    ->where(function ($q) use ($currentUserId, $targetUser) {
+                        $q->where(function ($q1) use ($currentUserId, $targetUser) {
+                            $q1->where('user_one_id', $currentUserId)->where('user_two_id', $targetUser->id);
+                        })->orWhere(function ($q2) use ($currentUserId, $targetUser) {
+                            $q2->where('user_one_id', $targetUser->id)->where('user_two_id', $currentUserId);
+                        });
+                    })
+                    ->exists();
+            }
+
+            return true;
+        });
+
+        return $filteredUsers->take(5)
+            ->map(fn($u) => [
+                'id' => $u->id,
+                'name' => $u->name,
+                'display_name' => $u->profile?->display_name ?? $u->name,
+                'avatar_url' => $u->profile?->avatar_url ?? null,
+            ])
+            ->toArray();
+    }
+};
 ?>
 
 <div class="ue-feed-layout">
@@ -897,7 +956,79 @@ new #[Layout('layouts.app')] class extends Component
                         </div>
                         
                         {{-- Right Column: Form --}}
-                        <div class="min-w-0">
+                        <div class="min-w-0 relative" x-data="{
+                            showDropdown: false,
+                            suggestions: [],
+                            searchQuery: '',
+                            cursorPosition: 0,
+                            selectedIndex: 0,
+                            handleInput(event) {
+                                const textarea = event.target;
+                                const value = textarea.value;
+                                const pos = textarea.selectionStart;
+                                this.cursorPosition = pos;
+
+                                const textBeforeCursor = value.slice(0, pos);
+                                const lastAt = textBeforeCursor.lastIndexOf('@');
+
+                                if (lastAt !== -1 && (lastAt === 0 || /\s/.test(textBeforeCursor[lastAt - 1]))) {
+                                    const query = textBeforeCursor.slice(lastAt + 1);
+                                    if (!/\s/.test(query)) {
+                                        this.searchQuery = query;
+                                        this.$wire.searchMentionUsers(query).then(results => {
+                                            this.suggestions = results;
+                                            this.showDropdown = results.length > 0;
+                                            this.selectedIndex = 0;
+                                        });
+                                        return;
+                                    }
+                                }
+                                this.closeDropdown();
+                            },
+                            selectNext() {
+                                if (!this.showDropdown) return;
+                                this.selectedIndex = (this.selectedIndex + 1) % this.suggestions.length;
+                            },
+                            selectPrev() {
+                                if (!this.showDropdown) return;
+                                this.selectedIndex = (this.selectedIndex - 1 + this.suggestions.length) % this.suggestions.length;
+                            },
+                            confirmSelection() {
+                                if (!this.showDropdown || this.suggestions.length === 0) return;
+                                this.insertMention(this.suggestions[this.selectedIndex]);
+                            },
+                            insertMention(user) {
+                                const textarea = document.getElementById('comment-text');
+                                const value = textarea.value;
+                                const pos = this.cursorPosition;
+                                
+                                const textBeforeCursor = value.slice(0, pos);
+                                const lastAt = textBeforeCursor.lastIndexOf('@');
+                                
+                                const before = value.slice(0, lastAt);
+                                const after = value.slice(pos);
+                                
+                                const mentionText = '@' + user.display_name + ' ';
+                                const newValue = before + mentionText + after;
+                                
+                                textarea.value = newValue;
+                                this.$wire.set('commentBody', newValue);
+                                
+                                textarea.focus();
+                                const newPos = lastAt + mentionText.length;
+                                this.$nextTick(() => {
+                                    textarea.setSelectionRange(newPos, newPos);
+                                });
+                                
+                                this.closeDropdown();
+                            },
+                            closeDropdown() {
+                                this.showDropdown = false;
+                                this.suggestions = [];
+                                this.searchQuery = '';
+                                this.selectedIndex = 0;
+                            }
+                        }">
                             @if ($replyingToCommentId)
                                 <div class="mb-3 px-3 py-1.5 rounded-lg bg-blue-50 border border-blue-100 text-xxs text-ue-brand font-bold flex items-center justify-between ue-animate-fade-in">
                                     <span>Đang phản hồi một bình luận</span>
@@ -913,6 +1044,11 @@ new #[Layout('layouts.app')] class extends Component
                                     <textarea
                                         id="comment-text"
                                         wire:model="commentBody"
+                                        @input="handleInput($event)"
+                                        @keydown.arrow-down.prevent="showDropdown ? selectNext() : true"
+                                        @keydown.arrow-up.prevent="showDropdown ? selectPrev() : true"
+                                        @keydown.enter="showDropdown ? ($event.preventDefault() || confirmSelection()) : true"
+                                        @keydown.escape="showDropdown ? ($event.preventDefault() || closeDropdown()) : true"
                                         placeholder="{{ $replyingToCommentId ? 'Nhập phản hồi của bạn...' : 'Viết bình luận công khai...' }}"
                                         rows="2"
                                         class="ue-composer__textarea focus:outline-none"
@@ -921,6 +1057,30 @@ new #[Layout('layouts.app')] class extends Component
                                     @error('commentBody')
                                         <p class="text-xs text-red-650 font-semibold mt-1">{{ $message }}</p>
                                     @enderror
+
+                                    {{-- Suggestion Dropdown --}}
+                                    <div 
+                                        x-show="showDropdown" 
+                                        x-transition
+                                        class="absolute left-0 right-0 mt-1 bg-white border border-slate-200 rounded-xl shadow-lg z-50 max-h-48 overflow-y-auto divide-y divide-slate-50"
+                                        style="display: none;"
+                                    >
+                                        <template x-for="(user, index) in suggestions" :key="user.id">
+                                            <button
+                                                type="button"
+                                                @click="insertMention(user)"
+                                                @mouseenter="selectedIndex = index"
+                                                class="w-full text-left px-4 py-2 flex items-center gap-3 transition-colors"
+                                                :class="selectedIndex === index ? 'bg-slate-50 text-ue-brand' : 'text-slate-700'"
+                                            >
+                                                <img :src="user.avatar_url || 'https://www.gravatar.com/avatar/' + user.id + '?d=mp&s=100'" class="w-6 h-6 rounded-full object-cover border border-slate-100" />
+                                                <div class="flex-1 min-w-0">
+                                                    <span class="text-xxs font-bold block truncate" x-text="user.display_name"></span>
+                                                    <span class="text-[9px] text-slate-400 block truncate" x-text="'@' + user.name"></span>
+                                                </div>
+                                            </button>
+                                        </template>
+                                    </div>
                                 </div>
 
                                 <div class="ue-composer__toolbar">

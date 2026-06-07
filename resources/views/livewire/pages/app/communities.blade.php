@@ -38,6 +38,8 @@ new class extends Component
     // Suggestion modal
     public bool $showSuggestModal = false;
 
+    public ?int $editingSuggestionId = null;
+
     public string $suggestName = '';
 
     public string $suggestType = 'club';
@@ -234,6 +236,46 @@ new class extends Component
         $this->dispatch('notify', type: 'success', message: 'Đã hủy yêu cầu tham gia.');
     }
 
+    public function getMySuggestionsProperty()
+    {
+        return \App\Models\CommunitySuggestion::where('submitted_by', auth()->id())
+            ->whereIn('status', [
+                \App\Enums\CommunitySuggestionStatus::Submitted->value,
+                \App\Enums\CommunitySuggestionStatus::UnderReview->value,
+                \App\Enums\CommunitySuggestionStatus::NeedMoreInformation->value,
+            ])
+            ->latest()
+            ->get();
+    }
+
+    public function editSuggestion(int $id): void
+    {
+        $suggestion = \App\Models\CommunitySuggestion::where('submitted_by', auth()->id())
+            ->where('id', $id)
+            ->firstOrFail();
+
+        $this->editingSuggestionId = $suggestion->id;
+        $this->suggestName = $suggestion->suggested_name;
+        $this->suggestType = $suggestion->community_type;
+        $this->suggestJoinPolicy = $suggestion->join_policy;
+        $this->suggestVisibility = $suggestion->visibility;
+        $this->suggestRelatedFaculty = $suggestion->related_faculty ?? '';
+        $this->suggestPurpose = $suggestion->purpose;
+        $this->suggestTargetMembers = $suggestion->target_members;
+        $this->suggestRules = $suggestion->rules ?? '';
+
+        $this->showSuggestModal = true;
+    }
+
+    public function closeSuggestModal(): void
+    {
+        $this->showSuggestModal = false;
+        $this->reset([
+            'suggestName', 'suggestType', 'suggestJoinPolicy', 'suggestVisibility',
+            'suggestRelatedFaculty', 'suggestPurpose', 'suggestTargetMembers', 'suggestRules', 'editingSuggestionId'
+        ]);
+    }
+
     public function submitSuggestion(CreateCommunitySuggestionAction $action): void
     {
         $this->validate([
@@ -247,23 +289,40 @@ new class extends Component
             'suggestRules' => ['nullable', 'string', 'max:5000'],
         ]);
 
-        $action->execute(auth()->user(), [
-            'suggested_name' => $this->suggestName,
-            'community_type' => $this->suggestType,
-            'join_policy' => $this->suggestJoinPolicy,
-            'visibility' => $this->suggestVisibility,
-            'purpose' => $this->suggestPurpose,
-            'target_members' => $this->suggestTargetMembers,
-            'rules' => $this->suggestRules ?: null,
-            'related_faculty' => $this->suggestRelatedFaculty ?: null,
-        ]);
+        if ($this->editingSuggestionId) {
+            $suggestion = \App\Models\CommunitySuggestion::where('submitted_by', auth()->id())
+                ->where('id', $this->editingSuggestionId)
+                ->firstOrFail();
 
-        $this->showSuggestModal = false;
-        $this->reset([
-            'suggestName', 'suggestType', 'suggestJoinPolicy', 'suggestVisibility',
-            'suggestRelatedFaculty', 'suggestPurpose', 'suggestTargetMembers', 'suggestRules',
-        ]);
-        $this->dispatch('notify', type: 'success', message: 'Đề xuất cộng đồng đã được gửi!');
+            $suggestion->update([
+                'suggested_name' => $this->suggestName,
+                'community_type' => $this->suggestType,
+                'join_policy' => $this->suggestJoinPolicy,
+                'visibility' => $this->suggestVisibility,
+                'purpose' => $this->suggestPurpose,
+                'target_members' => $this->suggestTargetMembers,
+                'rules' => $this->suggestRules ?: null,
+                'related_faculty' => $this->suggestRelatedFaculty ?: null,
+                'status' => \App\Enums\CommunitySuggestionStatus::Submitted->value,
+            ]);
+
+            $this->dispatch('notify', type: 'success', message: 'Đề xuất cộng đồng đã được cập nhật và gửi lại!');
+        } else {
+            $action->execute(auth()->user(), [
+                'suggested_name' => $this->suggestName,
+                'community_type' => $this->suggestType,
+                'join_policy' => $this->suggestJoinPolicy,
+                'visibility' => $this->suggestVisibility,
+                'purpose' => $this->suggestPurpose,
+                'target_members' => $this->suggestTargetMembers,
+                'rules' => $this->suggestRules ?: null,
+                'related_faculty' => $this->suggestRelatedFaculty ?: null,
+            ]);
+
+            $this->dispatch('notify', type: 'success', message: 'Đề xuất cộng đồng đã được gửi!');
+        }
+
+        $this->closeSuggestModal();
     }
 
     // ─── Post Actions (for feed tab) ──────────────────────────────────────────
@@ -706,6 +765,68 @@ new class extends Component
                     </section>
                 @endif
 
+                {{-- 1.5. Proposer Suggestions --}}
+                @if ($this->mySuggestions->isNotEmpty())
+                    <section class="mb-6">
+                        <div class="flex items-center justify-between border-b border-slate-200 pb-3 mb-4">
+                            <div>
+                                <h3 class="text-sm font-extrabold text-slate-800">Đề xuất thành lập nhóm của bạn</h3>
+                                <p class="text-[11px] text-slate-400 mt-0.5">Danh sách các đề xuất đang chờ duyệt hoặc cần bổ sung thông tin.</p>
+                            </div>
+                            <span class="text-xs font-bold text-ue-brand bg-ue-brand-soft px-3 py-1 rounded-full">{{ $this->mySuggestions->count() }} đề xuất</span>
+                        </div>
+
+                        @foreach ($this->mySuggestions as $sug)
+                            @php
+                                $statusColor = match($sug->status?->value) {
+                                    'submitted' => 'blue',
+                                    'under_review' => 'yellow',
+                                    'need_more_information' => 'orange',
+                                    default => 'gray'
+                                };
+                            @endphp
+                            <div class="bg-white border border-slate-200 rounded-2xl p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4 hover:shadow-2xs transition mb-3">
+                                <div class="flex items-start gap-3 min-w-0 flex-1">
+                                    <div class="w-10 h-10 rounded-xl bg-slate-105 flex items-center justify-center text-slate-500 flex-shrink-0">
+                                        <x-ui.icon name="file-text" size="sm" />
+                                    </div>
+                                    <div class="min-w-0 flex-1">
+                                        <p class="font-bold text-sm text-slate-850 truncate">{{ $sug->suggested_name }}</p>
+                                        <div class="flex items-center gap-2 mt-1">
+                                            <span class="text-[10px] bg-slate-100 text-slate-500 font-bold px-2 py-0.5 rounded">
+                                                {{ collect(\App\Enums\CommunityType::cases())->firstWhere('value', $sug->community_type)?->label() ?? 'Nhóm' }}
+                                            </span>
+                                            <span class="text-[10px] bg-{{ $statusColor }}-50 text-{{ $statusColor }}-700 border border-{{ $statusColor }}-200/50 px-2 py-0.5 rounded font-bold">
+                                                {{ $sug->status?->label() }}
+                                            </span>
+                                        </div>
+                                        @if ($sug->status?->value === 'need_more_information' && $sug->admin_instruction)
+                                            <div class="mt-2 text-xs text-orange-700 bg-orange-50/70 rounded-lg p-3 border border-orange-100">
+                                                <p class="font-bold mb-0.5 flex items-center gap-1">
+                                                    <x-ui.icon name="info" size="xs" />
+                                                    Yêu cầu từ Quản trị viên:
+                                                </p>
+                                                <p class="leading-relaxed">{{ $sug->admin_instruction }}</p>
+                                            </div>
+                                        @endif
+                                    </div>
+                                </div>
+
+                                <div class="flex gap-2 items-center self-end sm:self-center">
+                                    @if ($sug->status?->value === 'need_more_information')
+                                        <button wire:click="editSuggestion({{ $sug->id }})"
+                                            class="px-3.5 py-2 bg-ue-brand hover:bg-opacity-95 text-white rounded-lg text-xs font-bold transition shadow-2xs">
+                                            Cập nhật & Gửi lại
+                                        </button>
+                                    @else
+                                        <span class="text-xs text-slate-400 font-medium italic">Đang chờ xử lý...</span>
+                                    @endif
+                                </div>
+                            </div>
+                        @endforeach
+                    </section>
+                @endif
+
                 {{-- 2. Managed Communities --}}
                 <section>
                     <div class="flex items-center justify-between border-b border-slate-200 pb-3 mb-4">
@@ -812,8 +933,8 @@ new class extends Component
                 {{-- Form Columns --}}
                 <div class="flex-1 space-y-4">
                     <div>
-                        <h3 class="text-lg font-extrabold text-slate-850">Đề xuất cộng đồng mới</h3>
-                        <p class="text-xs text-slate-500">Mẫu đề xuất sẽ được chuyển trực tiếp cho Quản trị viên xét duyệt thành lập.</p>
+                        <h3 class="text-lg font-extrabold text-slate-850">{{ $editingSuggestionId ? 'Cập nhật đề xuất cộng đồng' : 'Đề xuất cộng đồng mới' }}</h3>
+                        <p class="text-xs text-slate-500">{{ $editingSuggestionId ? 'Bổ sung thông tin và gửi lại đề xuất cho Quản trị viên.' : 'Mẫu đề xuất sẽ được chuyển trực tiếp cho Quản trị viên xét duyệt thành lập.' }}</p>
                     </div>
 
                     <div class="space-y-3">
@@ -895,7 +1016,7 @@ new class extends Component
                     </div>
 
                     <div class="flex gap-2 justify-end pt-3 border-t border-slate-100">
-                        <button wire:click="$set('showSuggestModal', false)"
+                        <button wire:click="closeSuggestModal"
                             class="px-4 py-2 border border-slate-200 text-slate-650 hover:bg-slate-50 text-xs font-bold rounded-xl transition">
                             Hủy bỏ
                         </button>
@@ -903,7 +1024,7 @@ new class extends Component
                             wire:loading.attr="disabled"
                             wire:target="submitSuggestion"
                             class="px-5 py-2 bg-ue-brand hover:bg-opacity-95 text-white text-xs font-bold rounded-xl transition shadow-sm disabled:opacity-60 disabled:cursor-not-allowed">
-                            <span wire:loading.remove wire:target="submitSuggestion">Gửi đề xuất</span>
+                            <span wire:loading.remove wire:target="submitSuggestion">{{ $editingSuggestionId ? 'Gửi lại đề xuất' : 'Gửi đề xuất' }}</span>
                             <span wire:loading wire:target="submitSuggestion">Đang gửi...</span>
                         </button>
                     </div>

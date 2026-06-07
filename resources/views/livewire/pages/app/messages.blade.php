@@ -852,7 +852,12 @@ new #[Layout('layouts.app')] class extends Component
                 >
                     <div class="flex items-center gap-3 min-w-0 flex-1">
                         @if ($convo['recipient'])
-                            <x-ui.avatar :user="$convo['recipient']" size="md" />
+                            <div class="relative flex-shrink-0">
+                                <x-ui.avatar :user="$convo['recipient']" size="md" />
+                                @if ($convo['recipient']->isOnline() && $convo['recipient']->canSeeOnlineStatus(auth()->user()))
+                                    <span class="absolute bottom-0 right-0 block h-2.5 w-2.5 rounded-full bg-green-500 border-2 border-white ring-1 ring-slate-100" title="Trực tuyến"></span>
+                                @endif
+                            </div>
                             <div class="min-w-0 flex-1">
                                 <div class="flex items-center justify-between gap-2">
                                     <h2 class="text-xs font-bold text-slate-800 flex items-center gap-1 truncate">
@@ -926,7 +931,12 @@ new #[Layout('layouts.app')] class extends Component
 
                     @if ($recipient)
                         <a href="{{ route('profile.show', $recipient) }}" class="block rounded-full focus:outline-none focus:ring-2 focus:ring-ue-brand/30" aria-label="Xem trang cá nhân của {{ $recipient->name }}">
-                            <x-ui.avatar :user="$recipient" size="sm" />
+                            <div class="relative flex-shrink-0">
+                                <x-ui.avatar :user="$recipient" size="sm" />
+                                @if ($recipient->isOnline() && $recipient->canSeeOnlineStatus(auth()->user()))
+                                    <span class="absolute bottom-0 right-0 block h-2 w-2 rounded-full bg-green-500 border-2 border-white ring-1 ring-slate-100" title="Trực tuyến"></span>
+                                @endif
+                            </div>
                         </a>
                         <div class="min-w-0">
                             @if ($recipientNickname)
@@ -941,7 +951,14 @@ new #[Layout('layouts.app')] class extends Component
                                 </a>
                             @endif
                             @if ($recipient->profile && $recipient->profile->faculty)
-                                <p class="text-[9px] text-slate-400 font-semibold truncate leading-none mt-0.5">{{ $recipient->profile->faculty }}</p>
+                                <p class="text-[9px] text-slate-400 font-semibold truncate leading-none mt-0.5">
+                                    {{ $recipient->profile->faculty }}
+                                    @if ($recipient->isOnline() && $recipient->canSeeOnlineStatus(auth()->user()))
+                                        <span class="text-green-500 font-bold ml-1.5">• Đang hoạt động</span>
+                                    @endif
+                                </p>
+                            @elseif ($recipient->isOnline() && $recipient->canSeeOnlineStatus(auth()->user()))
+                                <p class="text-[9px] text-green-500 font-bold truncate leading-none mt-0.5">Đang hoạt động</p>
                             @endif
                         </div>
                     @else

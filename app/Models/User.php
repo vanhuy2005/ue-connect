@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Enums\AccountStatus;
+use App\Enums\ConnectionStatus;
 use App\Enums\IdentityType;
 use App\Enums\MentorAccessStatus;
 use Database\Factories\UserFactory;
@@ -18,7 +19,7 @@ use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Spatie\Permission\Traits\HasRoles;
 
-#[Fillable(['name', 'email', 'password', 'account_status', 'account_status_reason', 'account_restricted_until', 'last_login_at', 'intended_identity_type'])]
+#[Fillable(['name', 'email', 'password', 'account_status', 'account_status_reason', 'account_restricted_until', 'last_login_at', 'last_seen_at', 'intended_identity_type'])]
 #[Hidden(['password', 'remember_token'])]
 /**
  * App\Models\User
@@ -44,6 +45,7 @@ class User extends Authenticatable implements MustVerifyEmail
             'intended_identity_type' => IdentityType::class,
             'account_restricted_until' => 'datetime',
             'last_login_at' => 'datetime',
+            'last_seen_at' => 'datetime',
         ];
     }
 
@@ -341,5 +343,68 @@ class User extends Authenticatable implements MustVerifyEmail
     public function communityJoinRequests(): HasMany
     {
         return $this->hasMany(CommunityJoinRequest::class);
+    }
+
+    /**
+     * Check if user is online based on last seen timestamp (within 5 minutes).
+     */
+    public function isOnline(): bool
+    {
+        return $this->last_seen_at && $this->last_seen_at->gt(now()->subMinutes(5));
+    }
+
+    /**
+     * Determine if a viewer is authorized to see this user's online status.
+     */
+    public function canSeeOnlineStatus(User $viewer): bool
+    {
+        if ($this->id === $viewer->id) {
+            return true;
+        }
+
+        $privacy = $this->profilePrivacySetting;
+        $visibility = $privacy ? $privacy->online_status_visibility : 'connections';
+
+        if ($visibility === 'nobody') {
+            return false;
+        }
+
+        // Check if there is an active direct connection between this user and the viewer
+        $isConnected = Connection::where(function ($q) use ($viewer) {
+            $q->where('user_one_id', min($this->id, $viewer->id))
+                ->where('user_two_id', max($this->id, $viewer->id));
+        })->where('status', ConnectionStatus::ACTIVE)->exists();
+
+        if ($visibility === 'connections') {
+            return $isConnected;
+        }
+
+        if ($visibility === 'mutual_connections') {
+            if ($isConnected) {
+                return true;
+            }
+
+            // Get this user's active connection user IDs
+            $myConnections = Connection::where(function ($q) {
+                $q->where('user_one_id', $this->id)->orWhere('user_two_id', $this->id);
+            })->where('status', ConnectionStatus::ACTIVE)
+                ->get()
+                ->map(fn ($c) => $c->user_one_id === $this->id ? $c->user_two_id : $c->user_one_id)
+                ->toArray();
+
+            // Get viewer's active connection user IDs
+            $viewerConnections = Connection::where(function ($q) use ($viewer) {
+                $q->where('user_one_id', $viewer->id)->orWhere('user_two_id', $viewer->id);
+            })->where('status', ConnectionStatus::ACTIVE)
+                ->get()
+                ->map(fn ($c) => $c->user_one_id === $viewer->id ? $c->user_two_id : $c->user_one_id)
+                ->toArray();
+
+            $mutual = array_intersect($myConnections, $viewerConnections);
+
+            return ! empty($mutual);
+        }
+
+        return false;
     }
 }

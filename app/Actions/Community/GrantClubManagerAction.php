@@ -67,7 +67,7 @@ class GrantClubManagerAction
             // Update the member's role label
             $member->update([
                 'role' => CommunityMemberRole::Manager->value,
-                'role_label' => 'Quản lý CLB',
+                'role_label' => 'Quản lý cộng đồng',
             ]);
 
             $targetUser->notify(new ClubManagerGrantedNotification($community));

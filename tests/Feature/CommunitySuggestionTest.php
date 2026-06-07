@@ -100,4 +100,105 @@ class CommunitySuggestionTest extends TestCase
             'status' => 'active',
         ]);
     }
+
+    public function test_admin_can_approve_suggestion_converting_it_to_community_with_proposer_fallback(): void
+    {
+        $admin = $this->createAdminUser();
+        $user = $this->createActiveUser();
+
+        $suggestion = CommunitySuggestion::create([
+            'submitted_by' => $user->id,
+            'suggested_name' => 'Biology Explorers',
+            'community_type' => 'academic_group',
+            'join_policy' => 'approval_required',
+            'visibility' => 'public',
+            'purpose' => 'Explore biology.',
+            'target_members' => 'All students',
+            'proposed_owner_id' => null, // Test fallback to submitted_by
+            'status' => 'submitted',
+        ]);
+
+        app(ReviewCommunitySuggestionAction::class)->execute($admin, $suggestion, [
+            'action' => 'approve',
+            'reason' => 'Approved and converted to community',
+        ]);
+
+        $this->assertDatabaseHas('communities', [
+            'name' => 'Biology Explorers',
+            'type' => 'academic_group',
+            'owner_id' => $user->id, // Should fall back to submitted_by
+            'status' => CommunityStatus::Draft->value,
+        ]);
+
+        $community = Community::where('name', 'Biology Explorers')->first();
+
+        $this->assertDatabaseHas('community_members', [
+            'community_id' => $community->id,
+            'user_id' => $user->id,
+            'role' => 'owner',
+            'status' => 'active',
+        ]);
+
+        $this->assertEquals(CommunitySuggestionStatus::ConvertedToCommunity, $suggestion->fresh()->status);
+    }
+
+    public function test_review_action_sends_notification_on_need_more_information(): void
+    {
+        $admin = $this->createAdminUser();
+        $user = $this->createActiveUser();
+
+        $suggestion = CommunitySuggestion::create([
+            'submitted_by' => $user->id,
+            'suggested_name' => 'Math Club',
+            'community_type' => 'academic_group',
+            'join_policy' => 'approval_required',
+            'visibility' => 'public',
+            'purpose' => 'We solve math puzzles.',
+            'target_members' => 'Math majors',
+            'status' => 'submitted',
+        ]);
+
+        app(ReviewCommunitySuggestionAction::class)->execute($admin, $suggestion, [
+            'action' => 'need_more_information',
+            'instruction' => 'Please explain target members in more detail.',
+        ]);
+
+        $this->assertEquals(CommunitySuggestionStatus::NeedMoreInformation, $suggestion->fresh()->status);
+        $this->assertCount(1, $user->notifications);
+        $notification = $user->notifications->first();
+        $this->assertEquals('community_suggestion_reviewed', $notification->data['type']);
+        $this->assertEquals('need_more_information', $notification->data['status']);
+        $this->assertStringContainsString('Please explain target members', $notification->data['body']);
+    }
+
+    public function test_user_can_resubmit_suggestion_via_livewire(): void
+    {
+        $user = $this->createActiveUser();
+
+        $suggestion = CommunitySuggestion::create([
+            'submitted_by' => $user->id,
+            'suggested_name' => 'Math Club',
+            'community_type' => 'academic_group',
+            'join_policy' => 'approval_required',
+            'visibility' => 'public',
+            'purpose' => 'We solve math puzzles.',
+            'target_members' => 'Math majors',
+            'status' => 'need_more_information',
+            'admin_instruction' => 'Provide more details.',
+        ]);
+
+        Volt::actingAs($user)
+            ->test('pages.app.communities')
+            ->call('editSuggestion', $suggestion->id)
+            ->assertSet('editingSuggestionId', $suggestion->id)
+            ->assertSet('suggestName', 'Math Club')
+            ->set('suggestTargetMembers', 'Math majors K47 and K48')
+            ->call('submitSuggestion');
+
+        $this->assertDatabaseHas('community_suggestions', [
+            'id' => $suggestion->id,
+            'target_members' => 'Math majors K47 and K48',
+            'status' => CommunitySuggestionStatus::Submitted->value,
+        ]);
+    }
 }

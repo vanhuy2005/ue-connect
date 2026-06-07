@@ -5,10 +5,13 @@ namespace Tests\Feature\Social;
 use App\Actions\Comments\CreateComment;
 use App\Actions\Comments\DeleteComment;
 use App\Actions\Comments\UpdateComment;
+use App\Actions\Settings\EnsureUserSettingsExistAction;
 use App\Enums\AccountStatus;
 use App\Enums\CommentStatus;
+use App\Enums\ConnectionStatus;
 use App\Enums\PostStatus;
 use App\Models\Comment;
+use App\Models\Connection;
 use App\Models\Post;
 use App\Models\User;
 use Database\Seeders\Reference\AccessControlReferenceSeeder;
@@ -342,5 +345,40 @@ class CommentInteractionTest extends TestCase
         $action->execute($this->user, $hiddenPost, [
             'body' => 'Trying to comment on a hidden post.',
         ]);
+    }
+
+    public function test_search_mention_users_returns_matching_results(): void
+    {
+        $this->actingAs($this->user);
+
+        // Make sure user settings exist
+        app(EnsureUserSettingsExistAction::class)->execute($this->otherUser);
+
+        $component = Volt::test('pages.app.post-detail', ['post' => $this->post]);
+
+        // 1. Target user has default ('everyone') preference -> should show up
+        $resultsOther = $component->instance()->searchMentionUsers('Other');
+        $this->assertCount(1, $resultsOther);
+        $this->assertEquals($this->otherUser->name, $resultsOther[0]['name']);
+
+        // 2. Target user has 'nobody' preference -> should NOT show up
+        $this->otherUser->profilePrivacySetting()->update(['mentions_preference' => 'nobody']);
+        $resultsOtherNobody = $component->instance()->searchMentionUsers('Other');
+        $this->assertEmpty($resultsOtherNobody);
+
+        // 3. Target user has 'connections' preference and NOT connected -> should NOT show up
+        $this->otherUser->profilePrivacySetting()->update(['mentions_preference' => 'connections']);
+        $resultsOtherNotConnected = $component->instance()->searchMentionUsers('Other');
+        $this->assertEmpty($resultsOtherNotConnected);
+
+        // 4. Target user has 'connections' preference and ARE connected -> should show up
+        Connection::create([
+            'user_one_id' => $this->user->id,
+            'user_two_id' => $this->otherUser->id,
+            'status' => ConnectionStatus::ACTIVE,
+        ]);
+        $resultsOtherConnected = $component->instance()->searchMentionUsers('Other');
+        $this->assertCount(1, $resultsOtherConnected);
+        $this->assertEquals($this->otherUser->name, $resultsOtherConnected[0]['name']);
     }
 }

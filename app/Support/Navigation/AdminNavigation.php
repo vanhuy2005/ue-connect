@@ -104,6 +104,14 @@ class AdminNavigation
                         'description' => 'Quản lý danh sách các cộng đồng/nhóm sinh viên',
                     ],
                     [
+                        'key' => 'community-suggestions',
+                        'label' => 'Đề xuất cộng đồng',
+                        'route' => 'admin.community-suggestions.index',
+                        'icon' => 'file-text',
+                        'permission' => 'manage_communities',
+                        'description' => 'Duyệt các đề xuất thành lập cộng đồng/CLB từ sinh viên',
+                    ],
+                    [
                         'key' => 'announcements',
                         'label' => 'Thông báo cộng đồng',
                         'route' => 'admin.announcements.index',

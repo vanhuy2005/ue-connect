@@ -22,6 +22,8 @@ new class extends Component
     // Privacy Form State
     public string $profile_visibility = 'public_to_verified';
     public string $discovery_visibility = 'enabled';
+    public bool $is_profile_private = false;
+    public bool $is_discoverable = true;
     public bool $show_faculty = true;
     public bool $show_major = true;
     public bool $show_cohort = true;
@@ -81,6 +83,8 @@ new class extends Component
         if ($privacy) {
             $this->profile_visibility = $privacy->profile_visibility;
             $this->discovery_visibility = $privacy->discovery_visibility;
+            $this->is_profile_private = ($this->profile_visibility === 'connections_only' || $this->profile_visibility === 'private');
+            $this->is_discoverable = ($this->discovery_visibility === 'enabled');
             $this->show_faculty = $privacy->show_faculty;
             $this->show_major = $privacy->show_major;
             $this->show_cohort = $privacy->show_cohort;
@@ -91,6 +95,9 @@ new class extends Component
             $this->show_communities = $privacy->show_communities;
             $this->show_career_info = $privacy->show_career_info;
             $this->show_mentor_topics = $privacy->show_mentor_topics;
+            $this->mentions_preference = $privacy->mentions_preference ?? 'everyone';
+            $this->tags_preference = $privacy->tags_preference ?? 'everyone';
+            $this->online_status_visibility = $privacy->online_status_visibility ?? 'connections';
         }
 
         // Load Notification Preferences
@@ -109,11 +116,70 @@ new class extends Component
         }
     }
 
+    public function updatedIsDiscoverable($value): void
+    {
+        $this->discovery_visibility = $value ? 'enabled' : 'disabled';
+    }
+
+    public function updatedIsProfilePrivate($value): void
+    {
+        $this->profile_visibility = $value ? 'connections_only' : 'public_to_verified';
+    }
+
+    public function updatedProfileVisibility($value): void
+    {
+        if ($value === 'connections_only' || $value === 'private' || $value === true || $value === '1' || $value === 1) {
+            $this->is_profile_private = true;
+            if ($value === true || $value === '1' || $value === 1) {
+                $this->profile_visibility = 'connections_only';
+            }
+        } else {
+            $this->is_profile_private = false;
+            if ($value !== 'hidden_by_moderation') {
+                $this->profile_visibility = 'public_to_verified';
+            }
+        }
+    }
+
+    public function updatedDiscoveryVisibility($value): void
+    {
+        if ($value === 'enabled' || $value === true || $value === '1' || $value === 1) {
+            $this->is_discoverable = true;
+            if ($value === true || $value === '1' || $value === 1) {
+                $this->discovery_visibility = 'enabled';
+            }
+        } else {
+            $this->is_discoverable = false;
+            if ($value !== 'forced_hidden') {
+                $this->discovery_visibility = 'disabled';
+            }
+        }
+    }
+
     /**
      * Save profile privacy settings.
      */
     public function savePrivacy(UpdateProfilePrivacySettingsAction $action): void
     {
+        // Normalize boolean/numeric string values
+        if ($this->profile_visibility === true || $this->profile_visibility === '1' || $this->profile_visibility === 1) {
+            $this->profile_visibility = 'connections_only';
+        } elseif ($this->profile_visibility === false || $this->profile_visibility === '0' || $this->profile_visibility === 0) {
+            $this->profile_visibility = 'public_to_verified';
+        }
+
+        if ($this->discovery_visibility === true || $this->discovery_visibility === '1' || $this->discovery_visibility === 1) {
+            $this->discovery_visibility = 'enabled';
+        } elseif ($this->discovery_visibility === false || $this->discovery_visibility === '0' || $this->discovery_visibility === 0) {
+            $this->discovery_visibility = 'disabled';
+        }
+
+        $this->validate([
+            'mentions_preference' => 'required|in:everyone,connections,nobody',
+            'tags_preference' => 'required|in:everyone,connections,nobody',
+            'online_status_visibility' => 'required|in:connections,mutual_connections,nobody',
+        ]);
+
         try {
             $user = Auth::user();
             $action->execute($user, [
@@ -129,6 +195,9 @@ new class extends Component
                 'show_communities' => $this->show_communities,
                 'show_career_info' => $this->show_career_info,
                 'show_mentor_topics' => $this->show_mentor_topics,
+                'mentions_preference' => $this->mentions_preference,
+                'tags_preference' => $this->tags_preference,
+                'online_status_visibility' => $this->online_status_visibility,
             ]);
 
             $this->feedbackMessage = 'Cập nhật thiết lập riêng tư thành công.';
@@ -495,9 +564,7 @@ new class extends Component
                                         <input 
                                             type="checkbox" 
                                             id="private-profile" 
-                                            wire:model="profile_visibility" 
-                                            true-value="connections_only" 
-                                            false-value="public_to_verified"
+                                            wire:model="is_profile_private" 
                                             class="h-4 w-4 rounded border-slate-200 text-ue-brand focus:ring-ue-brand"
                                         />
                                     </div>
@@ -641,6 +708,114 @@ new class extends Component
                             @endif
                         </div>
 
+                    @elseif ($subSection === 'mentions')
+                        {{-- Tagging and Mentions --}}
+                        <div class="space-y-6">
+                            <div>
+                                <a href="{{ route('settings', ['section' => 'privacy']) }}" class="flex items-center gap-1 text-[10px] font-bold text-slate-400 hover:text-slate-600 mb-2">
+                                    <x-ui.icon name="chevron-left" size="2xs" /> Quyền riêng tư
+                                </a>
+                                <h2 class="text-sm font-bold text-slate-800">Gắn thẻ và nhắc đến</h2>
+                                <p class="text-xxs text-slate-400 font-medium mt-0.5">Tùy chọn cho phép gắn thẻ @lượt nhắc trong các bài viết và bình luận.</p>
+                            </div>
+
+                            <form wire:submit.prevent="savePrivacy" class="space-y-6">
+                                <div class="bg-white border border-slate-150 rounded-2xl p-5 shadow-2xs space-y-6">
+                                    {{-- Mentions preference --}}
+                                    <div class="space-y-2.5">
+                                        <h3 class="text-xxs font-bold text-slate-800 uppercase tracking-wider text-[9px]">Ai có thể nhắc đến (@mention) bạn</h3>
+                                        <div class="space-y-2">
+                                            <label class="flex items-center gap-3 cursor-pointer">
+                                                <input type="radio" wire:model="mentions_preference" value="everyone" class="h-4 w-4 border-slate-200 text-ue-brand focus:ring-ue-brand">
+                                                <div class="text-xxs font-semibold text-slate-700">Mọi người</div>
+                                            </label>
+                                            <label class="flex items-center gap-3 cursor-pointer">
+                                                <input type="radio" wire:model="mentions_preference" value="connections" class="h-4 w-4 border-slate-200 text-ue-brand focus:ring-ue-brand">
+                                                <div class="text-xxs font-semibold text-slate-700">Bạn bè / Đang theo dõi</div>
+                                            </label>
+                                            <label class="flex items-center gap-3 cursor-pointer">
+                                                <input type="radio" wire:model="mentions_preference" value="nobody" class="h-4 w-4 border-slate-200 text-ue-brand focus:ring-ue-brand">
+                                                <div class="text-xxs font-semibold text-slate-700">Không ai cả</div>
+                                            </label>
+                                        </div>
+                                    </div>
+
+                                    <hr class="border-slate-100">
+
+                                    {{-- Tags preference --}}
+                                    <div class="space-y-2.5">
+                                        <h3 class="text-xxs font-bold text-slate-800 uppercase tracking-wider text-[9px]">Ai có thể gắn thẻ bạn</h3>
+                                        <div class="space-y-2">
+                                            <label class="flex items-center gap-3 cursor-pointer">
+                                                <input type="radio" wire:model="tags_preference" value="everyone" class="h-4 w-4 border-slate-200 text-ue-brand focus:ring-ue-brand">
+                                                <div class="text-xxs font-semibold text-slate-700">Mọi người</div>
+                                            </label>
+                                            <label class="flex items-center gap-3 cursor-pointer">
+                                                <input type="radio" wire:model="tags_preference" value="connections" class="h-4 w-4 border-slate-200 text-ue-brand focus:ring-ue-brand">
+                                                <div class="text-xxs font-semibold text-slate-700">Bạn bè / Đang theo dõi</div>
+                                            </label>
+                                            <label class="flex items-center gap-3 cursor-pointer">
+                                                <input type="radio" wire:model="tags_preference" value="nobody" class="h-4 w-4 border-slate-200 text-ue-brand focus:ring-ue-brand">
+                                                <div class="text-xxs font-semibold text-slate-700">Không ai cả</div>
+                                            </label>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="flex justify-end">
+                                    <button 
+                                        type="submit" 
+                                        class="bg-ue-brand hover:bg-ue-brand-hover text-white text-xxs font-bold px-4 py-2 rounded-xl shadow-xs transition-all"
+                                    >
+                                        Lưu thay đổi
+                                    </button>
+                                </div>
+                            </form>
+                        </div>
+
+                    @elseif ($subSection === 'online_status')
+                        {{-- Online Status --}}
+                        <div class="space-y-6">
+                            <div>
+                                <a href="{{ route('settings', ['section' => 'privacy']) }}" class="flex items-center gap-1 text-[10px] font-bold text-slate-400 hover:text-slate-600 mb-2">
+                                    <x-ui.icon name="chevron-left" size="2xs" /> Quyền riêng tư
+                                </a>
+                                <h2 class="text-sm font-bold text-slate-800">Trạng thái trực tuyến</h2>
+                                <p class="text-xxs text-slate-400 font-medium mt-0.5">Quản lý việc hiển thị trạng thái đang online của bạn cho các thành viên khác.</p>
+                            </div>
+
+                            <form wire:submit.prevent="savePrivacy" class="space-y-6">
+                                <div class="bg-white border border-slate-150 rounded-2xl p-5 shadow-2xs space-y-6">
+                                    <div class="space-y-2.5">
+                                        <h3 class="text-xxs font-bold text-slate-800 uppercase tracking-wider text-[9px]">Ai có thể nhìn thấy trạng thái trực tuyến của bạn</h3>
+                                        <div class="space-y-2">
+                                            <label class="flex items-center gap-3 cursor-pointer">
+                                                <input type="radio" wire:model="online_status_visibility" value="connections" class="h-4 w-4 border-slate-200 text-ue-brand focus:ring-ue-brand">
+                                                <div class="text-xxs font-semibold text-slate-700">Bạn bè kết nối</div>
+                                            </label>
+                                            <label class="flex items-center gap-3 cursor-pointer">
+                                                <input type="radio" wire:model="online_status_visibility" value="mutual_connections" class="h-4 w-4 border-slate-200 text-ue-brand focus:ring-ue-brand">
+                                                <div class="text-xxs font-semibold text-slate-700">Bạn học kết nối chéo (Mutual)</div>
+                                            </label>
+                                            <label class="flex items-center gap-3 cursor-pointer">
+                                                <input type="radio" wire:model="online_status_visibility" value="nobody" class="h-4 w-4 border-slate-200 text-ue-brand focus:ring-ue-brand">
+                                                <div class="text-xxs font-semibold text-slate-700">Không ai cả</div>
+                                            </label>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="flex justify-end">
+                                    <button 
+                                        type="submit" 
+                                        class="bg-ue-brand hover:bg-ue-brand-hover text-white text-xxs font-bold px-4 py-2 rounded-xl shadow-xs transition-all"
+                                    >
+                                        Lưu thay đổi
+                                    </button>
+                                </div>
+                            </form>
+                        </div>
+
                     @else
                         {{-- Main Privacy Page --}}
                         <div class="space-y-6">
@@ -661,27 +836,27 @@ new class extends Component
                                     <x-ui.icon name="chevron-right" size="xs" class="opacity-50" />
                                 </a>
 
-                                <div class="p-4 flex items-center justify-between opacity-50 cursor-not-allowed">
+                                <a 
+                                    href="{{ route('settings', ['section' => 'privacy', 'subSection' => 'mentions']) }}" 
+                                    class="p-4 flex items-center justify-between hover:bg-slate-50 transition-colors"
+                                >
                                     <div class="space-y-0.5">
-                                        <span class="text-xxs font-bold text-slate-800 block flex items-center gap-1.5">
-                                            Gắn thẻ và nhắc đến
-                                            <span class="bg-slate-100 text-[8px] text-slate-500 font-bold px-1.5 py-0.5 rounded">Sắp ra mắt</span>
-                                        </span>
+                                        <span class="text-xxs font-bold text-slate-800 block">Gắn thẻ và nhắc đến</span>
                                         <span class="text-[10px] text-slate-400 block">Tùy chọn cho phép gắn thẻ @lượt nhắc.</span>
                                     </div>
                                     <x-ui.icon name="chevron-right" size="xs" class="opacity-50" />
-                                </div>
+                                </a>
 
-                                <div class="p-4 flex items-center justify-between opacity-50 cursor-not-allowed">
+                                <a 
+                                    href="{{ route('settings', ['section' => 'privacy', 'subSection' => 'online_status']) }}" 
+                                    class="p-4 flex items-center justify-between hover:bg-slate-50 transition-colors"
+                                >
                                     <div class="space-y-0.5">
-                                        <span class="text-xxs font-bold text-slate-800 block flex items-center gap-1.5">
-                                            Trạng thái trực tuyến
-                                            <span class="bg-slate-100 text-[8px] text-slate-500 font-bold px-1.5 py-0.5 rounded">Sắp ra mắt</span>
-                                        </span>
+                                        <span class="text-xxs font-bold text-slate-800 block">Trạng thái trực tuyến</span>
                                         <span class="text-[10px] text-slate-400 block">Quản lý hiển thị trạng thái đang online.</span>
                                     </div>
                                     <x-ui.icon name="chevron-right" size="xs" class="opacity-50" />
-                                </div>
+                                </a>
 
                                 <a 
                                     href="{{ route('settings', ['section' => 'privacy', 'subSection' => 'blocked']) }}" 
@@ -706,9 +881,7 @@ new class extends Component
                                     <input 
                                         type="checkbox" 
                                         id="discoverable-toggle" 
-                                        wire:model="discovery_visibility" 
-                                        true-value="enabled" 
-                                        false-value="disabled"
+                                        wire:model="is_discoverable" 
                                         wire:change="savePrivacy"
                                         class="h-4 w-4 rounded border-slate-200 text-ue-brand focus:ring-ue-brand"
                                     />

@@ -2,6 +2,7 @@
 
 use App\Http\Middleware\EnsureAccountIsActive;
 use App\Http\Middleware\EnsureIdentityIsVerified;
+use App\Http\Middleware\UpdateUserLastSeen;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
@@ -15,6 +16,9 @@ return Application::configure(basePath: dirname(__DIR__))
     )
     ->withMiddleware(function (Middleware $middleware): void {
         $middleware->trustProxies(at: '*');
+        $middleware->web(append: [
+            UpdateUserLastSeen::class,
+        ]);
         $middleware->alias([
             'active.account' => EnsureAccountIsActive::class,
             'verified.identity' => EnsureIdentityIsVerified::class,

@@ -10,6 +10,7 @@ use App\Models\Community;
 use App\Models\CommunityMember;
 use App\Models\CommunitySuggestion;
 use App\Models\User;
+use App\Notifications\Community\CommunitySuggestionReviewedNotification;
 use App\Services\AuditService;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
@@ -43,12 +44,7 @@ class ReviewCommunitySuggestionAction
             $before = $suggestion->toArray();
 
             match ($action) {
-                'approve' => $suggestion->update([
-                    'status' => CommunitySuggestionStatus::Approved->value,
-                    'reviewed_by' => $actor->id,
-                    'admin_reason' => $data['reason'] ?? null,
-                    'admin_instruction' => $data['instruction'] ?? null,
-                ]),
+                'approve' => $this->convertToCommunity($actor, $suggestion, $data),
                 'reject' => $suggestion->update([
                     'status' => CommunitySuggestionStatus::Rejected->value,
                     'reviewed_by' => $actor->id,
@@ -76,6 +72,10 @@ class ReviewCommunitySuggestionAction
                 'reason' => $data['reason'] ?? null,
             ]);
         });
+
+        if ($suggestion->submitter) {
+            $suggestion->submitter->notify(new CommunitySuggestionReviewedNotification($suggestion));
+        }
     }
 
     /**
@@ -83,9 +83,11 @@ class ReviewCommunitySuggestionAction
      */
     private function convertToCommunity(User $actor, CommunitySuggestion $suggestion, array $data): void
     {
+        $communityName = ! empty(trim($data['community_name'] ?? '')) ? trim($data['community_name']) : $suggestion->suggested_name;
+
         $community = Community::create([
-            'name' => $data['community_name'] ?? $suggestion->suggested_name,
-            'slug' => Str::slug($data['community_name'] ?? $suggestion->suggested_name),
+            'name' => $communityName,
+            'slug' => Str::slug($communityName),
             'type' => $suggestion->community_type,
             'join_policy' => $suggestion->join_policy ?? 'approval_required',
             'visibility' => $suggestion->visibility ?? 'public',
@@ -94,7 +96,7 @@ class ReviewCommunitySuggestionAction
             'settings' => ['target_members' => $suggestion->target_members],
             'status' => CommunityStatus::Draft->value,
             'created_by' => $actor->id,
-            'owner_id' => $suggestion->proposed_owner_id,
+            'owner_id' => $suggestion->proposed_owner_id ?? $suggestion->submitted_by,
             'related_faculty' => $suggestion->related_faculty,
             'related_program_id' => $suggestion->related_program_id,
         ]);
@@ -114,6 +116,8 @@ class ReviewCommunitySuggestionAction
             'status' => CommunitySuggestionStatus::ConvertedToCommunity->value,
             'reviewed_by' => $actor->id,
             'converted_community_id' => $community->id,
+            'admin_reason' => $data['reason'] ?? null,
+            'admin_instruction' => $data['instruction'] ?? null,
         ]);
     }
 }
