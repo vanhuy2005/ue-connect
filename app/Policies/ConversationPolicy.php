@@ -2,6 +2,7 @@
 
 namespace App\Policies;
 
+use App\Enums\ConversationStatus;
 use App\Models\BlockedUser;
 use App\Models\Connection;
 use App\Models\Conversation;
@@ -28,6 +29,11 @@ class ConversationPolicy
     public function sendMessage(User $user, Conversation $conversation): bool
     {
         if (! $user->isActive()) {
+            return false;
+        }
+
+        // Must be an active conversation
+        if ($conversation->status !== ConversationStatus::ACTIVE) {
             return false;
         }
 
