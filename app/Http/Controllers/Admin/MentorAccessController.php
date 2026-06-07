@@ -47,7 +47,7 @@ class MentorAccessController extends Controller
         $data = $request->validated();
         $admin = $request->user();
 
-        if ($data['action'] === 'approve') {
+        if ($data['action'] === 'approve' && $mentorAccess->status !== MentorAccessStatus::Approved) {
             $this->checkTrustCompleteness($mentorAccess);
         }
 
@@ -77,7 +77,7 @@ class MentorAccessController extends Controller
             ]),
         };
 
-        return back()->with('status', 'Mentor access action applied.');
+        return redirect()->route('admin.mentors.index')->with('status', 'Đã xử lý yêu cầu mentor thành công.');
     }
 
     public function approve(MentorAccessRequest $mentorAccessRequest, GrantMentorAccessAction $grant)

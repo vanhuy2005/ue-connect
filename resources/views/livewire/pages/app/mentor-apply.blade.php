@@ -6,6 +6,7 @@ use App\Models\MentorAccessRequest;
 use Illuminate\Support\Facades\Auth;
 use Livewire\Volt\Component;
 use Livewire\WithFileUploads;
+use App\Actions\Media\GenerateMediaUrlAction;
 use App\Actions\Media\StoreTemporaryMediaAction;
 use App\Actions\Media\AttachMediaToModelAction;
 use App\Actions\Media\DeleteMediaAction;
@@ -40,19 +41,48 @@ new class extends Component {
 
     public ?int $evidenceMediaId = null;
     public ?string $evidenceFileName = null;
+    public ?string $evidencePreviewUrl = null;
     public ?string $avatarUrl = null;
     public ?string $avatarUploadMessage = null;
+
+    public ?int $existingRequestId = null;
 
     public function mount(): void
     {
         $user = Auth::user();
         $profileRecord = $user->profile;
         if ($profileRecord && $profileRecord->avatar()->exists()) {
-            $this->avatarUrl = $profileRecord->avatar()->first()->getUrl();
+            $this->avatarUrl = app(GenerateMediaUrlAction::class)->execute($profileRecord->avatar()->first(), 'thumb', $user);
         }
-        $eligible = RequestMentorAccessAction::eligibleRoleContextsFor($user);
-        if (!empty($eligible)) {
-            $this->requested_role_context = old('requested_role_context', array_key_first($eligible));
+
+        $openRequest = MentorAccessRequest::where('user_id', $user->id)
+            ->whereIn('status', [MentorAccessStatus::NeedMoreInfo->value])
+            ->latest()
+            ->first();
+
+        if ($openRequest) {
+            $this->existingRequestId = $openRequest->id;
+            $this->requested_role_context = $openRequest->requested_role_context;
+            $this->motivation = $openRequest->motivation;
+            $this->experience_summary = $openRequest->experience_summary ?? '';
+            $this->headline = $openRequest->headline ?? '';
+            $this->bio = $openRequest->bio ?? '';
+            $this->portfolio_link = $openRequest->portfolio_link ?? '';
+            $this->availability_note = $openRequest->availability_note ?? '';
+            $this->policy_agreed = $openRequest->policy_agreed;
+            $this->response_expectation_text = $openRequest->response_expectation_text ?? 'Thường phản hồi trong 2-3 ngày làm việc';
+            $this->office_hours_text = $openRequest->office_hours_text ?? '';
+            $this->expertise_topics_text = is_array($openRequest->expertise_topics) ? implode(', ', $openRequest->expertise_topics) : '';
+            $this->help_topics_text = is_array($openRequest->help_topics) ? implode(', ', $openRequest->help_topics) : '';
+            $this->career_paths_text = is_array($openRequest->career_paths) ? implode(', ', $openRequest->career_paths) : '';
+            $this->skills_text = is_array($openRequest->skills) ? implode(', ', $openRequest->skills) : '';
+            $this->preferred_request_types = $openRequest->preferred_request_types ?? ['cv_review', 'career_advice'];
+            $this->evidenceMediaId = $openRequest->evidence_media_id;
+        } else {
+            $eligible = RequestMentorAccessAction::eligibleRoleContextsFor($user);
+            if (!empty($eligible)) {
+                $this->requested_role_context = old('requested_role_context', array_key_first($eligible));
+            }
         }
     }
 
@@ -82,7 +112,7 @@ new class extends Component {
 
             $media = $storeAction->execute($user, $this->avatarFile, 'avatar', ['visibility' => 'public']);
             $attachAction->execute($user, $profile, [$media->id], 'avatar');
-            $this->avatarUrl = $media->getUrl();
+            $this->avatarUrl = app(GenerateMediaUrlAction::class)->execute($media, 'thumb', $user);
             $this->avatarUploadMessage = 'Đã cập nhật ảnh đại diện.';
         } catch (Throwable $exception) {
             $this->addError('avatarFile', 'Không tải được ảnh đại diện: '.$exception->getMessage());
@@ -101,6 +131,7 @@ new class extends Component {
             $media = $storeAction->execute($user, $this->evidenceFile, 'mentor_evidence', ['visibility' => 'private']);
             $this->evidenceMediaId = $media->id;
             $this->evidenceFileName = $this->evidenceFile->getClientOriginalName();
+            $this->evidencePreviewUrl = app(GenerateMediaUrlAction::class)->execute($media, 'preview', $user);
         } catch (Throwable $exception) {
             $this->addError('evidenceFile', 'Không tải được file minh chứng: '.$exception->getMessage());
         }
@@ -182,8 +213,25 @@ new class extends Component {
         ];
 
         try {
-            $action->execute($user, $data);
-            session()->flash('status', 'Yêu cầu trở thành mentor đã được gửi.');
+            $existing = $this->existingRequestId
+                ? MentorAccessRequest::where('id', $this->existingRequestId)
+                    ->where('user_id', $user->id)
+                    ->where('status', MentorAccessStatus::NeedMoreInfo)
+                    ->first()
+                : null;
+
+            if ($existing) {
+                $existing->update(array_merge($data, [
+                    'status' => MentorAccessStatus::Submitted,
+                    'reviewed_by' => null,
+                    'reviewed_at' => null,
+                    'review_reason' => null,
+                    'admin_notes' => null,
+                ]));
+                session()->flash('status', 'Yêu cầu mentor đã được cập nhật và gửi lại.');
+            } else {
+                $action->execute($user, $data);
+            }
             $this->redirect(route('mentor.dashboard'));
         } catch (\Exception $exception) {
             $this->addError('requested_role_context', $exception->getMessage());
@@ -233,10 +281,10 @@ new class extends Component {
         <p class="mt-1 text-sm text-slate-500">Chia sẻ kinh nghiệm của bạn để ban quản trị xét duyệt quyền mentor.</p>
     </div>
 
-    @if ($openRequest)
+    @if ($openRequest && $openRequest->status !== MentorAccessStatus::NeedMoreInfo)
         <div class="rounded-2xl border border-blue-100 bg-blue-50 p-5 text-sm text-blue-900 shadow-sm">
             <p class="font-bold text-base">Bạn đã có yêu cầu mentor: {{ $openRequest->status->label() }}</p>
-            @if ($mentorProfile || $openRequest->status === MentorAccessStatus::Approved)
+            @if ($openRequest->status === MentorAccessStatus::Approved && $mentorProfile)
                 <p class="mt-2 text-blue-800 leading-relaxed">Yêu cầu của bạn đã được duyệt. Hãy thiết lập hồ sơ mentor công khai để người học có thể tin tưởng khi gửi yêu cầu.</p>
                 <div class="mt-4 flex flex-wrap gap-2">
                     <a href="{{ route('mentor.setup') }}" class="inline-flex items-center justify-center rounded-xl bg-ue-brand px-4 py-2.5 text-sm font-bold text-white shadow-sm hover:bg-ue-brand-dark transition-all">
@@ -247,13 +295,7 @@ new class extends Component {
                     </a>
                 </div>
             @else
-                <p class="mt-2 text-blue-800 leading-relaxed">Ban quản trị đang xét duyệt yêu cầu của bạn. Nếu trạng thái là cần thêm thông tin, hãy bổ sung theo phản hồi từ quản trị viên.</p>
-                @if ($openRequest->status === MentorAccessStatus::NeedMoreInfo && $openRequest->review_reason)
-                    <div class="mt-3 rounded-xl border border-amber-200 bg-amber-50 p-4 text-amber-900">
-                        <p class="font-bold">Lý do yêu cầu bổ sung thông tin:</p>
-                        <p class="mt-1 font-medium">{{ $openRequest->review_reason }}</p>
-                    </div>
-                @endif
+                <p class="mt-2 text-blue-800 leading-relaxed">Ban quản trị đang xét duyệt yêu cầu của bạn.</p>
             @endif
         </div>
     @elseif (empty($eligibleRoleContexts))
@@ -264,6 +306,15 @@ new class extends Component {
             </p>
         </div>
     @else
+        @if ($openRequest && $openRequest->status === MentorAccessStatus::NeedMoreInfo)
+            <div class="mb-6 rounded-2xl border border-amber-200 bg-amber-50 p-5 text-sm text-amber-900 shadow-sm">
+                <p class="font-bold text-base">Yêu cầu cần bổ sung thông tin</p>
+                @if ($openRequest->review_reason)
+                    <p class="mt-2 font-medium">{{ $openRequest->review_reason }}</p>
+                @endif
+                <p class="mt-3 text-amber-800">Vui lòng cập nhật thông tin bên dưới và gửi lại.</p>
+            </div>
+        @endif
         <div class="grid gap-6 lg:grid-cols-[minmax(0,1fr)_380px]">
             {{-- Left side - Interactive Registration Form --}}
             <form wire:submit.prevent="submit" class="space-y-6">
@@ -283,32 +334,46 @@ new class extends Component {
                     <h2 class="text-base font-bold text-slate-900 border-b pb-2">1. Minh chứng & Danh tính</h2>
 
                     {{-- Avatar Section --}}
-                    <div>
-                        <div class="flex items-start gap-4">
-                            @if ($avatarUrl)
-                                <img src="{{ $avatarUrl }}" class="h-16 w-16 rounded-full border border-slate-200 object-cover shadow-sm" alt="Avatar" />
-                            @else
-                                <x-ui.avatar :user="$currentUser" size="lg" class="border border-slate-200" />
-                            @endif
-                            <div class="min-w-0 flex-1">
-                                <span class="text-sm font-bold text-slate-700">Ảnh đại diện hồ sơ (Bắt buộc)</span>
-                                <p class="text-xs text-slate-500 mt-1">Ảnh đại diện rõ mặt giúp tạo niềm tin cao đối với sinh viên khi kết nối.</p>
-                                
-                                <div class="mt-3 flex items-center gap-3">
-                                    <label class="inline-flex cursor-pointer items-center justify-center rounded-xl bg-slate-100 hover:bg-slate-200 px-3 py-1.5 text-xs font-bold text-slate-700 shadow-2xs transition">
-                                        <x-ui.icon name="camera" size="xs" class="mr-1.5" />
-                                        Tải ảnh lên
-                                        <input type="file" wire:model="avatarFile" class="hidden" accept="image/jpeg,image/png,image/webp">
-                                    </label>
-                                    <span wire:loading wire:target="avatarFile" class="text-xxs text-slate-400 font-semibold animate-pulse">Đang upload...</span>
-                                    @if ($avatarUploadMessage)
-                                        <span class="text-xxs text-emerald-600 font-bold">{{ $avatarUploadMessage }}</span>
-                                    @endif
-                                </div>
-                                @error('avatarFile')
-                                    <p class="mt-1 text-xs font-bold text-red-600">{{ $message }}</p>
-                                @enderror
+                    <div class="flex flex-col sm:flex-row items-center gap-6">
+                        @if ($avatarUrl)
+                            <img src="{{ $avatarUrl }}" class="h-28 w-28 rounded-full border-4 border-white object-cover shadow-xl shrink-0" alt="Avatar" />
+                        @else
+                            <div class="h-28 w-28 rounded-full border-2 border-dashed border-slate-300 bg-slate-50 flex items-center justify-center shrink-0 shadow-sm">
+                                <x-ui.icon name="user" size="2xl" class="text-slate-400" />
                             </div>
+                        @endif
+                        <div class="flex-1 text-center sm:text-left">
+                            <div class="flex items-center justify-center sm:justify-start gap-2 flex-wrap">
+                                <span class="text-base font-bold text-slate-900">Ảnh đại diện hồ sơ</span>
+                                <span class="inline-flex items-center rounded-full bg-red-500 px-2.5 py-1 text-[10px] font-bold text-white uppercase tracking-wide shadow-sm">Bắt buộc</span>
+                            </div>
+                            <p class="text-sm text-slate-600 mt-2 leading-relaxed">
+                                Ảnh đại diện <span class="font-semibold">rõ mặt</span> giúp tạo niềm tin cao đối với sinh viên khi kết nối.
+                            </p>
+                            <p class="text-xs text-slate-500 mt-1">
+                                Chụp ảnh thẳng, không đeo khẩu trang/kính râm, đảm bảo ánh sáng tốt.
+                            </p>
+                            
+                            <div class="mt-4 flex flex-wrap items-center justify-center sm:justify-start gap-3">
+                                <label class="inline-flex cursor-pointer items-center justify-center rounded-xl bg-ue-brand hover:bg-ue-brand-dark px-5 py-2.5 text-sm font-bold text-white shadow-lg transition-all ring-2 ring-ue-brand/20">
+                                    <x-ui.icon name="camera" size="sm" class="mr-2" />
+                                    @if ($avatarUrl) Đổi ảnh đại diện @else Tải ảnh lên @endif
+                                    <input type="file" wire:model="avatarFile" class="hidden" accept="image/jpeg,image/png,image/webp">
+                                </label>
+                                <span wire:loading wire:target="avatarFile" class="text-xs text-slate-600 font-bold animate-pulse">Đang upload...</span>
+                                @if ($avatarUploadMessage)
+                                    <span class="text-xs text-emerald-700 font-bold flex items-center gap-1">
+                                        <x-ui.icon name="check-circle" size="sm" />
+                                        {{ $avatarUploadMessage }}
+                                    </span>
+                                @endif
+                            </div>
+                            @error('avatarFile')
+                                <p class="mt-3 text-sm font-bold text-red-600 flex items-center justify-center sm:justify-start gap-1">
+                                    <x-ui.icon name="alert-circle" size="sm" />
+                                    {{ $message }}
+                                </p>
+                            @enderror
                         </div>
                     </div>
 
@@ -325,7 +390,11 @@ new class extends Component {
                                     <input type="file" wire:model="evidenceFile" class="hidden" accept=".jpg,.jpeg,.png,.pdf,.webp,.docx,.zip">
                                 </label>
                                 <span wire:loading wire:target="evidenceFile" class="text-xxs text-slate-400 font-semibold animate-pulse">Đang upload...</span>
-                                @if ($evidenceFileName)
+                                @if ($evidencePreviewUrl)
+                                    <a href="{{ $evidencePreviewUrl }}" target="_blank" rel="noopener noreferrer" class="shrink-0">
+                                        <img src="{{ $evidencePreviewUrl }}" class="h-12 w-12 rounded-lg border border-slate-200 object-cover shadow-sm" alt="{{ $evidenceFileName }}" title="{{ $evidenceFileName }}" />
+                                    </a>
+                                @elseif ($evidenceFileName)
                                     <span class="text-xxs text-slate-600 font-bold bg-slate-100 px-2 py-1 rounded border">{{ $evidenceFileName }}</span>
                                 @endif
                             </div>
@@ -537,7 +606,7 @@ new class extends Component {
 
                 <div class="flex justify-end gap-3">
                     <button type="submit" class="rounded-xl bg-ue-brand hover:bg-ue-brand-dark px-5 py-3 text-sm font-bold text-white shadow-sm transition-all">
-                        Gửi hồ sơ đăng ký
+                        {{ $existingRequestId ? 'Cập nhật và gửi lại' : 'Gửi hồ sơ đăng ký' }}
                     </button>
                 </div>
             </form>
