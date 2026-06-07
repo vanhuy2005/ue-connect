@@ -24,6 +24,7 @@ use App\Models\ConversationUserSetting;
 use App\Models\ConversationPinnedMessage;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Gate;
+use App\Support\Media\MediaUrlResolver;
 use Livewire\Attributes\Layout;
 use Livewire\Volt\Component;
 
@@ -69,9 +70,15 @@ new #[Layout('layouts.app')] class extends Component
      */
     public function updatedAttachmentFile(): void
     {
-        $this->validate([
-            'attachmentFile' => 'image|max:10240', // Max 10MB
-        ]);
+        try {
+            $this->validate([
+                'attachmentFile' => 'image|max:5120', // 5MB limit
+            ]);
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            $this->addError('attachmentFile', $e->validator->errors()->first());
+            $this->attachmentFile = null;
+            return;
+        }
 
         $storeAction = app(\App\Actions\Media\StoreTemporaryMediaAction::class);
 
@@ -81,7 +88,7 @@ new #[Layout('layouts.app')] class extends Component
             $this->messageAttachment = [
                 'id' => $media->id,
                 'uuid' => $media->uuid,
-                'url' => app(\App\Actions\Media\GenerateMediaUrlAction::class)->execute($media, 'thumb', Auth::user()),
+                'url' => MediaUrlResolver::thumbnailUrl($media),
             ];
         } catch (\Exception $e) {
             $this->addError('attachmentFile', 'Lỗi tải ảnh đính kèm: ' . $e->getMessage());
@@ -1187,18 +1194,18 @@ new #[Layout('layouts.app')] class extends Component
                                 @elseif ($message->message_type === MessageType::IMAGE)
                                     @php
                                         $mediaItem = $message->media->first();
-                                        $imageUrl = $mediaItem ? app(\App\Actions\Media\GenerateMediaUrlAction::class)->execute($mediaItem, 'detail', Auth::user()) : null;
-                                        $originalUrl = $mediaItem ? app(\App\Actions\Media\GenerateMediaUrlAction::class)->execute($mediaItem, 'original', Auth::user()) : null;
+                                        $imageUrl = $mediaItem ? MediaUrlResolver::publicUrl($mediaItem, 'detail') : null;
+                                        $originalUrl = $mediaItem ? MediaUrlResolver::publicUrl($mediaItem, 'original') : null;
                                         $messageImageVariant = $mediaItem?->relationLoaded('variants') ? $mediaItem->variants->firstWhere('variant_name', 'detail') : null;
                                     @endphp
                                     @if ($imageUrl)
                                         <div class="flex flex-col gap-2">
-                                            <div class="rounded-2xl overflow-hidden border border-slate-150 max-w-[280px] bg-slate-100 shadow-2xs">
-                                                <a href="{{ $originalUrl ?? $imageUrl }}" target="_blank" class="block cursor-zoom-in">
+                                            <div class="rounded-2xl overflow-hidden border border-slate-150 max-w-[280px] bg-slate-100 shadow-2xs flex items-center justify-center">
+                                                <a href="{{ $originalUrl ?? $imageUrl }}" target="_blank" class="block cursor-zoom-in w-full h-full">
                                                     <img
                                                         src="{{ $imageUrl }}"
                                                         alt="Attachment"
-                                                        class="w-full h-auto object-cover max-h-64 hover:opacity-95 transition-opacity"
+                                                        class="ue-message-attachment-media hover:opacity-95 transition-opacity"
                                                         loading="lazy"
                                                         @if($messageImageVariant?->width) width="{{ $messageImageVariant->width }}" @endif
                                                         @if($messageImageVariant?->height) height="{{ $messageImageVariant->height }}" @endif

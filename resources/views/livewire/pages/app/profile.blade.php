@@ -102,15 +102,16 @@ new class extends Component
     }
 
     /**
+     /**
      * Handle Avatar photo uploads.
      */
     public function updatedAvatarFile(): void
     {
-        $this->validate([
-            'avatarFile' => 'image|max:5120', // 5MB limit
-        ]);
-
         try {
+            $this->validate([
+                'avatarFile' => 'image|max:5120', // 5MB limit
+            ]);
+
             $storeAction = app(StoreTemporaryMediaAction::class);
             $attachAction = app(AttachMediaToModelAction::class);
             $deleteAction = app(DeleteMediaAction::class);
@@ -135,6 +136,9 @@ new class extends Component
 
             $this->user->load('profile.media.variants');
             $this->feedbackMessage = 'Cập nhật ảnh đại diện thành công.';
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            $this->feedbackMessage = $e->validator->errors()->first();
+            throw $e;
         } catch (\Exception $e) {
             $this->feedbackMessage = 'Lỗi tải ảnh lên: ' . $e->getMessage();
         }
@@ -145,11 +149,11 @@ new class extends Component
      */
     public function updatedCoverFile(): void
     {
-        $this->validate([
-            'coverFile' => 'image|max:8192', // 8MB limit
-        ]);
-
         try {
+            $this->validate([
+                'coverFile' => 'image|max:5120', // 5MB limit
+            ]);
+
             $storeAction = app(StoreTemporaryMediaAction::class);
             $attachAction = app(AttachMediaToModelAction::class);
             $deleteAction = app(DeleteMediaAction::class);
@@ -174,6 +178,9 @@ new class extends Component
 
             $this->user->load('profile.media.variants');
             $this->feedbackMessage = 'Cập nhật ảnh bìa thành công.';
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            $this->feedbackMessage = $e->validator->errors()->first();
+            throw $e;
         } catch (\Exception $e) {
             $this->feedbackMessage = 'Lỗi tải ảnh lên: ' . $e->getMessage();
         }
@@ -411,15 +418,7 @@ new class extends Component
      */
     public function getAvatarUrlProperty(): string
     {
-        $media = $this->user->profile->relationLoaded('media')
-            ? $this->user->profile->media->firstWhere('collection', 'avatar')
-            : $this->user->profile->avatar()->with('variants')->first();
-
-        if ($media) {
-            return app(GenerateMediaUrlAction::class)->execute($media, 'display', Auth::user()) ?: asset('images/default-avatar.svg');
-        }
-
-        return asset('images/default-avatar.svg');
+        return \App\Support\Media\MediaUrlResolver::avatarUrl($this->user, 'display') ?: asset('images/default-avatar.svg');
     }
 
     /**
@@ -427,15 +426,7 @@ new class extends Component
      */
     public function getCoverUrlProperty(): ?string
     {
-        $media = $this->user->profile->relationLoaded('media')
-            ? $this->user->profile->media->firstWhere('collection', 'profile_cover')
-            : $this->user->profile->cover()->with('variants')->first();
-
-        if ($media) {
-            return app(GenerateMediaUrlAction::class)->execute($media, 'desktop', Auth::user());
-        }
-
-        return null;
+        return \App\Support\Media\MediaUrlResolver::coverUrl($this->user, 'desktop');
     }
 
     public function with(): array
@@ -831,6 +822,11 @@ new class extends Component
                         <span class="hidden sm:inline">Thay đổi ảnh bìa</span>
                         <input type="file" wire:model="coverFile" class="hidden" accept="image/*" />
                     </label>
+                    @error('coverFile')
+                        <span class="absolute bottom-14 right-3 bg-red-500 text-white text-[10px] font-semibold px-2 py-1 rounded-md shadow-sm z-20">
+                            {{ $message }}
+                        </span>
+                    @enderror
                 @endif
             </div>
 
@@ -848,6 +844,13 @@ new class extends Component
                             <input type="file" wire:model="avatarFile" class="hidden" accept="image/*" />
                         </label>
                     @endif
+
+                    @error('avatarFile')
+                        <div class="absolute inset-0 bg-red-950/80 text-white text-[9px] font-semibold flex flex-col items-center justify-center p-2 text-center z-20">
+                            <x-ui.icon name="alert-triangle" size="xs" class="text-red-400 mb-0.5" />
+                            <span class="leading-normal">{{ $message }}</span>
+                        </div>
+                    @enderror
                 </div>
 
                 {{-- Profile Info Section --}}

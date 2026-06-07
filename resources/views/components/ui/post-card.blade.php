@@ -189,12 +189,12 @@
                         @if ($mediaCount === 1)
                             {{-- 1 image: full width, smart ratio --}}
                             @php($dimensions = $mediaDimensions($mediaItems[0]))
-                            <div class="overflow-hidden rounded-2xl border border-slate-150 bg-slate-50">
-                                <a href="{{ $mediaUrlAction->execute($mediaItems[0], 'detail', $currentUser) ?? $mediaUrlAction->execute($mediaItems[0], 'original', $currentUser) }}" target="_blank" rel="noopener noreferrer" class="block">
+                            <div class="ue-media-frame">
+                                <a href="{{ $mediaUrlAction->execute($mediaItems[0], 'detail', $currentUser) ?? $mediaUrlAction->execute($mediaItems[0], 'original', $currentUser) }}" target="_blank" rel="noopener noreferrer" class="block w-full h-full">
                                     <img
                                         src="{{ $mediaUrlAction->execute($mediaItems[0], 'feed', $currentUser) }}"
                                         alt="Hình ảnh đính kèm"
-                                        class="w-full h-auto object-cover max-h-[360px] hover:scale-[1.01] transition-transform duration-300 cursor-zoom-in"
+                                        class="ue-media-image"
                                         loading="lazy"
                                         @if($dimensions['width']) width="{{ $dimensions['width'] }}" @endif
                                         @if($dimensions['height']) height="{{ $dimensions['height'] }}" @endif
@@ -268,15 +268,17 @@
                         @endif
                     </div>
                 @elseif (!empty($post->media_url))
-                    <div class="ue-post-card__media mt-2.5 overflow-hidden rounded-xl border border-slate-150 max-w-lg select-none bg-slate-50">
-                        <a href="{{ $post->media_url }}" target="_blank" rel="noopener noreferrer" class="block">
-                            <img
-                                src="{{ $post->media_url }}"
-                                alt="Hình ảnh đính kèm"
-                                class="w-full h-auto object-cover max-h-[360px] hover:scale-[1.01] transition-transform duration-300 cursor-zoom-in"
-                                loading="lazy"
-                            />
-                        </a>
+                    <div class="mt-2.5 max-w-lg select-none">
+                        <div class="ue-media-frame">
+                            <a href="{{ $post->media_url }}" target="_blank" rel="noopener noreferrer" class="block w-full h-full">
+                                <img
+                                    src="{{ $post->media_url }}"
+                                    alt="Hình ảnh đính kèm"
+                                    class="ue-media-image"
+                                    loading="lazy"
+                                />
+                            </a>
+                        </div>
                     </div>
                 @endif
                 

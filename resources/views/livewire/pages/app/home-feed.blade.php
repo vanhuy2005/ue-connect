@@ -12,7 +12,7 @@ use App\Actions\Messaging\SendSharedPostMessage;
 use App\Actions\Messaging\FindOrCreateDirectConversation;
 use App\Actions\Media\AttachMediaToModelAction;
 use App\Actions\Media\DeleteMediaAction;
-use App\Actions\Media\GenerateMediaUrlAction;
+use App\Support\Media\MediaUrlResolver;
 use App\Actions\Media\StoreTemporaryMediaAction;
 use App\Actions\Follows\FollowUser;
 use App\Actions\Follows\UnfollowUser;
@@ -107,9 +107,15 @@ new #[Layout('layouts.app')] class extends Component
      */
     public function updatedImageFiles(): void
     {
-        $this->validate([
-            'imageFiles.*' => 'image|max:10240', // Max 10MB per image
-        ]);
+        try {
+            $this->validate([
+                'imageFiles.*' => 'image|max:5120', // 5MB limit
+            ]);
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            $this->addError('imageFiles', $e->validator->errors()->first());
+            $this->imageFiles = [];
+            return;
+        }
 
         $maxImages = config('media.limits.post_max_images', 4);
         if (count($this->composerImages) + count($this->imageFiles) > $maxImages) {
@@ -127,7 +133,7 @@ new #[Layout('layouts.app')] class extends Component
                 $this->composerImages[] = [
                     'id' => $media->id,
                     'uuid' => $media->uuid,
-                    'url' => app(GenerateMediaUrlAction::class)->execute($media, 'thumb', Auth::user()),
+                    'url' => MediaUrlResolver::thumbnailUrl($media),
                 ];
             } catch (\Exception $e) {
                 $this->addError('imageFiles', 'Lỗi tải ảnh lên: ' . $e->getMessage());

@@ -27,11 +27,10 @@
 @php
 $displayName = '';
 if ($user) {
-    $profile = $user->profile;
-    $avatarMedia = $profile?->avatar()->first();
-    if ($avatarMedia) {
-        $src = app(\App\Actions\Media\GenerateMediaUrlAction::class)->execute($avatarMedia, 'thumb', auth()->user());
+    if (! $src) {
+        $src = \App\Support\Media\MediaUrlResolver::avatarUrl($user, 'thumb');
     }
+    $profile = $user->profile;
     $displayName = $profile?->display_name ?? $user->name ?? '';
     if (! $fallback) {
         // Build up to 2 initials from the name

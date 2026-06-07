@@ -1000,11 +1000,11 @@ new class extends Component
      */
     public function updatedCoverFile(): void
     {
-        $this->validate([
-            'coverFile' => 'image|max:8192', // 8MB limit
-        ]);
-
         try {
+            $this->validate([
+                'coverFile' => 'image|max:5120', // 5MB limit
+            ]);
+
             $storeAction = app(StoreTemporaryMediaAction::class);
             $attachAction = app(AttachMediaToModelAction::class);
             $deleteAction = app(DeleteMediaAction::class);
@@ -1027,6 +1027,9 @@ new class extends Component
 
             $this->community->load('media');
             $this->dispatch('notify', type: 'success', message: 'Cập nhật ảnh bìa cộng đồng thành công.');
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            $this->dispatch('notify', type: 'error', message: $e->validator->errors()->first());
+            throw $e;
         } catch (\Exception $e) {
             $this->dispatch('notify', type: 'error', message: 'Lỗi tải ảnh lên: ' . $e->getMessage());
         }
@@ -1037,11 +1040,11 @@ new class extends Component
      */
     public function updatedAvatarFile(): void
     {
-        $this->validate([
-            'avatarFile' => 'image|max:5120', // 5MB limit
-        ]);
-
         try {
+            $this->validate([
+                'avatarFile' => 'image|max:5120', // 5MB limit
+            ]);
+
             $storeAction = app(StoreTemporaryMediaAction::class);
             $attachAction = app(AttachMediaToModelAction::class);
             $deleteAction = app(DeleteMediaAction::class);
@@ -1064,6 +1067,9 @@ new class extends Component
 
             $this->community->load('media');
             $this->dispatch('notify', type: 'success', message: 'Cập nhật ảnh đại diện cộng đồng thành công.');
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            $this->dispatch('notify', type: 'error', message: $e->validator->errors()->first());
+            throw $e;
         } catch (\Exception $e) {
             $this->dispatch('notify', type: 'error', message: 'Lỗi tải ảnh lên: ' . $e->getMessage());
         }
@@ -1075,10 +1081,7 @@ new class extends Component
     public function getCoverUrlProperty(): ?string
     {
         $media = $this->community->cover()->first();
-        if ($media) {
-            return app(GenerateMediaUrlAction::class)->execute($media, 'desktop', auth()->user());
-        }
-        return null;
+        return \App\Support\Media\MediaUrlResolver::publicUrl($media, 'desktop');
     }
 
     /**
@@ -1087,10 +1090,7 @@ new class extends Component
     public function getAvatarUrlProperty(): ?string
     {
         $media = $this->community->avatar()->first();
-        if ($media) {
-            return app(GenerateMediaUrlAction::class)->execute($media, 'display', auth()->user());
-        }
-        return null;
+        return \App\Support\Media\MediaUrlResolver::publicUrl($media, 'display');
     }
 };
 ?>
@@ -1168,6 +1168,11 @@ new class extends Component
                         <span class="hidden sm:inline">Chỉnh sửa ảnh bìa</span>
                         <input type="file" wire:model="coverFile" class="hidden" accept="image/jpeg,image/png,image/webp">
                     </label>
+                    @error('coverFile')
+                        <span class="absolute bottom-16 right-4 bg-red-500 text-white text-[10px] font-semibold px-2 py-1 rounded-md shadow-sm z-20">
+                            {{ $message }}
+                        </span>
+                    @enderror
                 @endif
             </div>
 
@@ -1188,6 +1193,13 @@ new class extends Component
                                 <input type="file" wire:model="avatarFile" class="hidden" accept="image/jpeg,image/png,image/webp">
                             </label>
                         @endif
+
+                        @error('avatarFile')
+                            <div class="absolute inset-0 bg-red-950/85 text-white text-[10px] font-semibold flex flex-col items-center justify-center p-2 text-center z-20">
+                                <x-ui.icon name="alert-triangle" size="xs" class="text-red-400 mb-1" />
+                                <span class="leading-tight">{{ $message }}</span>
+                            </div>
+                        @enderror
                     </div>
 
                     <div class="text-center sm:text-left pt-2 sm:pt-14 md:pt-20">
