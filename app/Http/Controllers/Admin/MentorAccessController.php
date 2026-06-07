@@ -61,11 +61,18 @@ class MentorAccessController extends Controller
                 'reason' => $data['reason'] ?? null,
                 'admin_notes' => $data['instruction'] ?? null,
             ]),
-            'request_more_info' => $review->execute($admin, $mentorAccess, [
+            'request_more_info' => tap($review->execute($admin, $mentorAccess, [
                 'action' => 'need_more_info',
                 'reason' => $data['reason'] ?? null,
                 'admin_notes' => $data['instruction'] ?? null,
-            ]),
+            ]), function () use ($mentorAccess) {
+                if ($mentorAccess->user->mentorProfile) {
+                    $mentorAccess->user->mentorProfile->update([
+                        'is_active' => false,
+                        'mentor_visibility' => false,
+                    ]);
+                }
+            }),
             'revoke' => $revoke->execute($admin, $mentorAccess->user->mentorProfile, [
                 'reason' => $data['reason'],
                 'admin_notes' => $data['instruction'] ?? null,
@@ -125,6 +132,13 @@ class MentorAccessController extends Controller
             'reason' => request('reason'),
             'admin_notes' => request('admin_notes'),
         ]);
+
+        if ($mentorAccessRequest->user->mentorProfile) {
+            $mentorAccessRequest->user->mentorProfile->update([
+                'is_active' => false,
+                'mentor_visibility' => false,
+            ]);
+        }
 
         return back()->with('status', 'More information requested.');
     }

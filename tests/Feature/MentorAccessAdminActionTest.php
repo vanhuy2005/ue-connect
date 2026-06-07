@@ -7,6 +7,7 @@ use App\Enums\MentorAccessStatus;
 use App\Enums\MentorAvailabilityStatus;
 use App\Models\MentorAccessRequest;
 use App\Models\MentorProfile;
+use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\Feature\Concerns\BuildsMentorFixtures;
 use Tests\TestCase;
@@ -84,7 +85,7 @@ class MentorAccessAdminActionTest extends TestCase
 
         $this->actingAs($admin)->post(route('admin.mentors.action', $request), [
             'action' => 'approve',
-            'reason' => 'Good fit.',
+            'reason' => 'Good fit mentor.',
         ]);
 
         $profile = MentorProfile::where('user_id', $applicant->id)->first();
@@ -95,7 +96,7 @@ class MentorAccessAdminActionTest extends TestCase
         $this->assertEquals(['Web Development', 'Software Engineering'], $profile->career_paths);
         $this->assertEquals('Full-stack developer mentor', $profile->headline);
         $this->assertEquals('Experienced developer helping juniors.', $profile->bio);
-        $this->assertEquals(MentorAvailabilityStatus::Available, $profile->availability_status);
+        $this->assertSame(MentorAvailabilityStatus::Available, $profile->availability_status);
         $this->assertTrue($profile->mentor_visibility);
         $this->assertEquals(5, $profile->max_pending_requests);
     }
@@ -403,6 +404,151 @@ class MentorAccessAdminActionTest extends TestCase
         $response->assertSee('I want to help students with their career planning and growth.');
     }
 
+    public function test_request_more_info_deactivates_existing_mentor_profile(): void
+    {
+        $admin = $this->adminUser();
+        $applicant = $this->activeUser('alumni');
+        $profile = $this->mentorProfile($applicant);
+
+        $request = MentorAccessRequest::where('user_id', $applicant->id)
+            ->where('status', MentorAccessStatus::Approved)
+            ->first();
+
+        $this->actingAs($admin)->post(route('admin.mentors.action', $request), [
+            'action' => 'request_more_info',
+            'reason' => 'Please update your profile details.',
+            'instruction' => 'Update headline and bio.',
+        ]);
+
+        $this->assertDatabaseHas('mentor_access_requests', [
+            'id' => $request->id,
+            'status' => MentorAccessStatus::NeedMoreInfo->value,
+        ]);
+
+        $this->assertDatabaseHas('mentor_profiles', [
+            'id' => $profile->id,
+            'is_active' => false,
+            'mentor_visibility' => false,
+        ]);
+    }
+
+    public function test_revoked_user_can_reapply(): void
+    {
+        $admin = $this->adminUser();
+        $applicant = $this->activeUser('alumni');
+        $profile = $this->mentorProfile($applicant);
+
+        $request = MentorAccessRequest::where('user_id', $applicant->id)
+            ->where('status', MentorAccessStatus::Approved)
+            ->first();
+
+        $this->actingAs($admin)->post(route('admin.mentors.action', $request), [
+            'action' => 'revoke',
+            'reason' => 'Violated guidelines.',
+        ]);
+
+        $this->attachAvatar($applicant);
+
+        $response = $this->actingAs($applicant)->post(route('mentor.apply.store'), [
+            'requested_role_context' => 'alumni',
+            'motivation' => 'I want to rejoin the mentor program with improved profile.',
+            'experience_summary' => 'Updated experience.',
+            'headline' => 'Re-applying mentor',
+            'bio' => 'I am re-applying with a more complete and detailed profile for mentoring students.',
+            'expertise_topics' => ['career planning', 'cv review', 'interview prep'],
+            'help_topics' => ['resume writing', 'job search', 'soft skills'],
+            'preferred_request_types' => ['cv_review', 'career_advice'],
+            'response_expectation_text' => 'Within 2 days.',
+            'policy_agreed' => true,
+        ]);
+
+        $response->assertRedirect(route('mentor.dashboard'));
+
+        $this->assertDatabaseHas('mentor_access_requests', [
+            'user_id' => $applicant->id,
+            'status' => MentorAccessStatus::Submitted->value,
+        ]);
+    }
+
+    public function test_revoked_user_sees_reapply_ui_on_dashboard(): void
+    {
+        $applicant = $this->activeUser('alumni');
+        $profile = $this->mentorProfile($applicant);
+        $this->revokeMentorAccess($applicant, $profile);
+
+        $response = $this->actingAs($applicant)->get(route('mentor.dashboard'));
+
+        $response->assertOk();
+        $response->assertSee('Bạn chưa đăng ký làm mentor');
+        $response->assertSee('Đăng ký làm mentor');
+        $response->assertSee(route('mentor.apply'));
+        $response->assertDontSee('Quyền mentor đã bị thu hồi');
+        $response->assertDontSee('Lý do thu hồi');
+    }
+
+    public function test_revoked_user_sees_reapply_ui_on_setup_page(): void
+    {
+        $applicant = $this->activeUser('alumni');
+        $profile = $this->mentorProfile($applicant);
+        $this->revokeMentorAccess($applicant, $profile);
+
+        $response = $this->actingAs($applicant)->get(route('mentor.setup'));
+
+        $response->assertOk();
+        $response->assertSee('Bạn chưa đăng ký làm mentor');
+        $response->assertSee('Đăng ký làm mentor');
+        $response->assertDontSee('Quyền mentor đã bị thu hồi');
+    }
+
+    public function test_need_more_info_ui_appears_on_dashboard_without_profile(): void
+    {
+        $applicant = $this->activeUser('alumni');
+
+        MentorAccessRequest::create([
+            'user_id' => $applicant->id,
+            'requested_role_context' => 'alumni',
+            'status' => MentorAccessStatus::NeedMoreInfo,
+            'motivation' => 'I want to mentor students.',
+            'review_reason' => 'Please add more expertise topics.',
+            'reviewed_by' => $this->adminUser()->id,
+            'reviewed_at' => now(),
+        ]);
+
+        $response = $this->actingAs($applicant)->get(route('mentor.dashboard'));
+
+        $response->assertOk();
+        $response->assertSee('Cần thêm thông tin');
+        $response->assertSee('Please add more expertise topics.');
+        $response->assertSee('Chỉnh sửa đơn đăng ký');
+        $response->assertDontSee('Độ hoàn thiện');
+    }
+
+    public function test_need_more_info_ui_on_dashboard_when_was_approved(): void
+    {
+        $admin = $this->adminUser();
+        $applicant = $this->activeUser('alumni');
+        $profile = $this->mentorProfile($applicant);
+
+        $request = MentorAccessRequest::where('user_id', $applicant->id)
+            ->where('status', MentorAccessStatus::Approved)
+            ->first();
+
+        $this->actingAs($admin)->post(route('admin.mentors.action', $request), [
+            'action' => 'request_more_info',
+            'reason' => 'Please update your profile details.',
+            'instruction' => 'Update headline and bio.',
+        ]);
+
+        $response = $this->actingAs($applicant)->get(route('mentor.dashboard'));
+
+        $response->assertOk();
+        $response->assertSee('Cần thêm thông tin');
+        $response->assertSee('Please update your profile details.');
+        $response->assertSee('Chỉnh sửa đơn đăng ký');
+        $response->assertDontSee('Độ hoàn thiện');
+        $response->assertDontSee('Cập nhật hồ sơ');
+    }
+
     public function test_admin_can_request_more_info_then_alumni_resubmits_full_flow(): void
     {
         $admin = $this->adminUser();
@@ -453,6 +599,20 @@ class MentorAccessAdminActionTest extends TestCase
             'id' => $submission->id,
             'status' => MentorAccessStatus::Submitted->value,
             'review_reason' => null,
+        ]);
+    }
+
+    private function revokeMentorAccess(User $applicant, MentorProfile $profile): void
+    {
+        $admin = $this->adminUser();
+
+        $request = MentorAccessRequest::where('user_id', $applicant->id)
+            ->where('status', MentorAccessStatus::Approved)
+            ->first();
+
+        $this->actingAs($admin)->post(route('admin.mentors.action', $request), [
+            'action' => 'revoke',
+            'reason' => 'Test revocation reason that is long enough.',
         ]);
     }
 }
