@@ -404,7 +404,7 @@ class PostInteractionTest extends TestCase
             ->set('perPage', 20)
             ->call('setFeedTab', 'following')
             ->assertSet('activeFeedTab', 'following')
-            ->assertSet('perPage', 10)
+            ->assertSet('perPage', 5)
             ->assertSee('Following tab visible post.')
             ->assertDontSee('Following tab random post.')
             ->assertDontSee('Following tab community-only post.');
