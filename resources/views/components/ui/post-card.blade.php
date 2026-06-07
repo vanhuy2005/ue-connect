@@ -8,6 +8,7 @@
     'editingPostId' => null,
     'editingBody' => '',
     'showQuickFollow' => false,
+    'showFollowCheck' => false,
     'repostCount' => 0,
     'isReposted' => false,
     'repostedBy' => null,
@@ -64,14 +65,26 @@
                 @if ($showQuickFollow)
                     <button
                         type="button"
-                        wire:click="quickFollowAuthor({{ $author->id }})"
+                        wire:click="openQuickFollowModal({{ $author->id }})"
                         wire:loading.attr="disabled"
-                        wire:target="quickFollowAuthor({{ $author->id }})"
-                        class="absolute -right-1 -bottom-1 flex h-5 w-5 items-center justify-center rounded-full border-2 border-white bg-slate-950 text-white shadow-sm transition-colors hover:bg-ue-brand focus:outline-none focus:ring-2 focus:ring-ue-brand/30 disabled:cursor-not-allowed disabled:opacity-60"
+                        wire:target="openQuickFollowModal({{ $author->id }})"
+                        class="absolute -bottom-1 -right-1 bg-white text-slate-700 w-5 h-5 rounded-full flex items-center justify-center border border-slate-200 hover:scale-110 active:scale-95 transition-all shadow-xs z-10"
+                        title="Theo dõi nhanh {{ $author->name }}"
                         aria-label="Theo dõi nhanh {{ $author->name }}"
-                        title="Theo dõi"
                     >
-                        <x-ui.icon name="plus" size="2xs" />
+                        <x-ui.icon name="plus" size="xxs" class="text-slate-750 font-bold" />
+                    </button>
+                @elseif ($showFollowCheck)
+                    <button
+                        type="button"
+                        wire:click="openQuickFollowModal({{ $author->id }})"
+                        wire:loading.attr="disabled"
+                        wire:target="openQuickFollowModal({{ $author->id }})"
+                        class="absolute -bottom-1 -right-1 bg-white text-slate-700 w-5 h-5 rounded-full flex items-center justify-center border border-slate-200 hover:scale-110 active:scale-95 transition-all shadow-xs z-10"
+                        title="Đang theo dõi {{ $author->name }}"
+                        aria-label="Đang theo dõi {{ $author->name }}"
+                    >
+                        <x-ui.icon name="check" size="xxs" class="text-slate-750 font-bold" />
                     </button>
                 @endif
             </div>

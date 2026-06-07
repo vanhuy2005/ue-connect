@@ -191,16 +191,23 @@ $secondaryNav = [
 </nav>
 @else
 <nav
-    class="ue-shell__sidebar hidden lg:flex flex-col py-5 px-5 justify-between h-100dvh sticky top-0"
+    class="ue-shell__sidebar hidden lg:flex flex-col py-5 justify-between h-100dvh sticky top-0 border-r border-ue-border/80"
+    :class="collapsed ? 'ue-shell__sidebar--collapsed px-3' : 'ue-shell__sidebar--expanded px-5'"
     aria-label="Điều hướng chính"
     role="navigation"
-    x-data="{ moreOpen: false }"
+    x-data="{
+        moreOpen: false,
+        collapsed: true
+    }"
+    @mouseenter="collapsed = false"
+    @mouseleave="collapsed = true"
 >
     <div class="flex flex-col gap-7 flex-1 min-h-0 overflow-y-auto pr-1">
         {{-- Logo --}}
-        <div class="px-1">
-            <a href="{{ route('dashboard') }}" wire:navigate.hover class="inline-flex items-center ue-focus-ring rounded-lg" aria-label="UEConnect - Trang chủ">
-                <x-brand.logo variant="horizontal" size="lg" class="h-9 w-auto" />
+        <div class="px-1" :class="collapsed ? 'flex justify-center' : ''">
+            <a href="{{ route('dashboard') }}" wire:navigate.hover class="inline-flex items-center gap-2.5 ue-focus-ring rounded-lg" aria-label="UEConnect - Trang chủ">
+                <x-brand.logo variant="mark" size="lg" class="h-9 w-9 flex-shrink-0" />
+                <span x-show="!collapsed" class="font-bold text-lg text-ue-brand tracking-tight">UEConnect</span>
             </a>
         </div>
 
@@ -214,11 +221,17 @@ $secondaryNav = [
                             @if($item['href'] !== '#') wire:navigate.hover @endif
                             class="ue-nav-link {{ $item['active'] ? 'active' : '' }}"
                             @if($item['active']) aria-current="page" @endif
+                            :title="collapsed ? '{{ $item['label'] }}' : ''"
                         >
-                            <x-ui.icon :name="$item['icon']" size="md" aria-hidden="true" class="flex-shrink-0" />
-                            <span>{{ $item['label'] }}</span>
+                            <div class="relative flex items-center justify-center">
+                                <x-ui.icon :name="$item['icon']" size="md" aria-hidden="true" class="flex-shrink-0" />
+                                @if (!empty($item['badge']) && $item['badge'] > 0)
+                                    <span x-show="collapsed" class="absolute -top-1 -right-1 flex h-2 w-2 rounded-full bg-red-500 ring-2 ring-white"></span>
+                                @endif
+                            </div>
+                            <span x-show="!collapsed">{{ $item['label'] }}</span>
                             @if (!empty($item['badge']) && $item['badge'] > 0)
-                                <span class="ml-auto px-2 py-0.5 rounded-full bg-ue-brand text-white text-[10px] font-bold">
+                                <span x-show="!collapsed" class="ml-auto px-2 py-0.5 rounded-full bg-ue-brand text-white text-[10px] font-bold">
                                     {{ $item['badge'] }}
                                 </span>
                             @endif
@@ -230,7 +243,7 @@ $secondaryNav = [
 
         {{-- Secondary Navigation Divider & List --}}
         <div class="pt-1 flex flex-col gap-1.5">
-            <p class="px-3 text-[10px] font-bold uppercase tracking-wider text-ue-text-muted/70">
+            <p x-show="!collapsed" class="px-3 text-[10px] font-bold uppercase tracking-wider text-ue-text-muted/70">
                 Mở rộng
             </p>
             <ul class="flex flex-col gap-1" role="list">
@@ -241,35 +254,41 @@ $secondaryNav = [
                             @if($item['href'] !== '#') wire:navigate.hover @endif
                             class="ue-nav-link {{ $item['active'] ? 'active' : '' }}"
                             @if($item['active']) aria-current="page" @endif
+                            :title="collapsed ? '{{ $item['label'] }}' : ''"
                         >
-                            <x-ui.icon :name="$item['icon']" size="md" aria-hidden="true" class="flex-shrink-0" />
-                            <span>{{ $item['label'] }}</span>
+                            <div class="relative flex items-center justify-center">
+                                <x-ui.icon :name="$item['icon']" size="md" aria-hidden="true" class="flex-shrink-0" />
+                            </div>
+                            <span x-show="!collapsed">{{ $item['label'] }}</span>
                         </a>
                     </li>
                 @endforeach
             </ul>
         </div>
-
-
     </div>
 
-    {{-- Bottom More Trigger & Menu --}}
-    <div class="relative mt-auto pt-4">
+    {{-- Bottom Toggle & More Trigger & Menu --}}
+    <div class="relative mt-auto pt-4 flex flex-col gap-1.5">
+        {{-- More Trigger --}}
         <button
             type="button"
             @click="moreOpen = !moreOpen"
             @click.away="moreOpen = false"
             class="ue-nav-link w-full flex items-center justify-between"
-            :class="moreOpen ? 'bg-ue-brand-soft text-ue-brand-active' : ''"
+            :class="[
+                moreOpen ? 'bg-ue-brand-soft text-ue-brand-active' : '',
+                collapsed ? 'justify-center' : ''
+            ]"
             aria-haspopup="true"
             :aria-expanded="moreOpen"
             aria-label="Xem thêm menu"
+            :title="collapsed ? 'Xem thêm' : ''"
         >
             <div class="flex items-center gap-3">
                 <x-ui.icon name="menu" size="md" class="flex-shrink-0" />
-                <span>Xem thêm</span>
+                <span x-show="!collapsed">Xem thêm</span>
             </div>
-            <x-ui.icon name="chevron-up" size="xs" class="text-ue-text-muted/60 transition-transform duration-150" x-bind:class="moreOpen ? 'rotate-180' : ''" />
+            <x-ui.icon name="chevron-up" size="xs" x-show="!collapsed" class="text-ue-text-muted/60 transition-transform duration-150" x-bind:class="moreOpen ? 'rotate-180' : ''" />
         </button>
 
         {{-- More popover menu --}}
@@ -281,7 +300,8 @@ $secondaryNav = [
             x-transition:leave="transition ease-in duration-75"
             x-transition:leave-start="transform opacity-100 scale-100 translate-y-0"
             x-transition:leave-end="transform opacity-0 scale-95 translate-y-2"
-            class="absolute left-0 bottom-full mb-2 w-64 bg-white rounded-2xl shadow-lg ring-1 ring-black/5 py-2 z-dropdown"
+            class="absolute bottom-full mb-2 w-64 bg-white rounded-2xl shadow-lg ring-1 ring-black/5 py-2 z-dropdown"
+            :class="collapsed ? 'left-2' : 'left-0'"
             style="display: none;"
             @keydown.escape.window="moreOpen = false"
         >

@@ -46,6 +46,8 @@ class Post extends Model
     protected function casts(): array
     {
         return [
+            'user_id' => 'integer',
+            'scope_id' => 'integer',
             'visibility' => PostVisibility::class,
             'status' => PostStatus::class,
             'edited_at' => 'datetime',

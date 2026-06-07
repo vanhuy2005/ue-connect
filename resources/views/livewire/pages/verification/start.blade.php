@@ -345,6 +345,8 @@ new #[Layout('layouts.app')] class extends Component
             return;
         }
 
+        $privateDisk = config('media.private_disk', 'private');
+
         $this->syncLockedRole();
 
         // Only one active verification request per user
@@ -493,11 +495,11 @@ new #[Layout('layouts.app')] class extends Component
                 $targetExtension = $mimeToExtension[$mimeType] ?? 'jpg';
 
                 $capturedPath = 'verifications/' . $user->id . '/captures/' . Str::uuid() . '.' . $targetExtension;
-                Storage::disk('private')->put($capturedPath, $rawImage);
+                Storage::disk($privateDisk)->put($capturedPath, $rawImage);
                 
                 $capturedMedia = [
                     'owner_id' => $user->id,
-                    'disk' => 'private',
+                    'disk' => $privateDisk,
                     'path' => $capturedPath,
                     'original_name' => 'camera_capture_' . time() . '.' . $targetExtension,
                     'mime_type' => $mimeType ?? 'image/jpeg',
@@ -533,7 +535,7 @@ new #[Layout('layouts.app')] class extends Component
         }
 
         try {
-            DB::transaction(function () use ($user, &$uploadedPaths, $session, $capturedMedia) {
+            DB::transaction(function () use ($user, &$uploadedPaths, $session, $capturedMedia, $privateDisk) {
                 // 1. Create Verification Request
                 $request = VerificationRequest::create([
                     'user_id' => $user->id,
@@ -585,12 +587,12 @@ new #[Layout('layouts.app')] class extends Component
                 // 3. Upload Files & Create Evidences
                 foreach ($this->evidence_files as $index => $file) {
                     if ($file) {
-                        $path = $file->store('verifications/'.$user->id, 'private');
+                        $path = $file->store('verifications/'.$user->id, $privateDisk);
                         $uploadedPaths[] = $path;
 
                         $mediaFile = MediaFile::create([
                             'owner_id' => $user->id,
-                            'disk' => 'private',
+                            'disk' => $privateDisk,
                             'path' => $path,
                             'original_name' => $file->getClientOriginalName(),
                             'mime_type' => $file->getMimeType(),
@@ -658,7 +660,7 @@ new #[Layout('layouts.app')] class extends Component
         } catch (\Throwable $e) {
             // Clean up files on error
             foreach ($uploadedPaths as $orphanedPath) {
-                Storage::disk('private')->delete($orphanedPath);
+                Storage::disk($privateDisk)->delete($orphanedPath);
             }
 
             if ($session) {

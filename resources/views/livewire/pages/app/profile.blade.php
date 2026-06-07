@@ -8,7 +8,12 @@ use App\Models\Media;
 use App\Models\UserFollow;
 use App\Enums\ConnectionStatus;
 use App\Enums\PostStatus;
+use App\Enums\GreetingStatus;
+use App\Models\Greeting;
 use App\Actions\Connections\SendGreeting;
+use App\Actions\Connections\CancelGreeting;
+use App\Actions\Connections\AcceptGreeting;
+use App\Actions\Connections\RemoveConnection;
 use App\Actions\Connections\BlockUser;
 use App\Actions\Follows\FollowUser;
 use App\Actions\Follows\UnfollowUser;
@@ -298,6 +303,82 @@ new class extends Component
     }
 
     /**
+     * Send connection greeting request.
+     */
+    public function sendGreeting(SendGreeting $sendGreeting): void
+    {
+        try {
+            $sendGreeting->execute(Auth::user(), $this->user);
+            $this->feedbackMessage = 'Đã gửi lời mời kết nối thành công.';
+        } catch (\Exception $e) {
+            $this->feedbackMessage = $e->getMessage();
+        }
+    }
+
+    /**
+     * Cancel connection greeting request.
+     */
+    public function cancelGreeting(CancelGreeting $cancelGreeting): void
+    {
+        try {
+            $greeting = Greeting::where('sender_id', Auth::id())
+                ->where('receiver_id', $this->user->id)
+                ->where('status', GreetingStatus::PENDING)
+                ->first();
+
+            if ($greeting) {
+                $cancelGreeting->execute(Auth::user(), $greeting);
+                $this->feedbackMessage = 'Đã hủy yêu cầu kết nối.';
+            }
+        } catch (\Exception $e) {
+            $this->feedbackMessage = $e->getMessage();
+        }
+    }
+
+    /**
+     * Accept connection greeting request.
+     */
+    public function acceptGreeting(AcceptGreeting $acceptGreeting): void
+    {
+        try {
+            $greeting = Greeting::where('sender_id', $this->user->id)
+                ->where('receiver_id', Auth::id())
+                ->where('status', GreetingStatus::PENDING)
+                ->first();
+
+            if ($greeting) {
+                $acceptGreeting->execute(Auth::user(), $greeting);
+                $this->feedbackMessage = 'Đã chấp nhận lời mời kết nối.';
+            }
+        } catch (\Exception $e) {
+            $this->feedbackMessage = $e->getMessage();
+        }
+    }
+
+    /**
+     * Remove existing connection.
+     */
+    public function removeConnection(RemoveConnection $removeConnection): void
+    {
+        try {
+            $userOneId = min(Auth::id(), $this->user->id);
+            $userTwoId = max(Auth::id(), $this->user->id);
+
+            $connection = Connection::where('user_one_id', $userOneId)
+                ->where('user_two_id', $userTwoId)
+                ->where('status', ConnectionStatus::ACTIVE)
+                ->first();
+
+            if ($connection) {
+                $removeConnection->execute(Auth::user(), $connection);
+                $this->feedbackMessage = 'Đã hủy kết bạn.';
+            }
+        } catch (\Exception $e) {
+            $this->feedbackMessage = $e->getMessage();
+        }
+    }
+
+    /**
      * Determine if I blocked this user.
      */
     public function getIsBlockedByMeProperty(): bool
@@ -487,10 +568,234 @@ new class extends Component
             $showBio = $isOwn || ($targetPrivacy ? (bool)$targetPrivacy->show_bio : true);
         @endphp
 
-        {{-- Interactive Profile Header with Cover Image --}}
-        <div class="relative bg-white border border-slate-150 rounded-3xl overflow-hidden shadow-2xs">
+        {{-- MOBILE HEADER LAYOUT (No Card, Instagram Threads style layout) --}}
+        <div class="block sm:hidden bg-transparent space-y-4 px-2 relative z-10">
+            <div class="flex items-start justify-between gap-4">
+                {{-- Info Column --}}
+                <div class="space-y-1.5 min-w-0 flex-1">
+                    <h1 class="text-xl font-extrabold text-slate-900 leading-tight flex items-center gap-1.5">
+                        <span class="truncate">{{ $user->profile?->display_name ?? $user->name }}</span>
+                        @if ($user->isActive())
+                            <x-ui.icon name="shield-check" size="xs" class="text-ue-brand fill-ue-brand" />
+                        @endif
+                    </h1>
+                    
+                    <div class="flex items-center gap-2 text-xxs text-slate-500 font-medium">
+                        <span>{{ '@' . ($user->username ?? Str::slug($user->name, '')) }}</span>
+                        <span class="px-1.5 py-0.5 rounded bg-slate-100 text-slate-605 font-bold uppercase text-[8px] tracking-wide">
+                            @if (($user->profile?->role_type ?? 'student') === 'student') Sinh viên
+                            @elseif (in_array(($user->profile?->role_type ?? ''), ['teacher', 'advisor'], true)) Giảng viên
+                            @elseif (($user->profile?->role_type ?? '') === 'alumni') Cựu sinh viên
+                            @else Thành viên
+                            @endif
+                        </span>
+                    </div>
+
+                    @if ($showFaculty && $user->profile?->faculty)
+                        <div class="text-[10px] text-slate-500 font-semibold uppercase tracking-wider pt-0.5">
+                            Khoa: {{ $user->profile?->faculty }}
+                        </div>
+                    @endif
+                </div>
+
+                {{-- Avatar Column --}}
+                <div class="relative w-16 h-16 rounded-full overflow-visible flex-shrink-0">
+                    <x-ui.avatar :user="$user" size="lg" class="w-full h-full border border-slate-100 shadow-2xs" />
+                    
+                    @if ($isOwn)
+                        <label class="absolute -bottom-1 -right-1 bg-white text-slate-800 w-5.5 h-5.5 rounded-full flex items-center justify-center border border-slate-200 shadow-xs cursor-pointer z-10">
+                            <x-ui.icon name="plus" size="xxs" />
+                            <input type="file" wire:model="avatarFile" class="hidden" accept="image/*" />
+                        </label>
+                    @else
+                        @if (!$isFollowing)
+                            <button
+                                type="button"
+                                wire:click="followUser"
+                                wire:loading.attr="disabled"
+                                wire:target="followUser"
+                                class="absolute -bottom-1 -right-1 bg-slate-950 text-white w-5.5 h-5.5 rounded-full flex items-center justify-center border border-white hover:scale-110 active:scale-95 transition-all shadow-xs z-10"
+                                title="Theo dõi {{ $user->name }}"
+                            >
+                                <x-ui.icon name="plus" size="xxs" />
+                            </button>
+                        @endif
+                    @endif
+                </div>
+            </div>
+
+            {{-- Bio --}}
+            @if ($showBio)
+                <div class="text-xs text-slate-700 leading-relaxed max-w-xl">
+                    @if ($user->profile?->bio)
+                        <p>{{ $user->profile?->bio }}</p>
+                    @elseif ($isOwn)
+                        <p class="italic text-slate-400">Chưa cập nhật giới thiệu cá nhân.</p>
+                    @endif
+                </div>
+            @endif
+
+            {{-- Stats / Followers --}}
+            <div class="flex items-center gap-1.5 text-[11px] text-slate-400 select-none">
+                <span>{{ $followersCount }} người theo dõi</span>
+                @if ($this->connectionsCount > 0)
+                    <span>•</span>
+                    <span>{{ $this->connectionsCount }} bạn bè</span>
+                @endif
+                <span>•</span>
+                <span>{{ $this->postsCount }} bài viết</span>
+            </div>
+
+            {{-- Action Buttons Row --}}
+            @if ($isOwn)
+                <div class="grid grid-cols-2 gap-2.5 pt-1">
+                    <a href="{{ route('profile.edit') }}" class="w-full bg-white hover:bg-slate-50 border border-slate-200 text-slate-800 text-xs font-bold py-2 rounded-xl transition-colors flex items-center justify-center gap-1.5 shadow-3xs">
+                        <x-ui.icon name="edit" size="xs" class="text-slate-500" />
+                        Chỉnh sửa trang cá nhân
+                    </a>
+                    <button 
+                        type="button" 
+                        @click="navigator.clipboard.writeText(window.location.href); $wire.set('feedbackMessage', 'Đã sao chép liên kết hồ sơ');" 
+                        class="w-full bg-white hover:bg-slate-50 border border-slate-200 text-slate-800 text-xs font-bold py-2 rounded-xl transition-colors flex items-center justify-center gap-1.5 shadow-3xs"
+                    >
+                        <x-ui.icon name="share-2" size="xs" class="text-slate-500" />
+                        Chia sẻ trang cá nhân
+                    </button>
+                </div>
+            @else
+                <div class="flex items-center gap-2 pt-1">
+                    {{-- Follow / Unfollow --}}
+                    @if ($isFollowing)
+                        <button
+                            type="button"
+                            wire:click="unfollowUser"
+                            wire:loading.attr="disabled"
+                            wire:target="unfollowUser"
+                            class="flex-1 inline-flex items-center justify-center gap-1.5 rounded-xl border border-slate-200 bg-white py-2 text-xs font-bold text-slate-800 shadow-3xs transition-colors hover:bg-slate-50 disabled:opacity-60"
+                        >
+                            <span wire:loading.remove wire:target="unfollowUser">Đang theo dõi</span>
+                            <span wire:loading wire:target="unfollowUser">Đang xử lý...</span>
+                        </button>
+                    @else
+                        <button
+                            type="button"
+                            wire:click="followUser"
+                            wire:loading.attr="disabled"
+                            wire:target="followUser"
+                            class="flex-1 inline-flex items-center justify-center gap-1.5 rounded-xl bg-slate-950 py-2 text-xs font-bold text-white shadow-3xs transition-colors hover:bg-slate-900 disabled:opacity-60"
+                        >
+                            <span wire:loading.remove wire:target="followUser">Theo dõi</span>
+                            <span wire:loading wire:target="followUser">Đang xử lý...</span>
+                        </button>
+                    @endif
+
+                    {{-- Message --}}
+                    @if ($this->connectionStatus === 'connected')
+                        <a href="{{ route('messages.index', ['conversation' => \App\Models\Conversation::where('conversation_type', \App\Enums\ConversationType::DIRECT)->whereHas('participants', function($q) { $q->where('user_id', $this->user->id); })->first()?->id]) }}" class="flex-1 bg-white hover:bg-slate-50 border border-slate-200 text-slate-800 text-xs font-bold py-2 rounded-xl shadow-3xs transition-colors flex items-center justify-center gap-1">
+                            <x-ui.icon name="message-square" size="xs" class="text-slate-500" />
+                            Nhắn tin
+                        </a>
+                    @else
+                        <button
+                            type="button"
+                            wire:click="sendGreeting"
+                            wire:loading.attr="disabled"
+                            wire:target="sendGreeting"
+                            class="flex-1 bg-white hover:bg-slate-50 border border-slate-200 text-slate-800 text-xs font-bold py-2 rounded-xl shadow-3xs transition-colors flex items-center justify-center gap-1"
+                        >
+                            <x-ui.icon name="message-square" size="xs" class="text-slate-500" />
+                            Nhắn tin
+                        </button>
+                    @endif
+
+                    {{-- Friend Connection Status Icon Button --}}
+                    @if ($this->connectionStatus === 'connected')
+                        <div class="relative" x-data="{ openFriendMenu: false }" @click.away="openFriendMenu = false">
+                            <button
+                                type="button"
+                                @click="openFriendMenu = !openFriendMenu"
+                                class="w-12 h-9 rounded-xl bg-slate-100 text-slate-700 border border-slate-200 hover:bg-slate-200 hover:text-slate-900 transition-colors flex items-center justify-center flex-shrink-0 shadow-3xs gap-0.5"
+                                title="Bạn bè"
+                            >
+                                <x-ui.icon name="user-check" size="sm" />
+                                <x-ui.icon name="chevron-down" size="xxs" class="text-slate-400 -ml-0.5" />
+                            </button>
+                            <div x-show="openFriendMenu" x-transition class="absolute right-0 mt-1 bg-white border border-slate-150 rounded-xl shadow-lg py-1 z-30 w-36 text-left" style="display: none;">
+                                <button
+                                    type="button"
+                                    wire:click="removeConnection"
+                                    wire:loading.attr="disabled"
+                                    wire:target="removeConnection"
+                                    class="w-full text-left px-3 py-2 text-xxs font-semibold text-red-600 hover:bg-red-50 flex items-center gap-1.5 transition-colors disabled:opacity-60"
+                                >
+                                    <x-ui.icon name="user-minus" size="xs" class="text-red-400" />
+                                    <span>Hủy kết bạn</span>
+                                </button>
+                            </div>
+                        </div>
+                    @elseif ($this->connectionStatus === 'pending_sent')
+                        <button
+                            type="button"
+                            wire:click="cancelGreeting"
+                            wire:loading.attr="disabled"
+                            wire:target="cancelGreeting"
+                            class="w-9 h-9 rounded-xl bg-slate-50 text-slate-550 border border-slate-200 hover:bg-slate-100 hover:text-slate-700 transition-colors flex items-center justify-center flex-shrink-0 shadow-3xs"
+                            title="Hủy lời mời kết nối"
+                        >
+                            <x-ui.icon name="clock" size="sm" />
+                        </button>
+                    @elseif ($this->connectionStatus === 'pending_received')
+                        <button
+                            type="button"
+                            wire:click="acceptGreeting"
+                            wire:loading.attr="disabled"
+                            wire:target="acceptGreeting"
+                            class="w-9 h-9 rounded-xl bg-blue-50 text-blue-700 border border-blue-100 hover:bg-blue-100 hover:text-blue-800 transition-colors flex items-center justify-center animate-pulse flex-shrink-0 shadow-3xs"
+                            title="Đồng ý kết nối"
+                        >
+                            <x-ui.icon name="user-plus" size="sm" />
+                        </button>
+                    @elseif ($this->connectionStatus === 'blocked')
+                        <span class="px-2.5 h-9 rounded-xl bg-slate-50 text-slate-400 border border-slate-200 text-[10px] font-bold flex items-center justify-center flex-shrink-0">
+                            Đã chặn
+                        </span>
+                    @else
+                        <button
+                            type="button"
+                            wire:click="sendGreeting"
+                            wire:loading.attr="disabled"
+                            wire:target="sendGreeting"
+                            class="w-9 h-9 rounded-xl bg-white text-slate-850 border border-slate-200 hover:bg-slate-50 transition-colors flex items-center justify-center flex-shrink-0 shadow-3xs"
+                            title="Gửi lời mời kết nối"
+                        >
+                            <x-ui.icon name="user-plus" size="sm" />
+                        </button>
+                    @endif
+
+                    {{-- More Options --}}
+                    <div class="relative" x-data="{ openOptions: false }" @click.away="openOptions = false">
+                        <button @click="openOptions = !openOptions" class="w-9 h-9 text-slate-450 hover:text-slate-655 hover:bg-slate-50 border border-slate-200 rounded-xl transition-colors flex items-center justify-center shadow-3xs">
+                            <x-ui.icon name="more-horizontal" size="sm" />
+                        </button>
+                        <div x-show="openOptions" x-transition class="absolute right-0 mt-1 bg-white border border-slate-150 rounded-xl shadow-lg py-1 z-30 w-40 text-left" style="display: none;">
+                            <button type="button" wire:click="blockUser" wire:loading.attr="disabled" wire:target="blockUser" class="w-full text-left px-3 py-2 text-xxs font-semibold text-red-600 hover:bg-red-50 flex items-center gap-1.5 transition-colors">
+                                <x-ui.icon name="shield-x" size="xs" class="text-red-400" />
+                                <span>Chặn thành viên</span>
+                            </button>
+                            <button type="button" wire:click="reportUser" wire:loading.attr="disabled" wire:target="reportUser" class="w-full text-left px-3 py-2 text-xxs font-semibold text-slate-700 hover:bg-slate-50 flex items-center gap-1.5 transition-colors">
+                                <x-ui.icon name="flag" size="xs" class="text-slate-400" />
+                                <span>Báo cáo tài khoản</span>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            @endif
+        </div>
+
+        {{-- DESKTOP HEADER LAYOUT (Keep Card, Cover Image) --}}
+        <div class="hidden sm:block relative z-10 bg-white border border-slate-150 rounded-3xl shadow-2xs">
             {{-- Cover Photo Section --}}
-            <div class="relative h-44 sm:h-64 w-full bg-gradient-to-tr from-slate-200 to-slate-100 overflow-hidden">
+            <div class="relative h-44 sm:h-64 w-full bg-gradient-to-tr from-slate-200 to-slate-100 overflow-hidden rounded-t-[22px]">
                 @if ($this->coverUrl)
                     <img src="{{ $this->coverUrl }}" alt="Cover picture" class="w-full h-full object-cover" />
                 @else
@@ -533,7 +838,8 @@ new class extends Component
             <div class="relative px-4 sm:px-6 pb-6 pt-0 md:pt-6 text-center md:text-left">
                 {{-- Round Avatar Photo --}}
                 <div class="relative -mt-14 mx-auto md:absolute md:-top-16 md:left-6 md:mt-0 md:mx-0 w-28 h-28 sm:w-32 sm:h-32 rounded-full overflow-hidden border-4 border-white bg-slate-50 shadow-md group">
-                    <x-ui.avatar :user="$user" size="2xl" class="w-full h-full border-none rounded-none shadow-none text-2xl font-bold bg-slate-100 flex items-center justify-center" />
+                        <x-ui.avatar :user="$user" size="2xl" class="w-full h-full border-none rounded-none shadow-none text-2xl font-bold bg-slate-100 flex items-center justify-center" />
+
 
                     @if ($isOwn)
                         <label class="absolute inset-0 bg-slate-900/40 opacity-0 group-hover:opacity-100 cursor-pointer flex flex-col items-center justify-center text-white text-[9px] font-bold transition-opacity">
@@ -562,113 +868,29 @@ new class extends Component
                             @else Thành viên
                             @endif
                         </span>
-
-                        {{-- Action Buttons --}}
-                        <div class="flex w-full sm:w-auto items-center justify-center md:justify-start gap-2 flex-wrap sm:ml-auto">
-                            @if ($this->connectionStatus === 'self')
-                                <a href="{{ route('profile.edit') }}" class="bg-white hover:bg-slate-50 border border-slate-200 text-slate-700 text-xxs font-bold px-4 py-1.5 rounded-lg transition-colors flex items-center gap-1.5 shadow-2xs">
-                                    <x-ui.icon name="edit" size="xs" />
-                                    Chỉnh sửa hồ sơ
-                                </a>
-                            @else
-                                @if (! in_array($this->connectionStatus, ['blocked'], true))
-                                    @if ($isFollowing)
-                                        <button
-                                            type="button"
-                                            wire:click="unfollowUser"
-                                            wire:loading.attr="disabled"
-                                            wire:target="unfollowUser"
-                                            class="inline-flex items-center justify-center gap-1.5 rounded-lg border border-slate-200 bg-white px-4 py-1.5 text-xxs font-bold text-slate-650 shadow-2xs transition-colors hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
-                                        >
-                                            <x-ui.icon name="check" size="xs" />
-                                            <span wire:loading.remove wire:target="unfollowUser">Đang theo dõi</span>
-                                            <span wire:loading wire:target="unfollowUser">Đang xử lý...</span>
-                                        </button>
-                                    @else
-                                        <button
-                                            type="button"
-                                            wire:click="followUser"
-                                            wire:loading.attr="disabled"
-                                            wire:target="followUser"
-                                            class="inline-flex items-center justify-center gap-1.5 rounded-lg bg-ue-brand px-4 py-1.5 text-xxs font-bold text-white shadow-2xs transition-colors hover:bg-ue-brand-dark disabled:cursor-not-allowed disabled:opacity-60"
-                                        >
-                                            <x-ui.icon name="plus" size="xs" />
-                                            <span wire:loading.remove wire:target="followUser">Theo dõi</span>
-                                            <span wire:loading wire:target="followUser">Đang xử lý...</span>
-                                        </button>
-                                    @endif
-                                @endif
-
-                                @if ($this->connectionStatus === 'connected')
-                                    <a href="{{ route('messages.index', ['conversation' => \App\Models\Conversation::where('conversation_type', \App\Enums\ConversationType::DIRECT)->whereHas('participants', function($q) { $q->where('user_id', $this->user->id); })->first()?->id]) }}" class="bg-ue-brand hover:bg-ue-brand-dark text-white text-xxs font-bold px-4 py-1.5 rounded-lg shadow-2xs hover:shadow-sm transition-all flex items-center gap-1.5">
-                                        <x-ui.icon name="message-square" size="xs" />
-                                        Nhắn tin
-                                    </a>
-                                    <button type="button" disabled class="bg-slate-50 text-emerald-600 border border-slate-200 text-xxs font-bold px-4 py-1.5 rounded-lg flex items-center gap-1.5">
-                                        <x-ui.icon name="check" size="xs" />
-                                        Bạn bè
-                                    </button>
-                                @elseif ($this->connectionStatus === 'pending_sent')
-                                    <button type="button" disabled class="bg-slate-100 text-slate-450 text-xxs font-bold px-4 py-1.5 rounded-lg border border-slate-200 cursor-not-allowed">
-                                        Chờ phản hồi
-                                    </button>
-                                @elseif ($this->connectionStatus === 'pending_received')
-                                    <a href="{{ route('connections.index') }}" class="bg-indigo-650 hover:bg-indigo-750 text-white text-xxs font-bold px-4 py-1.5 rounded-lg shadow-2xs transition-colors">
-                                        Xem lời mời
-                                    </a>
-                                @elseif ($this->connectionStatus === 'blocked')
-                                    <span class="text-xxs font-bold text-red-500 bg-red-50 border border-red-100 px-3 py-1.5 rounded-lg">Đã chặn</span>
-                                @else
-                                    <a href="{{ route('discovery.index') }}" class="bg-ue-brand hover:bg-ue-brand-dark text-white text-xxs font-bold px-4 py-1.5 rounded-lg shadow-2xs transition-colors flex items-center gap-1.5">
-                                        <x-ui.icon name="user-plus" size="xs" />
-                                        Gửi lời chào
-                                    </a>
-                                @endif
-
-                                {{-- More Safety controls --}}
-                                <div class="relative" x-data="{ openOptions: false }" @click.away="openOptions = false">
-                                    <button @click="openOptions = !openOptions" class="p-1.5 text-slate-450 hover:text-slate-600 hover:bg-slate-50 border border-slate-200 rounded-lg transition-colors shadow-2xs">
-                                        <x-ui.icon name="more-horizontal" size="xs" />
-                                    </button>
-                                    <div x-show="openOptions" x-transition class="absolute right-0 mt-1 bg-white border border-slate-150 rounded-xl shadow-lg py-1 z-30 w-40 text-left" style="display: none;">
-                                        <button type="button" wire:click="blockUser" wire:loading.attr="disabled" wire:target="blockUser" class="w-full text-left px-3 py-2 text-xxs font-semibold text-red-600 hover:bg-red-50 flex items-center gap-1.5 transition-colors disabled:opacity-60">
-                                            <x-ui.icon name="shield-x" size="xs" class="text-red-400" />
-                                            <span wire:loading.remove wire:target="blockUser">Chặn thành viên</span>
-                                            <span wire:loading wire:target="blockUser">Đang chặn...</span>
-                                        </button>
-                                        <button type="button" wire:click="reportUser" wire:loading.attr="disabled" wire:target="reportUser" class="w-full text-left px-3 py-2 text-xxs font-semibold text-slate-700 hover:bg-slate-50 flex items-center gap-1.5 transition-colors disabled:opacity-60">
-                                            <x-ui.icon name="flag" size="xs" class="text-slate-400" />
-                                            <span wire:loading.remove wire:target="reportUser">Báo cáo tài khoản</span>
-                                            <span wire:loading wire:target="reportUser">Đang gửi...</span>
-                                        </button>
-                                    </div>
-                                </div>
-                            @endif
-                        </div>
                     </div>
 
-                    {{-- Stats --}}
-                    <div class="flex items-center justify-center md:justify-start gap-6 py-1 text-slate-700 select-none">
+                    <div class="flex items-center justify-center md:justify-start gap-6 py-1 text-slate-700 select-none text-xxs font-medium">
                         <div class="flex items-baseline gap-1">
-                            <span class="text-xs font-bold">{{ $this->postsCount }}</span>
-                            <span class="text-xxs text-slate-400 font-medium">Bài viết</span>
+                            <span class="text-xs font-bold text-slate-800">{{ $this->postsCount }}</span>
+                            <span class="text-slate-400">Bài viết</span>
                         </div>
                         <div class="flex items-baseline gap-1">
-                            <span class="text-xs font-bold">{{ $this->connectionsCount }}</span>
-                            <span class="text-xxs text-slate-400 font-medium">Bạn bè</span>
+                            <span class="text-xs font-bold text-slate-800">{{ $this->connectionsCount }}</span>
+                            <span class="text-slate-400">Bạn bè</span>
                         </div>
                         <div class="flex items-baseline gap-1">
-                            <span class="text-xs font-bold">{{ $followersCount }}</span>
-                            <span class="text-xxs text-slate-400 font-medium">Người theo dõi</span>
+                            <span class="text-xs font-bold text-slate-800">{{ $followersCount }}</span>
+                            <span class="text-slate-400">Người theo dõi</span>
                         </div>
                         <div class="flex items-baseline gap-1">
-                            <span class="text-xs font-bold">{{ $followingCount }}</span>
-                            <span class="text-xxs text-slate-400 font-medium">Đang theo dõi</span>
+                            <span class="text-xs font-bold text-slate-800">{{ $followingCount }}</span>
+                            <span class="text-slate-400">Đang theo dõi</span>
                         </div>
                     </div>
 
                     {{-- Credentials & Bio --}}
-                    <div class="space-y-1 text-slate-500 text-xxs font-medium max-w-lg mx-auto md:mx-0">
+                    <div class="space-y-1 text-slate-500 text-xxs font-medium max-w-xl mx-auto md:mx-0">
                         <p class="text-slate-450 tracking-wide uppercase text-[9px] font-bold">
                             @if ($showFaculty && $user->profile?->faculty)
                                 Khoa: {{ $user->profile?->faculty }}
@@ -682,9 +904,152 @@ new class extends Component
                             @endif
                         @endif
                     </div>
+
+                {{-- Action Buttons Row --}}
+                <div class="mt-5 pt-4 border-t border-slate-100 flex items-center justify-center md:justify-start gap-3 w-full flex-wrap">
+                    @if ($isOwn)
+                        <a href="{{ route('profile.edit') }}" class="flex-1 sm:flex-none bg-white hover:bg-slate-50 border border-slate-200 text-slate-700 text-xxs font-bold px-4 py-2 rounded-xl transition-colors flex items-center justify-center gap-1.5 shadow-2xs">
+                            <x-ui.icon name="edit" size="xs" />
+                            Chỉnh sửa hồ sơ
+                        </a>
+                    @else
+                        {{-- Follow / Unfollow --}}
+                        @if ($isFollowing)
+                            <button
+                                type="button"
+                                wire:click="unfollowUser"
+                                wire:loading.attr="disabled"
+                                wire:target="unfollowUser"
+                                class="flex-1 sm:flex-none inline-flex items-center justify-center gap-1.5 rounded-xl border border-slate-250 bg-white px-5 py-2 text-xxs font-bold text-slate-700 shadow-2xs transition-colors hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
+                            >
+                                <span wire:loading.remove wire:target="unfollowUser">Đang theo dõi</span>
+                                <span wire:loading wire:target="unfollowUser">Đang xử lý...</span>
+                            </button>
+                        @else
+                            <button
+                                type="button"
+                                wire:click="followUser"
+                                wire:loading.attr="disabled"
+                                wire:target="followUser"
+                                class="flex-1 sm:flex-none inline-flex items-center justify-center gap-1.5 rounded-xl bg-slate-900 px-5 py-2 text-xxs font-bold text-white shadow-2xs transition-colors hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-60"
+                            >
+                                <span wire:loading.remove wire:target="followUser">Theo dõi</span>
+                                <span wire:loading wire:target="followUser">Đang xử lý...</span>
+                            </button>
+                        @endif
+
+                        {{-- Message --}}
+                        @if ($this->connectionStatus === 'connected')
+                            <a href="{{ route('messages.index', ['conversation' => \App\Models\Conversation::where('conversation_type', \App\Enums\ConversationType::DIRECT)->whereHas('participants', function($q) { $q->where('user_id', $this->user->id); })->first()?->id]) }}" class="flex-1 sm:flex-none bg-white hover:bg-slate-50 border border-slate-200 text-slate-700 text-xxs font-bold px-5 py-2 rounded-xl shadow-2xs transition-colors flex items-center justify-center gap-1.5">
+                                <x-ui.icon name="message-square" size="xs" />
+                                Nhắn tin
+                            </a>
+                        @else
+                            {{-- Message button acts as connect (send greeting) when not connected --}}
+                            <button
+                                type="button"
+                                wire:click="sendGreeting"
+                                wire:loading.attr="disabled"
+                                wire:target="sendGreeting"
+                                class="flex-1 sm:flex-none bg-white hover:bg-slate-50 border border-slate-200 text-slate-700 text-xxs font-bold px-5 py-2 rounded-xl shadow-2xs transition-colors flex items-center justify-center gap-1.5"
+                            >
+                                <x-ui.icon name="message-square" size="xs" />
+                                Nhắn tin
+                            </button>
+                        @endif
+
+                        {{-- Connection status --}}
+                        @if ($this->connectionStatus === 'connected')
+                            {{-- Friends dropdown menu --}}
+                            <div class="relative" x-data="{ openFriendMenu: false }" @click.away="openFriendMenu = false">
+                                <button
+                                    type="button"
+                                    @click="openFriendMenu = !openFriendMenu"
+                                    class="inline-flex items-center justify-center gap-1.5 px-4 py-2 rounded-xl bg-slate-100 text-slate-800 border border-slate-200 hover:bg-slate-200 hover:text-slate-900 transition-colors text-xxs font-bold"
+                                    title="Bạn bè"
+                                >
+                                    <x-ui.icon name="user-check" size="xs" />
+                                    <span>Bạn bè</span>
+                                    <x-ui.icon name="chevron-down" size="xs" class="text-slate-500" />
+                                </button>
+                                <div x-show="openFriendMenu" x-transition class="absolute left-0 sm:left-auto sm:right-0 mt-1 bg-white border border-slate-150 rounded-xl shadow-lg py-1 z-30 w-40 text-left" style="display: none;">
+                                    <button
+                                        type="button"
+                                        wire:click="removeConnection"
+                                        wire:loading.attr="disabled"
+                                        wire:target="removeConnection"
+                                        class="w-full text-left px-3 py-2 text-xxs font-semibold text-red-650 hover:bg-red-50 flex items-center gap-1.5 transition-colors disabled:opacity-60"
+                                    >
+                                        <x-ui.icon name="user-minus" size="xs" class="text-red-400" />
+                                        <span>Hủy kết bạn</span>
+                                    </button>
+                                </div>
+                            </div>
+                        @elseif ($this->connectionStatus === 'pending_sent')
+                            {{-- Pending Sent (Click to cancel) --}}
+                            <button
+                                type="button"
+                                wire:click="cancelGreeting"
+                                wire:loading.attr="disabled"
+                                wire:target="cancelGreeting"
+                                class="px-3.5 py-2 rounded-xl bg-slate-50 text-slate-655 border border-slate-200 hover:bg-slate-100 hover:text-slate-700 transition-colors flex items-center justify-center"
+                                title="Đang chờ phản hồi (Click để hủy yêu cầu)"
+                            >
+                                <x-ui.icon name="clock" size="xs" />
+                            </button>
+                        @elseif ($this->connectionStatus === 'pending_received')
+                            {{-- Pending Received (Click to accept) --}}
+                            <button
+                                type="button"
+                                wire:click="acceptGreeting"
+                                wire:loading.attr="disabled"
+                                wire:target="acceptGreeting"
+                                class="px-3.5 py-2 rounded-xl bg-blue-50 text-blue-700 border border-blue-100 hover:bg-blue-100 hover:text-blue-800 transition-colors flex items-center justify-center animate-pulse"
+                                title="Lời mời kết nối mới (Click để đồng ý)"
+                            >
+                                <x-ui.icon name="user-plus" size="xs" />
+                            </button>
+                        @elseif ($this->connectionStatus === 'blocked')
+                            <span class="px-3.5 py-2 rounded-xl bg-slate-50 text-slate-400 border border-slate-200 text-xxs font-bold flex items-center justify-center">
+                                Đã chặn
+                            </span>
+                        @else
+                            {{-- None: send greeting request --}}
+                            <button
+                                type="button"
+                                wire:click="sendGreeting"
+                                wire:loading.attr="disabled"
+                                wire:target="sendGreeting"
+                                class="px-3.5 py-2 rounded-xl bg-white text-slate-700 border border-slate-200 hover:bg-slate-50 transition-colors flex items-center justify-center"
+                                title="Gửi lời mời kết nối"
+                            >
+                                <x-ui.icon name="user-plus" size="xs" />
+                            </button>
+                        @endif
+
+                        {{-- More Safety controls --}}
+                        <div class="relative" x-data="{ openOptions: false }" @click.away="openOptions = false">
+                            <button @click="openOptions = !openOptions" class="p-2 text-slate-450 hover:text-slate-655 hover:bg-slate-50 border border-slate-200 rounded-xl transition-colors shadow-2xs flex items-center justify-center">
+                                <x-ui.icon name="more-horizontal" size="xs" />
+                            </button>
+                            <div x-show="openOptions" x-transition class="absolute right-0 mt-1 bg-white border border-slate-150 rounded-xl shadow-lg py-1 z-30 w-40 text-left" style="display: none;">
+                                <button type="button" wire:click="blockUser" wire:loading.attr="disabled" wire:target="blockUser" class="w-full text-left px-3 py-2 text-xxs font-semibold text-red-600 hover:bg-red-50 flex items-center gap-1.5 transition-colors disabled:opacity-60">
+                                    <x-ui.icon name="shield-x" size="xs" class="text-red-400" />
+                                    <span wire:loading.remove wire:target="blockUser">Chặn thành viên</span>
+                                    <span wire:loading wire:target="blockUser">Đang chặn...</span>
+                                </button>
+                                <button type="button" wire:click="reportUser" wire:loading.attr="disabled" wire:target="reportUser" class="w-full text-left px-3 py-2 text-xxs font-semibold text-slate-700 hover:bg-slate-50 flex items-center gap-1.5 transition-colors disabled:opacity-60">
+                                    <x-ui.icon name="flag" size="xs" class="text-slate-400" />
+                                    <span wire:loading.remove wire:target="reportUser">Báo cáo tài khoản</span>
+                                    <span wire:loading wire:target="reportUser">Đang gửi...</span>
+                                </button>
+                            </div>
+                        </div>
+                    @endif
                 </div>
             </div>
         </div>
+    </div>
 
         {{-- Modern Profile Tabs --}}
         <div class="flex flex-col space-y-4">

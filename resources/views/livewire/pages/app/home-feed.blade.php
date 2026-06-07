@@ -15,6 +15,7 @@ use App\Actions\Media\DeleteMediaAction;
 use App\Actions\Media\GenerateMediaUrlAction;
 use App\Actions\Media\StoreTemporaryMediaAction;
 use App\Actions\Follows\FollowUser;
+use App\Actions\Follows\UnfollowUser;
 use App\Enums\CommentStatus;
 use App\Enums\PostStatus;
 use App\Enums\PostVisibility;
@@ -45,6 +46,11 @@ new #[Layout('layouts.app')] class extends Component
     public int $perPage = self::FEED_PAGE_SIZE;
     public string $activeFeedTab = 'for_you';
     public ?int $selectedCommunityId = null;
+    
+    // Quick follow properties
+    public bool $showQuickFollowModal = false;
+    public ?int $quickFollowUserId = null;
+    public bool $quickFollowCompleted = false;
 
     // Multi-image upload properties
     public $imageFiles = [];
@@ -403,6 +409,36 @@ new #[Layout('layouts.app')] class extends Component
     }
 
     /**
+     * Toggle follow status for a user.
+     */
+    public function toggleFollow(int $userId, FollowUser $followUser, UnfollowUser $unfollowUser): void
+    {
+        try {
+            $targetUser = User::findOrFail($userId);
+            $currentUser = Auth::user();
+
+            if ($currentUser->id === $targetUser->id) {
+                $this->feedbackMessage = 'Bạn không thể tự theo dõi chính mình.';
+                return;
+            }
+
+            $isFollowing = \App\Models\UserFollow::where('follower_id', $currentUser->id)
+                ->where('following_id', $targetUser->id)
+                ->exists();
+
+            if ($isFollowing) {
+                $unfollowUser->execute($currentUser, $targetUser);
+                $this->feedbackMessage = 'Đã bỏ theo dõi ' . $targetUser->name . '.';
+            } else {
+                $followUser->execute($currentUser, $targetUser);
+                $this->feedbackMessage = 'Đã theo dõi ' . $targetUser->name . '.';
+            }
+        } catch (\Exception $e) {
+            $this->feedbackMessage = $e->getMessage();
+        }
+    }
+
+    /**
      * Start post sharing flow.
      */
     public function startShare(int $postId): void
@@ -542,20 +578,90 @@ new #[Layout('layouts.app')] class extends Component
     }
 
     /**
-     * Follow a post author directly from the feed.
+     * Open quick follow modal for the specified user.
      */
-    public function quickFollowAuthor(int $authorId, FollowUser $followUser): void
+    public function openQuickFollowModal(int $authorId): void
     {
         $author = User::findOrFail($authorId);
+        $currentUser = Auth::user();
+
+        if ($author->id === $currentUser->id) {
+            $this->feedbackMessage = 'Bạn không thể tự theo dõi chính mình.';
+            return;
+        }
+
+        // Check if already active connections/friends
+        $isFriend = Connection::where(function ($query) use ($currentUser, $author) {
+                $query->where('user_one_id', $currentUser->id)->where('user_two_id', $author->id);
+            })
+            ->orWhere(function ($query) use ($currentUser, $author) {
+                $query->where('user_one_id', $author->id)->where('user_two_id', $currentUser->id);
+            })
+            ->where('status', ConnectionStatus::ACTIVE)
+            ->exists();
+
+        if ($isFriend) {
+            $this->feedbackMessage = 'Người dùng này đã kết nối bạn bè với bạn.';
+            return;
+        }
+
+        $this->quickFollowUserId = $author->id;
+        $this->quickFollowCompleted = \App\Models\UserFollow::where('follower_id', $currentUser->id)
+            ->where('following_id', $author->id)
+            ->exists();
+        $this->showQuickFollowModal = true;
+    }
+
+    /**
+     * Confirm quick follow from within the modal.
+     */
+    public function confirmQuickFollow(FollowUser $followUser): void
+    {
+        if (! $this->quickFollowUserId) {
+            return;
+        }
+
+        $author = User::findOrFail($this->quickFollowUserId);
 
         try {
             $followUser->execute(Auth::user(), $author);
-            $this->feedbackMessage = 'Đã theo dõi '.$author->name.'.';
+            $this->quickFollowCompleted = true;
+            $this->feedbackMessage = 'Đã theo dõi ' . $author->name . '.';
         } catch (\Illuminate\Validation\ValidationException $e) {
             $this->feedbackMessage = collect($e->errors())->flatten()->first() ?: 'Không thể theo dõi người dùng này.';
         } catch (\Exception $e) {
             $this->feedbackMessage = $e->getMessage();
         }
+    }
+
+    /**
+     * Confirm quick unfollow from within the modal.
+     */
+    public function confirmQuickUnfollow(UnfollowUser $unfollowUser): void
+    {
+        if (! $this->quickFollowUserId) {
+            return;
+        }
+
+        $author = User::findOrFail($this->quickFollowUserId);
+
+        try {
+            $unfollowUser->execute(Auth::user(), $author);
+            $this->quickFollowCompleted = false;
+            $this->feedbackMessage = 'Đã bỏ theo dõi ' . $author->name . '.';
+        } catch (\Exception $e) {
+            $this->feedbackMessage = $e->getMessage();
+        }
+    }
+
+    /**
+     * Close the quick follow modal.
+     */
+    public function closeQuickFollowModal(): void
+    {
+        $this->showQuickFollowModal = false;
+        $this->quickFollowUserId = null;
+        $this->quickFollowCompleted = false;
     }
 
     /**
@@ -596,7 +702,15 @@ new #[Layout('layouts.app')] class extends Component
      */
     private function baseFeedQuery(User $user): Builder
     {
-        $query = Post::with(['user.profile', 'media.variants'])
+        $query = Post::with([
+            'user.profile',
+            'user' => function ($query) use ($user): void {
+                $query->withCount(['followers as is_followed_by_current_user' => function ($q) use ($user): void {
+                    $q->where('follower_id', $user->id);
+                }]);
+            },
+            'media.variants'
+        ])
             ->withCount([
                 'likes',
                 'reposts',
@@ -1023,14 +1137,14 @@ new #[Layout('layouts.app')] class extends Component
                                 </div>
 
                                 <div class="ue-composer__toolbar">
-                                    <div class="ue-composer__actions flex items-center gap-2">
+                                    <div class="ue-composer__actions flex items-center gap-2 flex-shrink-0">
                                         {{-- Image Upload Trigger Button --}}
-                                        <label class="p-1.5 text-slate-400 hover:text-slate-600 hover:bg-slate-50 border border-slate-200 rounded-lg cursor-pointer transition-colors shadow-2xs flex items-center justify-center">
-                                            <x-ui.icon name="image" size="xs" />
+                                        <label class="ue-composer__media-btn p-1.5 text-slate-400 hover:text-slate-600 hover:bg-slate-50 border border-slate-200 rounded-lg cursor-pointer transition-colors shadow-2xs flex items-center justify-center flex-shrink-0">
+                                            <x-ui.icon name="image" size="md" />
                                             <input type="file" wire:model="imageFiles" multiple class="hidden" accept="image/*" />
                                         </label>
 
-                                        <span class="ue-composer__counter text-slate-400 text-xxs font-semibold">
+                                        <span class="ue-composer__counter text-slate-400 text-xxs font-semibold whitespace-nowrap flex-shrink-0">
                                             {{ mb_strlen($body) }}/3000
                                         </span>
                                         @php
@@ -1040,7 +1154,7 @@ new #[Layout('layouts.app')] class extends Component
                                                 default => 'Chỉ sinh viên xác thực',
                                             };
                                         @endphp
-                                        <div class="relative">
+                                        <div class="relative flex-shrink-0">
                                             <label for="post-visibility" class="sr-only">Quyền xem</label>
                                             <select
                                                 id="post-visibility"
@@ -1051,20 +1165,20 @@ new #[Layout('layouts.app')] class extends Component
                                                 <option value="connections_only">Chỉ bạn bè</option>
                                                 <option value="community">Chỉ cộng đồng</option>
                                             </select>
-                                            <div class="flex items-center gap-1.5 px-2.5 py-1 bg-slate-50 text-slate-500 rounded-lg select-none pointer-events-none">
-                                                <x-ui.icon name="shield-check" size="xs" class="text-ue-brand fill-ue-brand/10" />
+                                            <div class="flex items-center gap-1 px-2 py-1 bg-slate-50 text-slate-500 rounded-lg select-none pointer-events-none whitespace-nowrap flex-shrink-0">
+                                                <x-ui.icon name="shield-check" size="xs" class="text-ue-brand fill-ue-brand/10 flex-shrink-0" />
                                                 <span class="hidden sm:inline text-xxs font-bold">{{ $visibilityLabel }}</span>
-                                                <span class="sm:hidden text-[10px] font-bold">{{ $visibility === 'verified_users' ? 'Xác thực' : $visibilityLabel }}</span>
-                                                <x-ui.icon name="chevron-down" size="xs" class="text-slate-400" />
+                                                <span class="sm:hidden text-[10px] font-bold whitespace-nowrap flex-shrink-0">{{ $visibility === 'verified_users' ? 'Xác thực' : $visibilityLabel }}</span>
+                                                <x-ui.icon name="chevron-down" size="xs" class="text-slate-400 flex-shrink-0" />
                                             </div>
                                         </div>
                                         @if ($visibility === 'community')
-                                            <div class="relative min-w-[150px]">
+                                            <div class="relative min-w-[120px] flex-shrink-0">
                                                 <label for="post-community" class="sr-only">Chọn cộng đồng</label>
                                                 <select
                                                     id="post-community"
                                                     wire:model="selectedCommunityId"
-                                                    class="w-full rounded-lg border border-slate-200 bg-slate-50 px-2.5 py-1 text-xxs font-bold text-slate-600 focus:border-ue-brand/40 focus:ring-ue-brand/20"
+                                                    class="w-full rounded-lg border border-slate-200 bg-slate-50 px-2 py-1 text-xxs font-bold text-slate-600 focus:border-ue-brand/40 focus:ring-ue-brand/20"
                                                 >
                                                     <option value="">Chọn cộng đồng</option>
                                                     @foreach ($availableCommunities as $community)
@@ -1084,6 +1198,7 @@ new #[Layout('layouts.app')] class extends Component
                                         icon="send"
                                         wire:loading.attr="disabled"
                                         wire:target="submitPost,imageFiles"
+                                        class="ue-composer__submit-btn flex-shrink-0"
                                     >
                                         <span wire:loading.remove wire:target="submitPost">Đăng bài</span>
                                         <span wire:loading wire:target="submitPost">Đang đăng...</span>
@@ -1130,9 +1245,13 @@ new #[Layout('layouts.app')] class extends Component
                         </article>
                     @else
                         @php
-                            $showQuickFollow = $post->user_id !== $currentUser->id
-                                && ! in_array($post->user_id, $followedAuthorIds, true)
-                                && ! in_array($post->user_id, $friendAuthorIds, true);
+                            $authorId = (int) $post->user_id;
+                            $isSelfAuthor = $authorId === (int) $currentUser->id;
+                            $isFriendAuthor = in_array($authorId, $friendAuthorIds, true);
+                            $isFollowedAuthor = in_array($authorId, $followedAuthorIds, true);
+
+                            $showQuickFollow = ! $isSelfAuthor && ! $isFriendAuthor && ! $isFollowedAuthor;
+                            $showFollowCheck = ! $isSelfAuthor && ! $isFriendAuthor && $isFollowedAuthor;
                         @endphp
                         <article class="ue-feed-item" wire:key="post-item-{{ $post->feed_item_key ?? $post->id }}">
                             <x-ui.post-card
@@ -1147,6 +1266,7 @@ new #[Layout('layouts.app')] class extends Component
                                 :editingPostId="$editingPostId"
                                 :editingBody="$editingBody"
                                 :showQuickFollow="$showQuickFollow"
+                                :showFollowCheck="$showFollowCheck"
                                 :repostedBy="$repostedBy"
                                 :repostedAt="$post->feed_reposted_at"
                                 :feedItemKey="$post->feed_item_key"
@@ -1427,5 +1547,110 @@ new #[Layout('layouts.app')] class extends Component
                 </div>
             </div>
         </div>
+    @endif
+
+    {{-- QUICK FOLLOW MODAL --}}
+    @if ($showQuickFollowModal && $quickFollowUserId)
+        @php
+            $quickFollowUser = \App\Models\User::find($quickFollowUserId);
+        @endphp
+        @if ($quickFollowUser)
+            @php
+                $quickFollowFollowersCount = \App\Models\UserFollow::where('following_id', $quickFollowUser->id)->count();
+                $quickFollowUserFaculty = $quickFollowUser->profile?->faculty;
+                $quickFollowDisplayName = $quickFollowUser->profile?->display_name ?? $quickFollowUser->name;
+                $quickFollowUsername = $quickFollowUser->username ?? \Illuminate\Support\Str::slug($quickFollowUser->name, '');
+            @endphp
+            <div
+                class="fixed inset-0 z-50 overflow-y-auto flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs ue-animate-fade-in"
+                role="dialog"
+                aria-modal="true"
+                aria-labelledby="follow-modal-title"
+                x-data
+                @keydown.escape.window="$wire.closeQuickFollowModal()"
+            >
+                <div 
+                    class="bg-white rounded-2xl max-w-sm w-full border border-slate-200 shadow-2xl overflow-hidden ue-animate-scale-in"
+                    @click.outside="$wire.closeQuickFollowModal()"
+                >
+                    {{-- Header with Close button --}}
+                    <div class="px-5 py-3 border-b border-slate-100 flex items-center justify-between">
+                        <span class="text-xs font-bold text-slate-400 uppercase tracking-wider">Thông tin người dùng</span>
+                        <button 
+                            type="button" 
+                            wire:click="closeQuickFollowModal" 
+                            class="text-slate-400 hover:text-slate-600 transition-colors p-1 rounded-lg hover:bg-slate-50"
+                            aria-label="Đóng modal"
+                        >
+                            <x-ui.icon name="x" size="xs" />
+                        </button>
+                    </div>
+
+                    {{-- Body with user details --}}
+                    <div class="p-6 flex flex-col items-center text-center">
+                        <x-ui.avatar :user="$quickFollowUser" size="xl" class="mb-4 shadow-sm" />
+                        
+                        <h3 id="follow-modal-title" class="text-lg font-bold text-slate-800 flex items-center gap-1.5 justify-center leading-tight">
+                            <span>{{ $quickFollowDisplayName }}</span>
+                            @if ($quickFollowUser->isActive())
+                                <x-ui.icon name="shield-check" size="xs" class="text-ue-brand fill-ue-brand" />
+                            @endif
+                        </h3>
+                        
+                        <p class="text-xs text-slate-400 font-semibold mt-1">
+                            @<span>{{ $quickFollowUsername }}</span>
+                        </p>
+
+                        @if ($quickFollowUserFaculty)
+                            <p class="text-[10px] text-slate-500 font-bold bg-slate-50 border border-slate-150 px-2 py-0.5 rounded-full mt-2.5">
+                                Khoa {{ $quickFollowUserFaculty }}
+                            </p>
+                        @endif
+
+                        <div class="mt-4 flex items-center gap-1 text-xs text-slate-500 font-medium">
+                            <span class="font-bold text-slate-800">{{ $quickFollowFollowersCount }}</span>
+                            <span>{{ $quickFollowFollowersCount > 1 ? 'người theo dõi' : 'người theo dõi' }}</span>
+                        </div>
+                    </div>
+
+                    {{-- Footer with actions --}}
+                    <div class="px-6 py-4 bg-slate-50 border-t border-slate-100 flex flex-col gap-2">
+                        @if ($quickFollowCompleted)
+                            <button
+                                type="button"
+                                wire:click="confirmQuickUnfollow"
+                                wire:loading.attr="disabled"
+                                wire:target="confirmQuickUnfollow"
+                                class="w-full py-2.5 px-4 text-xs font-bold text-slate-700 bg-slate-100 hover:bg-slate-200 border border-slate-200 rounded-xl transition-all flex items-center justify-center gap-1.5"
+                            >
+                                <span wire:loading.remove wire:target="confirmQuickUnfollow" class="flex items-center gap-1.5 justify-center w-full">
+                                    Bỏ theo dõi
+                                </span>
+                                <span wire:loading wire:target="confirmQuickUnfollow" class="flex items-center gap-1.5 justify-center w-full">
+                                    <span class="animate-spin rounded-full h-3 w-3 border border-slate-500 border-t-transparent"></span>
+                                    Đang xử lý...
+                                </span>
+                            </button>
+                        @else
+                            <button
+                                type="button"
+                                wire:click="confirmQuickFollow"
+                                wire:loading.attr="disabled"
+                                wire:target="confirmQuickFollow"
+                                class="w-full py-2.5 px-4 text-xs font-bold text-white bg-ue-brand hover:bg-ue-brand-dark rounded-xl shadow-2xs hover:shadow-sm transition-all flex items-center justify-center gap-1.5"
+                            >
+                                <span wire:loading.remove wire:target="confirmQuickFollow" class="flex items-center gap-1.5 justify-center w-full">
+                                    Theo dõi
+                                </span>
+                                <span wire:loading wire:target="confirmQuickFollow" class="flex items-center gap-1.5 justify-center w-full">
+                                    <span class="animate-spin rounded-full h-3 w-3 border border-white border-t-transparent"></span>
+                                    Đang xử lý...
+                                </span>
+                            </button>
+                        @endif
+                    </div>
+                </div>
+            </div>
+        @endif
     @endif
 </div>
