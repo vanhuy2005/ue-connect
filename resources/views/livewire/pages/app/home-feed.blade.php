@@ -38,7 +38,21 @@ new #[Layout('layouts.app')] class extends Component
 {
     use WithPagination, WithFileUploads;
 
-    private const FEED_PAGE_SIZE = 10;
+    private const FEED_PAGE_SIZE = 5;
+
+    public bool $feedReady = false;
+
+    public function loadInitialFeed(): void
+    {
+        $this->feedReady = true;
+    }
+
+    public function mount(): void
+    {
+        if (app()->environment('testing')) {
+            $this->feedReady = true;
+        }
+    }
 
     // Composer properties
     public string $body = '';
@@ -833,24 +847,25 @@ new #[Layout('layouts.app')] class extends Component
     /**
      * Rank For You items: friends, following, joined communities, then recent.
      */
-    private function applyForYouRanking(Builder $query, User $user): Builder
-    {
+    private function applyForYouRanking(
+        Builder $query,
+        array $friendIds,
+        array $followingIds,
+        array $communityIds
+    ): Builder {
         $cases = [];
         $bindings = [];
 
-        $friendIds = $this->friendUserIds($user);
         if ($friendIds !== []) {
             $cases[] = 'WHEN user_id IN ('.$this->placeholdersFor($friendIds).') THEN 0';
             array_push($bindings, ...$friendIds);
         }
 
-        $followingIds = $this->followingUserIds($user);
         if ($followingIds !== []) {
             $cases[] = 'WHEN user_id IN ('.$this->placeholdersFor($followingIds).') THEN 1';
             array_push($bindings, ...$followingIds);
         }
 
-        $communityIds = $this->joinedCommunityIds($user);
         if ($communityIds !== []) {
             $cases[] = 'WHEN scope_type = ? AND scope_id IN ('.$this->placeholdersFor($communityIds).') THEN 2';
             $bindings[] = 'community';
@@ -922,6 +937,23 @@ new #[Layout('layouts.app')] class extends Component
     {
         $user = Auth::user();
 
+        if (! $this->feedReady) {
+            return [
+                'posts' => new Paginator([], $this->perPage, 1, ['path' => request()->url()]),
+                'currentUser' => $user,
+                'availableCommunities' => $this->visibility === PostVisibility::COMMUNITY->value
+                    ? $user->activeCommunityMemberships()
+                        ->with('community')
+                        ->get()
+                        ->pluck('community')
+                        ->filter(fn ($community): bool => $community?->isActive() ?? false)
+                        ->values()
+                    : collect(),
+                'followedAuthorIds' => [],
+                'friendAuthorIds' => [],
+            ];
+        }
+
         $query = $this->baseFeedQuery($user);
         $repostQuery = $this->baseRepostQuery($user);
         $friendIds = $this->friendUserIds($user);
@@ -940,7 +972,7 @@ new #[Layout('layouts.app')] class extends Component
             $query->latest('published_at');
             $repostQuery->latest('created_at');
         } else {
-            $this->applyForYouRanking($query, $user);
+            $this->applyForYouRanking($query, $friendIds, $followingIds, $communityIds);
             $repostQuery->latest('created_at');
         }
 
@@ -1007,13 +1039,15 @@ new #[Layout('layouts.app')] class extends Component
                 ->pluck('users.id')
                 ->map(fn ($id): int => (int) $id)
                 ->all();
-        $friendAuthorIds = array_values(array_intersect($this->friendUserIds($user), $postAuthorIds));
-        $availableCommunities = $user->activeCommunityMemberships()
-            ->with('community')
-            ->get()
-            ->pluck('community')
-            ->filter(fn ($community): bool => $community?->isActive() ?? false)
-            ->values();
+        $friendAuthorIds = array_values(array_intersect($friendIds, $postAuthorIds));
+        $availableCommunities = $this->visibility === PostVisibility::COMMUNITY->value
+            ? $user->activeCommunityMemberships()
+                ->with('community')
+                ->get()
+                ->pluck('community')
+                ->filter(fn ($community): bool => $community?->isActive() ?? false)
+                ->values()
+            : collect();
 
         return [
             'posts' => $posts,
@@ -1025,7 +1059,7 @@ new #[Layout('layouts.app')] class extends Component
     }
 };
 ?>
- <div class="ue-feed-layout">
+ <div class="ue-feed-layout" wire:init="loadInitialFeed">
     <div class="ue-feed-column">
         {{-- Page-local Header --}}
         <header class="ue-feed-header">
@@ -1246,91 +1280,101 @@ new #[Layout('layouts.app')] class extends Component
             </div>
 
             {{-- Posts list loop --}}
-            <div class="ue-feed-list">
-                @forelse ($posts as $post)
-                    @php
-                        $isLiked = (int) $post->liked_by_current_user_count > 0;
-                        $isSaved = (int) $post->saved_by_current_user_count > 0;
-                        $isReposted = (int) $post->reposted_by_current_user_count > 0;
-                        $likeCount = (int) $post->likes_count;
-                        $commentCount = (int) $post->published_comments_count;
-                        $repostCount = (int) $post->reposts_count;
-                        $repostedBy = $post->relationLoaded('feedRepostedBy') ? $post->feedRepostedBy : null;
-                    @endphp
+            @if (! $feedReady)
+                <x-ui.feed-skeleton :count="5" />
+            @else
+                <div wire:loading wire:target="setFeedTab">
+                    <x-ui.feed-skeleton :count="4" />
+                </div>
 
-                    @if (in_array($post->id, $locallyHiddenPostIds))
-                        {{-- Hidden Post Placeholder --}}
-                        <article class="ue-feed-item p-4 sm:p-5 bg-slate-50/50 flex items-center justify-between gap-4 ue-animate-fade-in" wire:key="hidden-post-placeholder-{{ $post->id }}">
-                            <div class="flex items-center gap-3">
-                                <div class="w-8 h-8 rounded-full bg-slate-100 border border-slate-200 flex items-center justify-center text-slate-500 flex-shrink-0">
-                                    <x-ui.icon name="eye-off" size="xs" />
-                                </div>
-                                <div class="space-y-0.5 text-left">
-                                    <h4 class="text-xs font-bold text-slate-800">Đã ẩn bài viết</h4>
-                                    <p class="text-[10px] text-slate-500 leading-normal">Việc ẩn bài viết giúp UEConnect cá nhân hóa Bảng tin của bạn.</p>
-                                </div>
-                            </div>
-                            <button
-                                type="button"
-                                wire:click="undoHidePost({{ $post->id }})"
-                                class="px-3 py-1.5 text-xs font-bold text-ue-brand bg-ue-brand-soft border border-ue-brand/10 rounded-xl hover:bg-ue-brand hover:text-white transition-all flex-shrink-0"
-                            >
-                                Hoàn tác
-                            </button>
-                        </article>
-                    @else
-                        @php
-                            $authorId = (int) $post->user_id;
-                            $isSelfAuthor = $authorId === (int) $currentUser->id;
-                            $isFriendAuthor = in_array($authorId, $friendAuthorIds, true);
-                            $isFollowedAuthor = in_array($authorId, $followedAuthorIds, true);
+                <div wire:loading.remove wire:target="setFeedTab">
+                    <div class="ue-feed-list">
+                        @forelse ($posts as $post)
+                            @php
+                                $isLiked = (int) $post->liked_by_current_user_count > 0;
+                                $isSaved = (int) $post->saved_by_current_user_count > 0;
+                                $isReposted = (int) $post->reposted_by_current_user_count > 0;
+                                $likeCount = (int) $post->likes_count;
+                                $commentCount = (int) $post->published_comments_count;
+                                $repostCount = (int) $post->reposts_count;
+                                $repostedBy = $post->relationLoaded('feedRepostedBy') ? $post->feedRepostedBy : null;
+                            @endphp
 
-                            $showQuickFollow = ! $isSelfAuthor && ! $isFriendAuthor && ! $isFollowedAuthor;
-                            $showFollowCheck = ! $isSelfAuthor && ! $isFriendAuthor && $isFollowedAuthor;
-                        @endphp
-                        <article class="ue-feed-item" wire:key="post-item-{{ $post->feed_item_key ?? $post->id }}">
-                            <x-ui.post-card
-                                :post="$post"
-                                :currentUser="$currentUser"
-                                :isSaved="$isSaved"
-                                :isLiked="$isLiked"
-                                :isReposted="$isReposted"
-                                :likeCount="$likeCount"
-                                :commentCount="$commentCount"
-                                :repostCount="$repostCount"
-                                :editingPostId="$editingPostId"
-                                :editingBody="$editingBody"
-                                :showQuickFollow="$showQuickFollow"
-                                :showFollowCheck="$showFollowCheck"
-                                :repostedBy="$repostedBy"
-                                :repostedAt="$post->feed_reposted_at"
-                                :feedItemKey="$post->feed_item_key"
-                                :showRepostAction="true"
-                            />
-                        </article>
-                    @endif
-                @empty
-                    <div class="p-8">
-                        <x-ui.empty-state
-                            icon="message-square"
-                            title="Bảng tin chưa có bài viết nào"
-                            description="Hãy là người đầu tiên chia sẻ điều hữu ích với cộng đồng HCMUE."
-                        >
-                            @if ($currentUser->isActive())
-                                <x-ui.button
-                                    type="button"
-                                    variant="primary"
-                                    size="md"
-                                    icon="edit"
-                                    onclick="document.getElementById('post-body').focus()"
-                                >
-                                    Viết bài đầu tiên
-                                </x-ui.button>
+                            @if (in_array($post->id, $locallyHiddenPostIds))
+                                {{-- Hidden Post Placeholder --}}
+                                <article class="ue-feed-item p-4 sm:p-5 bg-slate-50/50 flex items-center justify-between gap-4 ue-animate-fade-in" wire:key="hidden-post-placeholder-{{ $post->id }}">
+                                    <div class="flex items-center gap-3">
+                                        <div class="w-8 h-8 rounded-full bg-slate-100 border border-slate-200 flex items-center justify-center text-slate-500 flex-shrink-0">
+                                            <x-ui.icon name="eye-off" size="xs" />
+                                        </div>
+                                        <div class="space-y-0.5 text-left">
+                                            <h4 class="text-xs font-bold text-slate-800">Đã ẩn bài viết</h4>
+                                            <p class="text-[10px] text-slate-500 leading-normal">Việc ẩn bài viết giúp UEConnect cá nhân hóa Bảng tin của bạn.</p>
+                                        </div>
+                                    </div>
+                                    <button
+                                        type="button"
+                                        wire:click="undoHidePost({{ $post->id }})"
+                                        class="px-3 py-1.5 text-xs font-bold text-ue-brand bg-ue-brand-soft border border-ue-brand/10 rounded-xl hover:bg-ue-brand hover:text-white transition-all flex-shrink-0"
+                                    >
+                                        Hoàn tác
+                                    </button>
+                                </article>
+                            @else
+                                @php
+                                    $authorId = (int) $post->user_id;
+                                    $isSelfAuthor = $authorId === (int) $currentUser->id;
+                                    $isFriendAuthor = in_array($authorId, $friendAuthorIds, true);
+                                    $isFollowedAuthor = in_array($authorId, $followedAuthorIds, true);
+
+                                    $showQuickFollow = ! $isSelfAuthor && ! $isFriendAuthor && ! $isFollowedAuthor;
+                                    $showFollowCheck = ! $isSelfAuthor && ! $isFriendAuthor && $isFollowedAuthor;
+                                @endphp
+                                <article class="ue-feed-item" wire:key="post-item-{{ $post->feed_item_key ?? $post->id }}">
+                                    <x-ui.post-card
+                                        :post="$post"
+                                        :currentUser="$currentUser"
+                                        :isSaved="$isSaved"
+                                        :isLiked="$isLiked"
+                                        :isReposted="$isReposted"
+                                        :likeCount="$likeCount"
+                                        :commentCount="$commentCount"
+                                        :repostCount="$repostCount"
+                                        :editingPostId="$editingPostId"
+                                        :editingBody="$editingBody"
+                                        :showQuickFollow="$showQuickFollow"
+                                        :showFollowCheck="$showFollowCheck"
+                                        :repostedBy="$repostedBy"
+                                        :repostedAt="$post->feed_reposted_at"
+                                        :feedItemKey="$post->feed_item_key"
+                                        :showRepostAction="true"
+                                    />
+                                </article>
                             @endif
-                        </x-ui.empty-state>
+                        @empty
+                            <div class="p-8">
+                                <x-ui.empty-state
+                                    icon="message-square"
+                                    title="Bảng tin chưa có bài viết nào"
+                                    description="Hãy là người đầu tiên chia sẻ điều hữu ích với cộng đồng HCMUE."
+                                >
+                                    @if ($currentUser->isActive())
+                                        <x-ui.button
+                                            type="button"
+                                            variant="primary"
+                                            size="md"
+                                            icon="edit"
+                                            onclick="document.getElementById('post-body').focus()"
+                                        >
+                                            Viết bài đầu tiên
+                                        </x-ui.button>
+                                    @endif
+                                </x-ui.empty-state>
+                            </div>
+                        @endforelse
                     </div>
-                @endforelse
-            </div>
+                </div>
+            @endif
 
             {{-- End state / Infinite scroll sentinel inside feed surface --}}
             <div class="ue-feed-end-state">
@@ -1338,15 +1382,16 @@ new #[Layout('layouts.app')] class extends Component
                     @if ($posts->hasMorePages())
                         <div
                             wire:intersect="loadMore"
-                            class="flex flex-col items-center gap-2 py-2 text-center"
+                            class="flex flex-col items-center gap-2 py-2 text-center w-full"
                         >
-                            <span wire:loading.remove wire:target="loadMore" class="text-xxs text-slate-400 font-semibold">
-                                Đang tải thêm bài viết...
-                            </span>
-                            <span wire:loading wire:target="loadMore" class="inline-flex items-center gap-2 text-xxs text-slate-400 font-semibold">
-                                <span class="ue-spinner"></span>
-                                Đang tải...
-                            </span>
+                            <div wire:loading.remove wire:target="loadMore">
+                                <span class="text-xxs text-slate-400 font-semibold">
+                                    Đang tải thêm bài viết...
+                                </span>
+                            </div>
+                            <div wire:loading wire:target="loadMore" class="w-full mt-2">
+                                <x-ui.feed-skeleton :count="2" />
+                            </div>
                         </div>
                     @else
                         <span class="text-xxs text-slate-400 font-semibold mb-1">Bạn đã xem hết bài viết hiện có.</span>

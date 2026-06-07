@@ -101,7 +101,7 @@ class PostInteractionTest extends TestCase
             ->call('submitPost')
             ->assertHasNoErrors()
             ->assertSet('body', '')
-            ->assertSet('perPage', 10)
+            ->assertSet('perPage', 5)
             ->assertSet('feedbackMessage', 'Đăng bài viết thành công.');
 
         $this->assertDatabaseHas('posts', [
@@ -280,14 +280,15 @@ class PostInteractionTest extends TestCase
         $this->actingAs($this->user);
 
         Volt::test('pages.app.home-feed')
-            ->assertSet('perPage', 10)
+            ->assertSet('perPage', 5)
             ->assertSee('Feed load more post 1.')
-            ->assertSee('Feed load more post 10.')
-            ->assertDontSee('Feed load more post 11.')
+            ->assertSee('Feed load more post 5.')
+            ->assertDontSee('Feed load more post 6.')
             ->call('loadMore')
-            ->assertSet('perPage', 20)
-            ->assertSee('Feed load more post 11.')
-            ->assertSee('Feed load more post 12.');
+            ->assertSet('perPage', 10)
+            ->assertSee('Feed load more post 6.')
+            ->assertSee('Feed load more post 10.')
+            ->assertDontSee('Feed load more post 11.');
     }
 
     public function test_for_you_feed_prioritizes_friends_following_communities_then_recent_posts(): void

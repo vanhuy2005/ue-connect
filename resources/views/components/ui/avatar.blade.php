@@ -111,6 +111,7 @@ $palette = $palettes[$paletteIndex];
                 alt="{{ $alt }}"
                 class="w-full h-full object-cover"
                 loading="lazy"
+                decoding="async"
                 onerror="this.style.display='none'; this.nextElementSibling.classList.remove('hidden');"
             />
             <svg viewBox="0 0 100 100" class="w-full h-full text-current hidden" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">

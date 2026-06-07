@@ -196,6 +196,7 @@
                                         alt="Hình ảnh đính kèm"
                                         class="ue-media-image"
                                         loading="lazy"
+                                        decoding="async"
                                         @if($dimensions['width']) width="{{ $dimensions['width'] }}" @endif
                                         @if($dimensions['height']) height="{{ $dimensions['height'] }}" @endif
                                     />
@@ -212,6 +213,7 @@
                                             alt="Hình ảnh đính kèm" 
                                             class="w-full h-full object-cover hover:scale-[1.02] transition-transform duration-300 cursor-zoom-in"
                                             loading="lazy"
+                                            decoding="async"
                                             @if($dimensions['width']) width="{{ $dimensions['width'] }}" @endif
                                             @if($dimensions['height']) height="{{ $dimensions['height'] }}" @endif
                                         />
@@ -228,6 +230,7 @@
                                         alt="Hình ảnh" 
                                         class="w-full h-full object-cover hover:scale-[1.02] transition-transform duration-300 cursor-zoom-in"
                                         loading="lazy"
+                                        decoding="async"
                                         @if($dimensions['width']) width="{{ $dimensions['width'] }}" @endif
                                         @if($dimensions['height']) height="{{ $dimensions['height'] }}" @endif
                                     />
@@ -241,6 +244,7 @@
                                                 alt="Hình ảnh" 
                                                 class="w-full h-full object-cover hover:scale-[1.02] transition-transform duration-300 cursor-zoom-in"
                                                 loading="lazy"
+                                                decoding="async"
                                                 @if($dimensions['width']) width="{{ $dimensions['width'] }}" @endif
                                                 @if($dimensions['height']) height="{{ $dimensions['height'] }}" @endif
                                             />
@@ -259,6 +263,7 @@
                                             alt="Hình ảnh" 
                                             class="w-full h-full object-cover hover:scale-[1.02] transition-transform duration-300 cursor-zoom-in"
                                             loading="lazy"
+                                            decoding="async"
                                             @if($dimensions['width']) width="{{ $dimensions['width'] }}" @endif
                                             @if($dimensions['height']) height="{{ $dimensions['height'] }}" @endif
                                         />
@@ -276,6 +281,7 @@
                                     alt="Hình ảnh đính kèm"
                                     class="ue-media-image"
                                     loading="lazy"
+                                    decoding="async"
                                 />
                             </a>
                         </div>
