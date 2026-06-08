@@ -239,6 +239,11 @@ new #[Layout('layouts.app')] class extends Component
         });
 
         session()->flash('success', 'Thiết lập hồ sơ thành công!');
+
+        if (in_array($this->role_type, ['alumni']) && $this->willing_to_mentor) {
+            return $this->redirect(route('mentor.apply'), navigate: true);
+        }
+
         return $this->redirect(route('dashboard'), navigate: true);
     }
 }; ?>

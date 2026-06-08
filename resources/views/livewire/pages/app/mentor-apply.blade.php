@@ -84,6 +84,13 @@ new class extends Component {
                 $this->requested_role_context = old('requested_role_context', array_key_first($eligible));
             }
         }
+
+        // Pre-fill bio from completed profile
+        if ($profileRecord) {
+            if ($this->bio === '' && $profileRecord->bio) {
+                $this->bio = $profileRecord->bio;
+            }
+        }
     }
 
     public function updatedAvatarFile(): void
