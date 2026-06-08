@@ -133,6 +133,9 @@ new #[Layout('layouts.app')] class extends Component
         $this->validate([
             'evidence_files.*' => ['nullable', 'file', 'mimes:jpeg,png,pdf,webp', 'max:5120'],
             'evidence_notes.*' => ['nullable', 'string', 'max:500'],
+        ], [
+            'evidence_files.*.max' => 'Kích thước tệp tin không được vượt quá 5MB.',
+            'evidence_files.*.mimes' => 'Hệ thống chỉ chấp nhận tệp ảnh (JPEG, PNG, WEBP) hoặc tệp PDF.',
         ]);
 
         $privateDisk = config('media.private_disk', 'private');
@@ -330,7 +333,22 @@ new #[Layout('layouts.app')] class extends Component
                                             <x-ui.icon name="upload" size="md" class="text-ue-text-muted mb-1" />
                                             <label class="cursor-pointer bg-ue-brand-soft text-ue-brand px-2.5 py-1.5 rounded-lg text-xs font-semibold hover:bg-ue-brand-soft-hover transition-colors">
                                                 Chọn tệp
-                                                <input type="file" wire:model="evidence_files.{{ $i }}" class="hidden" accept="image/*,application/pdf" />
+                                                <input type="file" 
+                                                       wire:model="evidence_files.{{ $i }}" 
+                                                       class="hidden" 
+                                                       accept="image/*,application/pdf"
+                                                       x-on:change="
+                                                           if ($event.target.files.length > 0 && $event.target.files[0].size > 5120 * 1024) {
+                                                               $event.preventDefault();
+                                                               $event.target.value = '';
+                                                               window.dispatchEvent(new CustomEvent('ue:toast', {
+                                                                   detail: {
+                                                                       type: 'danger',
+                                                                       message: 'Kích thước tệp tin không được vượt quá 5MB.'
+                                                                   }
+                                                               }));
+                                                           }
+                                                       " />
                                             </label>
                                         @endif
                                     </div>

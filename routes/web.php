@@ -448,6 +448,24 @@ Route::middleware(['auth', 'active.account', 'verified.identity'])->group(functi
         return view('app.messages', ['activeConversation' => $conversation]);
     })->name('messages.index');
 
+    Route::post('app/presence/heartbeat', function () {
+        $user = Auth::user();
+        if (! $user) {
+            return response()->json(['status' => 'unauthenticated'], 401);
+        }
+
+        $cacheKey = 'user_last_seen_heartbeat_'.$user->id;
+        $now = now();
+
+        $lastSeenCached = cache($cacheKey);
+        if (! $lastSeenCached || $now->diffInSeconds($lastSeenCached) > 120) {
+            $user->update(['last_seen_at' => $now]);
+            cache([$cacheKey => $now], now()->addMinutes(5));
+        }
+
+        return response()->json(['status' => 'ok', 'last_seen_at' => $now->toIso8601String()]);
+    })->name('presence.heartbeat');
+
     // 4.1 Secure Media Delivery Routes
     Route::get('app/media/{media}/preview', [MediaController::class, 'preview'])
         ->name('media.preview');

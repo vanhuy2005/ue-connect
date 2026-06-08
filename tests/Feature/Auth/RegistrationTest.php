@@ -64,12 +64,12 @@ class RegistrationTest extends TestCase
         $this->assertAuthenticated();
     }
 
-    public function test_teacher_registration_rejects_root_hcmue_domain(): void
+    public function test_teacher_registration_rejects_student_domain(): void
     {
         $component = Volt::test('pages.auth.register')
             ->set('identity_type', 'teacher_advisor')
             ->set('name', 'Test Staff')
-            ->set('email', 'teacher@hcmue.edu.vn')
+            ->set('email', 'teacher@student.hcmue.edu.vn')
             ->set('password', 'password')
             ->set('password_confirmation', 'password');
 

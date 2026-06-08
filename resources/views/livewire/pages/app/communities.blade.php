@@ -927,7 +927,7 @@ new class extends Component
 
     {{-- 1. Create/Suggest Community Modal with Live Preview --}}
     @if ($showSuggestModal)
-        <div class="fixed inset-0 bg-slate-900/60 backdrop-blur-xs z-50 flex items-center justify-center p-4 overflow-y-auto">
+        <div wire:key="suggest-community-modal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-xs z-50 flex items-center justify-center p-4 overflow-y-auto">
             <div class="bg-white rounded-3xl shadow-2xl w-full max-w-4xl p-6 md:p-8 flex flex-col md:flex-row gap-6 my-8 max-h-[90vh] overflow-y-auto" x-data="{ step: 1 }">
                 
                 {{-- Form Columns --}}
@@ -937,11 +937,22 @@ new class extends Component
                         <p class="text-xs text-slate-500">{{ $editingSuggestionId ? 'Bổ sung thông tin và gửi lại đề xuất cho Quản trị viên.' : 'Mẫu đề xuất sẽ được chuyển trực tiếp cho Quản trị viên xét duyệt thành lập.' }}</p>
                     </div>
 
+                    @if ($errors->any())
+                        <div class="p-3 bg-red-50 text-red-800 text-xs rounded-xl border border-red-200">
+                            <div class="font-bold mb-1">Vui lòng kiểm tra lại thông tin:</div>
+                            <ul class="list-disc pl-4 space-y-0.5">
+                                @foreach ($errors->all() as $error)
+                                    <li>{{ $error }}</li>
+                                @endforeach
+                            </ul>
+                        </div>
+                    @endif
+
                     <div class="space-y-3">
                         {{-- Name --}}
                         <div>
                             <label class="block text-xs font-bold text-slate-600 uppercase tracking-wide mb-1">Tên cộng đồng <span class="text-red-500">*</span></label>
-                            <input type="text" wire:model.live="suggestName" maxlength="160"
+                            <input type="text" wire:model.live.debounce.500ms="suggestName" maxlength="160"
                                 class="w-full px-3 py-2 border rounded-xl text-xs transition focus:outline-none focus:ring-2 focus:ring-ue-brand border-slate-200" placeholder="VD: CLB Lập trình UEConnect">
                             @error('suggestName') <p class="text-red-500 text-[10px] mt-1 font-semibold">{{ $message }}</p> @enderror
                         </div>
@@ -949,7 +960,7 @@ new class extends Component
                         <div class="grid grid-cols-2 gap-3">
                             {{-- Type --}}
                             <div>
-                                <label class="block text-xs font-bold text-slate-650 uppercase tracking-wide mb-1">Phân loại <span class="text-red-500">*</span></label>
+                                <label class="block text-xs font-bold text-slate-655 uppercase tracking-wide mb-1">Phân loại <span class="text-red-500">*</span></label>
                                 <select wire:model.live="suggestType" class="w-full px-3 py-2 border rounded-xl text-xs transition focus:outline-none focus:ring-2 focus:ring-ue-brand border-slate-200">
                                     @foreach ($this->suggestibleTypes as $type)
                                         <option value="{{ $type->value }}">{{ $type->label() }}</option>
@@ -982,7 +993,7 @@ new class extends Component
                             {{-- Faculty --}}
                             <div>
                                 <label class="block text-xs font-bold text-slate-650 uppercase tracking-wide mb-1">Khoa quản lý/phụ trách</label>
-                                <input type="text" wire:model.live="suggestRelatedFaculty" maxlength="160"
+                                <input type="text" wire:model.live.debounce.500ms="suggestRelatedFaculty" maxlength="160"
                                     class="w-full px-3 py-2 border rounded-xl text-xs transition focus:outline-none focus:ring-2 focus:ring-ue-brand border-slate-200" placeholder="VD: Khoa Công nghệ thông tin">
                             </div>
                         </div>
@@ -990,7 +1001,7 @@ new class extends Component
                         {{-- Target Members --}}
                         <div>
                             <label class="block text-xs font-bold text-slate-650 uppercase tracking-wide mb-1">Đối tượng hướng tới <span class="text-red-500">*</span></label>
-                            <input type="text" wire:model.live="suggestTargetMembers" maxlength="500"
+                            <input type="text" wire:model.live.debounce.500ms="suggestTargetMembers" maxlength="500"
                                 class="w-full px-3 py-2 border rounded-xl text-xs transition focus:outline-none focus:ring-2 focus:ring-ue-brand border-slate-200" placeholder="VD: Sinh viên CNTT, K45-K48...">
                             @error('suggestTargetMembers') <p class="text-red-500 text-[10px] mt-1 font-semibold">{{ $message }}</p> @enderror
                         </div>
@@ -998,7 +1009,7 @@ new class extends Component
                         {{-- Purpose / Description --}}
                         <div>
                             <label class="block text-xs font-bold text-slate-650 uppercase tracking-wide mb-1">Mục đích hoạt động <span class="text-red-500">*</span></label>
-                            <textarea wire:model.live="suggestPurpose" rows="3" maxlength="2000"
+                            <textarea wire:model.live.debounce.500ms="suggestPurpose" rows="3" maxlength="2000"
                                 class="w-full px-3 py-2 border rounded-xl text-xs transition focus:outline-none focus:ring-2 focus:ring-ue-brand border-slate-200 resize-none" placeholder="Mô tả lý do lập nhóm và nội dung hoạt động cốt lõi..."></textarea>
                             <div class="flex justify-between text-[10px] text-slate-400 mt-1">
                                 <span>Cung cấp tối thiểu 20 ký tự</span>
@@ -1010,7 +1021,7 @@ new class extends Component
                         {{-- Rules --}}
                         <div>
                             <label class="block text-xs font-bold text-slate-650 uppercase tracking-wide mb-1">Nội quy sơ bộ</label>
-                            <textarea wire:model.live="suggestRules" rows="2" maxlength="5000"
+                            <textarea wire:model.live.debounce.500ms="suggestRules" rows="2" maxlength="5000"
                                 class="w-full px-3 py-2 border rounded-xl text-xs transition focus:outline-none focus:ring-2 focus:ring-ue-brand border-slate-200 resize-none" placeholder="Các quy tắc tôn trọng và xây dựng cộng đồng học thuật..."></textarea>
                         </div>
                     </div>

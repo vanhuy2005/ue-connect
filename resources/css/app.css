@@ -751,7 +751,16 @@
         position: sticky;
         top: 0;
         height: 100dvh;
-        overflow-y: auto;
+        z-index: 40;
+        transition: width 250ms cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    .ue-shell__sidebar--collapsed {
+        width: var(--layout-sidebar-w-collapsed) !important;
+    }
+
+    .ue-shell__sidebar--expanded {
+        width: var(--layout-sidebar-w) !important;
     }
 
     .ue-shell__main {
@@ -796,7 +805,7 @@
         display: flex;
         align-items: center;
         gap: 0.875rem;
-        padding: 0.625rem 0.75rem;
+        padding: 0.625rem 0.875rem;
         border-radius: 0.625rem;
         font-size: var(--text-base);
         font-weight: var(--font-medium);
@@ -1843,11 +1852,8 @@
     width: var(--layout-sidebar-w-collapsed) !important;
 }
 
-/* Center logo, icons, and menu button inside collapsed sidebar */
+/* Keep icons aligned and fixed in position inside collapsed sidebar */
 .ue-shell__sidebar--collapsed .ue-nav-link {
-    justify-content: center;
-    padding-left: 0;
-    padding-right: 0;
     gap: 0;
 }
 
@@ -1899,4 +1905,117 @@
 .ue-shell--social main {
     background-color: #ffffff !important;
 }
+
+/* =============================================================================
+   Sidebar Fixed / Overlay Layout Stability on Desktop
+   ============================================================================= */
+@media (min-width: 1024px) {
+    .ue-shell--social .ue-shell__sidebar,
+    .ue-shell--conversation .ue-shell__sidebar {
+        position: fixed !important;
+        left: 0 !important;
+        top: 0 !important;
+        bottom: 0 !important;
+        height: 100vh !important;
+        z-index: 50 !important;
+    }
+
+    .ue-shell--social .ue-shell__main,
+    .ue-shell--conversation .ue-shell__main {
+        margin-left: var(--layout-sidebar-w-collapsed) !important;
+        width: calc(100% - var(--layout-sidebar-w-collapsed)) !important;
+        flex: 1 !important;
+    }
+
+    .ue-shell--admin .ue-shell__sidebar {
+        position: fixed !important;
+        left: 0 !important;
+        top: 0 !important;
+        bottom: 0 !important;
+        height: 100vh !important;
+        z-index: 50 !important;
+    }
+
+    .ue-shell--admin .ue-shell__main {
+        margin-left: var(--layout-sidebar-w) !important;
+        width: calc(100% - var(--layout-sidebar-w)) !important;
+        flex: 1 !important;
+    }
+}
+
+/* =============================================================================
+   Uncropped Premium Media Viewport Enhancements
+   ============================================================================= */
+.ue-media-frame {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    background-color: var(--neutral-50);
+    border: 1px solid var(--ue-border);
+    border-radius: var(--radius-xl);
+    overflow: hidden;
+    max-height: 450px;
+    width: 100%;
+}
+
+.ue-media-image {
+    max-width: 100%;
+    max-height: 450px;
+    height: auto;
+    width: auto;
+    display: block;
+    margin: 0 auto;
+    object-fit: contain;
+    transition: transform var(--duration-md) var(--ease-out);
+}
+
+.ue-media-image:hover {
+    transform: scale(1.01);
+}
+
+.ue-media-image--contain {
+    object-fit: contain;
+}
+
+.ue-message-attachment-media {
+    max-width: 100%;
+    max-height: 320px;
+    height: auto;
+    width: auto;
+    object-fit: contain;
+    display: block;
+    margin: 0 auto;
+}
+
+/* =============================================================================
+   Instagram-Style Slide-Out Notification Panel
+   ============================================================================= */
+.ue-notifications-panel {
+    position: fixed;
+    top: 0;
+    left: var(--layout-sidebar-w-collapsed);
+    width: 390px;
+    height: 100vh;
+    background-color: #ffffff;
+    border-right: 1px solid var(--ue-border);
+    z-index: 45;
+    box-shadow: var(--shadow-md);
+    transform: translateX(-100%);
+    opacity: 0;
+    pointer-events: none;
+    transition: transform 250ms cubic-bezier(0.2, 0, 0, 1), opacity 250ms cubic-bezier(0.2, 0, 0, 1);
+}
+
+.ue-notifications-panel.open {
+    transform: translateX(0);
+    opacity: 1;
+    pointer-events: auto;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .ue-notifications-panel {
+        transition: none !important;
+    }
+}
+
 

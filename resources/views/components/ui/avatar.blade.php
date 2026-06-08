@@ -27,11 +27,10 @@
 @php
 $displayName = '';
 if ($user) {
-    $profile = $user->profile;
-    $avatarMedia = $profile?->avatar()->first();
-    if ($avatarMedia) {
-        $src = app(\App\Actions\Media\GenerateMediaUrlAction::class)->execute($avatarMedia, 'thumb', auth()->user());
+    if (! $src) {
+        $src = \App\Support\Media\MediaUrlResolver::avatarUrl($user, 'thumb');
     }
+    $profile = $user->profile;
     $displayName = $profile?->display_name ?? $user->name ?? '';
     if (! $fallback) {
         // Build up to 2 initials from the name
@@ -49,6 +48,21 @@ if ($user) {
         $alt = $fallback ? "Ảnh đại diện của {$fallback}" : 'Ảnh đại diện';
     }
 }
+
+$isOnline = false;
+if ($user && auth()->check()) {
+    $isOnline = auth()->user()->canSeePresenceOf($user) && $user->isOnline();
+}
+
+$dotSizeClasses = match($size) {
+    'xs'  => 'h-1.5 w-1.5 ring-1',
+    'sm'  => 'h-2 w-2 ring-1.5',
+    'md'  => 'h-2.5 w-2.5 ring-2',
+    'lg'  => 'h-3 w-3 ring-2',
+    'xl'  => 'h-4 w-4 ring-2',
+    '2xl' => 'h-5 w-5 ring-2.5',
+    default => 'h-2.5 w-2.5 ring-2',
+};
 
 $sizeClasses = match($size) {
     'xs'  => 'w-6 h-6 text-2xs',
@@ -80,30 +94,44 @@ $palette = $palettes[$paletteIndex];
 @endphp
 
 
-<span
-    {{ $attributes->class([
-        'inline-flex items-center justify-center flex-shrink-0 overflow-hidden',
-        'bg-ue-brand-soft border border-ue-border',
-        $sizeClasses,
-        $shapeClass,
-    ]) }}
-    role="img"
-    aria-label="{{ $alt ?: 'Ảnh đại diện' }}"
->
-    @if($src)
-        <img
-            src="{{ $src }}"
-            alt="{{ $alt }}"
-            class="w-full h-full object-cover"
-            loading="lazy"
-        />
-    @else
-        <svg viewBox="0 0 100 100" class="w-full h-full text-current" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
-            <rect width="100" height="100" fill="{{ $palette['bg'] }}"/>
-            <!-- Head (rounder vertical oval) -->
-            <ellipse cx="50" cy="38" rx="19" ry="21" fill="{{ $palette['fg'] }}"/>
-            <!-- Body (curved shoulders reaching bottom) -->
-            <path d="M8 105 C8 76 25 63 50 63 C75 63 92 76 92 105 Z" fill="{{ $palette['fg'] }}"/>
-        </svg>
+<div class="relative inline-flex flex-shrink-0 self-start">
+    <span
+        {{ $attributes->class([
+            'inline-flex items-center justify-center flex-shrink-0 overflow-hidden',
+            'bg-ue-brand-soft border border-ue-border',
+            $sizeClasses,
+            $shapeClass,
+        ]) }}
+        role="img"
+        aria-label="{{ $alt ?: 'Ảnh đại diện' }}"
+    >
+        @if($src)
+            <img
+                src="{{ $src }}"
+                alt="{{ $alt }}"
+                class="w-full h-full object-cover"
+                loading="lazy"
+                decoding="async"
+                onerror="this.style.display='none'; this.nextElementSibling.classList.remove('hidden');"
+            />
+            <svg viewBox="0 0 100 100" class="w-full h-full text-current hidden" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+                <rect width="100" height="100" fill="{{ $palette['bg'] }}"/>
+                <!-- Head (rounder vertical oval) -->
+                <ellipse cx="50" cy="38" rx="19" ry="21" fill="{{ $palette['fg'] }}"/>
+                <!-- Body (curved shoulders reaching bottom) -->
+                <path d="M8 105 C8 76 25 63 50 63 C75 63 92 76 92 105 Z" fill="{{ $palette['fg'] }}"/>
+            </svg>
+        @else
+            <svg viewBox="0 0 100 100" class="w-full h-full text-current" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+                <rect width="100" height="100" fill="{{ $palette['bg'] }}"/>
+                <!-- Head (rounder vertical oval) -->
+                <ellipse cx="50" cy="38" rx="19" ry="21" fill="{{ $palette['fg'] }}"/>
+                <!-- Body (curved shoulders reaching bottom) -->
+                <path d="M8 105 C8 76 25 63 50 63 C75 63 92 76 92 105 Z" fill="{{ $palette['fg'] }}"/>
+            </svg>
+        @endif
+    </span>
+    @if ($isOnline)
+        <span class="absolute bottom-0 right-0 block rounded-full bg-green-500 ring-white {{ $dotSizeClasses }}" aria-label="Online"></span>
     @endif
-</span>
+</div>

@@ -19,7 +19,7 @@ use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Spatie\Permission\Traits\HasRoles;
 
-#[Fillable(['name', 'email', 'password', 'account_status', 'account_status_reason', 'account_restricted_until', 'last_login_at', 'last_seen_at', 'intended_identity_type'])]
+#[Fillable(['name', 'email', 'password', 'account_status', 'account_status_reason', 'account_restricted_until', 'last_login_at', 'intended_identity_type', 'last_seen_at', 'show_activity_status'])]
 #[Hidden(['password', 'remember_token'])]
 /**
  * App\Models\User
@@ -46,6 +46,10 @@ class User extends Authenticatable implements MustVerifyEmail
             'account_restricted_until' => 'datetime',
             'last_login_at' => 'datetime',
             'last_seen_at' => 'datetime',
+<<<<<<< HEAD
+=======
+            'show_activity_status' => 'boolean',
+>>>>>>> cb631b47c033676f3c651a480c81b3751f9e2c96
         ];
     }
 
@@ -88,6 +92,53 @@ class User extends Authenticatable implements MustVerifyEmail
     {
         return $this->account_status === AccountStatus::ACTIVE
             || $this->account_status === AccountStatus::PROFILE_INCOMPLETE;
+    }
+
+    /**
+     * Check if this user is allowed to see the presence/activity status of the target user.
+     */
+    public function canSeePresenceOf(User $targetUser): bool
+    {
+        if ($this->id === $targetUser->id) {
+            return true;
+        }
+
+        if (! $this->show_activity_status || ! $targetUser->show_activity_status) {
+            return false;
+        }
+
+        $userOneId = min($this->id, $targetUser->id);
+        $userTwoId = max($this->id, $targetUser->id);
+        $areFriends = Connection::where('user_one_id', $userOneId)
+            ->where('user_two_id', $userTwoId)
+            ->where('status', ConnectionStatus::ACTIVE)
+            ->exists();
+
+        if ($areFriends) {
+            return true;
+        }
+
+        $shareConversation = Conversation::whereHas('participants', function ($q) {
+            $q->where('user_id', $this->id);
+        })
+            ->whereHas('participants', function ($q) use ($targetUser) {
+                $q->where('user_id', $targetUser->id);
+            })
+            ->exists();
+
+        if ($shareConversation) {
+            return true;
+        }
+
+        return false;
+    }
+
+    /**
+     * Check if this user is currently online.
+     */
+    public function isOnline(): bool
+    {
+        return $this->last_seen_at && $this->last_seen_at->gt(now()->subMinutes(5));
     }
 
     /**

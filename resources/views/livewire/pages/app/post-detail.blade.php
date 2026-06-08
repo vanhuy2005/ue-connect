@@ -824,12 +824,12 @@ new #[Layout('layouts.app')] class extends Component
                                     <div class="mt-3 max-w-lg select-none">
                                         @if ($mediaCount === 1)
                                             {{-- 1 image: full width, smart ratio --}}
-                                            <div class="overflow-hidden rounded-2xl border border-slate-150 bg-slate-50">
-                                                <a href="{{ $mediaUrlAction->execute($mediaItems[0], 'detail', $currentUser) ?? $mediaUrlAction->execute($mediaItems[0], 'original', $currentUser) }}" target="_blank" rel="noopener noreferrer" class="block">
+                                            <div class="ue-media-frame">
+                                                <a href="{{ $mediaUrlAction->execute($mediaItems[0], 'detail', $currentUser) ?? $mediaUrlAction->execute($mediaItems[0], 'original', $currentUser) }}" target="_blank" rel="noopener noreferrer" class="block w-full h-full">
                                                     <img
                                                         src="{{ $mediaUrlAction->execute($mediaItems[0], 'feed', $currentUser) }}"
                                                         alt="Hình ảnh đính kèm"
-                                                        class="w-full h-auto object-cover max-h-[360px] hover:scale-[1.01] transition-transform duration-300 cursor-zoom-in"
+                                                        class="ue-media-image"
                                                         loading="lazy"
                                                     />
                                                 </a>
@@ -889,10 +889,12 @@ new #[Layout('layouts.app')] class extends Component
                                         @endif
                                     </div>
                                 @elseif ($post->media_url)
-                                    <div class="mt-3 rounded-xl overflow-hidden border border-slate-150 max-h-60 bg-slate-50 flex items-center justify-center">
-                                        <a href="{{ $post->media_url }}" target="_blank" rel="noopener noreferrer" class="block w-full">
-                                            <img src="{{ $post->media_url }}" alt="Media post" class="object-contain max-h-60 mx-auto cursor-zoom-in" />
-                                        </a>
+                                    <div class="mt-3 max-w-lg select-none">
+                                        <div class="ue-media-frame">
+                                            <a href="{{ $post->media_url }}" target="_blank" rel="noopener noreferrer" class="block w-full h-full">
+                                                <img src="{{ $post->media_url }}" alt="Media post" class="ue-media-image" />
+                                            </a>
+                                        </div>
                                     </div>
                                 @endif
 

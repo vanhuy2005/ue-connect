@@ -28,7 +28,7 @@ class CloudinaryMediaDeliveryProvider implements MediaStorageProvider
 
     public function __construct()
     {
-        $this->cloudName = config('media.providers.cloudinary.cloud_name', '');
+        $this->cloudName = (string) (config('media.providers.cloudinary.cloud_name') ?? '');
         $this->apiKey = config('media.providers.cloudinary.api_key');
         $this->apiSecret = config('media.providers.cloudinary.api_secret');
         $this->secure = (bool) config('media.providers.cloudinary.secure', true);
