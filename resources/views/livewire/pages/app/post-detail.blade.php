@@ -587,18 +587,45 @@ new #[Layout('layouts.app')] class extends Component
 
         $currentUserId = Auth::id();
 
+        $driver = \Illuminate\Support\Facades\DB::connection()->getDriverName();
+
         // Get matching users
-        $users = User::where(function ($query) use ($search) {
-                $query->where('name', 'like', "%{$search}%")
-                    ->orWhereHas('profile', function ($q) use ($search) {
-                        $q->where('display_name', 'like', "%{$search}%");
-                    });
+        $users = User::where(function ($query) use ($search, $driver) {
+                if ($driver === 'sqlsrv') {
+                    $query->whereRaw("name COLLATE Latin1_General_CI_AI LIKE ?", ["%{$search}%"])
+                        ->orWhereHas('profile', function ($q) use ($search) {
+                            $q->whereRaw("display_name COLLATE Latin1_General_CI_AI LIKE ?", ["%{$search}%"]);
+                        });
+                } else {
+                    $query->where('name', 'like', "%{$search}%")
+                        ->orWhereHas('profile', function ($q) use ($search) {
+                            $q->where('display_name', 'like', "%{$search}%");
+                        });
+                }
             })
             ->with(['profile', 'profilePrivacySetting'])
             ->get();
 
-        // Filter based on their privacy preferences
+        // Filter based on their privacy preferences and connection status
         $filteredUsers = $users->filter(function ($targetUser) use ($currentUserId) {
+            if ($targetUser->id === $currentUserId) {
+                return true;
+            }
+
+            // Must be friends (active connection)
+            $userOneId = min($currentUserId, $targetUser->id);
+            $userTwoId = max($currentUserId, $targetUser->id);
+
+            $isFriend = Connection::where('user_one_id', $userOneId)
+                ->where('user_two_id', $userTwoId)
+                ->where('status', ConnectionStatus::ACTIVE)
+                ->exists();
+
+            if (! $isFriend) {
+                return false;
+            }
+
+            // Respect the target user's privacy preference
             $privacy = $targetUser->profilePrivacySetting;
             $preference = $privacy ? $privacy->mentions_preference : 'everyone';
 
@@ -606,26 +633,10 @@ new #[Layout('layouts.app')] class extends Component
                 return false;
             }
 
-            if ($targetUser->id === $currentUserId) {
-                return true;
-            }
-
-            if ($preference === 'connections') {
-                return Connection::where('status', ConnectionStatus::ACTIVE)
-                    ->where(function ($q) use ($currentUserId, $targetUser) {
-                        $q->where(function ($q1) use ($currentUserId, $targetUser) {
-                            $q1->where('user_one_id', $currentUserId)->where('user_two_id', $targetUser->id);
-                        })->orWhere(function ($q2) use ($currentUserId, $targetUser) {
-                            $q2->where('user_one_id', $targetUser->id)->where('user_two_id', $currentUserId);
-                        });
-                    })
-                    ->exists();
-            }
-
             return true;
         });
 
-        return $filteredUsers->take(5)
+        $results = $filteredUsers->take(5)
             ->map(fn($u) => [
                 'id' => $u->id,
                 'name' => $u->name,
@@ -633,6 +644,8 @@ new #[Layout('layouts.app')] class extends Component
                 'avatar_url' => $u->profile?->avatar_url ?? null,
             ])
             ->toArray();
+
+        return $results;
     }
 };
 ?>
@@ -975,7 +988,7 @@ new #[Layout('layouts.app')] class extends Component
 
                                 if (lastAt !== -1 && (lastAt === 0 || /\s/.test(textBeforeCursor[lastAt - 1]))) {
                                     const query = textBeforeCursor.slice(lastAt + 1);
-                                    if (!/\s/.test(query)) {
+                                    if (query.length > 0 && query.length <= 50 && !/\s{2,}/.test(query) && !/^\s/.test(query)) {
                                         this.searchQuery = query;
                                         this.$wire.searchMentionUsers(query).then(results => {
                                             this.suggestions = results;

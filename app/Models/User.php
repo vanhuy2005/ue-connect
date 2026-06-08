@@ -46,10 +46,7 @@ class User extends Authenticatable implements MustVerifyEmail
             'account_restricted_until' => 'datetime',
             'last_login_at' => 'datetime',
             'last_seen_at' => 'datetime',
-<<<<<<< HEAD
-=======
             'show_activity_status' => 'boolean',
->>>>>>> cb631b47c033676f3c651a480c81b3751f9e2c96
         ];
     }
 
@@ -394,14 +391,6 @@ class User extends Authenticatable implements MustVerifyEmail
     public function communityJoinRequests(): HasMany
     {
         return $this->hasMany(CommunityJoinRequest::class);
-    }
-
-    /**
-     * Check if user is online based on last seen timestamp (within 5 minutes).
-     */
-    public function isOnline(): bool
-    {
-        return $this->last_seen_at && $this->last_seen_at->gt(now()->subMinutes(5));
     }
 
     /**

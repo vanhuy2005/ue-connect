@@ -119,7 +119,13 @@ class AppServiceProvider extends ServiceProvider
         }
 
         DatabaseNotification::created(function (DatabaseNotification $notification) {
-            UserNotificationCreated::dispatch($notification);
+            try {
+                UserNotificationCreated::dispatch($notification);
+            } catch (\Exception $e) {
+                \Log::warning('Real-time notification broadcasting failed: '.$e->getMessage(), [
+                    'notification_id' => $notification->id,
+                ]);
+            }
         });
     }
 }
