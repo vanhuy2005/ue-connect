@@ -24,6 +24,7 @@ class ValidateMediaUploadAction
             'message_attachment',
             'verification_evidence',
             'report_evidence',
+            'mentor_evidence',
         ];
 
         if (! in_array($collection, $allowedCollections, true)) {

@@ -103,4 +103,31 @@ class Media extends Model
     {
         return $this->visibility === 'private';
     }
+
+    /**
+     * Get the storage provider name.
+     * Maps primary_provider to provider for compatibility with MediaVariant.
+     */
+    public function getProviderAttribute(): ?string
+    {
+        return $this->primary_provider;
+    }
+
+    /**
+     * Get the storage disk name.
+     * Maps primary_disk to disk for compatibility with MediaVariant.
+     */
+    public function getDiskAttribute(): ?string
+    {
+        return $this->primary_disk;
+    }
+
+    /**
+     * Get the storage path.
+     * Maps primary_path to path for compatibility with MediaVariant.
+     */
+    public function getPathAttribute(): ?string
+    {
+        return $this->primary_path;
+    }
 }

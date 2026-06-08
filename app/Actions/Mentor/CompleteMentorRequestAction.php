@@ -2,6 +2,7 @@
 
 namespace App\Actions\Mentor;
 
+use App\Enums\ConversationStatus;
 use App\Enums\MentorRequestStatus;
 use App\Models\MentorRequest;
 use App\Models\User;
@@ -25,11 +26,16 @@ class CompleteMentorRequestAction
             'completed_at' => now(),
         ]);
 
+        // Archive the conversation so neither party can send new messages
+        if ($mentorRequest->conversation_id) {
+            $mentorRequest->conversation->update([
+                'status' => ConversationStatus::ARCHIVED,
+            ]);
+        }
+
         // Notify both participants
         $mentorRequest->student->notify(new MentorRequestCompletedNotification($mentorRequest));
         $mentorRequest->mentor->notify(new MentorRequestCompletedNotification($mentorRequest));
-
-        // TODO: emit mentor_request_completed analytics event
 
         return $mentorRequest->fresh();
     }
