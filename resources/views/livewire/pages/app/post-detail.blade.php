@@ -7,6 +7,7 @@ use App\Actions\Posts\TogglePostLike;
 use App\Actions\Posts\TogglePostSave;
 use App\Actions\Posts\DeletePost;
 use App\Actions\Posts\UpdatePost;
+use App\Actions\Posts\TogglePostRepost;
 use App\Actions\Reports\CreateReport;
 use App\Actions\Messaging\SendSharedPostMessage;
 use App\Actions\Messaging\FindOrCreateDirectConversation;
@@ -77,7 +78,7 @@ new #[Layout('layouts.app')] class extends Component
     public function mount(Post $post): void
     {
         Gate::authorize('view', $post);
-        $this->post = $post->loadMissing(['user.profile', 'likes', 'saves', 'media.variants']);
+        $this->post = $post->loadMissing(['user.profile', 'likes', 'saves', 'media.variants', 'reposts']);
     }
 
     /**
@@ -135,6 +136,24 @@ new #[Layout('layouts.app')] class extends Component
             $post = Post::findOrFail($postId);
             $togglePostSave->execute(Auth::user(), $post);
             $this->feedbackMessage = 'Đã cập nhật lưu bài viết.';
+        } catch (\Illuminate\Auth\Access\AuthorizationException $e) {
+            $this->feedbackMessage = $e->getMessage();
+        }
+    }
+
+    /**
+     * Toggle post repost from detail.
+     */
+    public function togglePostRepost(int $postId, TogglePostRepost $togglePostRepost): void
+    {
+        try {
+            $post = Post::findOrFail($postId);
+            $isReposted = $togglePostRepost->execute(Auth::user(), $post);
+            
+            // Reload post relations to update the UI
+            $this->post->load('reposts');
+            
+            $this->feedbackMessage = $isReposted ? 'Đã đăng lại bài viết.' : 'Đã hủy đăng lại bài viết.';
         } catch (\Illuminate\Auth\Access\AuthorizationException $e) {
             $this->feedbackMessage = $e->getMessage();
         }
@@ -692,6 +711,9 @@ new #[Layout('layouts.app')] class extends Component
                     ? $post->media->where('status', 'ready')->values()
                     : $post->media()->where('status', 'ready')->with('variants')->get();
                 $mediaCount = $mediaItems->count();
+                $commentCount = $post->comments()->whereIn('status', [\App\Enums\CommentStatus::PUBLISHED, \App\Enums\CommentStatus::EDITED])->count();
+                $repostCount = $post->reposts->count();
+                $isReposted = $post->reposts->where('user_id', $currentUser->id)->isNotEmpty();
             @endphp
 
             <div class="ue-feed-surface">
@@ -710,7 +732,7 @@ new #[Layout('layouts.app')] class extends Component
                             <div class="ue-post-card__header">
                                 <div>
                                     <div class="flex items-center gap-1.5">
-                                        <a href="{{ $authorProfileUrl }}" class="text-sm font-bold text-slate-800 leading-tight hover:text-ue-brand hover:underline">
+                                        <a href="{{ $authorProfileUrl }}" class="text-[15px] font-bold text-slate-800 leading-tight hover:text-ue-brand hover:underline">
                                             {{ $author->name }}
                                         </a>
                                         <x-ui.icon name="check-circle" size="xs" class="text-ue-brand flex-shrink-0" />
@@ -719,7 +741,7 @@ new #[Layout('layouts.app')] class extends Component
                                         </span>
                                     </div>
                                     @if ($profile)
-                                        <div class="text-[10px] text-slate-400 font-medium mt-0.5 leading-none">
+                                        <div class="text-xs text-slate-400 font-medium mt-1 leading-none">
                                             {{ Str::ucfirst($profile->role_type) }}
                                             @if ($profile->faculty)
                                                 · {{ $profile->faculty }}
@@ -832,15 +854,15 @@ new #[Layout('layouts.app')] class extends Component
                                     </div>
                                 </div>
                             @else
-                                <div class="ue-post-card__content mt-2 text-slate-800 text-sm sm:text-base whitespace-pre-wrap leading-relaxed">{{ $post->body }}</div>
+                                <div class="ue-post-card__content mt-3 text-slate-800 text-base sm:text-lg whitespace-pre-wrap leading-relaxed">{{ $post->body }}</div>
                                 
                                 {{-- Polymorphic Media Grid --}}
                                 @if ($mediaCount > 0)
-                                    <div class="mt-3 max-w-lg select-none">
+                                    <div class="mt-3 w-full max-w-lg select-none mr-auto">
                                         @if ($mediaCount === 1)
                                             {{-- 1 image: full width, smart ratio --}}
                                             <div class="ue-media-frame">
-                                                <a href="{{ $mediaUrlAction->execute($mediaItems[0], 'detail', $currentUser) ?? $mediaUrlAction->execute($mediaItems[0], 'original', $currentUser) }}" target="_blank" rel="noopener noreferrer" class="block w-full h-full">
+                                                <a href="{{ $mediaUrlAction->execute($mediaItems[0], 'detail', $currentUser) ?? $mediaUrlAction->execute($mediaItems[0], 'original', $currentUser) }}" target="_blank" rel="noopener noreferrer" class="block">
                                                     <img
                                                         src="{{ $mediaUrlAction->execute($mediaItems[0], 'feed', $currentUser) }}"
                                                         alt="Hình ảnh đính kèm"
@@ -904,9 +926,9 @@ new #[Layout('layouts.app')] class extends Component
                                         @endif
                                     </div>
                                 @elseif ($post->media_url)
-                                    <div class="mt-3 max-w-lg select-none">
+                                    <div class="mt-3 w-full max-w-lg select-none mr-auto">
                                         <div class="ue-media-frame">
-                                            <a href="{{ $post->media_url }}" target="_blank" rel="noopener noreferrer" class="block w-full h-full">
+                                            <a href="{{ $post->media_url }}" target="_blank" rel="noopener noreferrer" class="block">
                                                 <img src="{{ $post->media_url }}" alt="Media post" class="ue-media-image" />
                                             </a>
                                         </div>
@@ -935,10 +957,28 @@ new #[Layout('layouts.app')] class extends Component
                                 />
 
                                 {{-- Comments Link --}}
-                                <span class="ue-action-button flex items-center gap-1.5 text-xs font-semibold text-slate-500">
+                                <button
+                                    type="button"
+                                    onclick="document.getElementById('comment-text').focus()"
+                                    class="ue-action-button flex items-center gap-1.5 text-xs font-semibold text-slate-500 hover:text-ue-brand transition-colors"
+                                >
                                     <x-ui.icon name="message-circle" size="md" class="ue-action-button__icon text-current" />
-                                    <span class="ue-action-button__count">Thảo luận</span>
-                                </span>
+                                    <span class="ue-action-button__count">{{ $commentCount }}</span>
+                                </button>
+
+                                {{-- Repost --}}
+                                @if (! $isOwner)
+                                    <x-ui.post-action-button
+                                        icon="repost"
+                                        activeIcon="repost"
+                                        label="Đăng lại"
+                                        :count="$repostCount"
+                                        :selected="$isReposted"
+                                        wireClick="togglePostRepost({{ $post->id }})"
+                                        wire:loading.attr="disabled"
+                                        wire:target="togglePostRepost({{ $post->id }})"
+                                    />
+                                @endif
 
                                 {{-- Share --}}
                                 <x-ui.post-action-button
@@ -1124,7 +1164,7 @@ new #[Layout('layouts.app')] class extends Component
 
             {{-- 3. COMMENTS LIST (THREADS-STYLE THREADING) --}}
             <div class="bg-white border border-slate-150 rounded-2xl p-4 sm:p-5 shadow-xs space-y-6 mt-6">
-                <h3 class="text-xs font-bold text-slate-800 flex items-center gap-1.5 pb-3 border-b border-slate-100">
+                <h3 class="text-sm font-bold text-slate-800 flex items-center gap-1.5 pb-3 border-b border-slate-100">
                     <x-ui.icon name="message-circle" size="xs" class="text-ue-brand" />
                     Thảo luận cộng đồng
                 </h3>

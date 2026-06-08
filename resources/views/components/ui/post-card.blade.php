@@ -46,12 +46,16 @@
     wire:key="post-card-{{ $feedItemKey ?? $post->id }}"
 >
     @if ($repostedBy)
-        <div class="flex items-center gap-1.5 px-4 pt-3 text-[11px] font-bold text-slate-400 sm:px-5">
-            <x-ui.icon name="repost" size="xs" class="text-slate-400" />
-            <span>{{ $reposterName }} đã đăng lại</span>
-            @if ($repostedAt)
-                <span class="font-semibold">· {{ $repostedAt->diffForHumans() }}</span>
-            @endif
+        <div class="grid grid-cols-[36px_1fr] md:grid-cols-[var(--feed-avatar-size)_1fr] gap-x-[10px] md:gap-x-[var(--feed-avatar-gap)] mb-2 text-[11px] font-bold text-slate-400">
+            <div class="flex justify-end items-center pr-2">
+                <x-ui.icon name="repost" size="xs" class="text-slate-400" />
+            </div>
+            <div class="flex items-center gap-1">
+                <span>{{ $reposterName }} đã đăng lại</span>
+                @if ($repostedAt)
+                    <span class="font-semibold">· {{ $repostedAt->diffForHumans() }}</span>
+                @endif
+            </div>
         </div>
     @endif
 
@@ -96,7 +100,7 @@
             <div class="ue-post-card__header">
                 <div>
                     <div class="flex items-center gap-1.5 flex-nowrap min-w-0">
-                        <a href="{{ $authorProfileUrl }}" class="text-sm font-bold text-slate-800 leading-tight truncate min-w-0 hover:text-ue-brand hover:underline">
+                        <a href="{{ $authorProfileUrl }}" class="text-[15px] font-bold text-slate-800 leading-tight truncate min-w-0 hover:text-ue-brand hover:underline">
                             {{ $author->name }}
                         </a>
                         <x-ui.icon name="check-circle" size="xs" class="text-ue-brand flex-shrink-0" aria-label="Đã xác thực" />
@@ -109,7 +113,7 @@
                     
                     {{-- Faculty & Major --}}
                     @if ($profile)
-                        <div class="text-[10px] text-slate-400 font-medium mt-0.5 leading-none">
+                        <div class="text-xs text-slate-400 font-medium mt-1 leading-none">
                             {{ Str::ucfirst($profile->role_type) }}
                             @if ($profile->faculty)
                                 · {{ $profile->faculty }}
@@ -181,16 +185,16 @@
                     </div>
                 </div>
             @else
-                <div class="ue-post-card__content mt-1">{{ $post->body }}</div>
+                <div class="ue-post-card__content mt-2.5">{{ $post->body }}</div>
                 
                 {{-- Polymorphic Media Grid --}}
                 @if ($mediaCount > 0)
-                    <div class="mt-2.5 max-w-lg select-none">
+                    <div class="mt-2.5 w-full max-w-lg select-none mr-auto">
                         @if ($mediaCount === 1)
                             {{-- 1 image: full width, smart ratio --}}
                             @php($dimensions = $mediaDimensions($mediaItems[0]))
                             <div class="ue-media-frame">
-                                <a href="{{ $mediaUrlAction->execute($mediaItems[0], 'detail', $currentUser) ?? $mediaUrlAction->execute($mediaItems[0], 'original', $currentUser) }}" target="_blank" rel="noopener noreferrer" class="block w-full h-full">
+                                <a href="{{ $mediaUrlAction->execute($mediaItems[0], 'detail', $currentUser) ?? $mediaUrlAction->execute($mediaItems[0], 'original', $currentUser) }}" target="_blank" rel="noopener noreferrer" class="block">
                                     <img
                                         src="{{ $mediaUrlAction->execute($mediaItems[0], 'feed', $currentUser) }}"
                                         alt="Hình ảnh đính kèm"
@@ -273,9 +277,9 @@
                         @endif
                     </div>
                 @elseif (!empty($post->media_url))
-                    <div class="mt-2.5 max-w-lg select-none">
+                    <div class="mt-2.5 w-full max-w-lg select-none mr-auto">
                         <div class="ue-media-frame">
-                            <a href="{{ $post->media_url }}" target="_blank" rel="noopener noreferrer" class="block w-full h-full">
+                            <a href="{{ $post->media_url }}" target="_blank" rel="noopener noreferrer" class="block">
                                 <img
                                     src="{{ $post->media_url }}"
                                     alt="Hình ảnh đính kèm"

@@ -1235,19 +1235,19 @@
     }
 
     .ue-post-card__meta {
-        font-size: var(--text-2xs);
+        font-size: var(--text-xs);
         color: var(--ue-text-muted);
         font-weight: var(--font-medium);
     }
 
     .ue-post-card__content {
-        font-size: var(--text-sm);
+        font-size: var(--text-base);
         line-height: var(--leading-relaxed);
         color: var(--ue-text);
         word-break: break-word;
         white-space: pre-wrap;
         text-align: left;
-        margin-top: 8px;
+        margin-top: 12px;
     }
 
     .ue-post-card__actions {
@@ -1948,25 +1948,24 @@
    Uncropped Premium Media Viewport Enhancements
    ============================================================================= */
 .ue-media-frame {
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    background-color: var(--neutral-50);
-    border: 1px solid var(--ue-border);
-    border-radius: var(--radius-xl);
-    overflow: hidden;
+    display: block;
     max-height: 450px;
     width: 100%;
+    max-width: 100%;
+    margin: 0;
 }
 
 .ue-media-image {
+    width: 100%;
     max-width: 100%;
     max-height: 450px;
     height: auto;
-    width: auto;
     display: block;
-    margin: 0 auto;
-    object-fit: contain;
+    margin: 0;
+    object-fit: cover;
+    background-color: var(--neutral-50);
+    border: 1px solid var(--ue-border);
+    border-radius: var(--radius-xl);
     transition: transform var(--duration-md) var(--ease-out);
 }
 
