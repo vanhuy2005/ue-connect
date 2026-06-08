@@ -119,11 +119,7 @@ new class extends Component {
 
             $media = $storeAction->execute($user, $this->avatarFile, 'avatar', ['visibility' => 'public']);
             $attachAction->execute($user, $profile, [$media->id], 'avatar');
-<<<<<<< HEAD
             $this->avatarUrl = app(GenerateMediaUrlAction::class)->execute($media, 'thumb', $user);
-=======
-            $this->avatarUrl = \App\Support\Media\MediaUrlResolver::publicUrl($media);
->>>>>>> e7314f2 (style: fix post media layout alignment, console syntax error and heartbeat sleep logic)
             $this->avatarUploadMessage = 'Đã cập nhật ảnh đại diện.';
         } catch (Throwable $exception) {
             $this->addError('avatarFile', 'Không tải được ảnh đại diện: '.$exception->getMessage());
