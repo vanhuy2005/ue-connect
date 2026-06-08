@@ -587,10 +587,24 @@ new #[Layout('layouts.app')] class extends Component
 
         $currentUserId = Auth::id();
 
+        // Get active connection user IDs
+        $friendIds = Connection::where(function ($query) use ($currentUserId) {
+                $query->where('user_one_id', $currentUserId)
+                    ->orWhere('user_two_id', $currentUserId);
+            })
+            ->where('status', ConnectionStatus::ACTIVE)
+            ->get()
+            ->map(function ($conn) use ($currentUserId) {
+                return $conn->user_one_id === $currentUserId ? $conn->user_two_id : $conn->user_one_id;
+            })
+            ->push($currentUserId) // Allow self tagging
+            ->toArray();
+
         $driver = \Illuminate\Support\Facades\DB::connection()->getDriverName();
 
-        // Get matching users
-        $users = User::where(function ($query) use ($search, $driver) {
+        // Get matching users from connections/self
+        $users = User::whereIn('id', $friendIds)
+            ->where(function ($query) use ($search, $driver) {
                 if ($driver === 'sqlsrv') {
                     $query->whereRaw("name COLLATE Latin1_General_CI_AI LIKE ?", ["%{$search}%"])
                         ->orWhereHas('profile', function ($q) use ($search) {
@@ -606,23 +620,10 @@ new #[Layout('layouts.app')] class extends Component
             ->with(['profile', 'profilePrivacySetting'])
             ->get();
 
-        // Filter based on their privacy preferences and connection status
+        // Filter based on their privacy preferences
         $filteredUsers = $users->filter(function ($targetUser) use ($currentUserId) {
             if ($targetUser->id === $currentUserId) {
                 return true;
-            }
-
-            // Must be friends (active connection)
-            $userOneId = min($currentUserId, $targetUser->id);
-            $userTwoId = max($currentUserId, $targetUser->id);
-
-            $isFriend = Connection::where('user_one_id', $userOneId)
-                ->where('user_two_id', $userTwoId)
-                ->where('status', ConnectionStatus::ACTIVE)
-                ->exists();
-
-            if (! $isFriend) {
-                return false;
             }
 
             // Respect the target user's privacy preference
@@ -643,6 +644,7 @@ new #[Layout('layouts.app')] class extends Component
                 'display_name' => $u->profile?->display_name ?? $u->name,
                 'avatar_url' => $u->profile?->avatar_url ?? null,
             ])
+            ->values()
             ->toArray();
 
         return $results;
