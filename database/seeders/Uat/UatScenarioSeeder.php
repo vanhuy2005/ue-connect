@@ -11,7 +11,6 @@ class UatScenarioSeeder extends Seeder
     {
         $this->call([
             UatAccountSeeder::class,
-            SeedPotentialMentors::class,
             UatVerificationSeeder::class,
             UatFeedSeeder::class,
             UatCommunitySeeder::class,
