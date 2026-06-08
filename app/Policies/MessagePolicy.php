@@ -2,6 +2,7 @@
 
 namespace App\Policies;
 
+use App\Enums\ConversationStatus;
 use App\Models\BlockedUser;
 use App\Models\Connection;
 use App\Models\Conversation;
@@ -33,6 +34,16 @@ class MessagePolicy
         }
 
         $conversation = $message->conversation;
+
+        // Must be an active conversation
+        if ($conversation->status !== ConversationStatus::ACTIVE) {
+            return false;
+        }
+
+        // Mentor conversations bypass connection check
+        if ($conversation->mentor_request_id) {
+            return true;
+        }
 
         // 1. Must be participant in conversation
         $isParticipant = $conversation->participants()->where('user_id', $user->id)->exists();

@@ -93,6 +93,7 @@ class AppServiceProvider extends ServiceProvider
             'profile' => Profile::class,
             'message' => Message::class,
             'community' => Community::class,
+            'mentor_profile' => MentorProfile::class,
         ]);
 
         Gate::policy(Connection::class, ConnectionPolicy::class);

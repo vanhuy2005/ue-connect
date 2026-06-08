@@ -2,6 +2,7 @@
 
 namespace Database\Seeders\Uat;
 
+use Database\Seeders\SeedPotentialMentors;
 use Illuminate\Database\Seeder;
 
 class UatScenarioSeeder extends Seeder
