@@ -27,6 +27,9 @@ class EnsureUserSettingsExistAction
                     'show_communities' => false,
                     'show_career_info' => false,
                     'show_mentor_topics' => true,
+                    'mentions_preference' => 'everyone',
+                    'tags_preference' => 'everyone',
+                    'online_status_visibility' => 'connections',
                 ]);
             }
 

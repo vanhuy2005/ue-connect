@@ -23,7 +23,7 @@ class ClubManagerGrantedNotification extends Notification
             'type' => 'club_manager_granted',
             'community_id' => $this->community->id,
             'community_name' => $this->community->name,
-            'title' => 'Bạn được cấp quyền Quản lý CLB',
+            'title' => 'Bạn được cấp quyền Quản lý cộng đồng',
             'body' => 'Bạn đã được cấp quyền Quản lý trong cộng đồng '.$this->community->name.'.',
             'action_url' => route('community.show', ['community' => $this->community->id]),
         ];

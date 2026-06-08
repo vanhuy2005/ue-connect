@@ -2,11 +2,14 @@
 
 namespace Tests\Feature;
 
+use App\Enums\ConnectionStatus;
 use App\Models\Community;
 use App\Models\CommunityJoinRequest;
 use App\Models\CommunityMember;
 use App\Models\CommunityResource;
+use App\Models\Connection;
 use App\Models\MediaFile;
+use App\Models\PermissionGrant;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Storage;
@@ -300,15 +303,15 @@ class CommunityDetailTest extends TestCase
         $friend2 = $this->createActiveUser();
 
         // Establish connections
-        \App\Models\Connection::create([
+        Connection::create([
             'user_one_id' => min($user->id, $friend1->id),
             'user_two_id' => max($user->id, $friend1->id),
-            'status' => \App\Enums\ConnectionStatus::ACTIVE,
+            'status' => ConnectionStatus::ACTIVE,
         ]);
-        \App\Models\Connection::create([
+        Connection::create([
             'user_one_id' => min($user->id, $friend2->id),
             'user_two_id' => max($user->id, $friend2->id),
-            'status' => \App\Enums\ConnectionStatus::ACTIVE,
+            'status' => ConnectionStatus::ACTIVE,
         ]);
 
         Volt::actingAs($user)
@@ -324,12 +327,193 @@ class CommunityDetailTest extends TestCase
         // Check if messages were sent
         $this->assertDatabaseHas('messages', [
             'sender_id' => $user->id,
-            'body' => "Chào {$friend1->name}! Mình muốn mời bạn tham gia cộng đồng: {$community->name}\nTham gia tại đây: " . route('community.show', $community->id),
+            'body' => "Chào {$friend1->name}! Mình muốn mời bạn tham gia cộng đồng: {$community->name}\nTham gia tại đây: ".route('community.show', $community->id),
         ]);
 
         $this->assertDatabaseHas('messages', [
             'sender_id' => $user->id,
-            'body' => "Chào {$friend2->name}! Mình muốn mời bạn tham gia cộng đồng: {$community->name}\nTham gia tại đây: " . route('community.show', $community->id),
+            'body' => "Chào {$friend2->name}! Mình muốn mời bạn tham gia cộng đồng: {$community->name}\nTham gia tại đây: ".route('community.show', $community->id),
+        ]);
+    }
+
+    public function test_owner_can_promote_member_to_manager(): void
+    {
+        $owner = $this->createActiveUser();
+        $memberUser = $this->createActiveUser();
+
+        $community = Community::factory()->active()->forOwner($owner)->create();
+        $member = CommunityMember::factory()->active()->for($community)->for($memberUser)->create([
+            'role' => 'member',
+        ]);
+
+        Volt::actingAs($owner)
+            ->test('pages.app.community-show', ['community' => $community])
+            ->call('openChangeRoleModal', $member->id)
+            ->assertSet('showChangeRoleModal', true)
+            ->assertSet('selectedMemberIdForRole', $member->id)
+            ->set('newRole', 'manager')
+            ->call('confirmChangeRole')
+            ->assertHasNoErrors()
+            ->assertSet('showChangeRoleModal', false);
+
+        $member->refresh();
+        $this->assertSame('manager', $member->role->value);
+        $this->assertDatabaseHas('permission_grants', [
+            'user_id' => $memberUser->id,
+            'permission_key' => 'manage_community',
+            'scope_type' => 'community',
+            'scope_id' => $community->id,
+            'status' => 'active',
+        ]);
+    }
+
+    public function test_owner_can_promote_member_to_moderator(): void
+    {
+        $owner = $this->createActiveUser();
+        $memberUser = $this->createActiveUser();
+
+        $community = Community::factory()->active()->forOwner($owner)->create();
+        $member = CommunityMember::factory()->active()->for($community)->for($memberUser)->create([
+            'role' => 'member',
+        ]);
+
+        Volt::actingAs($owner)
+            ->test('pages.app.community-show', ['community' => $community])
+            ->call('openChangeRoleModal', $member->id)
+            ->set('newRole', 'moderator')
+            ->call('confirmChangeRole')
+            ->assertHasNoErrors();
+
+        $member->refresh();
+        $this->assertSame('moderator', $member->role->value);
+        $this->assertDatabaseHas('permission_grants', [
+            'user_id' => $memberUser->id,
+            'permission_key' => 'moderate_community_posts',
+            'scope_type' => 'community',
+            'scope_id' => $community->id,
+            'status' => 'active',
+        ]);
+    }
+
+    public function test_owner_can_demote_manager_to_member(): void
+    {
+        $owner = $this->createActiveUser();
+        $memberUser = $this->createActiveUser();
+
+        $community = Community::factory()->active()->forOwner($owner)->create();
+        $member = CommunityMember::factory()->active()->for($community)->for($memberUser)->create([
+            'role' => 'manager',
+        ]);
+
+        // Setup existing permission grant to be revoked
+        PermissionGrant::create([
+            'user_id' => $memberUser->id,
+            'permission_key' => 'manage_community',
+            'scope_type' => 'community',
+            'scope_id' => $community->id,
+            'granted_by' => $owner->id,
+            'starts_at' => now(),
+            'status' => 'active',
+            'reason' => 'test reason',
+        ]);
+
+        Volt::actingAs($owner)
+            ->test('pages.app.community-show', ['community' => $community])
+            ->call('openChangeRoleModal', $member->id)
+            ->set('newRole', 'member')
+            ->call('confirmChangeRole')
+            ->assertHasNoErrors();
+
+        $member->refresh();
+        $this->assertSame('member', $member->role->value);
+        $this->assertDatabaseHas('permission_grants', [
+            'user_id' => $memberUser->id,
+            'permission_key' => 'manage_community',
+            'scope_type' => 'community',
+            'scope_id' => $community->id,
+            'status' => 'revoked',
+        ]);
+    }
+
+    public function test_owner_can_transfer_ownership(): void
+    {
+        $owner = $this->createActiveUser();
+        $memberUser = $this->createActiveUser();
+
+        $community = Community::factory()->active()->forOwner($owner)->create();
+        $member = CommunityMember::factory()->active()->for($community)->for($memberUser)->create([
+            'role' => 'member',
+        ]);
+
+        $ownerMember = CommunityMember::factory()->active()->for($community)->for($owner)->create([
+            'role' => 'owner',
+        ]);
+
+        Volt::actingAs($owner)
+            ->test('pages.app.community-show', ['community' => $community])
+            ->call('openChangeRoleModal', $member->id)
+            ->set('newRole', 'owner')
+            ->call('confirmChangeRole')
+            ->assertHasNoErrors();
+
+        $member->refresh();
+        $ownerMember->refresh();
+        $community->refresh();
+
+        $this->assertSame('owner', $member->role->value);
+        $this->assertSame('manager', $ownerMember->role->value);
+        $this->assertEquals($memberUser->id, $community->owner_id);
+    }
+
+    public function test_regular_member_cannot_manage_member_roles(): void
+    {
+        $owner = $this->createActiveUser();
+        $memberUser1 = $this->createActiveUser();
+        $memberUser2 = $this->createActiveUser();
+
+        $community = Community::factory()->active()->forOwner($owner)->create();
+        CommunityMember::factory()->active()->for($community)->for($memberUser1)->create([
+            'role' => 'member',
+        ]);
+        $member2 = CommunityMember::factory()->active()->for($community)->for($memberUser2)->create([
+            'role' => 'member',
+        ]);
+
+        $this->assertFalse($memberUser1->can('manageMemberRoles', $community));
+
+        Volt::actingAs($memberUser1)
+            ->test('pages.app.community-show', ['community' => $community])
+            ->assertDontSee('title="Cấp quyền"');
+
+        Volt::actingAs($memberUser1)
+            ->test('pages.app.community-show', ['community' => $community])
+            ->call('openChangeRoleModal', $member2->id)
+            ->assertStatus(403);
+    }
+
+    public function test_active_member_can_create_post(): void
+    {
+        $user = $this->createActiveUser();
+        $community = Community::factory()->active()->create([
+            'name' => 'Posting Club',
+        ]);
+        CommunityMember::factory()->active()->for($community)->for($user)->create();
+
+        Volt::actingAs($user)
+            ->test('pages.app.community-show', ['community' => $community])
+            ->set('showPostComposer', true)
+            ->set('postBody', 'Hello community!')
+            ->call('createPost')
+            ->assertHasNoErrors()
+            ->assertSet('showPostComposer', false)
+            ->assertSet('postBody', '')
+            ->assertDispatched('notify', type: 'success', message: 'Bài đăng đã được tạo.');
+
+        $this->assertDatabaseHas('posts', [
+            'scope_type' => 'community',
+            'scope_id' => $community->id,
+            'body' => 'Hello community!',
+            'user_id' => $user->id,
         ]);
     }
 }

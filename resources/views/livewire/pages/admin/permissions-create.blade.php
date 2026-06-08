@@ -7,18 +7,49 @@ use Illuminate\Support\Facades\DB;
 use App\Services\AuditLogService;
 
 new class extends Component {
-    public int $user_id = 0;
+    public ?int $user_id = null;
+    public string $user_search = '';
+    public array $searchResults = [];
+    public bool $showDropdown = false;
+
     public string $permission_key = '';
     public string $scope_type = '';
     public ?int $scope_id = null;
     public string $reason = '';
 
-    public function submit()
+    public function updatedUserSearch(mixed $value): void
+    {
+        if (empty($value)) {
+            $this->searchResults = [];
+            $this->showDropdown = false;
+            $this->user_id = null;
+            return;
+        }
+
+        $this->searchResults = User::query()
+            ->where('name', 'like', '%' . $value . '%')
+            ->orWhere('email', 'like', '%' . $value . '%')
+            ->limit(10)
+            ->get(['id', 'name', 'email'])
+            ->toArray();
+
+        $this->showDropdown = true;
+    }
+
+    public function selectUser(int $id, string $name): void
+    {
+        $this->user_id = $id;
+        $this->user_search = $name;
+        $this->searchResults = [];
+        $this->showDropdown = false;
+    }
+
+    public function submit(): mixed
     {
         $this->validate([
-            'user_id' => ['required','integer','exists:users,id'],
-            'permission_key' => ['required','string'],
-            'reason' => ['required','string','min:5'],
+            'user_id' => ['required', 'integer', 'exists:users,id'],
+            'permission_key' => ['required', 'string'],
+            'reason' => ['required', 'string', 'min:5'],
         ]);
 
         DB::transaction(function () {
@@ -56,10 +87,41 @@ new class extends Component {
 
     <x-ui.card>
         <form wire:submit.prevent="submit" class="grid grid-cols-1 gap-4">
-            <div>
-                <x-ui.label for="user_id" class="text-xs font-semibold">Người nhận (ID người dùng)</x-ui.label>
-                <x-ui.input type="number" id="user_id" wire:model.live="user_id" class="mt-1 h-9 text-xs" placeholder="Nhập user_id của club manager" />
-                <p class="text-[10px] text-ue-text-muted mt-1">Nếu chưa biết, mở trang admin Người dùng và xem cột ID.</p>
+            <div class="relative" x-data="{ open: @entangle('showDropdown') }" @click.outside="open = false">
+                <x-ui.label for="user_search" class="text-xs font-semibold">Người nhận (Tìm theo tên hoặc email)</x-ui.label>
+                <x-ui.input 
+                    type="text" 
+                    id="user_search" 
+                    wire:model.live="user_search" 
+                    class="mt-1 h-9 text-xs" 
+                    placeholder="Nhập tên hoặc email..." 
+                    autocomplete="off"
+                    @focus="open = true"
+                />
+                
+                @if($showDropdown && !empty($searchResults))
+                    <div class="absolute z-10 w-full mt-1 bg-white border border-gray-200 rounded-md shadow-lg max-h-60 overflow-y-auto">
+                        @foreach($searchResults as $u)
+                            <button 
+                                type="button"
+                                wire:click="selectUser({{ $u['id'] }}, '{{ addslashes($u['name']) }}')"
+                                class="w-full text-left px-3 py-2 text-xs hover:bg-gray-100 focus:outline-none focus:bg-gray-100 flex flex-col border-b border-gray-50 last:border-0"
+                            >
+                                <span class="font-medium text-gray-900">{{ $u['name'] }}</span>
+                                <span class="text-[10px] text-gray-500">{{ $u['email'] }} (ID: {{ $u['id'] }})</span>
+                            </button>
+                        @endforeach
+                    </div>
+                @endif
+
+                @error('user_id')
+                    <p class="text-red-500 text-xs mt-1 font-semibold">{{ $message }}</p>
+                @enderror
+
+                @if($user_id)
+                    <p class="text-[10px] text-green-600 mt-1 font-semibold">Đã chọn: ID {{ $user_id }}</p>
+                @endif
+                <p class="text-[10px] text-ue-text-muted mt-1">Gõ từ khóa để tìm kiếm người nhận (hệ thống sẽ tự động tìm kiếm).</p>
             </div>
 
             <div>
@@ -79,6 +141,9 @@ new class extends Component {
                     <option value="manage_mentor_access">manage_mentor_access — Quản lý quyền mentor</option>
                     <option value="view_audit_log">view_audit_log — Xem nhật ký audit</option>
                 </x-ui.select>
+                @error('permission_key')
+                    <p class="text-red-500 text-xs mt-1 font-semibold">{{ $message }}</p>
+                @enderror
                 <p class="text-[10px] text-ue-text-muted mt-1">Để cấp club manager, chọn <strong>manage_club</strong> và dùng phạm vi <strong>Cộng đồng</strong>.</p>
             </div>
 
@@ -100,6 +165,9 @@ new class extends Component {
             <div>
                 <x-ui.label for="reason" class="text-xs font-semibold">Lý do</x-ui.label>
                 <x-ui.textarea id="reason" wire:model.live="reason" class="mt-1 text-sm" rows="4" placeholder="Giải thích lý do cấp quyền..." />
+                @error('reason')
+                    <p class="text-red-500 text-xs mt-1 font-semibold">{{ $message }}</p>
+                @enderror
             </div>
 
             <div class="flex justify-end">

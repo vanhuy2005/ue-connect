@@ -42,7 +42,7 @@ class CommunityMemberFactory extends Factory
     {
         return $this->state([
             'role' => CommunityMemberRole::Manager->value,
-            'role_label' => 'Quản lý CLB',
+            'role_label' => 'Quản lý cộng đồng',
         ]);
     }
 

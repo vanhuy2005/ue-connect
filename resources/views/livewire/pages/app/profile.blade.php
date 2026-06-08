@@ -58,7 +58,14 @@ new class extends Component
             $profile->restore();
         }
         
-        $this->user->load(['profile.media.variants', 'profile.studentProfile.faculty', 'profile.studentProfile.academicProgram', 'profile.alumniProfile', 'profile.advisorProfile']);
+        $this->user->load([
+            'profile.media.variants',
+            'profile.studentProfile.faculty',
+            'profile.studentProfile.academicProgram',
+            'profile.alumniProfile',
+            'profile.advisorProfile',
+            'profilePrivacySetting',
+        ]);
         $this->refreshFollowState();
     }
 
@@ -406,6 +413,45 @@ new class extends Component
     }
 
     /**
+     * Determine if the viewer is authorized to see this user's online status.
+     * Reuses connectionStatus computed property to avoid extra database queries.
+     */
+    public function getCanSeeOnlineStatusProperty(): bool
+    {
+        $viewer = Auth::user();
+        if (! $viewer) {
+            return false;
+        }
+
+        if ($this->user->id === $viewer->id) {
+            return true;
+        }
+
+        $privacy = $this->user->profilePrivacySetting;
+        $visibility = $privacy ? $privacy->online_status_visibility : 'connections';
+
+        if ($visibility === 'nobody') {
+            return false;
+        }
+
+        $isConnected = $this->connectionStatus === 'connected';
+
+        if ($visibility === 'connections') {
+            return $isConnected;
+        }
+
+        if ($visibility === 'mutual_connections') {
+            if ($isConnected) {
+                return true;
+            }
+
+            return $this->user->canSeeOnlineStatus($viewer);
+        }
+
+        return false;
+    }
+
+    /**
      * Report user.
      */
     public function reportUser(): void
@@ -436,39 +482,47 @@ new class extends Component
         $profileMedia = collect();
         $profileReposts = collect();
 
-        if ($this->activeTab === 'posts') {
-            $profilePosts = $this->user->posts()
-                ->with('media.variants')
-                ->whereIn('status', [PostStatus::PUBLISHED, PostStatus::EDITED])
-                ->visibleTo(Auth::user())
-                ->latest()
-                ->take(10)
-                ->get();
-        } elseif ($this->activeTab === 'replies') {
-            $profileComments = $this->user->comments()
-                ->with('post.user')
-                ->latest()
-                ->take(10)
-                ->get();
-        } elseif ($this->activeTab === 'media') {
-            $profileMedia = Media::query()
-                ->with('variants')
-                ->where('user_id', $this->user->id)
-                ->where('collection', 'post_image')
-                ->where('status', 'ready')
-                ->latest()
-                ->take(30)
-                ->get();
-        } elseif ($this->activeTab === 'reposts') {
-            $profileReposts = $this->user->postReposts()
-                ->with(['user.profile', 'post.user.profile', 'post.media.variants'])
-                ->whereHas('post', function ($query): void {
-                    $query->whereIn('status', [PostStatus::PUBLISHED, PostStatus::EDITED])
-                        ->visibleTo(Auth::user());
-                })
-                ->latest()
-                ->take(10)
-                ->get();
+        $isOwn = $this->user->id === Auth::id();
+        $targetPrivacy = $this->user->profilePrivacySetting;
+        $isPrivateProfile = $targetPrivacy && in_array($targetPrivacy->profile_visibility, ['connections_only', 'private'], true);
+        $isConnected = $this->connectionStatus === 'connected';
+        $canViewContent = $isOwn || !$isPrivateProfile || $isConnected;
+
+        if ($canViewContent) {
+            if ($this->activeTab === 'posts') {
+                $profilePosts = $this->user->posts()
+                    ->with('media.variants')
+                    ->whereIn('status', [PostStatus::PUBLISHED, PostStatus::EDITED])
+                    ->visibleTo(Auth::user())
+                    ->latest()
+                    ->take(10)
+                    ->get();
+            } elseif ($this->activeTab === 'replies') {
+                $profileComments = $this->user->comments()
+                    ->with('post.user')
+                    ->latest()
+                    ->take(10)
+                    ->get();
+            } elseif ($this->activeTab === 'media') {
+                $profileMedia = Media::query()
+                    ->with('variants')
+                    ->where('user_id', $this->user->id)
+                    ->where('collection', 'post_image')
+                    ->where('status', 'ready')
+                    ->latest()
+                    ->take(30)
+                    ->get();
+            } elseif ($this->activeTab === 'reposts') {
+                $profileReposts = $this->user->postReposts()
+                    ->with(['user.profile', 'post.user.profile', 'post.media.variants'])
+                    ->whereHas('post', function ($query): void {
+                        $query->whereIn('status', [PostStatus::PUBLISHED, PostStatus::EDITED])
+                            ->visibleTo(Auth::user());
+                    })
+                    ->latest()
+                    ->take(10)
+                    ->get();
+            }
         }
 
         return [
@@ -552,11 +606,15 @@ new class extends Component
             $isOwn = $user->id === Auth::id();
             $targetPrivacy = $user->profilePrivacySetting;
             
-            $showFaculty = $isOwn || ($targetPrivacy ? (bool)$targetPrivacy->show_faculty : true);
-            $showMajor = $isOwn || ($targetPrivacy ? (bool)$targetPrivacy->show_major : true);
-            $showCohort = $isOwn || ($targetPrivacy ? (bool)$targetPrivacy->show_cohort : true);
-            $showClassCode = $isOwn || ($targetPrivacy ? (bool)$targetPrivacy->show_class_code : false);
-            $showBio = $isOwn || ($targetPrivacy ? (bool)$targetPrivacy->show_bio : true);
+            $isPrivateProfile = $targetPrivacy && in_array($targetPrivacy->profile_visibility, ['connections_only', 'private'], true);
+            $isConnected = $this->connectionStatus === 'connected';
+            $canViewContent = $isOwn || !$isPrivateProfile || $isConnected;
+
+            $showFaculty = $canViewContent && ($isOwn || ($targetPrivacy ? (bool)$targetPrivacy->show_faculty : true));
+            $showMajor = $canViewContent && ($isOwn || ($targetPrivacy ? (bool)$targetPrivacy->show_major : true));
+            $showCohort = $canViewContent && ($isOwn || ($targetPrivacy ? (bool)$targetPrivacy->show_cohort : true));
+            $showClassCode = $canViewContent && ($isOwn || ($targetPrivacy ? (bool)$targetPrivacy->show_class_code : false));
+            $showBio = $canViewContent && ($isOwn || ($targetPrivacy ? (bool)$targetPrivacy->show_bio : true));
         @endphp
 
         {{-- MOBILE HEADER LAYOUT (No Card, Instagram Threads style layout) --}}
@@ -594,7 +652,7 @@ new class extends Component
                     <x-ui.avatar :user="$user" size="lg" class="w-full h-full border border-slate-100 shadow-2xs" />
                     
                     @if ($isOwn)
-                        <label class="absolute -bottom-1 -right-1 bg-white text-slate-800 w-5.5 h-5.5 rounded-full flex items-center justify-center border border-slate-200 shadow-xs cursor-pointer z-10">
+                        <label class="absolute -bottom-1 -right-1 bg-white text-slate-800 w-6 h-6 rounded-full flex items-center justify-center border border-slate-200 shadow-xs cursor-pointer z-10">
                             <x-ui.icon name="plus" size="xxs" />
                             <input type="file" wire:model="avatarFile" class="hidden" accept="image/*" />
                         </label>
@@ -605,12 +663,16 @@ new class extends Component
                                 wire:click="followUser"
                                 wire:loading.attr="disabled"
                                 wire:target="followUser"
-                                class="absolute -bottom-1 -right-1 bg-slate-950 text-white w-5.5 h-5.5 rounded-full flex items-center justify-center border border-white hover:scale-110 active:scale-95 transition-all shadow-xs z-10"
+                                class="absolute -bottom-1 -right-1 bg-slate-950 text-white w-6 h-6 rounded-full flex items-center justify-center border border-white hover:scale-110 active:scale-95 transition-all shadow-xs z-10"
                                 title="Theo dõi {{ $user->name }}"
                             >
                                 <x-ui.icon name="plus" size="xxs" />
                             </button>
                         @endif
+                    @endif
+
+                    @if ($user->isOnline() && $this->canSeeOnlineStatus)
+                        <span class="absolute bottom-0 right-0 block h-3.5 w-3.5 rounded-full bg-green-500 border-2 border-white ring-1 ring-slate-100" title="Trực tuyến"></span>
                     @endif
                 </div>
             </div>
@@ -833,16 +895,21 @@ new class extends Component
             {{-- Profile Metadata Area --}}
             <div class="relative px-4 sm:px-6 pb-6 pt-0 md:pt-6 text-center md:text-left">
                 {{-- Round Avatar Photo --}}
-                <div class="relative -mt-14 mx-auto md:absolute md:-top-16 md:left-6 md:mt-0 md:mx-0 w-28 h-28 sm:w-32 sm:h-32 rounded-full overflow-hidden border-4 border-white bg-slate-50 shadow-md group">
+                <div class="relative -mt-14 mx-auto md:absolute md:-top-16 md:left-6 md:mt-0 md:mx-0 w-28 h-28 sm:w-32 sm:h-32 rounded-full border-4 border-white bg-slate-50 shadow-md group">
+                    <div class="w-full h-full rounded-full overflow-hidden">
                         <x-ui.avatar :user="$user" size="2xl" class="w-full h-full border-none rounded-none shadow-none text-2xl font-bold bg-slate-100 flex items-center justify-center" />
-
+                    </div>
 
                     @if ($isOwn)
-                        <label class="absolute inset-0 bg-slate-900/40 opacity-0 group-hover:opacity-100 cursor-pointer flex flex-col items-center justify-center text-white text-[9px] font-bold transition-opacity">
+                        <label class="absolute inset-0 rounded-full bg-slate-900/40 opacity-0 group-hover:opacity-100 cursor-pointer flex flex-col items-center justify-center text-white text-[9px] font-bold transition-opacity z-10">
                             <x-ui.icon name="camera" size="sm" />
                             Đổi ảnh
                             <input type="file" wire:model="avatarFile" class="hidden" accept="image/*" />
                         </label>
+                    @endif
+
+                    @if ($user->isOnline() && $this->canSeeOnlineStatus)
+                        <span class="absolute bottom-1 right-1 block h-6 w-6 rounded-full bg-green-500 border-4 border-white ring-1 ring-slate-100" title="Trực tuyến"></span>
                     @endif
 
                     @error('avatarFile')
@@ -1055,7 +1122,28 @@ new class extends Component
     </div>
 
         {{-- Modern Profile Tabs --}}
-        <div class="flex flex-col space-y-4">
+        @if (!$canViewContent)
+            <div class="bg-white border border-slate-150 rounded-3xl p-8 py-16 text-center shadow-2xs space-y-4 max-w-lg mx-auto">
+                <div class="w-16 h-16 rounded-full bg-slate-50 border border-slate-100 flex items-center justify-center mx-auto text-slate-400">
+                    <x-ui.icon name="lock" size="lg" />
+                </div>
+                <div class="space-y-2">
+                    <h3 class="text-base font-bold text-slate-800">Trang cá nhân riêng tư</h3>
+                    <p class="text-xxs text-slate-400 leading-relaxed max-w-md mx-auto">
+                        Chỉ những người bạn kết nối với {{ $user->profile?->display_name ?? $user->name }} mới có thể xem các bài viết và thông tin học đường chi tiết của thành viên này.
+                    </p>
+                </div>
+                @if ($this->connectionStatus === 'none')
+                    <div class="pt-3">
+                        <a href="{{ route('discovery.index') }}" class="inline-flex items-center gap-1.5 bg-ue-brand hover:bg-ue-brand-dark text-white text-xxs font-bold px-5 py-2.5 rounded-xl shadow-2xs transition-colors">
+                            <x-ui.icon name="user-plus" size="xs" />
+                            Gửi lời chào kết nối
+                        </a>
+                    </div>
+                @endif
+            </div>
+        @else
+            <div class="flex flex-col space-y-4">
             <div class="flex border-b border-slate-150 overflow-x-auto pb-px justify-start px-4 sm:px-0 gap-4 sm:gap-6 select-none scrollbar-none">
                 <button 
                     type="button" 
@@ -1294,5 +1382,6 @@ new class extends Component
                 @endif
             </div>
         </div>
+        @endif
     @endif
 </div>

@@ -25,6 +25,9 @@ class ProfilePrivacySetting extends Model
         'show_communities',
         'show_career_info',
         'show_mentor_topics',
+        'mentions_preference',
+        'tags_preference',
+        'online_status_visibility',
     ];
 
     protected $casts = [

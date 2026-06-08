@@ -15,6 +15,7 @@ use App\Models\CommunitySuggestion;
 use App\Models\Connection;
 use App\Models\Conversation;
 use App\Models\Media;
+use App\Models\MediaVariant;
 use App\Models\MentorAccessRequest;
 use App\Models\MentorFeedback;
 use App\Models\MentorProfile;
@@ -22,6 +23,7 @@ use App\Models\MentorRequest;
 use App\Models\Message;
 use App\Models\Post;
 use App\Models\Profile;
+use App\Models\Report;
 use App\Models\User;
 use App\Models\VerificationRequest;
 use App\Policies\AnnouncementPolicy;
@@ -49,6 +51,7 @@ use Illuminate\Auth\Notifications\VerifyEmail;
 use Illuminate\Database\Eloquent\Relations\Relation;
 use Illuminate\Notifications\DatabaseNotification;
 use Illuminate\Notifications\Messages\MailMessage;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\URL;
@@ -119,7 +122,40 @@ class AppServiceProvider extends ServiceProvider
         }
 
         DatabaseNotification::created(function (DatabaseNotification $notification) {
-            UserNotificationCreated::dispatch($notification);
+            try {
+                UserNotificationCreated::dispatch($notification);
+            } catch (\Exception $e) {
+                \Log::warning('Real-time notification broadcasting failed: '.$e->getMessage(), [
+                    'notification_id' => $notification->id,
+                ]);
+            }
         });
+
+        // Clear admin dashboard cache when relevant models are modified
+        $clearAdminDashboardCache = fn () => Cache::forget('admin_dashboard_data');
+
+        VerificationRequest::saved($clearAdminDashboardCache);
+        VerificationRequest::deleted($clearAdminDashboardCache);
+
+        Report::saved($clearAdminDashboardCache);
+        Report::deleted($clearAdminDashboardCache);
+
+        Post::saved($clearAdminDashboardCache);
+        Post::deleted($clearAdminDashboardCache);
+
+        Comment::saved($clearAdminDashboardCache);
+        Comment::deleted($clearAdminDashboardCache);
+
+        User::saved($clearAdminDashboardCache);
+        User::deleted($clearAdminDashboardCache);
+
+        Media::saved($clearAdminDashboardCache);
+        Media::deleted($clearAdminDashboardCache);
+
+        MediaVariant::saved($clearAdminDashboardCache);
+        MediaVariant::deleted($clearAdminDashboardCache);
+
+        AuditLog::saved($clearAdminDashboardCache);
+        AuditLog::deleted($clearAdminDashboardCache);
     }
 }

@@ -227,6 +227,17 @@ class CommunityPolicy
     }
 
     /**
+     * Whether a user can manage member roles (promote/demote) in a community.
+     */
+    public function manageMemberRoles(User $user, Community $community): bool
+    {
+        return $this->isEligibleUser($user)
+            && ($community->isOwnedBy($user)
+            || $user->can('manage_communities')
+            || $user->can('manage_permissions'));
+    }
+
+    /**
      * Send chat messages in community channel.
      */
     public function sendChat(User $user, Community $community): bool

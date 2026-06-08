@@ -562,7 +562,7 @@ new class extends Component {
                     class="w-full px-3 py-2 border border-ue-border rounded-lg text-sm">
                     <option value="member">Thành viên</option>
                     <option value="moderator">Kiểm duyệt viên</option>
-                    <option value="manager">Quản lý CLB</option>
+                    <option value="manager">Quản lý cộng đồng</option>
                 </select>
             </div>
             <div class="flex gap-3 justify-end">

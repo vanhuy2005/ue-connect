@@ -2,10 +2,14 @@
 
 namespace App\Http\Controllers\Admin;
 
+use App\Enums\AccountStatus;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Admin\CreateAnnouncementRequest;
 use App\Models\Announcement;
+use App\Models\User;
+use App\Notifications\SystemAnnouncementNotification;
 use App\Services\AuditService;
+use App\Support\Navigation\UserNavigationMetrics;
 use Illuminate\Http\Request;
 
 class AnnouncementController extends Controller
@@ -37,9 +41,15 @@ class AnnouncementController extends Controller
             'target' => $data['target'] ?? null,
             'starts_at' => $data['starts_at'] ?? null,
             'expires_at' => $data['expires_at'] ?? null,
-            'status' => 'draft',
+            'status' => $data['status'] ?? 'draft',
             'created_by' => $request->user()->id,
         ]);
+
+        if ($announcement->status === 'published') {
+            $announcement->starts_at = $announcement->starts_at ?? now();
+            $announcement->save();
+            $this->notifyActiveUsers($announcement);
+        }
 
         $audit->log([
             'action' => 'create_announcement',
@@ -60,6 +70,8 @@ class AnnouncementController extends Controller
         $announcement->status = 'published';
         $announcement->starts_at = $announcement->starts_at ?? now();
         $announcement->save();
+
+        $this->notifyActiveUsers($announcement);
 
         $audit->log([
             'action' => 'publish_announcement',
@@ -111,5 +123,17 @@ class AnnouncementController extends Controller
         ]);
 
         return redirect()->route('admin.announcements.index')->with('status', 'Announcement deleted.');
+    }
+
+    private function notifyActiveUsers(Announcement $announcement): void
+    {
+        $users = User::where('account_status', AccountStatus::ACTIVE)->get();
+        $notification = new SystemAnnouncementNotification($announcement);
+        $metrics = app(UserNavigationMetrics::class);
+
+        foreach ($users as $user) {
+            $user->notify($notification);
+            $metrics->forgetForUser($user->id);
+        }
     }
 }
