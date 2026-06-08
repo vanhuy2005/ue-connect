@@ -11,9 +11,11 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::table('users', function (Blueprint $table) {
-            $table->timestamp('last_seen_at')->nullable();
-        });
+        if (! Schema::hasColumn('users', 'last_seen_at')) {
+            Schema::table('users', function (Blueprint $table) {
+                $table->timestamp('last_seen_at')->nullable();
+            });
+        }
     }
 
     /**
@@ -21,8 +23,10 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::table('users', function (Blueprint $table) {
-            $table->dropColumn('last_seen_at');
-        });
+        if (Schema::hasColumn('users', 'last_seen_at')) {
+            Schema::table('users', function (Blueprint $table) {
+                $table->dropColumn('last_seen_at');
+            });
+        }
     }
 };
