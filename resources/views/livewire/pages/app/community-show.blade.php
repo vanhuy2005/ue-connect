@@ -1937,6 +1937,69 @@ new class extends Component
 
     {{-- MODALS --}}
 
+    {{-- Post Composer Modal --}}
+    @if ($showPostComposer)
+        <div class="fixed inset-0 bg-slate-900/60 backdrop-blur-xs z-50 flex items-center justify-center p-4">
+            <div class="bg-white rounded-3xl border border-slate-200 shadow-2xl max-w-lg w-full overflow-hidden flex flex-col animate-fade-in">
+                <div class="px-5 py-4 border-b border-slate-100 flex items-center justify-between">
+                    <h3 class="text-sm font-extrabold text-slate-805 flex items-center gap-2">
+                        <x-ui.icon name="edit-3" size="xs" class="text-ue-brand" />
+                        Tạo bài viết mới
+                    </h3>
+                    <button type="button" wire:click="closeTransientUi" class="text-slate-400 hover:text-slate-650 transition">
+                        <x-ui.icon name="x" size="xs" />
+                    </button>
+                </div>
+
+                <form wire:submit.prevent="createPost" class="p-5 space-y-4">
+                    <div class="flex gap-3">
+                        <div class="flex-shrink-0">
+                            <x-ui.avatar :user="auth()->user()" size="md" />
+                        </div>
+                        <div class="flex-1 min-w-0">
+                            <label for="modal-post-body" class="sr-only">Nội dung bài viết</label>
+                            <textarea
+                                id="modal-post-body"
+                                wire:model.live="postBody"
+                                placeholder="Có gì mới trong cộng đồng của bạn hôm nay?"
+                                rows="5"
+                                class="w-full border-0 focus:ring-0 p-0 text-slate-700 placeholder-slate-400 text-sm resize-none bg-transparent focus:outline-none"
+                                maxlength="10000"
+                            ></textarea>
+                            @error('postBody')
+                                <p class="text-xs text-red-650 mt-1 font-semibold">{{ $message }}</p>
+                            @enderror
+                        </div>
+                    </div>
+
+                    <div class="flex items-center justify-between pt-4 border-t border-slate-100">
+                        <span class="text-xxs text-slate-400 font-semibold">
+                            {{ mb_strlen($postBody) }}/10000
+                        </span>
+
+                        <div class="flex items-center justify-end gap-2.5">
+                            <button 
+                                type="button" 
+                                wire:click="closeTransientUi" 
+                                class="px-4 py-2 border border-slate-250 text-slate-600 hover:bg-slate-50 text-xs font-bold rounded-xl transition"
+                            >
+                                Hủy bỏ
+                            </button>
+                            <button type="submit"
+                                wire:loading.attr="disabled"
+                                wire:target="createPost"
+                                class="px-5 py-2 bg-ue-brand text-white text-xs font-bold rounded-xl hover:bg-opacity-95 transition shadow-sm disabled:opacity-60 disabled:cursor-not-allowed flex items-center gap-1.5">
+                                <x-ui.icon name="send" size="xs" wire:loading.remove wire:target="createPost" />
+                                <span wire:loading.remove wire:target="createPost">Đăng bài</span>
+                                <span wire:loading wire:target="createPost">Đang đăng...</span>
+                            </button>
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
+    @endif
+
     {{-- Join Modal --}}
     @if ($showJoinModal)
         <div class="fixed inset-0 bg-slate-900/60 backdrop-blur-xs z-50 flex items-center justify-center p-4">

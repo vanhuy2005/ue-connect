@@ -42,6 +42,7 @@ $sizeClasses = match($size) {
         @if($disabled) disabled @endif
         @if($hasError && $id) aria-describedby="{{ $id }}-error" @endif
         @if($hasError) aria-invalid="true" @endif
+        style="background-image: none !important;"
         {{ $attributes->class([
             /* Base */
             'ue-input block w-full appearance-none cursor-pointer',

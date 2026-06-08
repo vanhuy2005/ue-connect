@@ -490,4 +490,30 @@ class CommunityDetailTest extends TestCase
             ->call('openChangeRoleModal', $member2->id)
             ->assertStatus(403);
     }
+
+    public function test_active_member_can_create_post(): void
+    {
+        $user = $this->createActiveUser();
+        $community = Community::factory()->active()->create([
+            'name' => 'Posting Club',
+        ]);
+        CommunityMember::factory()->active()->for($community)->for($user)->create();
+
+        Volt::actingAs($user)
+            ->test('pages.app.community-show', ['community' => $community])
+            ->set('showPostComposer', true)
+            ->set('postBody', 'Hello community!')
+            ->call('createPost')
+            ->assertHasNoErrors()
+            ->assertSet('showPostComposer', false)
+            ->assertSet('postBody', '')
+            ->assertDispatched('notify', type: 'success', message: 'Bài đăng đã được tạo.');
+
+        $this->assertDatabaseHas('posts', [
+            'scope_type' => 'community',
+            'scope_id' => $community->id,
+            'body' => 'Hello community!',
+            'user_id' => $user->id,
+        ]);
+    }
 }
