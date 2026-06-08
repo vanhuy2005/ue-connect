@@ -67,9 +67,14 @@ class BuildAdminDashboardAction
         }
 
         // 2. Fetch raw counts
-        $pendingVerificationsCount = VerificationRequest::where('status', VerificationStatus::PENDING_REVIEW)->count();
-        $needsInfoVerificationsCount = VerificationRequest::where('status', VerificationStatus::NEEDS_MORE_INFORMATION)->count();
-        $conflictsVerificationsCount = VerificationRequest::where('status', VerificationStatus::CONFLICT)->count();
+        $verificationCounts = DB::table('verification_requests')
+            ->select('status', DB::raw('count(*) as total'))
+            ->groupBy('status')
+            ->pluck('total', 'status');
+
+        $pendingVerificationsCount = $verificationCounts[VerificationStatus::PENDING_REVIEW->value] ?? 0;
+        $needsInfoVerificationsCount = $verificationCounts[VerificationStatus::NEEDS_MORE_INFORMATION->value] ?? 0;
+        $conflictsVerificationsCount = $verificationCounts[VerificationStatus::CONFLICT->value] ?? 0;
 
         $openReportsCount = Report::where('status', 'pending')->count();
         $criticalReportsCount = 0; // Set to 0 as default since report table lacks critical flag, but we will treat conflict verifications or media quota alerts as critical
@@ -161,6 +166,7 @@ class BuildAdminDashboardAction
         $priorityItems = array_slice($priorityItems, 0, 8);
 
         // 4. System health statuses
+        $failedJobsCount = Schema::hasTable('failed_jobs') ? DB::table('failed_jobs')->count() : 0;
         $systemHealth = [
             [
                 'name' => 'Cơ sở dữ liệu (Database)',
@@ -170,9 +176,9 @@ class BuildAdminDashboardAction
             ],
             [
                 'name' => 'Hàng đợi (Queue Worker)',
-                'status' => Schema::hasTable('failed_jobs') && DB::table('failed_jobs')->count() > 0 ? 'degraded' : 'healthy',
-                'message' => Schema::hasTable('failed_jobs') && DB::table('failed_jobs')->count() > 0
-                    ? 'Có '.DB::table('failed_jobs')->count().' tác vụ bị lỗi trong hàng đợi.'
+                'status' => $failedJobsCount > 0 ? 'degraded' : 'healthy',
+                'message' => $failedJobsCount > 0
+                    ? 'Có '.$failedJobsCount.' tác vụ bị lỗi trong hàng đợi.'
                     : 'Hàng đợi rỗng hoặc đang xử lý bình thường.',
                 'last_checked' => now(),
             ],
@@ -233,7 +239,7 @@ class BuildAdminDashboardAction
             'snapshot' => $snapshot,
             'priority_queue' => $priorityItems,
             'system_health' => $systemHealth,
-            'recent_activity' => AuditLog::latest()->limit(8)->get(),
+            'recent_activity' => AuditLog::with('actor')->latest()->limit(8)->get(),
             'trends' => $trends,
         ];
     }

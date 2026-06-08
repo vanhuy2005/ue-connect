@@ -58,7 +58,14 @@ new class extends Component
             $profile->restore();
         }
         
-        $this->user->load(['profile.media.variants', 'profile.studentProfile.faculty', 'profile.studentProfile.academicProgram', 'profile.alumniProfile', 'profile.advisorProfile']);
+        $this->user->load([
+            'profile.media.variants',
+            'profile.studentProfile.faculty',
+            'profile.studentProfile.academicProgram',
+            'profile.alumniProfile',
+            'profile.advisorProfile',
+            'profilePrivacySetting',
+        ]);
         $this->refreshFollowState();
     }
 
@@ -399,6 +406,45 @@ new class extends Component
     }
 
     /**
+     * Determine if the viewer is authorized to see this user's online status.
+     * Reuses connectionStatus computed property to avoid extra database queries.
+     */
+    public function getCanSeeOnlineStatusProperty(): bool
+    {
+        $viewer = Auth::user();
+        if (! $viewer) {
+            return false;
+        }
+
+        if ($this->user->id === $viewer->id) {
+            return true;
+        }
+
+        $privacy = $this->user->profilePrivacySetting;
+        $visibility = $privacy ? $privacy->online_status_visibility : 'connections';
+
+        if ($visibility === 'nobody') {
+            return false;
+        }
+
+        $isConnected = $this->connectionStatus === 'connected';
+
+        if ($visibility === 'connections') {
+            return $isConnected;
+        }
+
+        if ($visibility === 'mutual_connections') {
+            if ($isConnected) {
+                return true;
+            }
+
+            return $this->user->canSeeOnlineStatus($viewer);
+        }
+
+        return false;
+    }
+
+    /**
      * Report user.
      */
     public function reportUser(): void
@@ -615,7 +661,7 @@ new class extends Component
                     <x-ui.avatar :user="$user" size="lg" class="w-full h-full border border-slate-100 shadow-2xs" />
                     
                     @if ($isOwn)
-                        <label class="absolute -bottom-1 -right-1 bg-white text-slate-800 w-5.5 h-5.5 rounded-full flex items-center justify-center border border-slate-200 shadow-xs cursor-pointer z-10">
+                        <label class="absolute -bottom-1 -right-1 bg-white text-slate-800 w-6 h-6 rounded-full flex items-center justify-center border border-slate-200 shadow-xs cursor-pointer z-10">
                             <x-ui.icon name="plus" size="xxs" />
                             <input type="file" wire:model="avatarFile" class="hidden" accept="image/*" />
                         </label>
@@ -626,7 +672,7 @@ new class extends Component
                                 wire:click="followUser"
                                 wire:loading.attr="disabled"
                                 wire:target="followUser"
-                                class="absolute -bottom-1 -right-1 bg-slate-950 text-white w-5.5 h-5.5 rounded-full flex items-center justify-center border border-white hover:scale-110 active:scale-95 transition-all shadow-xs z-10"
+                                class="absolute -bottom-1 -right-1 bg-slate-950 text-white w-6 h-6 rounded-full flex items-center justify-center border border-white hover:scale-110 active:scale-95 transition-all shadow-xs z-10"
                                 title="Theo dõi {{ $user->name }}"
                             >
                                 <x-ui.icon name="plus" size="xxs" />
@@ -634,7 +680,7 @@ new class extends Component
                         @endif
                     @endif
 
-                    @if ($user->isOnline() && $user->canSeeOnlineStatus(auth()->user()))
+                    @if ($user->isOnline() && $this->canSeeOnlineStatus)
                         <span class="absolute bottom-0 right-0 block h-3.5 w-3.5 rounded-full bg-green-500 border-2 border-white ring-1 ring-slate-100" title="Trực tuyến"></span>
                     @endif
                 </div>
@@ -866,8 +912,8 @@ new class extends Component
                         </label>
                     @endif
 
-                    @if ($user->isOnline() && $user->canSeeOnlineStatus(auth()->user()))
-                        <span class="absolute bottom-1 right-1 block h-4.5 w-4.5 rounded-full bg-green-500 border-4 border-white ring-1 ring-slate-100" title="Trực tuyến"></span>
+                    @if ($user->isOnline() && $this->canSeeOnlineStatus)
+                        <span class="absolute bottom-1 right-1 block h-6 w-6 rounded-full bg-green-500 border-4 border-white ring-1 ring-slate-100" title="Trực tuyến"></span>
                     @endif
                 </div>
 
