@@ -477,13 +477,34 @@ Route::middleware(['auth', 'active.account', 'verified.identity'])->group(functi
         $cacheKey = 'user_last_seen_heartbeat_'.$user->id;
         $now = now();
 
-        $lastSeenCached = cache($cacheKey);
-        if (! $lastSeenCached || $now->diffInSeconds($lastSeenCached) > 120) {
-            $user->update(['last_seen_at' => $now]);
-            cache([$cacheKey => $now], now()->addMinutes(5));
-        }
+        try {
+            $lastSeenCached = cache($cacheKey);
+            $shouldUpdate = true;
 
-        return response()->json(['status' => 'ok', 'last_seen_at' => $now->toIso8601String()]);
+            if ($lastSeenCached) {
+                if (is_numeric($lastSeenCached)) {
+                    $shouldUpdate = ($now->timestamp - (int)$lastSeenCached) > 120;
+                } else {
+                    try {
+                        if ($lastSeenCached instanceof \DateTimeInterface) {
+                            $shouldUpdate = $now->diffInSeconds($lastSeenCached) > 120;
+                        }
+                    } catch (\Throwable $tb) {
+                        $shouldUpdate = true;
+                    }
+                }
+            }
+
+            if ($shouldUpdate) {
+                $user->update(['last_seen_at' => $now]);
+                cache([$cacheKey => $now->timestamp], now()->addMinutes(5));
+            }
+
+            return response()->json(['status' => 'ok', 'last_seen_at' => $now->toIso8601String()]);
+        } catch (\Throwable $e) {
+            \Log::error('Heartbeat error: ' . $e->getMessage(), ['userId' => $user->id, 'exception' => $e]);
+            return response()->json(['status' => 'error', 'message' => $e->getMessage()], 500);
+        }
     })->name('presence.heartbeat');
 
     // 4.1 Secure Media Delivery Routes

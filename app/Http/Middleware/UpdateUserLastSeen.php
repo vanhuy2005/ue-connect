@@ -16,7 +16,7 @@ class UpdateUserLastSeen
      */
     public function handle(Request $request, Closure $next): Response
     {
-        if (Auth::check()) {
+        if (Auth::check() && ! $request->routeIs('presence.heartbeat')) {
             $user = Auth::user();
             if (! $user->last_seen_at || $user->last_seen_at->diffInMinutes(now()) >= 1) {
                 $user->updateQuietly(['last_seen_at' => now()]);

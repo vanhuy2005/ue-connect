@@ -1198,7 +1198,7 @@ new #[Layout('layouts.app')] class extends Component
                                             <label for="post-visibility" class="sr-only">Quyền xem</label>
                                             <select
                                                 id="post-visibility"
-                                                wire:model="visibility"
+                                                wire:model.live="visibility"
                                                 class="absolute inset-0 w-full h-full opacity-0 z-10 cursor-pointer"
                                             >
                                                 <option value="verified_users">Chỉ sinh viên xác thực</option>
@@ -1257,7 +1257,7 @@ new #[Layout('layouts.app')] class extends Component
                     if (window.Echo) {
                         window.Echo.private('feed')
                             .listen('.PostCreated', (e) => {
-                                if (e.author_id != {{ Auth::id() }}) {
+                                if (e.author_id != {{ Auth::id() ?? 'null' }}) {
                                     count++;
                                     showBanner = true;
                                 }

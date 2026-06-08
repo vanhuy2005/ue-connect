@@ -152,6 +152,16 @@ class MentorAccessRequestTest extends TestCase
             ->assertSee(route('mentor.setup'));
     }
 
+    public function test_mentor_apply_page_renders_with_avatar(): void
+    {
+        $user = $this->activeUser('alumni');
+        $this->attachAvatar($user);
+
+        $this->actingAs($user)
+            ->get(route('mentor.apply'))
+            ->assertOk();
+    }
+
     public function test_duplicate_pending_access_request_is_blocked(): void
     {
         $user = $this->activeUser('alumni');

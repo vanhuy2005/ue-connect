@@ -90,16 +90,16 @@
                 <div class="flex items-start justify-between">
                     <div>
                         <div class="flex items-center gap-1.5">
-                            <a href="{{ $commentAuthorProfileUrl }}" class="text-xs font-bold text-slate-800 leading-tight hover:text-ue-brand hover:underline">
+                            <a href="{{ $commentAuthorProfileUrl }}" class="text-sm font-bold text-slate-800 leading-tight hover:text-ue-brand hover:underline">
                                 {{ $commentAuthor->name }}
                             </a>
                             <x-ui.icon name="check-circle" size="xs" class="text-ue-brand flex-shrink-0" />
-                            <span class="text-[10px] text-slate-400 font-semibold">
+                            <span class="text-xs text-slate-400 font-semibold">
                                 · {{ $comment->created_at->diffForHumans() }}
                             </span>
                         </div>
                         @if ($commentProfile)
-                            <div class="text-[10px] text-slate-400 font-medium">
+                            <div class="text-xs text-slate-400 font-medium mt-0.5">
                                 {{ Str::ucfirst($commentProfile->role_type) }}
                                 @if ($commentProfile->faculty)
                                     · {{ $commentProfile->faculty }}
@@ -173,12 +173,12 @@
                 </div>
 
                 {{-- Content Body --}}
-                <div class="text-slate-700 text-xs mt-1 leading-relaxed">
+                <div class="text-slate-700 text-sm mt-1.5 leading-relaxed">
                     {{ $comment->body }}
                 </div>
 
                 {{-- Action triggers --}}
-                <div class="flex items-center gap-4 mt-2 text-slate-400 text-[10px] font-bold">
+                <div class="flex items-center gap-4 mt-2.5 text-slate-400 text-xs font-bold">
                     <button
                         type="button"
                         wire:click="toggleCommentLike({{ $comment->id }})"

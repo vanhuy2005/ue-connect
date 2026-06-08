@@ -240,9 +240,26 @@
                             });
                     }
 
-                    // Presence Heartbeat Loop (throttled/visibility-aware)
+                    // Presence Heartbeat Loop (throttled/visibility-aware & idle-aware)
+                    let lastActiveTime = Date.now();
+                    const idleLimit = 5 * 60 * 1000; // 5 minutes
+
+                    function updateActivity() {
+                        lastActiveTime = Date.now();
+                    }
+
+                    ['mousemove', 'keydown', 'scroll', 'click'].forEach(evt => {
+                        window.addEventListener(evt, updateActivity, { passive: true });
+                    });
+
                     function sendHeartbeat() {
+                        // Sleep if the tab is hidden
                         if (document.visibilityState !== 'visible') return;
+
+                        // Sleep if user is idle
+                        if (Date.now() - lastActiveTime > idleLimit) {
+                            return;
+                        }
 
                         fetch('{{ route('presence.heartbeat') }}', {
                             method: 'POST',
