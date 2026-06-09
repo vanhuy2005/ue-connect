@@ -1,10 +1,12 @@
 <?php
 
 use Livewire\Component;
+use Livewire\Attributes\Computed;
 use App\Actions\Admin\BuildAdminDashboardAction;
 
 new class extends Component {
-    public function getDataProperty(): array
+    #[Computed]
+    public function data(): array
     {
         return app(BuildAdminDashboardAction::class)->execute();
     }

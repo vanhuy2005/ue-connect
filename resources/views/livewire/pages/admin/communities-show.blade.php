@@ -18,6 +18,7 @@ use App\Models\CommunityMember;
 use App\Models\CommunityResource;
 use App\Models\User;
 use Livewire\Volt\Component;
+use Livewire\Attributes\Computed;
 
 new class extends Component {
     public Community $community;
@@ -63,7 +64,8 @@ new class extends Component {
         $this->community = $community->load(['creator', 'owner']);
     }
 
-    public function getActiveMembersProperty()
+    #[Computed]
+    public function activeMembers()
     {
         return CommunityMember::where('community_id', $this->community->id)
             ->where('status', CommunityMemberStatus::Active->value)
@@ -72,7 +74,8 @@ new class extends Component {
             ->paginate(20, pageName: 'membersPage');
     }
 
-    public function getPendingJoinRequestsProperty()
+    #[Computed]
+    public function pendingJoinRequests()
     {
         return CommunityJoinRequest::where('community_id', $this->community->id)
             ->where('status', 'pending')
@@ -81,7 +84,8 @@ new class extends Component {
             ->get();
     }
 
-    public function getPendingResourcesProperty()
+    #[Computed]
+    public function pendingResources()
     {
         return CommunityResource::where('community_id', $this->community->id)
             ->where('status', CommunityResourceStatus::PendingReview->value)
