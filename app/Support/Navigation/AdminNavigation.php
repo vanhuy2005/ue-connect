@@ -159,6 +159,14 @@ class AdminNavigation
                         'permission' => 'manage_system_settings',
                         'description' => 'Cấu hình các tham số vận hành, sao lưu và khôi phục cài đặt',
                     ],
+                    [
+                        'key' => 'ai-chat-logs',
+                        'label' => 'Giám sát AI Chatbot',
+                        'route' => 'admin.ai-chat-logs.index',
+                        'icon' => 'message-square',
+                        'permission' => 'manage_system_settings',
+                        'description' => 'Theo dõi nhật ký câu hỏi AI, phản hồi, cấu trúc truy vấn và đánh giá từ sinh viên',
+                    ],
                 ],
             ],
         ];
