@@ -372,9 +372,9 @@ new class extends Component {
                         <tbody class="divide-y divide-ue-border text-xs font-medium">
                             @forelse($recentActivity as $log)
                                 @php
-                                    $actionName = $log->action ?? ($log->action_key ?? 'Hành động khác');
-                                    $actorName = $log->actor?->name ?? ($log->actor_type === 'system' ? 'Hệ thống' : 'Quản trị viên');
-                                    $targetInfo = isset($log->target_type, $log->target_id) ? "{$log->target_type} #{$log->target_id}" : 'N/A';
+                                    $actionName = $log['action'] ?? ($log['action_key'] ?? 'Hành động khác');
+                                    $actorName = $log['actor_name'] ?? ($log['actor_type'] === 'system' ? 'Hệ thống' : 'Quản trị viên');
+                                    $targetInfo = isset($log['target_type'], $log['target_id']) ? "{$log['target_type']} #{$log['target_id']}" : 'N/A';
                                 @endphp
                                 <tr class="hover:bg-ue-surface-hover/30 transition-colors">
                                     <td class="px-5 py-4">
@@ -385,7 +385,7 @@ new class extends Component {
                                     <td class="px-5 py-4 text-ue-text font-semibold">{{ $actorName }}</td>
                                     <td class="px-5 py-4 text-ue-text-muted">{{ $targetInfo }}</td>
                                     <td class="px-5 py-4 text-ue-text-muted text-xxs">
-                                        {{ $log->created_at instanceof \Carbon\Carbon ? $log->created_at->diffForHumans() : \Carbon\Carbon::parse($log->created_at)->diffForHumans() }}
+                                        {{ \Carbon\Carbon::parse($log['created_at'])->diffForHumans() }}
                                     </td>
                                 </tr>
                             @empty
