@@ -31,6 +31,7 @@ use App\Actions\Reports\CreateReport;
 use App\Actions\Messaging\SendSharedPostMessage;
 use App\Actions\Messaging\FindOrCreateDirectConversation;
 use App\Models\Post;
+use App\Models\TemporaryAvatar;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\DB;
@@ -210,7 +211,7 @@ new class extends Component
                         default => now()->addDay(),
                     };
 
-                    \App\Models\TemporaryAvatar::create([
+                    TemporaryAvatar::create([
                         'user_id' => Auth::id(),
                         'previous_media_id' => $oldAvatar?->id,
                         'current_media_id' => $media->id,
@@ -2035,17 +2036,18 @@ new class extends Component
 </div>
 
     <!-- Crop Modal -->
-    <div 
-        x-data="avatarCropper()" 
-        x-on:avatar-selected.window="handleFileSelect($event.detail.files)"
-        x-show="open" 
-        class="fixed inset-0 z-modal overflow-y-auto flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs ue-animate-fade-in"
-        role="dialog" 
-        aria-modal="true" 
-        aria-labelledby="crop-modal-title"
-        style="display: none;"
-        @keydown.escape.window="cancel()"
-    >
+    <div x-data="avatarCropper()">
+        <template x-teleport="body">
+            <div
+                x-on:avatar-selected.window="handleFileSelect($event.detail.files)"
+                x-show="open"
+                class="fixed inset-0 z-modal overflow-y-auto flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs ue-animate-fade-in"
+                role="dialog"
+                aria-modal="true"
+                aria-labelledby="crop-modal-title"
+                style="display: none; z-index: var(--z-modal);"
+                @keydown.escape.window="cancel()"
+            >
         <!-- CSS styles specifically for circular crop box and zoom slider -->
         <style>
             .cropper-view-box,
@@ -2349,7 +2351,8 @@ new class extends Component
                     </button>
                 </div>
             </div>
-        </div>
+            </div>
+        </template>
     </div>
 </div>
 
@@ -2466,15 +2469,15 @@ new class extends Component
                     const handleUpload = (blob) => {
                         const croppedFile = new File([blob], 'avatar.jpg', { type: 'image/jpeg' });
                         
-                        @this.upload('avatarFile', croppedFile, 
-                            (uploadedUrl) => {
-                                @this.call('saveAvatar', this.caption, this.shareToFeed, this.duration, this.customExpiresAt)
+                        this.$wire.upload('avatarFile', croppedFile,
+                            () => {
+                                this.$wire.saveAvatar(this.caption, this.shareToFeed, this.duration, this.customExpiresAt)
                                     .then(() => {
                                         this.isUploading = false;
                                         this.open = false;
                                         this.cancel();
                                     })
-                                    .catch((err) => {
+                                    .catch(() => {
                                         this.isUploading = false;
                                     });
                             },
@@ -2510,4 +2513,3 @@ new class extends Component
         }
     </script>
 @endpush
-
