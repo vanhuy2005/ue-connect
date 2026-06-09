@@ -275,6 +275,9 @@
                 });
             </script>
         @endauth
+        @auth
+            <livewire:partials.app.ai-chatbot />
+        @endauth
 
     </body>
 </html>

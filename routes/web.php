@@ -16,6 +16,7 @@ use App\Actions\Settings\EnsureUserSettingsExistAction;
 use App\Enums\MentorAccessStatus;
 use App\Enums\MentorAvailabilityStatus;
 use App\Http\Controllers\Admin\AdminSearchController;
+use App\Http\Controllers\Admin\AdminSourceDocumentController;
 use App\Http\Controllers\Admin\AnnouncementController;
 use App\Http\Controllers\Admin\AuditLogController;
 use App\Http\Controllers\Admin\CommunityController;
@@ -26,6 +27,7 @@ use App\Http\Controllers\Admin\SystemSettingsController;
 use App\Http\Controllers\Admin\UserManagementController;
 use App\Http\Controllers\Admin\VerificationActionController;
 use App\Http\Controllers\Admin\VerificationEvidenceController;
+use App\Http\Controllers\ChatController;
 use App\Http\Controllers\MediaController;
 use App\Http\Controllers\UserFollowController;
 use App\Http\Middleware\EnsureAdminAccess;
@@ -72,8 +74,14 @@ Route::middleware(['auth', 'verified', 'active.account'])->group(function () {
 
 // 4. App Shell (protected by account status AND verified identity)
 Route::middleware(['auth', 'active.account', 'verified.identity'])->group(function () {
+    // Chat API
+    Route::post('chat/sessions', [ChatController::class, 'createSession'])->name('chat.sessions.create');
+    Route::get('chat/sessions', [ChatController::class, 'listSessions'])->name('chat.sessions.index');
+    Route::post('chat/sessions/{session}/messages', [ChatController::class, 'sendMessage'])->name('chat.sessions.message');
+    Route::post('chat/feedback', [ChatController::class, 'submitFeedback'])->name('chat.feedback');
     Route::view('app/home', 'app.home')
         ->name('dashboard');
+    Route::view('chat', 'app.chat')->name('chat');
 
     Route::get('app/posts/{post}', function (Post $post) {
         Gate::authorize('view', $post);
@@ -483,13 +491,13 @@ Route::middleware(['auth', 'active.account', 'verified.identity'])->group(functi
 
             if ($lastSeenCached) {
                 if (is_numeric($lastSeenCached)) {
-                    $shouldUpdate = ($now->timestamp - (int)$lastSeenCached) > 120;
+                    $shouldUpdate = ($now->timestamp - (int) $lastSeenCached) > 120;
                 } else {
                     try {
-                        if ($lastSeenCached instanceof \DateTimeInterface) {
+                        if ($lastSeenCached instanceof DateTimeInterface) {
                             $shouldUpdate = $now->diffInSeconds($lastSeenCached) > 120;
                         }
-                    } catch (\Throwable $tb) {
+                    } catch (Throwable $tb) {
                         $shouldUpdate = true;
                     }
                 }
@@ -501,8 +509,9 @@ Route::middleware(['auth', 'active.account', 'verified.identity'])->group(functi
             }
 
             return response()->json(['status' => 'ok', 'last_seen_at' => $now->toIso8601String()]);
-        } catch (\Throwable $e) {
-            \Log::error('Heartbeat error: ' . $e->getMessage(), ['userId' => $user->id, 'exception' => $e]);
+        } catch (Throwable $e) {
+            Log::error('Heartbeat error: '.$e->getMessage(), ['userId' => $user->id, 'exception' => $e]);
+
             return response()->json(['status' => 'error', 'message' => $e->getMessage()], 500);
         }
     })->name('presence.heartbeat');
@@ -560,6 +569,10 @@ Route::prefix('admin')
         // Audit logs
         Route::get('audit-logs', [AuditLogController::class, 'index'])
             ->name('audit-logs.index');
+
+        // AI Chat logs
+        Route::view('ai-chat-logs', 'admin.ai-chat-logs')
+            ->name('ai-chat-logs.index');
 
         // Notifications
         Route::get('notifications', function () {
@@ -699,6 +712,13 @@ Route::prefix('admin')
         Route::post('media/cloudinary-sync', [AdminMediaController::class, 'cloudinarySync'])->name('media.cloudinary-sync');
         Route::post('media/cleanup-temporary', [AdminMediaController::class, 'cleanupTemporary'])->name('media.cleanup-temporary');
         Route::post('media/cleanup-orphaned', [AdminMediaController::class, 'cleanupOrphaned'])->name('media.cleanup-orphaned');
+
+        // RAG Document Management
+        Route::get('source-documents', [AdminSourceDocumentController::class, 'index'])->name('source-documents.index');
+        Route::post('source-documents', [AdminSourceDocumentController::class, 'store'])->name('source-documents.store');
+        Route::post('source-documents/{sourceDocument}/ingest', [AdminSourceDocumentController::class, 'ingest'])->name('source-documents.ingest');
+        Route::delete('source-documents/{sourceDocument}', [AdminSourceDocumentController::class, 'destroy'])->name('source-documents.destroy');
+        Route::get('source-documents/test-search', [AdminSourceDocumentController::class, 'testSearch'])->name('source-documents.test-search');
     });
 
 // 6. Artisan command runner (temporary helper for production setup without shell)

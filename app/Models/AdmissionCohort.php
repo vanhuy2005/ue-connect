@@ -6,25 +6,22 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
-class Faculty extends Model
+class AdmissionCohort extends Model
 {
     use HasFactory;
 
     protected $fillable = [
-        'name',
-        'slug',
-        'description',
-        'status',
-        'code',
+        'year',
+        'cohort_name',
         'normalized_name',
-        'source_url',
+        'note',
     ];
 
     /**
-     * Get the academic programs for this faculty.
+     * Get the training programs for this cohort.
      */
-    public function academicPrograms(): HasMany
+    public function trainingPrograms(): HasMany
     {
-        return $this->hasMany(AcademicProgram::class);
+        return $this->hasMany(TrainingProgram::class, 'cohort_id');
     }
 }
