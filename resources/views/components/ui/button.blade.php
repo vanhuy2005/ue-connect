@@ -114,7 +114,7 @@ $loadingLabel = $loading ? 'true' : null;
     @if($isDisabled) aria-disabled="true" @endif
     {{ $attributes->class([
         /* Base */
-        'inline-flex items-center justify-center font-semibold leading-snug',
+        'inline-flex items-center justify-center font-bold leading-snug',
         'select-none whitespace-nowrap border rounded-lg',
         'transition-colors duration-sm ease-out',
         'ue-focus-ring',
@@ -145,7 +145,7 @@ $loadingLabel = $loading ? 'true' : null;
     @if($loading) aria-busy="true" @endif
     {{ $attributes->class([
         /* Base */
-        'inline-flex items-center justify-center font-semibold leading-snug',
+        'inline-flex items-center justify-center font-bold leading-snug',
         'select-none whitespace-nowrap border rounded-lg',
         'transition-colors duration-sm ease-out',
         'ue-focus-ring',

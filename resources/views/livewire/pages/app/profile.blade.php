@@ -1064,16 +1064,16 @@ new class extends Component
             <div class="flex items-start justify-between gap-4">
                 {{-- Info Column --}}
                 <div class="space-y-1.5 min-w-0 flex-1">
-                    <h1 class="text-xl font-extrabold text-slate-900 leading-tight flex items-center gap-1.5">
+                    <h1 class="ue-text-heading flex items-center gap-1.5">
                         <span class="truncate">{{ $user->profile?->display_name ?? $user->name }}</span>
                         @if ($user->isActive())
                             <x-ui.icon name="shield-check" size="xs" class="text-ue-brand fill-ue-brand" />
                         @endif
                     </h1>
                     
-                    <div class="flex items-center gap-2 text-xxs text-slate-500 font-medium">
+                    <div class="flex items-center gap-2 ue-text-caption">
                         <span>{{ '@' . ($user->username ?? Str::slug($user->name, '')) }}</span>
-                        <span class="px-1.5 py-0.5 rounded bg-slate-100 text-slate-605 font-bold uppercase text-[8px] tracking-wide">
+                        <span class="px-1.5 py-0.5 rounded bg-slate-100 text-slate-700 font-bold uppercase text-[9px] tracking-wide">
                             @if (($user->profile?->role_type ?? 'student') === 'student') Sinh viên
                             @elseif (in_array(($user->profile?->role_type ?? ''), ['teacher', 'advisor'], true)) Giảng viên
                             @elseif (($user->profile?->role_type ?? '') === 'alumni') Cựu sinh viên
@@ -1083,7 +1083,7 @@ new class extends Component
                     </div>
 
                     @if ($showFaculty && $user->profile?->faculty)
-                        <div class="text-[10px] text-slate-500 font-semibold uppercase tracking-wider pt-0.5">
+                        <div class="ue-text-caption uppercase tracking-wider pt-0.5 font-semibold">
                             Khoa: {{ $user->profile?->faculty }}
                         </div>
                     @endif
@@ -1091,7 +1091,7 @@ new class extends Component
 
                 {{-- Avatar Column --}}
                 <div class="relative w-16 h-16 rounded-full overflow-visible flex-shrink-0">
-                    <x-ui.avatar :user="$user" size="lg" class="w-full h-full border border-slate-100 shadow-2xs" />
+                    <x-ui.avatar :user="$user" size="full" :status="false" class="w-full h-full border border-slate-100 shadow-2xs" />
                     
                     @if ($isOwn)
                         <label class="absolute -bottom-1 -right-1 bg-white text-slate-800 w-6 h-6 rounded-full flex items-center justify-center border border-slate-200 shadow-xs cursor-pointer z-10">
@@ -1121,7 +1121,7 @@ new class extends Component
 
             {{-- Bio --}}
             @if ($showBio)
-                <div class="text-xs text-slate-700 leading-relaxed max-w-xl">
+                <div class="ue-text-body leading-relaxed max-w-xl text-slate-700">
                     @if ($user->profile?->bio)
                         <p>{{ $user->profile?->bio }}</p>
                     @elseif ($isOwn)
@@ -1131,14 +1131,14 @@ new class extends Component
             @endif
 
             {{-- Stats / Followers --}}
-            <div class="flex items-center gap-1.5 text-[11px] text-slate-400 select-none">
-                <span>{{ $followersCount }} người theo dõi</span>
+            <div class="flex items-center gap-1.5 ue-text-caption select-none">
+                <span class="font-semibold text-slate-800">{{ $followersCount }}</span> <span class="text-slate-500">người theo dõi</span>
                 @if ($this->connectionsCount > 0)
                     <span>•</span>
-                    <span>{{ $this->connectionsCount }} bạn bè</span>
+                    <span class="font-semibold text-slate-800">{{ $this->connectionsCount }}</span> <span class="text-slate-500">bạn bè</span>
                 @endif
                 <span>•</span>
-                <span>{{ $this->postsCount }} bài viết</span>
+                <span class="font-semibold text-slate-800">{{ $this->postsCount }}</span> <span class="text-slate-500">bài viết</span>
             </div>
 
             {{-- Action Buttons Row --}}
@@ -1341,7 +1341,7 @@ new class extends Component
                 {{-- Round Avatar Photo --}}
                 <div class="relative -mt-14 mx-auto md:absolute md:-top-16 md:left-6 md:mt-0 md:mx-0 w-28 h-28 sm:w-32 sm:h-32 rounded-full border-4 border-white bg-slate-50 shadow-md group">
                     <div class="w-full h-full rounded-full overflow-hidden">
-                        <x-ui.avatar :user="$user" size="2xl" class="w-full h-full border-none rounded-none shadow-none text-2xl font-bold bg-slate-100 flex items-center justify-center" />
+                        <x-ui.avatar :user="$user" size="full" :status="false" class="w-full h-full border-none rounded-none shadow-none text-2xl font-bold bg-slate-100 flex items-center justify-center" />
                     </div>
 
                     @if ($isOwn)
@@ -1367,7 +1367,7 @@ new class extends Component
                 {{-- Profile Info Section --}}
                 <div class="space-y-3.5 w-full mt-4 md:mt-0 md:pl-40 min-w-0">
                     <div class="flex flex-col sm:flex-row sm:items-center gap-3 justify-center md:justify-start">
-                        <h1 class="text-base sm:text-lg font-bold text-slate-800 flex items-center justify-center md:justify-start gap-1.5 min-w-0">
+                        <h1 class="ue-text-heading flex items-center justify-center md:justify-start gap-1.5 min-w-0">
                             <span class="truncate">{{ $user->profile?->display_name ?? $user->name }}</span>
                             @if ($user->isActive())
                                 <x-ui.icon name="shield-check" size="xs" class="text-ue-brand fill-ue-brand" />
@@ -1375,7 +1375,7 @@ new class extends Component
                         </h1>
 
                         {{-- Role Badge --}}
-                        <span class="inline-flex self-center px-2 py-0.5 rounded-full text-[9px] font-bold tracking-wide uppercase bg-slate-100 text-slate-500">
+                        <span class="inline-flex self-center px-2 py-0.5 rounded-full text-[10px] font-bold tracking-wide uppercase bg-slate-100 text-slate-650">
                             @if (($user->profile?->role_type ?? 'student') === 'student') Sinh viên
                             @elseif (in_array(($user->profile?->role_type ?? ''), ['teacher', 'advisor'], true)) Giảng viên
                             @elseif (($user->profile?->role_type ?? '') === 'alumni') Cựu sinh viên
@@ -1384,37 +1384,37 @@ new class extends Component
                         </span>
                     </div>
 
-                    <div class="flex items-center justify-center md:justify-start gap-6 py-1 text-slate-700 select-none text-xxs font-medium">
+                    <div class="flex items-center justify-center md:justify-start gap-6 py-1 select-none ue-text-caption">
                         <div class="flex items-baseline gap-1">
-                            <span class="text-xs font-bold text-slate-800">{{ $this->postsCount }}</span>
-                            <span class="text-slate-400">Bài viết</span>
+                            <span class="ue-text-body-strong">{{ $this->postsCount }}</span>
+                            <span class="text-slate-500">Bài viết</span>
                         </div>
                         <div class="flex items-baseline gap-1">
-                            <span class="text-xs font-bold text-slate-800">{{ $this->connectionsCount }}</span>
-                            <span class="text-slate-400">Bạn bè</span>
+                            <span class="ue-text-body-strong">{{ $this->connectionsCount }}</span>
+                            <span class="text-slate-500">Bạn bè</span>
                         </div>
                         <div class="flex items-baseline gap-1">
-                            <span class="text-xs font-bold text-slate-800">{{ $followersCount }}</span>
-                            <span class="text-slate-400">Người theo dõi</span>
+                            <span class="ue-text-body-strong">{{ $followersCount }}</span>
+                            <span class="text-slate-500">Người theo dõi</span>
                         </div>
                         <div class="flex items-baseline gap-1">
-                            <span class="text-xs font-bold text-slate-800">{{ $followingCount }}</span>
-                            <span class="text-slate-400">Đang theo dõi</span>
+                            <span class="ue-text-body-strong">{{ $followingCount }}</span>
+                            <span class="text-slate-500">Đang theo dõi</span>
                         </div>
                     </div>
 
                     {{-- Credentials & Bio --}}
-                    <div class="space-y-1 text-slate-500 text-xxs font-medium max-w-xl mx-auto md:mx-0">
-                        <p class="text-slate-450 tracking-wide uppercase text-[9px] font-bold">
+                    <div class="space-y-1 max-w-xl mx-auto md:mx-0">
+                        <p class="ue-text-caption uppercase tracking-wider font-semibold">
                             @if ($showFaculty && $user->profile?->faculty)
                                 Khoa: {{ $user->profile?->faculty }}
                             @endif
                         </p>
                         @if ($showBio)
                             @if ($user->profile?->bio)
-                                <p class="leading-relaxed text-slate-655">{{ $user->profile?->bio }}</p>
+                                <p class="ue-text-body leading-relaxed text-slate-700">{{ $user->profile?->bio }}</p>
                             @else
-                                <p class="italic text-slate-350">Chưa cập nhật giới thiệu cá nhân.</p>
+                                <p class="italic ue-text-body text-slate-400">Chưa cập nhật giới thiệu cá nhân.</p>
                             @endif
                         @endif
                     </div>

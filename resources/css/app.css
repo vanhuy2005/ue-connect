@@ -342,7 +342,7 @@
 
     body {
         font-family: var(--font-sans);
-        font-size: var(--text-base);
+        font-size: var(--text-lg);
         font-weight: var(--font-regular);
         line-height: var(--leading-relaxed);
         color: var(--ue-text);
@@ -806,18 +806,27 @@
         display: flex;
         align-items: center;
         gap: 0.875rem;
-        padding: 0.625rem 0.875rem;
+        padding: 0 12px;
         border-radius: 0.625rem;
-        font-size: var(--text-base);
-        font-weight: var(--font-medium);
+        font-size: var(--text-lg);
+        font-weight: var(--font-semibold);
         color: #111827;
         text-decoration: none;
         transition:
             background-color var(--duration-sm) var(--ease-out),
             color var(--duration-sm) var(--ease-out),
-            transform var(--duration-sm) var(--ease-out);
-        min-height: 44px;
+            transform var(--duration-sm) var(--ease-out),
+            padding 350ms cubic-bezier(0.4, 0, 0.2, 1),
+            border-radius 350ms cubic-bezier(0.4, 0, 0.2, 1);
+        height: 44px;
+        width: 100%;
+        overflow: hidden;
         cursor: pointer;
+    }
+
+    .ue-sidebar-logo-wrapper {
+        padding-left: 8px !important;
+        transition: padding-left 350ms cubic-bezier(0.4, 0, 0.2, 1);
     }
 
     .ue-nav-link svg {
@@ -839,7 +848,7 @@
     .ue-nav-link.active {
         background-color: #eef6ff;
         color: #03162d;
-        font-weight: var(--font-semibold);
+        font-weight: var(--font-bold);
     }
 
     .ue-nav-link[aria-current="page"] svg,
@@ -860,7 +869,7 @@
         padding: 0.5rem 0.625rem;
         border-radius: 0.5rem;
         color: #374151;
-        font-size: var(--text-sm);
+        font-size: var(--text-md);
         font-weight: var(--font-semibold);
         line-height: 1.25;
         text-decoration: none;
@@ -1228,21 +1237,21 @@
     .ue-post-card__author {
         font-weight: var(--font-bold);
         color: var(--ue-text);
-        font-size: var(--text-sm);
+        font-size: var(--text-lg); /* 16px */
         display: inline-flex;
         align-items: center;
         gap: 0.25rem;
     }
 
     .ue-post-card__meta {
-        font-size: var(--text-xs);
-        color: var(--ue-text-muted);
+        font-size: var(--text-sm); /* 13px */
+        color: var(--ue-text-secondary); /* Clearer contrast */
         font-weight: var(--font-medium);
     }
 
     .ue-post-card__content {
-        font-size: var(--text-base);
-        line-height: var(--leading-relaxed);
+        font-size: var(--text-lg); /* 16px readable post body */
+        line-height: 1.55;
         color: var(--ue-text);
         word-break: break-word;
         white-space: pre-wrap;
@@ -1847,15 +1856,44 @@
 
 .ue-shell__sidebar--expanded {
     width: var(--layout-sidebar-w) !important;
+    padding-left: 12px !important;
+    padding-right: 12px !important;
 }
 
 .ue-shell__sidebar--collapsed {
     width: var(--layout-sidebar-w-collapsed) !important;
+    padding-left: 14px !important;
+    padding-right: 14px !important;
+}
+
+.ue-shell__sidebar--collapsed .ue-sidebar-logo-wrapper {
+    padding-left: 6px !important;
 }
 
 /* Keep icons aligned and fixed in position inside collapsed sidebar */
 .ue-shell__sidebar--collapsed .ue-nav-link {
+    padding-left: 10px !important;
+    padding-right: 10px !important;
+    border-radius: 50%;
     gap: 0;
+}
+
+.ue-shell__sidebar--collapsed .ue-nav-link [x-show="!collapsed"],
+.ue-shell__sidebar--collapsed .ue-nav-link > span,
+.ue-shell__sidebar--collapsed .ue-nav-link svg:not(.flex-shrink-0) {
+    display: none !important;
+}
+
+.ue-sidebar-secondary-section > p {
+    height: 1.25rem;
+    overflow: hidden;
+    opacity: 1;
+    transition: opacity 200ms ease;
+}
+
+.ue-shell__sidebar--collapsed .ue-sidebar-secondary-section > p {
+    opacity: 0 !important;
+    pointer-events: none;
 }
 
 /* Sub-navigation links styles (larger typography and premium states) */
@@ -2015,6 +2053,126 @@
 @media (prefers-reduced-motion: reduce) {
     .ue-notifications-panel {
         transition: none !important;
+    }
+}
+
+/* =============================================================================
+   UEConnect Enterprise Typography Classes
+   ============================================================================= */
+@layer components {
+    /* 1. Page & Display Titles */
+    .ue-text-page-title {
+        font-family: var(--font-sans);
+        font-size: 1.5rem; /* 24px mobile */
+        font-weight: 700;
+        line-height: 1.2;
+        letter-spacing: var(--tracking-snug);
+        color: var(--ue-text);
+    }
+    @media (min-width: 768px) {
+        .ue-text-page-title {
+            font-size: 1.75rem; /* 28px desktop */
+        }
+    }
+
+    /* 2. Main Page Headings (e.g. Bảng tin, Tin nhắn, Hồ sơ) */
+    .ue-text-heading {
+        font-family: var(--font-sans);
+        font-size: 1.375rem; /* 22px mobile */
+        font-weight: 700;
+        line-height: 1.25;
+        letter-spacing: var(--tracking-snug);
+        color: var(--ue-text);
+    }
+    @media (min-width: 768px) {
+        .ue-text-heading {
+            font-size: 1.5rem; /* 24px desktop */
+        }
+    }
+
+    /* 3. Section Titles (e.g. Card headers, Group titles) */
+    .ue-text-section {
+        font-family: var(--font-sans);
+        font-size: 1.125rem; /* 18px mobile */
+        font-weight: 700;
+        line-height: 1.3;
+        letter-spacing: var(--tracking-snug);
+        color: var(--ue-text);
+    }
+    @media (min-width: 768px) {
+        .ue-text-section {
+            font-size: 1.25rem; /* 20px desktop */
+        }
+    }
+
+    /* 4. Subheading (e.g. Tab titles, small card titles) */
+    .ue-text-subheading {
+        font-family: var(--font-sans);
+        font-size: 1.0625rem; /* 17px */
+        font-weight: 600;
+        line-height: 1.35;
+        color: var(--ue-text);
+    }
+
+    /* 5. Default Readable Body (e.g. post body, messages, bio) */
+    .ue-text-body {
+        font-family: var(--font-sans);
+        font-size: 1rem; /* 16px */
+        font-weight: 400;
+        line-height: 1.55;
+        color: var(--ue-text);
+    }
+
+    /* 6. Bold/Strong Body (e.g. usernames, key content) */
+    .ue-text-body-strong {
+        font-family: var(--font-sans);
+        font-size: 1rem; /* 16px */
+        font-weight: 600;
+        line-height: 1.5;
+        color: var(--ue-text);
+    }
+
+    /* 7. Caption/Metadata (e.g. role, faculty, helper text, clear metadata) */
+    .ue-text-caption {
+        font-family: var(--font-sans);
+        font-size: 0.875rem; /* 14px */
+        font-weight: 500;
+        line-height: 1.4;
+        color: var(--ue-text-secondary);
+    }
+
+    /* 8. Tiny Metadata (e.g. timestamps, less important indicators) */
+    .ue-text-meta {
+        font-family: var(--font-sans);
+        font-size: 0.8125rem; /* 13px */
+        font-weight: 500;
+        line-height: 1.35;
+        color: var(--ue-text-muted);
+    }
+
+    /* 9. Button labels */
+    .ue-text-button {
+        font-family: var(--font-sans);
+        font-size: 0.9375rem; /* 15px */
+        font-weight: 700;
+        line-height: 1.2;
+    }
+
+    /* 10. Nav / Sidebar labels */
+    .ue-text-nav {
+        font-family: var(--font-sans);
+        font-size: 1rem; /* 16px */
+        font-weight: 600;
+        line-height: 1.4;
+    }
+
+    /* 11. Form / Input values */
+    .ue-text-input {
+        font-family: var(--font-sans);
+        font-size: 1rem; /* 16px */
+        font-weight: 400;
+        line-height: 1.4;
+        color: var(--ue-text);
     }
 }
 
