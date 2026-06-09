@@ -1,17 +1,108 @@
 <?php
 
 return [
+    /*
+    |--------------------------------------------------------------------------
+    | LLM Provider
+    |--------------------------------------------------------------------------
+    | Supported: "gemini", "openrouter", "ollama"
+    | Reads LLM_PROVIDER first, falls back to legacy AI_LLM_DRIVER.
+    */
+    'llm_provider' => env('LLM_PROVIDER', env('AI_LLM_DRIVER', 'gemini')),
+
+    /*
+    |--------------------------------------------------------------------------
+    | Qdrant Vector Store
+    |--------------------------------------------------------------------------
+    */
     'qdrant' => [
         'url' => env('QDRANT_URL', 'http://localhost:6333'),
         'api_key' => env('QDRANT_API_KEY', ''),
         'collection' => env('QDRANT_COLLECTION', 'hcmue_academic_chunks'),
+        'vector_size' => (int) env('QDRANT_VECTOR_SIZE', 768),
+        'end_point' => env('QDRANT_END_POINT', ''),
     ],
+
+    /*
+    |--------------------------------------------------------------------------
+    | Retrieval
+    |--------------------------------------------------------------------------
+    */
     'retrieval' => [
         'top_k' => (int) env('AI_RETRIEVAL_TOP_K', 8),
         'rerank_top_k' => (int) env('AI_RERANK_TOP_K', 5),
         'min_score' => (float) env('AI_MIN_RETRIEVAL_SCORE', 0.65),
     ],
+
+    /*
+    |--------------------------------------------------------------------------
+    | Embedding
+    |--------------------------------------------------------------------------
+    | Supported provider: "gemini"
+    */
     'embedding' => [
-        'model' => env('OPENAI_EMBEDDING_MODEL', 'text-embedding-3-small'),
+        'provider' => env('EMBEDDING_PROVIDER', 'gemini'),
+        'model' => env('GEMINI_EMBEDDING_MODEL', 'gemini-embedding-001'),
+        'dimensions' => (int) env('GEMINI_EMBEDDING_DIMENSIONS', 768),
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
+    | Gemini
+    |--------------------------------------------------------------------------
+    */
+    'gemini' => [
+        'api_key' => env('GEMINI_API_KEY', ''),
+        'model' => env('GEMINI_MODEL', 'gemini-2.0-flash'),
+        'base_url' => env('GEMINI_BASE_URL', 'https://generativelanguage.googleapis.com'),
+        'timeout' => (int) env('GEMINI_TIMEOUT_SECONDS', 30),
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
+    | OpenRouter
+    |--------------------------------------------------------------------------
+    */
+    'openrouter' => [
+        'api_key' => env('OPENROUTER_API_KEY', ''),
+        'model' => env('OPENROUTER_VISION_MODEL', 'google/gemini-2.0-flash'),
+        'base_url' => env('OPENROUTER_BASE_URL', 'https://openrouter.ai/api/v1'),
+        'timeout' => (int) env('OPENROUTER_TIMEOUT_SECONDS', 30),
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
+    | Ollama (Local LLM)
+    |--------------------------------------------------------------------------
+    | OLLAMA_CHAT_MODEL   — model used for chatbot generation (separate from
+    |                       OLLAMA_MODEL used by AI verification).
+    | OLLAMA_FALLBACK_*   — if Ollama fails and fallback enabled, use cloud.
+    */
+    'ollama' => [
+        'base_url' => env('OLLAMA_BASE_URL', 'http://127.0.0.1:11434'),
+        'chat_model' => env('OLLAMA_CHAT_MODEL', 'gemma4:e2b'),
+        'timeout' => (int) env('OLLAMA_TIMEOUT_SECONDS', 120),
+        'temperature' => (float) env('OLLAMA_TEMPERATURE', 0.2),
+        'top_p' => (float) env('OLLAMA_TOP_P', 0.9),
+        'num_ctx' => (int) env('OLLAMA_NUM_CTX', 4096),
+        'num_predict' => (int) env('OLLAMA_NUM_PREDICT', 1024),
+        'fallback_enabled' => (bool) env('OLLAMA_FALLBACK_ENABLED', true),
+        'fallback_provider' => env('OLLAMA_FALLBACK_PROVIDER', 'gemini'),
+        // Prompt compaction for constrained RAM
+        'rag_top_k' => (int) env('OLLAMA_RAG_TOP_K', 4),
+        'max_context_chars' => (int) env('OLLAMA_MAX_CONTEXT_CHARS', 12000),
+        'include_chat_history' => (bool) env('OLLAMA_INCLUDE_CHAT_HISTORY', false),
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
+    | Evaluation Thresholds (per provider)
+    |--------------------------------------------------------------------------
+    */
+    'evaluation' => [
+        'ollama' => [
+            'pass_threshold' => (float) env('OLLAMA_EVALUATION_PASS_THRESHOLD', 0.70),
+            'citation_pass_threshold' => (float) env('OLLAMA_CITATION_PASS_THRESHOLD', 0.75),
+        ],
     ],
 ];
