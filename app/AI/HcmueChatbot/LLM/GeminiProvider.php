@@ -97,15 +97,19 @@ class GeminiProvider implements LlmProviderInterface
      */
     public function embed(string $text): array
     {
-        $url = "https://generativelanguage.googleapis.com/v1beta/models/text-embedding-004:embedContent?key={$this->apiKey}";
+        $embeddingModel = str_contains($this->model, 'embedding') ? $this->model : 'text-embedding-004';
+        $cleanModel = ltrim($embeddingModel, 'models/');
+
+        $url = "https://generativelanguage.googleapis.com/v1beta/models/{$cleanModel}:embedContent?key={$this->apiKey}";
 
         $body = [
-            'model' => 'models/text-embedding-004',
+            'model' => "models/{$cleanModel}",
             'content' => [
                 'parts' => [
                     ['text' => $text],
                 ],
             ],
+            'outputDimensionality' => config('ai.embedding.dimensions', 768),
         ];
 
         try {
@@ -126,6 +130,61 @@ class GeminiProvider implements LlmProviderInterface
             return $data['embedding']['values'] ?? [];
         } catch (\Exception $e) {
             Log::error('Gemini embedding failed: '.$e->getMessage());
+            throw $e;
+        }
+    }
+
+    /**
+     * Embed multiple texts in a single batch request.
+     *
+     * @param  array<string>  $texts
+     * @return array<array<float>>
+     */
+    public function batchEmbed(array $texts): array
+    {
+        $embeddingModel = str_contains($this->model, 'embedding') ? $this->model : 'text-embedding-004';
+        $cleanModel = ltrim($embeddingModel, 'models/');
+
+        $url = "https://generativelanguage.googleapis.com/v1beta/models/{$cleanModel}:batchEmbedContents?key={$this->apiKey}";
+
+        $requests = [];
+        $dims = config('ai.embedding.dimensions', 768);
+        foreach ($texts as $text) {
+            $requests[] = [
+                'model' => "models/{$cleanModel}",
+                'content' => [
+                    'parts' => [
+                        ['text' => $text],
+                    ],
+                ],
+                'outputDimensionality' => $dims,
+            ];
+        }
+
+        try {
+            $response = Http::withHeaders([
+                'Content-Type' => 'application/json',
+            ])
+                ->withOptions([
+                    'verify' => false,
+                ])
+                ->post($url, ['requests' => $requests]);
+
+            if ($response->failed()) {
+                throw new \Exception('Gemini Batch Embedding API Error: Status '.$response->status().' - '.$response->body());
+            }
+
+            $data = $response->json();
+            $results = [];
+            if (isset($data['embeddings'])) {
+                foreach ($data['embeddings'] as $emb) {
+                    $results[] = $emb['values'] ?? [];
+                }
+            }
+
+            return $results;
+        } catch (\Exception $e) {
+            Log::error('Gemini batch embedding failed: '.$e->getMessage());
             throw $e;
         }
     }

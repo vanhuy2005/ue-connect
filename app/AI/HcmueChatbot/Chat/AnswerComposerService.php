@@ -41,6 +41,83 @@ class AnswerComposerService
         $primaryProvider = $gateway['primary'];
         $isOllama = $primaryProvider === 'ollama';
 
+        // 1. Direct total credits query formatting
+        if (! empty($structuredDbResult) && ($structuredDbResult['success'] ?? false)) {
+            $meta = $structuredDbResult['metadata'] ?? [];
+            if (($meta['type'] ?? '') === 'total_credits' && isset($structuredDbResult['data']['total_credits'])) {
+                $credits = $structuredDbResult['data']['total_credits'];
+                $cohort = $routerResult['entities']['cohort'] ?? 'K49';
+                $major = $routerResult['entities']['major'] ?? 'Công nghệ thông tin';
+                
+                // Try to resolve the exact source document
+                $sourceDoc = \App\Models\SourceDocument::where('document_type', 'training_program')
+                    ->where('cohort', 'like', "%{$cohort}%")
+                    ->where('title', 'like', "%{$major}%")
+                    ->first();
+                if (! $sourceDoc) {
+                    $sourceDoc = \App\Models\SourceDocument::where('document_type', 'training_program')
+                        ->where('cohort', 'like', "%{$cohort}%")
+                        ->first();
+                }
+
+                $sourceFileText = $sourceDoc 
+                    ? "\n\nNguồn trích dẫn: " . basename($sourceDoc->file_path ?: $sourceDoc->source_url) 
+                    : '';
+
+                $latencyMs = (int) round((microtime(true) - $startTime) * 1000);
+
+                return [
+                    'answer_text' => "Theo dữ liệu chương trình đào tạo đã lập chỉ mục, ngành {$major} khóa {$cohort} cần tích lũy {$credits} tín chỉ để tốt nghiệp.{$sourceFileText}",
+                    'model_provider' => 'structured_db',
+                    'model_name' => 'Database Query Engine',
+                    'latency_ms' => $latencyMs,
+                    'input_tokens' => 0,
+                    'output_tokens' => 0,
+                    'total_tokens' => 0,
+                    'fallback_used' => false,
+                    'fallback_provider' => null,
+                ];
+            }
+        }
+
+        // Grounding rule: Return static Vietnamese fallback response immediately if no context is found
+        $hasDbResult = ! empty($structuredDbResult) && ($structuredDbResult['success'] ?? false);
+        $hasRagChunks = ! empty($ragChunks);
+
+        if (! $hasDbResult && $routerResult['source'] === 'structured_db') {
+            $cohort = $routerResult['entities']['cohort'] ?? 'K49';
+            $major = $routerResult['entities']['major'] ?? 'Công nghệ thông tin';
+            $latencyMs = (int) round((microtime(true) - $startTime) * 1000);
+
+            return [
+                'answer_text' => "Mình chưa tìm thấy chương trình đào tạo {$cohort} ngành {$major} trong dữ liệu đã lập chỉ mục.",
+                'model_provider' => $primaryProvider,
+                'model_name' => LlmGateway::activeModelName($primaryProvider),
+                'latency_ms' => $latencyMs,
+                'input_tokens' => 0,
+                'output_tokens' => 0,
+                'total_tokens' => 0,
+                'fallback_used' => false,
+                'fallback_provider' => null,
+            ];
+        }
+
+        if (! $hasDbResult && ! $hasRagChunks) {
+            $latencyMs = (int) round((microtime(true) - $startTime) * 1000);
+
+            return [
+                'answer_text' => 'Xin lỗi, dữ liệu hiện tại không đề cập đến nội dung bạn đang tìm kiếm.',
+                'model_provider' => $primaryProvider,
+                'model_name' => LlmGateway::activeModelName($primaryProvider),
+                'latency_ms' => $latencyMs,
+                'input_tokens' => 0,
+                'output_tokens' => 0,
+                'total_tokens' => 0,
+                'fallback_used' => false,
+                'fallback_provider' => null,
+            ];
+        }
+
         // Apply prompt compaction for Ollama to prevent OOM on low-RAM machines
         if ($isOllama) {
             $ragChunks = $this->compactRagChunks($ragChunks);
@@ -141,17 +218,26 @@ class AnswerComposerService
         ];
     }
 
-    /**
-     * Limit RAG chunks to OLLAMA_RAG_TOP_K for prompt compaction.
-     *
-     * @param  array<int, array<string, mixed>>  $chunks
-     * @return array<int, array<string, mixed>>
-     */
     private function compactRagChunks(array $chunks): array
     {
         $limit = config('ai.ollama.rag_top_k', 4);
 
-        return array_slice($chunks, 0, $limit);
+        $sliced = array_slice($chunks, 0, $limit);
+        foreach ($sliced as &$chunk) {
+            if (isset($chunk['chunk_text'])) {
+                $maxLen = config('ai.ollama.chunk_max_chars', 1500);
+                if (mb_strlen($chunk['chunk_text'], 'UTF-8') > $maxLen) {
+                    $chunk['chunk_text'] = mb_substr($chunk['chunk_text'], 0, $maxLen, 'UTF-8')."\n...[Nội dung đoạn trích được cắt bớt để tối ưu hóa bộ nhớ local model]";
+                }
+            }
+            if (isset($chunk['metadata'])) {
+                $chunk['metadata'] = array_intersect_key($chunk['metadata'], array_flip([
+                    'document_name', 'document_type', 'cohort', 'page_start', 'page_end', 'article', 'chapter',
+                ]));
+            }
+        }
+
+        return $sliced;
     }
 
     /**

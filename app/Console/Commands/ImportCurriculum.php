@@ -115,24 +115,40 @@ class ImportCurriculum extends Command
                 }
 
                 // 2. Locate the pdf file
-                $khungDir = $item['major_dir'].DIRECTORY_SEPARATOR.'Chuongtrinhkhung';
-                if (! File::exists($khungDir)) {
-                    $this->error("Chuongtrinhkhung directory not found in {$item['major_dir']}");
+                $pdfPath = null;
+                $allFiles = File::allFiles($item['major_dir']);
 
-                    continue;
+                // First pass: search for typical curriculum framework keywords
+                foreach ($allFiles as $file) {
+                    if (strtolower($file->getExtension()) === 'pdf') {
+                        $filename = strtolower($file->getFilename());
+                        if (str_contains($filename, 'ctk') ||
+                            str_contains($filename, 'khung') ||
+                            str_contains($filename, 'chuongtrinhkhung') ||
+                            str_contains($filename, 'chuong_trinh_khung') ||
+                            str_contains($filename, 'ctdt') ||
+                            str_contains($filename, 'chuong_trinh_dao_tao')) {
+                            $pdfPath = $file->getRealPath();
+                            break;
+                        }
+                    }
                 }
 
-                $pdfs = File::files($khungDir);
-                $pdfPath = null;
-                foreach ($pdfs as $pdf) {
-                    if (strtolower($pdf->getExtension()) === 'pdf') {
-                        $pdfPath = $pdf->getRealPath();
-                        break;
+                // Second pass fallback: any PDF that is not a learning outcome (CDR)
+                if (! $pdfPath) {
+                    foreach ($allFiles as $file) {
+                        if (strtolower($file->getExtension()) === 'pdf') {
+                            $filename = strtolower($file->getFilename());
+                            if (! str_contains($filename, 'cdr') && ! str_contains($filename, 'chuan_dau_ra')) {
+                                $pdfPath = $file->getRealPath();
+                                break;
+                            }
+                        }
                     }
                 }
 
                 if (! $pdfPath) {
-                    $this->error("No PDF file found in {$khungDir}");
+                    $this->error("No PDF curriculum file found in {$item['major_dir']}");
 
                     continue;
                 }

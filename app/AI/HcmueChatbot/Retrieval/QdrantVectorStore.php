@@ -198,4 +198,27 @@ class QdrantVectorStore
 
         return true;
     }
+
+    /**
+     * Create payload index in Qdrant collection.
+     */
+    public function createPayloadIndex(string $fieldName, string $schemaType, ?string $collectionName = null): bool
+    {
+        $collection = $collectionName ?: $this->collection;
+        $body = [
+            'field_name' => $fieldName,
+            'field_schema' => $schemaType,
+        ];
+
+        $response = Http::withHeaders($this->getHeaders())
+            ->withoutVerifying()
+            ->put("{$this->url}/collections/{$collection}/index?wait=true", $body);
+
+        if ($response->failed()) {
+            Log::error("Failed to create payload index for '{$fieldName}' in collection '{$collection}': ".$response->body());
+            return false;
+        }
+
+        return true;
+    }
 }

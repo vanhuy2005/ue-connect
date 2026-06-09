@@ -54,6 +54,31 @@ class QueryRouterService
             }
         }
 
+        // Direct total credits / program requirements check to structured_db
+        $creditKeywords = ['tín chỉ', 'tc', 'tổng số tín chỉ', 'tổng tín chỉ'];
+        $isCreditQuery = false;
+        foreach ($creditKeywords as $kw) {
+            if (str_contains($lower, $kw)) {
+                $isCreditQuery = true;
+                break;
+            }
+        }
+
+        if ($isCreditQuery) {
+            if (empty($detectedTerms['cohort']) || empty($detectedTerms['major'])) {
+                $missing = [];
+                if (empty($detectedTerms['cohort'])) {
+                    $missing[] = 'cohort';
+                }
+                if (empty($detectedTerms['major'])) {
+                    $missing[] = 'major';
+                }
+                return $this->buildRoute('clarification', 'none', 0.90, $detectedTerms, $missing, 'Thiếu thông tin khóa hoặc ngành để tra cứu tín chỉ CTĐT.');
+            }
+
+            return $this->buildRoute('curriculum_course_lookup', 'structured_db', 0.95, $detectedTerms, [], 'Câu hỏi về tổng tín chỉ CTĐT, định tuyến trực tiếp đến structured DB.');
+        }
+
         // Policy / regulation topics → RAG
         $ragKeywords = [
             'học lại', 'học cải thiện', 'cảnh báo học tập', 'điều kiện tốt nghiệp',

@@ -191,8 +191,8 @@ class HcmueChatService
         return AiAnswer::create([
             'question_id' => $questionId,
             'answer_text' => $answerText,
-            'model_provider' => $extra['model_provider'] ?? env('AI_LLM_DRIVER', 'gemini'),
-            'model_name' => $extra['model_name'] ?? env('GEMINI_MODEL', 'gemini-2.0-flash'),
+            'model_provider' => $extra['model_provider'] ?? config('ai.llm_provider', 'gemini'),
+            'model_name' => $extra['model_name'] ?? config('ai.gemini.model', 'gemini-2.0-flash'),
             'prompt_version' => '1.0',
             'latency_ms' => $latencyMs,
             'input_tokens' => $extra['input_tokens'] ?? 0,
@@ -219,7 +219,7 @@ class HcmueChatService
                 'question_id' => $questionId,
                 'document_chunk_id' => $chunkDbId,
                 'score' => $chunk['score'] ?? null,
-                'rerank_score' => null,
+                'rerank_score' => $chunk['rerank_score'] ?? null,
                 'metadata_json' => [
                     'document_name' => $chunk['document_name'] ?? null,
                     'document_type' => $chunk['document_type'] ?? null,

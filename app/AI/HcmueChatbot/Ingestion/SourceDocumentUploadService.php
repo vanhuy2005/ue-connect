@@ -82,6 +82,8 @@ class SourceDocumentUploadService
             'status' => 'uploaded',
             'uploaded_by' => $metadata['uploaded_by'] ?? null,
             'published_at' => null,
+            'knowledge_batch_id' => $metadata['knowledge_batch_id'] ?? null,
+            'knowledge_batch_key' => $metadata['knowledge_batch_key'] ?? null,
         ]);
     }
 }
