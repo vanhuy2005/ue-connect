@@ -46,7 +46,7 @@
     wire:key="post-card-{{ $feedItemKey ?? $post->id }}"
 >
     @if ($repostedBy)
-        <div class="grid grid-cols-[36px_1fr] md:grid-cols-[var(--feed-avatar-size)_1fr] gap-x-[10px] md:gap-x-[var(--feed-avatar-gap)] mb-2 text-[11px] font-bold text-slate-400">
+        <div class="grid grid-cols-[36px_1fr] md:grid-cols-[var(--feed-avatar-size)_1fr] gap-x-[10px] md:gap-x-[var(--feed-avatar-gap)] mb-2 ue-text-meta font-bold text-slate-500">
             <div class="flex justify-end items-center pr-2">
                 <x-ui.icon name="repost" size="xs" class="text-slate-400" />
             </div>
@@ -100,7 +100,7 @@
             <div class="ue-post-card__header">
                 <div>
                     <div class="flex items-center gap-1.5 flex-nowrap min-w-0">
-                        <a href="{{ $authorProfileUrl }}" class="text-[15px] font-bold text-slate-800 leading-tight truncate min-w-0 hover:text-ue-brand hover:underline">
+                        <a href="{{ $authorProfileUrl }}" class="ue-text-body-strong text-slate-850 truncate min-w-0 hover:text-ue-brand hover:underline">
                             {{ $author->name }}
                         </a>
                         <x-ui.icon name="check-circle" size="xs" class="text-ue-brand flex-shrink-0" aria-label="Đã xác thực" />
@@ -113,7 +113,7 @@
                     
                     {{-- Faculty & Major --}}
                     @if ($profile)
-                        <div class="text-xs text-slate-400 font-medium mt-1 leading-none">
+                        <div class="ue-text-caption mt-1 leading-none text-slate-500 font-semibold">
                             {{ Str::ucfirst($profile->role_type) }}
                             @if ($profile->faculty)
                                 · {{ $profile->faculty }}
@@ -294,7 +294,7 @@
                 
                 {{-- Edited Badge --}}
                 @if ($post->status === \App\Enums\PostStatus::EDITED)
-                    <span class="inline-block mt-2 text-[9px] font-bold text-slate-400 bg-slate-50 border border-slate-100 rounded px-1.5 py-0.5">
+                    <span class="inline-block mt-2 ue-text-meta font-bold text-slate-500 bg-slate-50 border border-slate-100 rounded px-1.5 py-0.5">
                         Đã chỉnh sửa
                     </span>
                 @endif
@@ -318,7 +318,7 @@
                 {{-- Comments Link --}}
                 <a
                     href="{{ route('posts.show', $post) }}"
-                    class="ue-action-button flex items-center gap-1.5 text-xs font-semibold text-slate-500 hover:text-ue-brand transition-colors"
+                    class="ue-action-button flex items-center gap-1.5 ue-text-caption font-bold text-slate-550 hover:text-ue-brand transition-colors"
                 >
                     <x-ui.icon name="message-circle" size="md" class="ue-action-button__icon text-current" />
                     <span class="ue-action-button__count">{{ $commentCount }}</span>

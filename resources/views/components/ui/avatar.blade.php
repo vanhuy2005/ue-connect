@@ -22,6 +22,7 @@
     'size'     => 'md',
     'shape'    => 'circle',
     'fallback' => null,
+    'status'   => true,
 ])
 
 @php
@@ -61,6 +62,7 @@ $dotSizeClasses = match($size) {
     'lg'  => 'h-3 w-3 ring-2',
     'xl'  => 'h-4 w-4 ring-2',
     '2xl' => 'h-5 w-5 ring-2.5',
+    'full' => 'h-4 w-4 ring-2',
     default => 'h-2.5 w-2.5 ring-2',
 };
 
@@ -71,6 +73,7 @@ $sizeClasses = match($size) {
     'lg'  => 'w-12 h-12 text-md',
     'xl'  => 'w-16 h-16 text-base',
     '2xl' => 'w-20 h-20 text-lg',
+    'full' => 'w-full h-full text-xl',
     default => 'w-10 h-10 text-sm',
 };
 
@@ -94,7 +97,7 @@ $palette = $palettes[$paletteIndex];
 @endphp
 
 
-<div class="relative inline-flex flex-shrink-0 self-start">
+<div class="relative inline-flex flex-shrink-0 self-start @if($size === 'full') w-full h-full @endif">
     <span
         {{ $attributes->class([
             'inline-flex items-center justify-center flex-shrink-0 overflow-hidden',
@@ -131,7 +134,7 @@ $palette = $palettes[$paletteIndex];
             </svg>
         @endif
     </span>
-    @if ($isOnline)
+    @if ($isOnline && $status)
         <span class="absolute bottom-0 right-0 block rounded-full bg-green-500 ring-white {{ $dotSizeClasses }}" aria-label="Online"></span>
     @endif
 </div>

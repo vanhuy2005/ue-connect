@@ -31,10 +31,10 @@
 
 @php
 $sizeClasses = match($size) {
-    'sm' => 'h-9 px-3 text-md',
-    'md' => 'h-11 px-3.5 text-base',
-    'lg' => 'h-13 px-4 text-lg',
-    default => 'h-11 px-3.5 text-base',
+    'sm' => 'h-9 px-3 ue-text-input',
+    'md' => 'h-11 px-3.5 ue-text-input',
+    'lg' => 'h-13 px-4 ue-text-input',
+    default => 'h-11 px-3.5 ue-text-input',
 };
 
 $hasError = $hasError || ($name && $errors->has($name));

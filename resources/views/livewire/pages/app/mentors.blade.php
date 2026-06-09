@@ -210,36 +210,17 @@ new class extends Component
         </p>
     </div>
 
-    {{-- Skeleton loading --}}
-    <div wire:loading.delay wire:target="search,selectTopic,availabilityFilter,nextPage,previousPage,gotoPage" class="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-        @foreach (range(1, 6) as $i)
-            <div class="rounded-xl border border-slate-200 bg-white p-4 animate-pulse">
-                <div class="flex items-start gap-3">
-                    <div class="h-10 w-10 rounded-full bg-slate-200 flex-shrink-0"></div>
-                    <div class="flex-1 space-y-2">
-                        <div class="h-4 w-24 bg-slate-200 rounded"></div>
-                        <div class="h-3 w-16 bg-slate-100 rounded"></div>
-                    </div>
-                </div>
-                <div class="mt-4 space-y-2">
-                    <div class="h-4 w-3/4 bg-slate-200 rounded"></div>
-                    <div class="h-3 w-full bg-slate-100 rounded"></div>
-                </div>
-                <div class="mt-3 flex gap-1.5">
-                    <div class="h-5 w-14 bg-slate-100 rounded-full"></div>
-                    <div class="h-5 w-20 bg-slate-100 rounded-full"></div>
-                </div>
-            </div>
-        @endforeach
-    </div>
-
     {{-- Mentor grid --}}
-    <div wire:loading.delay.remove wire:target="search,selectTopic,availabilityFilter,nextPage,previousPage,gotoPage" class="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+    <div
+        class="grid gap-4 md:grid-cols-2 xl:grid-cols-3"
+        wire:loading.delay.class="ue-content-loading"
+        wire:target="search,selectTopic,availabilityFilter,nextPage,previousPage,gotoPage"
+    >
         @forelse ($mentors as $mentor)
             @php
                 $mentorUserProfileUrl = route('profile.show', $mentor->user);
             @endphp
-            <article class="rounded-xl border border-slate-200 bg-white p-4 shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-all">
+            <article class="ue-loadable-card rounded-xl border border-slate-200 bg-white p-4 shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-all">
                 <div class="flex items-start gap-3">
                     <a href="{{ $mentorUserProfileUrl }}" wire:navigate class="block rounded-full focus:outline-none focus:ring-2 focus:ring-ue-brand/30 flex-shrink-0">
                         <x-ui.avatar :user="$mentor->user" size="md" />
