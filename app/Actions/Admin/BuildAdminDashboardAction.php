@@ -108,7 +108,7 @@ class BuildAdminDashboardAction
                     'type_key' => 'verification',
                     'title' => $title,
                     'severity' => $severity,
-                    'created_at' => $req->created_at,
+                    'created_at' => $req->created_at?->toIso8601String(),
                     'cta_url' => route('admin.verifications.detail', $req->id),
                     'cta_label' => 'Xem hồ sơ',
                 ];
@@ -133,7 +133,7 @@ class BuildAdminDashboardAction
                     'type_key' => 'report',
                     'title' => $title,
                     'severity' => $severity,
-                    'created_at' => $report->created_at,
+                    'created_at' => $report->created_at?->toIso8601String(),
                     'cta_url' => route('admin.reports.show', $report),
                     'cta_label' => 'Xử lý',
                 ];
@@ -146,7 +146,7 @@ class BuildAdminDashboardAction
                     'type_key' => 'system',
                     'title' => "Cảnh báo lưu trữ: Dung lượng media đã đạt {$mediaStats['usage_percent']}%",
                     'severity' => $mediaStats['warning_level'],
-                    'created_at' => now(),
+                    'created_at' => now()->toIso8601String(),
                     'cta_url' => route('admin.media.usage'),
                     'cta_label' => 'Xem Media',
                 ];
@@ -241,7 +241,20 @@ class BuildAdminDashboardAction
                 'snapshot' => $snapshot,
                 'priority_queue' => $priorityItems,
                 'system_health' => $systemHealth,
-                'recent_activity' => AuditLog::with('actor')->latest()->limit(8)->get(),
+                'recent_activity' => AuditLog::with('actor')
+                    ->latest()
+                    ->limit(8)
+                    ->get()
+                    ->map(fn ($log) => [
+                        'action' => $log->action,
+                        'action_key' => $log->action_key,
+                        'actor_name' => $log->actor?->name,
+                        'actor_type' => $log->actor_type,
+                        'target_type' => $log->target_type,
+                        'target_id' => $log->target_id,
+                        'created_at' => $log->created_at?->toIso8601String(),
+                    ])
+                    ->toArray(),
                 'trends' => $trends,
             ];
         });

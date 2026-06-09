@@ -39,6 +39,7 @@ use Illuminate\Support\Str;
 use Livewire\Volt\Component;
 use Livewire\WithFileUploads;
 use Livewire\WithPagination;
+use Livewire\Attributes\Computed;
 use App\Actions\Media\StoreTemporaryMediaAction;
 use App\Actions\Media\AttachMediaToModelAction;
 use App\Actions\Media\DeleteMediaAction;
@@ -226,14 +227,16 @@ new class extends Component
         ]);
     }
 
-    public function getMembershipProperty(): ?CommunityMember
+    #[Computed]
+    public function membership(): ?CommunityMember
     {
         return CommunityMember::where('community_id', $this->community->id)
             ->where('user_id', auth()->id())
             ->first();
     }
 
-    public function getIsActiveMemberProperty(): bool
+    #[Computed]
+    public function isActiveMember(): bool
     {
         if (auth()->check() && $this->community->isOwnedBy(auth()->user())) {
             return true;
@@ -242,7 +245,8 @@ new class extends Component
         return $this->membership?->status === CommunityMemberStatus::Active;
     }
 
-    public function getHasPendingRequestProperty(): bool
+    #[Computed]
+    public function hasPendingRequest(): bool
     {
         return CommunityJoinRequest::where('community_id', $this->community->id)
             ->where('user_id', auth()->id())
@@ -250,7 +254,8 @@ new class extends Component
             ->exists();
     }
 
-    public function getFeedPostsProperty()
+    #[Computed]
+    public function feedPosts()
     {
         return Post::inCommunity($this->community->id)
             ->where('status', PostStatus::PUBLISHED->value)
@@ -271,7 +276,8 @@ new class extends Component
             ->paginate(15, pageName: 'feedPage');
     }
 
-    public function getUpcomingEventsProperty()
+    #[Computed]
+    public function upcomingEvents()
     {
         $query = CommunityEvent::where('community_id', $this->community->id)
             ->upcoming()
@@ -286,7 +292,8 @@ new class extends Component
         return $query->get();
     }
 
-    public function getPublishedResourcesProperty()
+    #[Computed]
+    public function publishedResources()
     {
         return $this->community->publishedResources()
             ->with(['submitter', 'mediaFile'])
@@ -294,14 +301,16 @@ new class extends Component
             ->paginate(12, pageName: 'resourcesPage');
     }
 
-    public function getMembersProperty()
+    #[Computed]
+    public function members()
     {
         return $this->community->activeMembers()
             ->with('user.profile')
             ->paginate(15, pageName: 'membersPage');
     }
 
-    public function getCanCreateEventsProperty(): bool
+    #[Computed]
+    public function canCreateEvents(): bool
     {
         return auth()->check()
             && $this->community->isActive()
@@ -547,7 +556,8 @@ new class extends Component
 
     // ─── Owner Management ──────────────────────────────────────────────────────
 
-    public function getCanManageProperty(): bool
+    #[Computed]
+    public function canManage(): bool
     {
         if (! auth()->check()) {
             return false;
@@ -558,7 +568,8 @@ new class extends Component
             || $user->can('manageMember', $this->community);
     }
 
-    public function getCanManuallyAddMembersProperty(): bool
+    #[Computed]
+    public function canManuallyAddMembers(): bool
     {
         if (! auth()->check()) {
             return false;
@@ -665,7 +676,8 @@ new class extends Component
         };
     }
 
-    public function getBehaviorPreviewProperty(): array
+    #[Computed]
+    public function behaviorPreview(): array
     {
         $visibility = $this->visibilityBehavior();
         $joinPolicy = $this->joinPolicyBehavior();
@@ -773,7 +785,8 @@ new class extends Component
         $this->community->refresh();
     }
 
-    public function getPendingJoinRequestsProperty()
+    #[Computed]
+    public function pendingJoinRequests()
     {
         if (! $this->canManage) {
             return collect();
@@ -835,7 +848,8 @@ new class extends Component
         $this->community->refresh();
     }
 
-    public function getSelectedMemberForRoleProperty(): ?CommunityMember
+    #[Computed]
+    public function selectedMemberForRole(): ?CommunityMember
     {
         return $this->selectedMemberIdForRole
             ? CommunityMember::with('user')->find($this->selectedMemberIdForRole)
@@ -1376,7 +1390,7 @@ new class extends Component
                 {{-- CTAs row --}}
                 <div class="flex flex-wrap items-center justify-center gap-2 relative z-10 pt-2 md:pt-0">
                     
-                    @if ($community->owner_id === auth()->id())
+                    @if ($community->isOwnedBy(auth()->user()))
                         <span class="px-3.5 py-2 bg-amber-50 text-amber-700 border border-amber-200 rounded-xl text-xs font-bold flex items-center gap-1 shadow-2xs">
                             <x-ui.icon name="shield" size="xs" />
                             <span>Chủ sở hữu</span>
@@ -1430,7 +1444,7 @@ new class extends Component
                                 <x-ui.icon name="bell" size="xs" class="text-slate-400" style="color: #000000 !important;" />
                                 <span style="color: #000000 !important;">Bật thông báo</span>
                             </button>
-                            @if ($this->isActiveMember && $community->owner_id !== auth()->id())
+                            @if ($this->isActiveMember && ! $community->isOwnedBy(auth()->user()))
                                 <button type="button" wire:click="openLeaveModal" @click="openMenu = false"
                                     class="w-full text-left px-4 py-2 hover:bg-red-50 flex items-center gap-2 border-t border-slate-100 text-red-600"
                                     style="color: #dc2626 !important;">
@@ -1478,7 +1492,7 @@ new class extends Component
                     {{-- 2.1 Tab Bảng tin --}}
                     @if ($activeTab === 'feed')
                         {{-- Composer Box --}}
-                        @if ($this->isActiveMember && $community->isActive())
+                        @if ($this->isActiveMember && ($community->isActive() || $this->canManage))
                             <div class="bg-white border border-slate-200 rounded-2xl p-4 shadow-2xs flex gap-3">
                                 <x-ui.avatar :user="auth()->user()" size="md" />
                                 <button wire:click="openPostComposer"

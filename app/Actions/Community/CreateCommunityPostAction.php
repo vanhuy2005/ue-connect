@@ -18,7 +18,7 @@ class CreateCommunityPostAction
      */
     public function execute(User $user, Community $community, array $data): Post
     {
-        if (! $community->isActive()) {
+        if (! $community->isActive() && ! $community->canManagedBy($user)) {
             throw ValidationException::withMessages([
                 'community' => 'Không thể đăng bài trong cộng đồng đang không hoạt động.',
             ]);

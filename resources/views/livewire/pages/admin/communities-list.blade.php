@@ -4,6 +4,7 @@ use App\Models\Community;
 use App\Models\User;
 use Livewire\Volt\Component;
 use Livewire\WithPagination;
+use Livewire\Attributes\Computed;
 
 new class extends Component {
     use WithPagination;
@@ -26,7 +27,8 @@ new class extends Component {
         $this->resetPage();
     }
 
-    public function getCommunitiesProperty()
+    #[Computed]
+    public function communities()
     {
         $query = Community::with(['creator'])->latest('created_at');
 
@@ -44,7 +46,8 @@ new class extends Component {
         return $query->paginate(20);
     }
 
-    public function getStatusesProperty()
+    #[Computed]
+    public function statuses()
     {
         return [
             ['value' => '', 'label' => 'Tất cả'],

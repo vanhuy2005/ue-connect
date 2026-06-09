@@ -5,6 +5,7 @@ use App\Enums\CommunitySuggestionStatus;
 use App\Models\CommunitySuggestion;
 use Livewire\Volt\Component;
 use Livewire\WithPagination;
+use Livewire\Attributes\Computed;
 
 new class extends Component {
     use WithPagination;
@@ -23,7 +24,8 @@ new class extends Component {
         $this->authorize('manage_communities');
     }
 
-    public function getSuggestionsProperty()
+    #[Computed]
+    public function suggestions()
     {
         $query = CommunitySuggestion::with('submitter', 'convertedCommunity')
             ->latest();
@@ -35,7 +37,8 @@ new class extends Component {
         return $query->paginate(20);
     }
 
-    public function getStatusesProperty(): array
+    #[Computed]
+    public function statuses(): array
     {
         return [
             ['value' => '', 'label' => 'Tất cả'],
