@@ -506,60 +506,43 @@ cyan gradient behind white text without contrast check;
 Để UI bớt “AI mockup” và giống social product hơn, ưu tiên system font. `Be Vietnam Pro` vẫn được giữ nếu cần chất Việt Nam rõ hơn.
 
 ```css
---font-sans: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Be Vietnam Pro", sans-serif;
---font-vietnamese: "Be Vietnam Pro", system-ui, sans-serif;
---font-data: "Inter", system-ui, sans-serif;
---font-brand-serif: "Source Serif Variable", Georgia, serif;
+--font-sans: "Be Vietnam Pro", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+--font-data: "Inter", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
 ```
 
 Rules:
+- Product UI chính: `system-ui` / `Be Vietnam Pro` (fallback tốt cho tiếng Việt).
+- Admin/data table: `Inter` để đảm bảo số liệu rõ ràng.
 
-- Product UI chính: `system-ui` first.
-- Vietnamese-heavy marketing: có thể dùng `Be Vietnam Pro`.
-- Admin/data table: `Inter`.
-- Brand heritage heading: `Source Serif Variable` rất hạn chế.
-- Không dùng Times New Roman trong app UI.
+## 7.2. Typography scale & Tokens
 
-## 7.2. Typography scale
+Định nghĩa hệ thống design tokens typography dùng chung toàn app qua class CSS:
 
-Enterprise social UI không cần H1 88px trừ marketing. Product screen nên tiết chế.
+| Token Class | Size Mobile | Size Desktop | Weight | Line Height | Color | Usage |
+|---|---|---|---|---|---|---|
+| `.ue-text-page-title` | 24px | 28px | 700 | 1.2 | `var(--ue-text)` | Tiêu đề lớn nhất trang |
+| `.ue-text-heading` | 22px | 24px | 700 | 1.25 | `var(--ue-text)` | Tiêu đề trang (Bảng tin, Tin nhắn,...) |
+| `.ue-text-section` | 18px | 20px | 700 | 1.3 | `var(--ue-text)` | Tiêu đề nhóm, card lớn |
+| `.ue-text-subheading` | 16px | 18px | 600 | 1.35 | `var(--ue-text)` | Tiêu đề thẻ nhỏ, tab |
+| `.ue-text-body` | 16px | 16px | 400 | 1.55 | `var(--ue-text)` | Nội dung bài viết, tin nhắn, bio |
+| `.ue-text-body-strong` | 16px | 16px | 600 | 1.5 | `var(--ue-text)` | Tên tác giả, nội dung quan trọng |
+| `.ue-text-caption` | 14px | 14px | 500 | 1.4 | `var(--ue-text-secondary)` | Khoa, vai trò, text mô tả phụ |
+| `.ue-text-meta` | 13px | 13px | 500 | 1.35 | `var(--ue-text-muted)` | Thời gian, dữ liệu kỹ thuật nhỏ |
+| `.ue-text-button` | 14px | 15px/16px | 700 | 1.2 | - | Nhãn nút bấm chính/phụ |
+| `.ue-text-nav` | 16px | 16px | 600 | 1.4 | `var(--ue-text)` | Nhãn thanh điều hướng, sidebar |
+| `.ue-text-input` | 16px | 16px | 400 | 1.4 | `var(--ue-text)` | Giá trị nhập liệu trong form/ô chat |
 
-```css
---text-2xs: 11px;
---text-xs:  12px;
---text-sm:  13px;
---text-md:  14px;
---text-base:15px;
---text-lg:  16px;
---text-xl:  18px;
---text-2xl: 20px;
---text-3xl: 24px;
---text-4xl: 32px;
-```
+## 7.3. Typography UX & Accessibility Rules
 
-## 7.3. Text styles
+### Do
+- Giữ body text tối thiểu `16px` trên mobile để tránh trình duyệt iOS tự động zoom vào input field.
+- Sử dụng line-height thoải mái (`1.45 - 1.6`) cho tiếng Việt có dấu tránh hiện tượng đè dấu hoặc sát dòng.
+- Đảm bảo độ tương phản màu chữ (không lạm dụng opacity quá thấp, tránh dùng `text-gray-400` cho nội dung đọc chính).
 
-| Style | Size | Weight | Line height | Use |
-|---|---:|---:|---:|---|
-| App Title | 24px | 700 | 32px | Page header |
-| Section Title | 20px | 700 | 28px | Sidebar/card group |
-| Post Author | 15px | 600 | 21px | User name |
-| Body | 15px | 400 | 21px | Post content |
-| Body Small | 14px | 400 | 20px | Secondary copy |
-| Metadata | 13px | 400 | 18px | Time, cohort, faculty |
-| Caption | 12px | 400 | 16px | Helper text |
-| Button | 15px | 600 | 21px | Button label |
-| Tab/Nav | 15px | 600 | 21px | Navigation |
-
-## 7.4. Typography UX rules
-
-- Body post content nên `15px/21px`.
-- Không dùng quá nhiều font weight.
-- Heading không nên quá lớn trong product UI.
-- Metadata phải dễ đọc, không dưới 12px.
-- Dùng `font-weight: 600` thay vì 700 cho nhiều label nhỏ.
-- Không dùng uppercase quá nhiều trong social UI.
-- Không center-align body text.
+### Don't
+- **Không dùng text-xs / text-xxs cho nội dung đọc chính** (như post body, bio, nội dung chat).
+- Không lạm dụng chữ viết hoa (uppercase) đối với các câu dài tiếng Việt.
+- Không căn giữa (center-align) văn bản đọc dài.
 
 ---
 

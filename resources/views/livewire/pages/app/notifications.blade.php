@@ -117,8 +117,8 @@ new #[Layout('layouts.app')] class extends Component
 <div wire:poll.visible.30s class="py-6 px-4 max-w-4xl mx-auto space-y-6">
     {{-- Header --}}
     <div class="flex flex-col gap-1.5 border-b border-slate-100 pb-4">
-        <h1 class="text-xl font-bold text-slate-800 tracking-tight">Hoạt động</h1>
-        <p class="text-xs text-slate-400 font-medium">Theo dõi các cập nhật về xác thực tài khoản, lời mời kết nối và tin nhắn mới trong cộng đồng của bạn.</p>
+        <h1 class="ue-text-heading">Hoạt động</h1>
+        <p class="ue-text-caption mt-1">Theo dõi các cập nhật về xác thực tài khoản, lời mời kết nối và tin nhắn mới trong cộng đồng của bạn.</p>
     </div>
 
     {{-- Horizontally Scrollable Tabs exactly like Threads --}}
@@ -127,7 +127,7 @@ new #[Layout('layouts.app')] class extends Component
             <button
                 type="button"
                 wire:click="$set('activeTab', 'all')"
-                class="px-4 py-1.5 rounded-full text-xxs font-bold transition-all border whitespace-nowrap
+                class="px-4 py-1.5 rounded-full ue-text-button transition-all border whitespace-nowrap
                        {{ $activeTab === 'all' ? 'bg-ue-brand-soft text-ue-brand-active border-ue-brand-border' : 'bg-white text-slate-600 border-slate-200 hover:border-slate-350 hover:bg-slate-50' }}"
             >
                 Tất cả
@@ -135,7 +135,7 @@ new #[Layout('layouts.app')] class extends Component
             <button
                 type="button"
                 wire:click="$set('activeTab', 'requests')"
-                class="px-4 py-1.5 rounded-full text-xxs font-bold transition-all border whitespace-nowrap relative
+                class="px-4 py-1.5 rounded-full ue-text-button transition-all border whitespace-nowrap relative
                        {{ $activeTab === 'requests' ? 'bg-ue-brand-soft text-ue-brand-active border-ue-brand-border' : 'bg-white text-slate-600 border-slate-200 hover:border-slate-350 hover:bg-slate-50' }}"
             >
                 Yêu cầu
@@ -143,7 +143,7 @@ new #[Layout('layouts.app')] class extends Component
             <button
                 type="button"
                 wire:click="$set('activeTab', 'messages')"
-                class="px-4 py-1.5 rounded-full text-xxs font-bold transition-all border whitespace-nowrap
+                class="px-4 py-1.5 rounded-full ue-text-button transition-all border whitespace-nowrap
                        {{ $activeTab === 'messages' ? 'bg-ue-brand-soft text-ue-brand-active border-ue-brand-border' : 'bg-white text-slate-600 border-slate-200 hover:border-slate-350 hover:bg-slate-50' }}"
             >
                 Tin nhắn
@@ -151,7 +151,7 @@ new #[Layout('layouts.app')] class extends Component
             <button
                 type="button"
                 wire:click="$set('activeTab', 'system')"
-                class="px-4 py-1.5 rounded-full text-xxs font-bold transition-all border whitespace-nowrap
+                class="px-4 py-1.5 rounded-full ue-text-button transition-all border whitespace-nowrap
                        {{ $activeTab === 'system' ? 'bg-ue-brand-soft text-ue-brand-active border-ue-brand-border' : 'bg-white text-slate-600 border-slate-200 hover:border-slate-350 hover:bg-slate-50' }}"
             >
                 Hệ thống
@@ -164,7 +164,7 @@ new #[Layout('layouts.app')] class extends Component
                 wire:click="markAllAsRead"
                 wire:loading.attr="disabled"
                 wire:target="markAllAsRead"
-                class="text-xxs font-bold text-ue-brand hover:text-ue-brand-dark transition-colors self-start sm:self-center mb-2 sm:mb-0 flex items-center gap-1"
+                class="ue-text-caption font-bold text-ue-brand hover:text-ue-brand-dark transition-colors self-start sm:self-center mb-2 sm:mb-0 flex items-center gap-1"
             >
                 <span wire:loading.remove wire:target="markAllAsRead" class="flex items-center gap-1">
                     <x-ui.icon name="check-circle" size="xs" />
@@ -253,11 +253,11 @@ new #[Layout('layouts.app')] class extends Component
                     {{-- Text Content --}}
                     <div class="min-w-0 flex-1 space-y-1">
                         <div class="flex items-center gap-1.5 flex-wrap">
-                            <h3 class="text-xs font-bold leading-tight {{ $isUnread ? 'text-slate-900' : 'text-slate-700' }}">
+                            <h3 class="ue-text-body-strong leading-tight {{ $isUnread ? 'text-slate-900' : 'text-slate-700' }}">
                                 {{ $notification->data['sender_name'] ?? 'UEConnect' }}
                             </h3>
-                            <span class="text-slate-300 select-none text-[9px] font-semibold">·</span>
-                            <span class="text-[9px] text-slate-450 font-medium lowercase tracking-wide">
+                            <span class="text-slate-300 select-none ue-text-meta font-semibold">·</span>
+                            <span class="ue-text-meta text-slate-455 font-medium lowercase tracking-wide">
                                 {{ $notification->created_at->diffForHumans() }}
                             </span>
                             @if ($isUnread)
@@ -265,11 +265,11 @@ new #[Layout('layouts.app')] class extends Component
                             @endif
                         </div>
                         
-                        <p class="text-xxs font-medium leading-normal text-slate-400">
+                        <p class="ue-text-meta font-medium leading-normal text-slate-400">
                             {{ $title }}
                         </p>
                         
-                        <p class="text-xxs font-medium leading-relaxed {{ $isUnread ? 'text-slate-750' : 'text-slate-500' }}">
+                        <p class="ue-text-caption font-medium leading-relaxed {{ $isUnread ? 'text-slate-750' : 'text-slate-500' }}">
                             {{ $body }}
                         </p>
                     </div>
@@ -283,7 +283,7 @@ new #[Layout('layouts.app')] class extends Component
                             wire:click="declineGreeting({{ $greeting->id }})"
                             wire:loading.attr="disabled"
                             wire:target="declineGreeting({{ $greeting->id }})"
-                            class="bg-slate-50 hover:bg-slate-100 text-slate-500 text-[10px] font-bold px-3 py-1.5 rounded-lg border border-slate-200 transition-colors disabled:opacity-60"
+                            class="bg-slate-50 hover:bg-slate-100 text-slate-500 ue-text-button px-3 py-1.5 rounded-lg border border-slate-200 transition-colors disabled:opacity-60"
                         >
                             Ẩn
                         </button>
@@ -292,7 +292,7 @@ new #[Layout('layouts.app')] class extends Component
                             wire:click="acceptGreeting({{ $greeting->id }})"
                             wire:loading.attr="disabled"
                             wire:target="acceptGreeting({{ $greeting->id }})"
-                            class="bg-ue-brand hover:bg-ue-brand-hover text-white text-[10px] font-bold px-3 py-1.5 rounded-lg shadow-2xs hover:shadow-xs transition-all disabled:opacity-60"
+                            class="bg-ue-brand hover:bg-ue-brand-hover text-white ue-text-button px-3 py-1.5 rounded-lg shadow-2xs hover:shadow-xs transition-all disabled:opacity-60"
                         >
                             <span wire:loading.remove wire:target="acceptGreeting({{ $greeting->id }})">Xác nhận</span>
                             <span wire:loading wire:target="acceptGreeting({{ $greeting->id }})">Đang xử lý...</span>
@@ -317,10 +317,10 @@ new #[Layout('layouts.app')] class extends Component
         @empty
             <div class="py-12 flex flex-col items-center justify-center text-center space-y-3 bg-slate-50 rounded-2xl border border-dashed border-slate-250">
                 <x-ui.icon name="bell" size="lg" class="text-slate-300 animate-pulse" />
-                <h3 class="text-sm font-bold text-slate-700">
+                <h3 class="ue-text-section font-bold text-slate-700">
                     {{ $activeTab === 'requests' ? 'Bạn không có lời mời kết nối nào' : ($activeTab === 'messages' ? 'Hộp thư tin nhắn hoàn toàn sạch sẽ' : 'Bạn chưa có thông báo nào') }}
                 </h3>
-                <p class="text-xxs text-slate-400 max-w-sm">
+                <p class="ue-text-caption text-slate-400 max-w-sm">
                     Mọi thông báo quan trọng về tài khoản và vòng kết nối của bạn sẽ xuất hiện tại đây.
                 </p>
             </div>

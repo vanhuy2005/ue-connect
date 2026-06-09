@@ -1356,8 +1356,9 @@ new #[Layout('layouts.app')] class extends Component
                     </div>
                 </div>
 
-                <div class="text-center py-6">
-                    <x-ui.icon name="shield-alert" size="md" class="text-slate-300 mx-auto" />
+                <div wire:loading.remove wire:target="selectConversation" class="space-y-4 flex flex-col flex-1">
+                    <div class="text-center py-6">
+                        <x-ui.icon name="shield-alert" size="md" class="text-slate-300 mx-auto" />
                     <p class="text-[10px] text-slate-400 font-medium max-w-xs mx-auto mt-2 leading-relaxed">
                         Cuộc trò chuyện này được mã hóa bảo mật và chỉ giới hạn hiển thị giữa hai thành viên xác thực học đường. Hãy trao đổi văn minh lịch sự.
                     </p>
@@ -1607,18 +1608,22 @@ new #[Layout('layouts.app')] class extends Component
                     </div>
                 </div>
 
-                <div id="server-message-client-ids" data-ids="{{ json_encode($messages->pluck('client_message_id')->filter()->values()->toArray()) }}" class="hidden"></div>
+                    <div id="server-message-client-ids" data-ids="{{ json_encode($messages->pluck('client_message_id')->filter()->values()->toArray()) }}" class="hidden"></div>
+                </div>
             </div>
 
             {{-- Message Composer or Restricted Banner --}}
             <div class="p-3 border-t border-slate-150 bg-white flex-shrink-0">
-                <div wire:loading.delay wire:target="selectConversation" class="flex items-center gap-2">
-                    <div class="ue-skeleton h-10 w-10 rounded-xl"></div>
-                    <div class="ue-skeleton h-10 flex-1 rounded-xl"></div>
-                    <div class="ue-skeleton h-10 w-10 rounded-xl"></div>
+                <div wire:loading.delay wire:target="selectConversation">
+                    <div class="flex items-center gap-2">
+                        <div class="ue-skeleton h-10 w-10 rounded-xl"></div>
+                        <div class="ue-skeleton h-10 flex-1 rounded-xl"></div>
+                        <div class="ue-skeleton h-10 w-10 rounded-xl"></div>
+                    </div>
                 </div>
 
-                @if ($isRestricted)
+                <div wire:loading.remove wire:target="selectConversation">
+                    @if ($isRestricted)
                     <div class="bg-slate-50 border border-slate-150 rounded-xl p-3.5 flex items-center gap-3 text-xxs font-semibold text-slate-500">
                         <x-ui.icon name="shield-alert" size="sm" class="text-slate-400 flex-shrink-0" />
                         <span class="leading-normal">
@@ -1720,6 +1725,7 @@ new #[Layout('layouts.app')] class extends Component
                         </button>
                     </form>
                 @endif
+                </div>
             </div>
         @else
             <div class="flex-1 flex flex-col items-center justify-center text-center p-8">
