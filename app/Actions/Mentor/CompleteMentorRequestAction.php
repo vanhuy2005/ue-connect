@@ -33,6 +33,9 @@ class CompleteMentorRequestAction
             ]);
         }
 
+        // Sync mentor availability (may free up a slot → revert to Available)
+        $mentorRequest->mentorProfile->syncAvailabilityFromPendingCount();
+
         // Notify both participants
         $mentorRequest->student->notify(new MentorRequestCompletedNotification($mentorRequest));
         $mentorRequest->mentor->notify(new MentorRequestCompletedNotification($mentorRequest));

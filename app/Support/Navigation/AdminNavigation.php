@@ -96,6 +96,14 @@ class AdminNavigation
                         'description' => 'Danh sách các báo cáo vi phạm từ người dùng',
                     ],
                     [
+                        'key' => 'opportunities',
+                        'label' => 'Quản lý cơ hội',
+                        'route' => 'admin.opportunities.queue',
+                        'icon' => 'briefcase',
+                        'permission' => 'manage_reports',
+                        'description' => 'Kiểm duyệt các tin đăng chia sẻ cơ hội việc làm và thực tập',
+                    ],
+                    [
                         'key' => 'communities',
                         'label' => 'Quản lý cộng đồng',
                         'route' => 'admin.communities.index',

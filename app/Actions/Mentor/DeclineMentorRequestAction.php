@@ -28,6 +28,9 @@ class DeclineMentorRequestAction
             'declined_at' => now(),
         ]);
 
+        // Sync mentor availability (slot freed up, may revert to Available)
+        $mentorRequest->mentorProfile->syncAvailabilityFromPendingCount();
+
         // Notify student — no conversation created
         $mentorRequest->student->notify(new MentorRequestDeclinedNotification($mentorRequest));
 

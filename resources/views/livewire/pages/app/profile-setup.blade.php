@@ -379,12 +379,31 @@ new #[Layout('layouts.app')] class extends Component
                     </div>
                 </div>
 
-                <div class="mt-4 p-4 bg-ue-blue-50 border border-ue-blue-100 rounded-xl flex items-start gap-3">
-                    <input type="checkbox" wire:model="willing_to_mentor" id="willing_to_mentor" class="h-4 w-4 rounded border-ue-border text-ue-brand focus:ring-ue-brand mt-1" />
-                    <div>
-                        <x-ui.label for="willing_to_mentor" class="font-bold text-ue-neutral-900">Sẵn sàng làm Mentor (Cố vấn nghề nghiệp)</x-ui.label>
-                        <p class="text-[11px] text-ue-text-secondary leading-relaxed">
-                            Bằng việc tích chọn, bạn đồng ý chia sẻ kinh nghiệm, hỗ trợ định hướng nghề nghiệp và phản hồi các câu hỏi học tập từ sinh viên khóa dưới.
+                <div 
+                    x-data="{ checked: @entangle('willing_to_mentor') }"
+                    :class="checked ? 'border-ue-brand bg-ue-brand-soft/20 shadow-xs' : 'border-ue-border hover:border-slate-300 bg-slate-50/50'"
+                    class="mt-6 p-4 rounded-xl border transition-all duration-300 flex items-start gap-3.5 cursor-pointer relative"
+                    @click="checked = !checked"
+                >
+                    <div class="flex items-center h-5">
+                        <input 
+                            type="checkbox" 
+                            wire:model="willing_to_mentor" 
+                            id="willing_to_mentor" 
+                            class="h-4 w-4 rounded border-slate-300 text-ue-brand focus:ring-ue-brand/30"
+                            @click.stop
+                        />
+                    </div>
+                    <div class="select-none flex-1">
+                        <label for="willing_to_mentor" class="font-bold text-slate-900 text-sm cursor-pointer" @click.stop>
+                            Sẵn sàng làm Mentor (Cố vấn nghề nghiệp)
+                        </label>
+                        <p class="text-xs text-slate-500 mt-2 leading-relaxed">
+                            Bằng việc tích chọn, bạn đồng ý chia sẻ kinh nghiệm, hỗ trợ định hướng nghề nghiệp và phản hồi các câu hỏi.
+                        </p>
+                        <p class="text-[10px] text-slate-400 mt-2 font-medium flex items-center gap-1">
+                            <x-ui.icon name="info" size="xs" class="text-ue-brand shrink-0" />
+                            Sau khi ấn "Hoàn tất", bạn sẽ được tự động chuyển hướng đến biểu mẫu đăng ký hồ sơ Mentor 4 bước.
                         </p>
                     </div>
                 </div>

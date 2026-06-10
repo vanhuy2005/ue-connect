@@ -76,6 +76,19 @@
             </button>
 
             @if($isOwner)
+                {{-- Expire Opportunity --}}
+                @if($post->post_type === \App\Enums\PostType::OPPORTUNITY && $post->opportunity && !$post->opportunity->is_expired)
+                    <button
+                        type="button"
+                        wire:click="markAsExpired({{ $post->id }})"
+                        class="flex items-center gap-2.5 px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50 transition-colors text-left rounded-lg"
+                        role="menuitem"
+                    >
+                        <x-ui.icon name="clock" size="xs" class="text-slate-400" />
+                        <span>Đánh dấu hết hạn</span>
+                    </button>
+                @endif
+
                 {{-- Edit --}}
                 <button
                     type="button"
@@ -184,6 +197,19 @@
             </button>
 
             @if($isOwner)
+                {{-- Expire Opportunity --}}
+                @if($post->post_type === \App\Enums\PostType::OPPORTUNITY && $post->opportunity && !$post->opportunity->is_expired)
+                    <button
+                        type="button"
+                        wire:click="markAsExpired({{ $post->id }})"
+                        onclick="if (window.closeActiveBottomSheet) window.closeActiveBottomSheet();"
+                        class="ue-bottom-sheet__item"
+                    >
+                        <x-ui.icon name="clock" size="sm" class="text-slate-400" />
+                        <span>Đánh dấu hết hạn</span>
+                    </button>
+                @endif
+
                 {{-- Edit --}}
                 <button
                     type="button"

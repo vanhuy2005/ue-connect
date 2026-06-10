@@ -22,7 +22,7 @@ return new class extends Migration
             $table->index(['post_id', 'created_at']);
         });
     }
-    
+
     /**
      * Reverse the migrations.
      */

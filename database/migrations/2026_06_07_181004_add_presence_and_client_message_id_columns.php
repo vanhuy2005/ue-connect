@@ -12,16 +12,16 @@ return new class extends Migration
     public function up(): void
     {
         Schema::table('users', function (Blueprint $table) {
-            if (!Schema::hasColumn('users', 'last_seen_at')) {
+            if (! Schema::hasColumn('users', 'last_seen_at')) {
                 $table->timestamp('last_seen_at')->nullable();
             }
-            if (!Schema::hasColumn('users', 'show_activity_status')) {
+            if (! Schema::hasColumn('users', 'show_activity_status')) {
                 $table->boolean('show_activity_status')->default(true);
             }
         });
 
         Schema::table('messages', function (Blueprint $table) {
-            if (!Schema::hasColumn('messages', 'client_message_id')) {
+            if (! Schema::hasColumn('messages', 'client_message_id')) {
                 $table->string('client_message_id', 100)->nullable()->index();
             }
         });
@@ -40,7 +40,7 @@ return new class extends Migration
             if (Schema::hasColumn('users', 'show_activity_status')) {
                 $columns[] = 'show_activity_status';
             }
-            if (!empty($columns)) {
+            if (! empty($columns)) {
                 $table->dropColumn($columns);
             }
         });

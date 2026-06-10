@@ -23,6 +23,7 @@
     'interactive' => false,
     'label'       => null,
     'pressed'     => null,
+    'noIcon'      => false,
 ])
 
 @php
@@ -80,6 +81,12 @@ $variantClasses = match($variant) {
     'info' =>
         'bg-[var(--info-bg-soft)] text-[var(--info-text)] border-[var(--info-border)]',
 
+    'experience' =>
+        'bg-emerald-50 text-emerald-700 border-emerald-250',
+
+    'career-insight' =>
+        'bg-purple-50 text-purple-700 border-purple-250',
+
     /* Neutral/default */
     default =>
         'bg-white text-slate-700 border-slate-200',
@@ -96,10 +103,13 @@ $autoIcon = match($variant) {
     'danger'        => 'x-circle',
     'info'          => 'info',
     'mentor'        => 'star',
+    'experience'    => 'book-open',
+    'career-insight'=> 'trending-up',
     default         => null,
 };
 
-$displayIcon = $icon ?? $autoIcon;
+$hasNoIcon = $noIcon === true || $noIcon === 'no-icon' || $noIcon === 'true';
+$displayIcon = $hasNoIcon ? null : ($icon ?? $autoIcon);
 $isInteractive = $interactive || $href;
 @endphp
 

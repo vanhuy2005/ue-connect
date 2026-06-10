@@ -74,7 +74,7 @@ class MentorAccessController extends Controller
                 }
             }),
             'revoke' => $revoke->execute($admin, $mentorAccess->user->mentorProfile, [
-                'reason' => $data['reason'],
+                'reason' => $data['reason'] ?? null,
                 'admin_notes' => $data['instruction'] ?? null,
             ]),
             default => $review->execute($admin, $mentorAccess, [
@@ -90,7 +90,7 @@ class MentorAccessController extends Controller
     public function approve(MentorAccessRequest $mentorAccessRequest, GrantMentorAccessAction $grant)
     {
         request()->validate([
-            'reason' => ['required', 'string', 'min:10'],
+            'reason' => ['nullable', 'string'],
             'admin_notes' => ['nullable', 'string'],
         ]);
 
@@ -107,7 +107,7 @@ class MentorAccessController extends Controller
     public function reject(MentorAccessRequest $mentorAccessRequest, ReviewMentorAccessAction $review)
     {
         request()->validate([
-            'reason' => ['required', 'string', 'min:10'],
+            'reason' => ['nullable', 'string'],
             'admin_notes' => ['nullable', 'string'],
         ]);
 
@@ -123,7 +123,7 @@ class MentorAccessController extends Controller
     public function needMoreInfo(MentorAccessRequest $mentorAccessRequest, ReviewMentorAccessAction $review)
     {
         request()->validate([
-            'reason' => ['required', 'string', 'min:10'],
+            'reason' => ['nullable', 'string'],
             'admin_notes' => ['nullable', 'string'],
         ]);
 
@@ -146,7 +146,7 @@ class MentorAccessController extends Controller
     public function revoke(MentorProfile $mentorProfile, RevokeMentorAccessAction $revoke)
     {
         request()->validate([
-            'reason' => ['required', 'string', 'min:10'],
+            'reason' => ['nullable', 'string'],
             'admin_notes' => ['nullable', 'string'],
         ]);
 
@@ -161,7 +161,7 @@ class MentorAccessController extends Controller
     public function grant(User $user, GrantMentorAccessAction $grant)
     {
         request()->validate([
-            'reason' => ['required', 'string', 'min:10'],
+            'reason' => ['nullable', 'string'],
             'admin_notes' => ['nullable', 'string'],
         ]);
 

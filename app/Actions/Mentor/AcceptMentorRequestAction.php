@@ -39,7 +39,10 @@ class AcceptMentorRequestAction
             // 3. Link conversation to request
             $mentorRequest->update(['conversation_id' => $conversation->id]);
 
-            // 4. Notify student
+            // 4. Sync mentor availability (may switch to Full)
+            $mentorRequest->mentorProfile->syncAvailabilityFromPendingCount();
+
+            // 5. Notify student
             $mentorRequest->student->notify(new MentorRequestAcceptedNotification($mentorRequest));
 
             // TODO: emit mentor_request_accepted analytics event

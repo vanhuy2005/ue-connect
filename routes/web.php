@@ -240,11 +240,18 @@ Route::middleware(['auth', 'active.account', 'verified.identity'])->group(functi
             'headline' => ['required', 'string', 'min:12', 'max:160'],
             'bio' => ['required', 'string', 'min:40', 'max:5000'],
             'expertise_topics_text' => ['required', 'string', 'max:1000'],
-            'help_topics_text' => ['required', 'string', 'max:1000'],
             'career_paths_text' => ['nullable', 'string', 'max:1000'],
             'skills_text' => ['nullable', 'string', 'max:1000'],
             'preferred_request_types' => ['required', 'array', 'min:1'],
             'preferred_request_types.*' => ['string', 'max:80'],
+            'custom_preferred_request' => [
+                Rule::requiredIf(function () {
+                    return in_array('other', request('preferred_request_types', []), true);
+                }),
+                'nullable',
+                'string',
+                'max:80',
+            ],
             'availability_status' => ['required', 'string', 'in:available,paused,full,hidden'],
             'mentor_visibility' => ['required', 'boolean'],
             'max_pending_requests' => ['required', 'integer', 'min:1', 'max:50'],
@@ -263,9 +270,19 @@ Route::middleware(['auth', 'active.account', 'verified.identity'])->group(functi
         };
 
         $data['expertise_topics'] = $normalizeList($data['expertise_topics_text'], 10);
-        $data['help_topics'] = $normalizeList($data['help_topics_text'], 8);
-        $data['career_paths'] = $normalizeList($data['career_paths_text'] ?? null, 8);
-        $data['skills'] = $normalizeList($data['skills_text'] ?? null, 12);
+
+        if (request()->has('career_paths_text')) {
+            $data['career_paths'] = $normalizeList($data['career_paths_text'] ?? null, 8);
+        }
+        if (request()->has('skills_text')) {
+            $data['skills'] = $normalizeList($data['skills_text'] ?? null, 12);
+        }
+
+        if (in_array('other', $data['preferred_request_types'], true) && request()->filled('custom_preferred_request')) {
+            $data['preferred_request_types'] = array_map(function ($type) {
+                return $type === 'other' ? request('custom_preferred_request') : $type;
+            }, $data['preferred_request_types']);
+        }
 
         unset(
             $data['expertise_topics_text'],
@@ -277,12 +294,6 @@ Route::middleware(['auth', 'active.account', 'verified.identity'])->group(functi
         if (count($data['expertise_topics']) < 2) {
             return back()
                 ->withErrors(['expertise_topics_text' => 'Vui lòng nhập ít nhất 2 chủ đề chuyên môn, ngăn cách bằng dấu phẩy hoặc xuống dòng.'])
-                ->withInput();
-        }
-
-        if (count($data['help_topics']) < 2) {
-            return back()
-                ->withErrors(['help_topics_text' => 'Vui lòng nhập ít nhất 2 nội dung bạn có thể hỗ trợ.'])
                 ->withInput();
         }
 

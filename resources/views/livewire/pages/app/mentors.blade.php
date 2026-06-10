@@ -61,7 +61,7 @@ new class extends Component
             $query->where(function ($q) {
                 foreach ($this->selectedTopics as $topic) {
                     $q->whereJsonContains('expertise_topics', $topic)
-                        ->orWhereJsonContains('help_topics', $topic);
+                        ->orWhereJsonContains('preferred_request_types', $topic);
                 }
             });
         }
@@ -82,9 +82,8 @@ new class extends Component
                 ->toArray(),
             'helpTopics' => MentorProfile::discoverable()
                 ->get()
-                ->flatMap(fn ($p) => $p->help_topics ?? [])
+                ->flatMap(fn ($p) => $p->preferred_request_types ?? [])
                 ->unique()
-                ->sort()
                 ->values()
                 ->toArray(),
         ];
@@ -154,14 +153,7 @@ new class extends Component
             x-show="showFilters"
             class="flex flex-wrap items-center gap-2"
         >
-            <button
-                wire:click="$set('availabilityFilter', '{{ $availabilityFilter === 'available' ? '' : 'available' }}')"
-                class="inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-semibold border transition
-                {{ $availabilityFilter === 'available' ? 'bg-ue-brand border-ue-brand text-white' : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-50' }}"
-            >
-                <span class="inline-block w-1.5 h-1.5 rounded-full {{ $availabilityFilter === 'available' ? 'bg-white' : 'bg-slate-300' }}"></span>
-                Đang nhận yêu cầu
-            </button>
+
 
             @if (! empty($expertiseTopics))
                 <div class="w-full flex flex-wrap items-center gap-1.5">
@@ -178,17 +170,31 @@ new class extends Component
                 </div>
             @endif
 
+@php
+    $preferredRequestOptions = [
+        'cv_review' => 'Review CV / Portfolio',
+        'career_advice' => 'Định hướng nghề nghiệp',
+        'academic_guidance' => 'Định hướng học thuật',
+        'subject_support' => 'Hỗ trợ môn học',
+        'research_guidance' => 'Nghiên cứu khoa học',
+        'interview_prep' => 'Chuẩn bị phỏng vấn',
+        'internship_experience' => 'Kinh nghiệm thực tập',
+        'other' => 'Khác',
+    ];
+@endphp
             @if (! empty($helpTopics))
                 <div class="w-full flex flex-wrap items-center gap-1.5">
                     <span class="text-[10px] font-bold text-slate-400 uppercase tracking-wider mr-1">Hỗ trợ</span>
-                    @foreach ($helpTopics as $topic)
-                        <button
-                            wire:click="selectTopic('{{ $topic }}')"
-                            class="rounded-full px-3 py-1.5 text-xs font-semibold border transition
-                            {{ in_array($topic, $this->selectedTopics) ? 'bg-ue-brand border-ue-brand text-white font-bold' : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-50' }}"
-                        >
-                            {{ $topic }}
-                        </button>
+                    @foreach ($helpTopics as $type)
+                        @if (isset($preferredRequestOptions[$type]))
+                            <button
+                                wire:click="selectTopic('{{ $type }}')"
+                                class="rounded-full px-3 py-1.5 text-xs font-semibold border transition
+                                {{ in_array($type, $this->selectedTopics) ? 'bg-ue-brand border-ue-brand text-white font-bold' : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-50' }}"
+                            >
+                                {{ $preferredRequestOptions[$type] }}
+                            </button>
+                        @endif
                     @endforeach
                 </div>
             @endif

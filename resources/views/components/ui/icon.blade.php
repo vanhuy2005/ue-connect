@@ -318,6 +318,18 @@ $sizeClass = match($size) {
             <polyline points="12 6 12 12 16 14"></polyline>
             @break
 
+        @case('dollar-sign')
+            <line x1="12" y1="1" x2="12" y2="23"></line>
+            <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path>
+            @break
+
+        @case('hourglass')
+            <path d="M5 2h14"></path>
+            <path d="M5 22h14"></path>
+            <path d="M19 2v4c0 3.8-3.1 7-7 7s-7-3.2-7-7V2"></path>
+            <path d="M5 22v-4c0-3.8 3.1-7 7-7s7 3.2 7 7v4"></path>
+            @break
+
         {{-- 📅 calendar --}}
         @case('calendar')
             <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
@@ -669,6 +681,14 @@ $sizeClass = match($size) {
             <circle cx="9" cy="7" r="4"></circle>
             <polyline points="16 11 18 13 22 9"></polyline>
             @break
+        {{-- 🕐✕ clock-x (expired / time's up) --}}
+        @case('clock-x')
+            <circle cx="12" cy="12" r="10"></circle>
+            <polyline points="12 6 12 12 16 14"></polyline>
+            <line x1="9" y1="9" x2="15" y2="15"></line>
+            <line x1="15" y1="9" x2="9" y2="15"></line>
+            @break
+
         {{-- Default fallback circle with warnings in local --}}
         @default
             @if(app()->environment('local', 'testing'))

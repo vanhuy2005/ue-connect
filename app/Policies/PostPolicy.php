@@ -4,7 +4,9 @@ namespace App\Policies;
 
 use App\Enums\CommunityMemberStatus;
 use App\Enums\ConnectionStatus;
+use App\Enums\ModerationStatus;
 use App\Enums\PostStatus;
+use App\Enums\PostType;
 use App\Enums\PostVisibility;
 use App\Models\CommunityMember;
 use App\Models\Connection;
@@ -37,6 +39,14 @@ class PostPolicy
         // Owner can always view their own post
         if ($post->user_id === $user->id) {
             return true;
+        }
+
+        // Check moderation status for opportunities
+        if ($post->post_type === PostType::OPPORTUNITY) {
+            $isAdminOrModerator = $user->hasRole('admin') || $user->can('manage_reports');
+            if (! $isAdminOrModerator && ! in_array($post->moderation_status, [ModerationStatus::APPROVED, ModerationStatus::EXPIRED], true)) {
+                return false;
+            }
         }
 
         // Normal users cannot view hidden, deleted, or moderated posts
@@ -107,6 +117,22 @@ class PostPolicy
         }
 
         return $user->can('moderate_content');
+    }
+
+    /**
+     * Determine whether the user can moderate an opportunity post.
+     */
+    public function moderate(User $user, Post $post): bool
+    {
+        return $user->isActive() && ($user->hasRole('admin') || $user->can('moderate_content'));
+    }
+
+    /**
+     * Determine whether the user can mark an opportunity as expired.
+     */
+    public function expire(User $user, Post $post): bool
+    {
+        return $user->isActive() && $post->user_id === $user->id;
     }
 
     /**

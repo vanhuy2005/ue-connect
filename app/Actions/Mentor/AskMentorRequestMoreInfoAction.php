@@ -6,6 +6,7 @@ use App\Enums\MentorRequestStatus;
 use App\Models\MentorRequest;
 use App\Models\User;
 use App\Notifications\Mentor\MentorRequestMoreInfoNotification;
+use App\Support\Navigation\UserNavigationMetrics;
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Support\Facades\Gate;
 
@@ -29,6 +30,8 @@ class AskMentorRequestMoreInfoAction
 
         // Notify student
         $mentorRequest->student->notify(new MentorRequestMoreInfoNotification($mentorRequest));
+
+        app(UserNavigationMetrics::class)->forgetForUser($mentorRequest->student);
 
         // TODO: emit mentor_request_more_info_requested analytics event
 

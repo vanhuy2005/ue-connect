@@ -2,7 +2,9 @@
 
 namespace Database\Factories;
 
+use App\Enums\ModerationStatus;
 use App\Enums\PostStatus;
+use App\Enums\PostType;
 use App\Enums\PostVisibility;
 use App\Models\Post;
 use App\Models\User;
@@ -25,6 +27,8 @@ class PostFactory extends Factory
             'body' => fake()->paragraph(),
             'visibility' => PostVisibility::VERIFIED_USERS,
             'status' => PostStatus::PUBLISHED,
+            'post_type' => PostType::STANDARD,
+            'moderation_status' => ModerationStatus::NONE,
             'published_at' => now(),
         ];
     }

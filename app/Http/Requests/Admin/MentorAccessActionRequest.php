@@ -16,9 +16,9 @@ class MentorAccessActionRequest extends FormRequest
     public function rules()
     {
         return [
-            'action' => ['required', 'string', 'in:approve,reject,request_more_info,grant,revoke,pause'],
-            'reason' => ['required', 'string', 'min:10'],
-            'instruction' => ['nullable', 'string', 'required_if:action,request_more_info'],
+            'action' => ['required', 'string', 'in:approve,reject,request_more_info,grant,revoke,pause,under_review'],
+            'reason' => ['nullable', 'string'],
+            'instruction' => ['nullable', 'string'],
         ];
     }
 }

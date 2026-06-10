@@ -8,7 +8,10 @@ use App\Enums\MentorAvailabilityStatus;
 use App\Models\MentorAccessRequest;
 use App\Models\MentorProfile;
 use App\Models\User;
+use App\Notifications\Mentor\MentorAccessNeedMoreInfoNotification;
+use App\Notifications\Mentor\MentorAccessRevokedNotification;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Notification;
 use Tests\Feature\Concerns\BuildsMentorFixtures;
 use Tests\TestCase;
 
@@ -130,6 +133,7 @@ class MentorAccessAdminActionTest extends TestCase
 
     public function test_admin_can_request_more_info_and_redirects_to_queue(): void
     {
+        Notification::fake();
         $admin = $this->adminUser();
         $applicant = $this->activeUser('alumni');
 
@@ -155,10 +159,13 @@ class MentorAccessAdminActionTest extends TestCase
             'review_reason' => 'Please provide your portfolio.',
             'admin_notes' => 'Upload samples of your work.',
         ]);
+
+        Notification::assertSentTo($applicant, MentorAccessNeedMoreInfoNotification::class);
     }
 
     public function test_admin_can_revoke_and_redirects_to_queue(): void
     {
+        Notification::fake();
         $admin = $this->adminUser();
         $applicant = $this->activeUser('alumni');
         $profile = $this->mentorProfile($applicant);
@@ -188,6 +195,8 @@ class MentorAccessAdminActionTest extends TestCase
         ]);
 
         $this->assertFalse($applicant->fresh()->hasDirectPermission('mentor_access'));
+
+        Notification::assertSentTo($applicant, MentorAccessRevokedNotification::class);
     }
 
     public function test_non_admin_cannot_access_action_endpoint(): void
@@ -304,12 +313,12 @@ class MentorAccessAdminActionTest extends TestCase
         ]);
 
         $response = $this->actingAs($admin)->from(route('admin.mentors.detail', $request->id))->post(route('admin.mentors.action', $request), [
-            'action' => 'reject',
+            'action' => 'invalid_action',
             'reason' => '',
         ]);
 
         $response->assertRedirect(route('admin.mentors.detail', $request->id));
-        $response->assertSessionHasErrors('reason');
+        $response->assertSessionHasErrors('action');
 
         $this->assertDatabaseHas('mentor_access_requests', [
             'id' => $request->id,
@@ -463,6 +472,7 @@ class MentorAccessAdminActionTest extends TestCase
         ]);
 
         $response->assertRedirect(route('mentor.dashboard'));
+        $response->assertSessionHas('status', 'Yêu cầu trở thành mentor đã được gửi.');
 
         $this->assertDatabaseHas('mentor_access_requests', [
             'user_id' => $applicant->id,
@@ -479,8 +489,8 @@ class MentorAccessAdminActionTest extends TestCase
         $response = $this->actingAs($applicant)->get(route('mentor.dashboard'));
 
         $response->assertOk();
-        $response->assertSee('Bạn chưa đăng ký làm mentor');
-        $response->assertSee('Đăng ký làm mentor');
+        $response->assertSee('Bạn chưa có hồ sơ mentor');
+        $response->assertSee('Gửi đăng ký ngay');
         $response->assertSee(route('mentor.apply'));
         $response->assertDontSee('Quyền mentor đã bị thu hồi');
         $response->assertDontSee('Lý do thu hồi');
@@ -495,7 +505,7 @@ class MentorAccessAdminActionTest extends TestCase
         $response = $this->actingAs($applicant)->get(route('mentor.setup'));
 
         $response->assertOk();
-        $response->assertSee('Bạn chưa đăng ký làm mentor');
+        $response->assertSee('Bạn chưa có hồ sơ mentor được duyệt');
         $response->assertSee('Đăng ký làm mentor');
         $response->assertDontSee('Quyền mentor đã bị thu hồi');
     }
@@ -583,7 +593,7 @@ class MentorAccessAdminActionTest extends TestCase
         ]);
 
         // 3. Applicant resubmits with more info
-        $this->actingAs($applicant)->post(route('mentor.apply.store'), [
+        $response = $this->actingAs($applicant)->post(route('mentor.apply.store'), [
             'requested_role_context' => 'alumni',
             'motivation' => 'I want to mentor students in career planning and development.',
             'headline' => 'Career mentor',
@@ -594,6 +604,9 @@ class MentorAccessAdminActionTest extends TestCase
             'response_expectation_text' => 'Within 3 days',
             'policy_agreed' => true,
         ]);
+
+        $response->assertRedirect(route('mentor.dashboard'));
+        $response->assertSessionHas('status', 'Yêu cầu mentor đã được cập nhật và gửi lại.');
 
         $this->assertDatabaseHas('mentor_access_requests', [
             'id' => $submission->id,
@@ -610,9 +623,12 @@ class MentorAccessAdminActionTest extends TestCase
             ->where('status', MentorAccessStatus::Approved)
             ->first();
 
-        $this->actingAs($admin)->post(route('admin.mentors.action', $request), [
+        $response = $this->actingAs($admin)->post(route('admin.mentors.action', $request), [
             'action' => 'revoke',
             'reason' => 'Test revocation reason that is long enough.',
         ]);
+        if (session('errors')) {
+            dd(session('errors')->all());
+        }
     }
 }

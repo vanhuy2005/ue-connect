@@ -85,9 +85,10 @@ class CreateMentorConversationAction
                 ->first();
 
             if ($conversation) {
-                // Update the mentor_request_id on the existing conversation
+                // Update the mentor_request_id on the existing conversation and reopen it
                 $conversation->update([
                     'mentor_request_id' => $mentorRequest->id,
+                    'status' => ConversationStatus::ACTIVE,
                 ]);
             } else {
                 // Create a new conversation

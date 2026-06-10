@@ -11,6 +11,7 @@ use App\Enums\MessageType;
 use App\Enums\MessageStatus;
 use App\Enums\ConnectionStatus;
 use App\Enums\ConversationStatus;
+use App\Enums\MentorRequestStatus;
 use App\Actions\Messaging\SendMessage;
 use App\Actions\Messaging\ReplyToMessage;
 use App\Actions\Messaging\RecallMessage;
@@ -54,6 +55,11 @@ new #[Layout('layouts.app')] class extends Component
     public ?int $reportingMessageId = null;
     public string $reportReason = 'harassment';
     public string $reportDescription = '';
+
+    // Feedback properties
+    public bool $showFeedbackModal = false;
+    public string $feedbackLevel = '';
+    public string $feedbackText = '';
 
     protected $listeners = ['refreshMessages' => '$refresh'];
 
@@ -385,6 +391,39 @@ new #[Layout('layouts.app')] class extends Component
     }
 
     /**
+     * Submit feedback for the mentor request associated with the conversation.
+     */
+    public function submitMentorFeedback(\App\Actions\Mentor\SubmitMentorFeedbackAction $action): void
+    {
+        $this->validate([
+            'feedbackLevel' => ['required', 'string', 'in:helpful,somewhat_helpful,not_helpful'],
+            'feedbackText' => ['nullable', 'string', 'max:2000'],
+        ], [
+            'feedbackLevel.required' => 'Vui lòng chọn mức độ hữu ích.',
+        ]);
+
+        if (! $this->selectedConversationId) {
+            return;
+        }
+
+        $conversation = Conversation::findOrFail($this->selectedConversationId);
+        $mentorRequest = $conversation->mentorRequest;
+
+        if ($mentorRequest && (int) $mentorRequest->student_id === (int) Auth::id()) {
+            if ($mentorRequest->status === MentorRequestStatus::Completed && !$mentorRequest->feedback()->exists()) {
+                $action->execute(Auth::user(), $mentorRequest, [
+                    'helpfulness_level' => $this->feedbackLevel,
+                    'feedback_text' => $this->feedbackText ?: null,
+                ]);
+                $this->feedbackLevel = '';
+                $this->feedbackText = '';
+                $this->showFeedbackModal = false;
+                $this->feedbackMessage = 'Cảm ơn bạn đã gửi phản hồi cho Mentor!';
+            }
+        }
+    }
+
+    /**
      * Check if the conversation is restricted.
      */
     public function isRestricted(Conversation $conversation): bool
@@ -408,8 +447,19 @@ new #[Layout('layouts.app')] class extends Component
 
         // Mentor conversations bypass connection check
         if ($conversation->mentor_request_id) {
-            // But respect archived status (completed requests)
-            return $conversation->status !== ConversationStatus::ACTIVE;
+            // If archived (completed), still allow if users are friends
+            if ($conversation->status !== ConversationStatus::ACTIVE) {
+                $userOneId = min($sender->id, $recipient->id);
+                $userTwoId = max($sender->id, $recipient->id);
+                $isConnected = Connection::where('user_one_id', $userOneId)
+                    ->where('user_two_id', $userTwoId)
+                    ->where('status', ConnectionStatus::ACTIVE)
+                    ->exists();
+
+                return ! $isConnected;
+            }
+
+            return false;
         }
 
         // 2. Check if connected
@@ -744,9 +794,13 @@ new #[Layout('layouts.app')] class extends Component
         $recipientNickname = null;
 
         if ($this->selectedConversationId) {
-            $activeConvo = Conversation::with(['participants.user.profile', 'conversationUserSettings' => function ($q) use ($userId) {
-                $q->where('user_id', $userId);
-            }])->findOrFail($this->selectedConversationId);
+            $activeConvo = Conversation::with([
+                'participants.user.profile',
+                'conversationUserSettings' => function ($q) use ($userId) {
+                    $q->where('user_id', $userId);
+                },
+                'mentorRequest.mentorProfile'
+            ])->findOrFail($this->selectedConversationId);
             Gate::authorize('view', $activeConvo);
 
             $userSetting = $activeConvo->conversationUserSettings->first();
@@ -771,6 +825,14 @@ new #[Layout('layouts.app')] class extends Component
             $isRestricted = $userSetting ? (bool) $userSetting->is_restricted : false;
             $isBlocked = $this->isBlockedState($activeConvo);
             $isBlockedByMe = $this->isBlockedByMe($activeConvo);
+
+            // Check if auth user and recipient are active friends
+            $recipientForCheck = $activeConvo->getRecipientFor(Auth::user());
+            $isFriendWithRecipient = $recipientForCheck ? Connection::where(
+                'user_one_id', min(Auth::id(), $recipientForCheck->id)
+            )->where(
+                'user_two_id', max(Auth::id(), $recipientForCheck->id)
+            )->where('status', ConnectionStatus::ACTIVE)->exists() : false;
 
             $pinnedMessages = ConversationPinnedMessage::where('conversation_id', $this->selectedConversationId)
                 ->with(['message.sender', 'pinnedBy'])
@@ -812,6 +874,7 @@ new #[Layout('layouts.app')] class extends Component
             'isRestricted' => $isRestricted,
             'isBlocked' => $isBlocked,
             'isBlockedByMe' => $isBlockedByMe,
+            'isFriendWithRecipient' => $isFriendWithRecipient ?? false,
             'isMuted' => $isMuted,
             'recipientNickname' => $recipientNickname,
             'pinnedMessages' => $pinnedMessages,
@@ -1372,6 +1435,9 @@ new #[Layout('layouts.app')] class extends Component
                         $msgDate = $message->created_at->format('d/m/Y');
                         $isMine = (int) $message->sender_id === (int) Auth::id();
                     @endphp
+                    @if ($message->message_type === MessageType::SYSTEM)
+                        @continue
+                    @endif
                     {{-- Date Separator --}}
                     @if ($msgDate !== $lastDate)
                         <div class="text-center my-3 flex items-center justify-center gap-3">
@@ -1623,7 +1689,99 @@ new #[Layout('layouts.app')] class extends Component
                 </div>
 
                 <div wire:loading.remove wire:target="selectConversation">
-                    @if ($isRestricted)
+                    @if ($activeConvo->mentorRequest && $activeConvo->mentorRequest->status === \App\Enums\MentorRequestStatus::Completed && !$isFriendWithRecipient)
+                    {{-- Completed Consultation Session UX --}}
+                    @php
+                        $mentorRequest = $activeConvo->mentorRequest;
+                        $isStudent = (int) $mentorRequest->student_id === (int) Auth::id();
+                        $isMentor = (int) $mentorRequest->mentor_id === (int) Auth::id();
+                    @endphp
+                    <div class="py-6 px-4 flex flex-col items-center text-center space-y-4">
+                        {{-- Confetti and Green Check icon --}}
+                        <div class="relative">
+                            <!-- Confetti decorations around checkmark -->
+                            <div class="absolute -top-2 -left-3 w-1.5 h-1.5 rounded-full bg-red-400 animate-bounce"></div>
+                            <div class="absolute top-1 -right-3 w-1 h-1 rounded-full bg-blue-400"></div>
+                            <div class="absolute -bottom-1 -left-4 w-1 h-1 rounded-full bg-yellow-400"></div>
+                            <div class="absolute -bottom-2 right-1 w-1.5 h-1.5 rounded-full bg-green-400"></div>
+                            
+                            <div class="w-12 h-12 rounded-full bg-green-50 flex items-center justify-center border border-green-100 shadow-2xs">
+                                <x-ui.icon name="check" size="md" class="text-green-600 font-extrabold stroke-[3px]" />
+                            </div>
+                        </div>
+
+                        <div class="space-y-1">
+                            <h3 class="text-xs font-bold text-green-700">Phiên tư vấn đã hoàn thành</h3>
+                            @if ($isStudent)
+                                <p class="text-xxs text-slate-500 font-medium max-w-sm leading-relaxed">
+                                    Đã đánh dấu hoàn thành phiên tư vấn này. Cuộc trò chuyện hiện đã được đóng. Để tiếp tục trao đổi, bạn có thể tạo yêu cầu tư vấn mới.
+                                </p>
+                            @else
+                                <p class="text-xxs text-slate-500 font-medium max-w-sm leading-relaxed">
+                                    Đã đánh dấu hoàn thành phiên tư vấn này. Cuộc trò chuyện hiện đã được đóng.
+                                </p>
+                            @endif
+                        </div>
+
+                        {{-- Action Buttons --}}
+                        <div class="flex items-center gap-2 pt-2">
+                            @if ($isStudent)
+                                @if ($mentorRequest->feedback()->exists())
+                                    <button type="button" disabled class="px-4 py-2 border border-slate-200 bg-slate-50 text-slate-400 rounded-xl text-xxs font-bold flex items-center gap-1.5 transition-all opacity-80 cursor-not-allowed">
+                                        <x-ui.icon name="check-circle" size="xs" />
+                                        Đã đánh giá
+                                    </button>
+                                @else
+                                    <button type="button" @click="$wire.set('showFeedbackModal', true)" class="px-4 py-2 border border-slate-200 hover:border-slate-300 bg-white hover:bg-slate-50 text-slate-700 rounded-xl text-xxs font-bold flex items-center gap-1.5 transition-all">
+                                        <x-ui.icon name="star" size="xs" class="text-amber-500" />
+                                        Đánh giá Mentor
+                                    </button>
+                                @endif
+                                
+                                @if ($mentorRequest->mentorProfile)
+                                    <a href="{{ route('mentor.show', $mentorRequest->mentorProfile) }}" class="px-4 py-2 bg-ue-brand hover:bg-ue-brand-dark text-white rounded-xl text-xxs font-bold flex items-center gap-1.5 shadow-2xs hover:shadow-sm transition-all">
+                                        <x-ui.icon name="plus" size="xs" />
+                                        Tạo yêu cầu mới
+                                    </a>
+                                @endif
+                            @else
+                                <a href="{{ route('mentor.requests.show', $mentorRequest) }}" class="px-4 py-2 bg-ue-brand hover:bg-ue-brand-dark text-white rounded-xl text-xxs font-bold flex items-center gap-1.5 shadow-2xs hover:shadow-sm transition-all">
+                                    <x-ui.icon name="external-link" size="xs" />
+                                    Chi tiết yêu cầu
+                                </a>
+                            @endif
+                        </div>
+
+                        {{-- Display feedback to mentor if present --}}
+                        @if ($isMentor && $mentorRequest->feedback()->exists())
+                            @php
+                                $feedback = $mentorRequest->feedback;
+                                $levelLabels = [
+                                    'helpful' => 'Hữu ích',
+                                    'somewhat_helpful' => 'Tạm được',
+                                    'not_helpful' => 'Chưa tốt',
+                                ];
+                                $levelColors = [
+                                    'helpful' => 'text-emerald-700 bg-emerald-50 border-emerald-100',
+                                    'somewhat_helpful' => 'text-amber-700 bg-amber-50 border-amber-100',
+                                    'not_helpful' => 'text-red-700 bg-red-50 border-red-100',
+                                ];
+                            @endphp
+                            <div class="w-full max-w-sm mt-3 p-3 rounded-xl border border-slate-100 bg-slate-50/50 text-left space-y-1.5">
+                                <p class="text-[9px] font-bold text-slate-400 uppercase tracking-wider">Đánh giá từ sinh viên</p>
+                                <div class="flex items-center justify-between">
+                                    <span class="px-2 py-0.5 rounded-full text-[9px] font-bold border {{ $levelColors[$feedback->helpfulness_level->value] ?? 'text-slate-700 bg-slate-100' }}">
+                                        {{ $levelLabels[$feedback->helpfulness_level->value] ?? $feedback->helpfulness_level->value }}
+                                    </span>
+                                    <span class="text-[9px] text-slate-400 font-semibold">{{ $feedback->created_at->format('d/m/Y') }}</span>
+                                </div>
+                                @if ($feedback->feedback_text)
+                                    <p class="text-[10px] text-slate-650 italic leading-relaxed">"{{ $feedback->feedback_text }}"</p>
+                                @endif
+                            </div>
+                        @endif
+                    </div>
+                    @elseif ($isRestricted)
                     <div class="bg-slate-50 border border-slate-150 rounded-xl p-3.5 flex items-center gap-3 text-xxs font-semibold text-slate-500">
                         <x-ui.icon name="shield-alert" size="sm" class="text-slate-400 flex-shrink-0" />
                         <span class="leading-normal">
@@ -1879,6 +2037,83 @@ new #[Layout('layouts.app')] class extends Component
                     <button type="button" wire:click="submitReport" wire:loading.attr="disabled" wire:target="submitReport" class="px-4 py-2 rounded-xl bg-red-600 hover:bg-red-700 text-white text-xxs font-bold shadow-2xs hover:shadow-sm transition-all disabled:opacity-60 disabled:cursor-not-allowed">
                         <span wire:loading.remove wire:target="submitReport">Gửi báo cáo</span>
                         <span wire:loading wire:target="submitReport">Đang gửi...</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+    @endif
+
+    {{-- Mentor Feedback Modal --}}
+    @if ($showFeedbackModal && $activeConvo && $activeConvo->mentorRequest)
+        @php
+            $mentorRequest = $activeConvo->mentorRequest;
+            $mentorUser = $mentorRequest->mentor;
+        @endphp
+        <div class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs" x-data x-cloak>
+            <div class="bg-white rounded-2xl border border-slate-150 shadow-2xl w-full max-w-sm overflow-hidden flex flex-col animate-in fade-in zoom-in-95 duration-150">
+                <div class="p-4 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
+                    <div class="flex items-center gap-1.5">
+                        <x-ui.icon name="star" size="sm" class="text-amber-500" />
+                        <h3 class="text-xs font-bold text-slate-800">Đánh giá buổi cố vấn</h3>
+                    </div>
+                    <button type="button" wire:click="$set('showFeedbackModal', false)" class="text-slate-400 hover:text-slate-600 transition-colors">
+                        <x-ui.icon name="x" size="xs" />
+                    </button>
+                </div>
+                <div class="p-4 space-y-4">
+                    <p class="text-[10px] text-slate-500 font-semibold leading-relaxed">
+                        Phản hồi của bạn sẽ được gửi đến mentor <span class="font-bold text-ue-brand">{{ $mentorUser?->name }}</span> để giúp họ cải thiện chất lượng hỗ trợ.
+                    </p>
+                    
+                    <div class="space-y-3">
+                        <div>
+                            <span class="text-[9px] font-bold text-slate-400 uppercase tracking-wider block mb-1.5">Mức độ hữu ích <span class="text-red-500">*</span></span>
+                            <div class="flex gap-2">
+                                <label class="flex-1 cursor-pointer">
+                                    <input type="radio" wire:model.live="feedbackLevel" value="helpful" class="sr-only peer" />
+                                    <div class="flex flex-col items-center gap-1 p-2.5 rounded-xl border text-[10px] font-bold transition
+                                        {{ $feedbackLevel === 'helpful' ? 'border-emerald-500 bg-emerald-50 text-emerald-700' : 'border-slate-200 text-slate-500 hover:border-slate-350' }}">
+                                        Hữu ích
+                                    </div>
+                                </label>
+                                <label class="flex-1 cursor-pointer">
+                                    <input type="radio" wire:model.live="feedbackLevel" value="somewhat_helpful" class="sr-only peer" />
+                                    <div class="flex flex-col items-center gap-1 p-2.5 rounded-xl border text-[10px] font-bold transition
+                                        {{ $feedbackLevel === 'somewhat_helpful' ? 'border-amber-500 bg-amber-50 text-amber-700' : 'border-slate-200 text-slate-500 hover:border-slate-355' }}">
+                                        Tạm được
+                                    </div>
+                                </label>
+                                <label class="flex-1 cursor-pointer">
+                                    <input type="radio" wire:model.live="feedbackLevel" value="not_helpful" class="sr-only peer" />
+                                    <div class="flex flex-col items-center gap-1 p-2.5 rounded-xl border text-[10px] font-bold transition
+                                        {{ $feedbackLevel === 'not_helpful' ? 'border-red-500 bg-red-50 text-red-700' : 'border-slate-200 text-slate-500 hover:border-slate-355' }}">
+                                        Chưa tốt
+                                    </div>
+                                </label>
+                            </div>
+                            @error('feedbackLevel') <p class="mt-1 text-[10px] text-red-500 font-semibold">{{ $message }}</p> @enderror
+                        </div>
+
+                        <div>
+                            <label for="feedback-text-input" class="block text-[9px] font-bold text-slate-400 uppercase tracking-wider mb-1.5">Chia sẻ thêm (không bắt buộc)</label>
+                            <textarea
+                                id="feedback-text-input"
+                                wire:model="feedbackText"
+                                placeholder="Điều gì đã tốt? Điều gì có thể cải thiện..."
+                                rows="3"
+                                class="w-full px-3 py-2 text-xxs rounded-xl border border-slate-200 focus:outline-none focus:ring-1 focus:ring-ue-brand/40 focus:border-ue-brand/40 text-slate-700 bg-slate-50/50 placeholder-slate-400 resize-none"
+                            ></textarea>
+                            @error('feedbackText') <p class="mt-1 text-[10px] text-red-500 font-semibold">{{ $message }}</p> @enderror
+                        </div>
+                    </div>
+                </div>
+                <div class="p-4 bg-slate-50/50 border-t border-slate-100 flex items-center justify-end gap-2">
+                    <button type="button" wire:click="$set('showFeedbackModal', false)" class="px-4 py-2 rounded-xl text-slate-600 hover:bg-slate-100 text-xxs font-bold transition-colors">
+                        Hủy
+                    </button>
+                    <button type="button" wire:click="submitMentorFeedback" wire:loading.attr="disabled" wire:target="submitMentorFeedback" class="px-4 py-2 rounded-xl bg-ue-brand hover:bg-ue-brand-dark text-white text-xxs font-bold shadow-2xs hover:shadow-sm transition-all disabled:opacity-60 disabled:cursor-not-allowed">
+                        <span wire:loading.remove wire:target="submitMentorFeedback">Gửi đánh giá</span>
+                        <span wire:loading wire:target="submitMentorFeedback">Đang gửi...</span>
                     </button>
                 </div>
             </div>

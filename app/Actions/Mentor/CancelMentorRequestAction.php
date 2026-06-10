@@ -22,6 +22,9 @@ class CancelMentorRequestAction
 
         $mentorRequest->update(['status' => MentorRequestStatus::Cancelled]);
 
+        // Sync mentor availability (slot freed up, may revert to Available)
+        $mentorRequest->mentorProfile->syncAvailabilityFromPendingCount();
+
         // Notify mentor
         $mentorRequest->mentor->notify(new MentorRequestCancelledNotification($mentorRequest));
 

@@ -8,14 +8,30 @@ new class extends Component {
     public function with(): array
     {
         $user = Auth::user();
+        $profile = $user->mentorProfile()->where('is_active', true)->first();
+
+        // Ensure availability status always reflects the real pending count
+        if ($profile) {
+            $profile->syncAvailabilityFromPendingCount();
+        }
 
         return [
-            'profile' => $user->mentorProfile()->first(),
+            'profile' => $profile,
             'received' => $user->receivedMentorRequests()->latest()->limit(10)->get(),
             'pendingRequest' => MentorAccessRequest::where('user_id', $user->id)
                 ->whereIn('status', ['submitted', 'under_review', 'need_more_info'])
                 ->latest()
                 ->first(),
+            'activePendingCount' => $profile
+                ? $profile->mentorRequests()
+                    ->whereIn('status', ['submitted', 'accepted', 'need_more_info', 'updated_by_student'])
+                    ->count()
+                : 0,
+            'completedCount' => $profile
+                ? $profile->mentorRequests()
+                    ->where('status', 'completed')
+                    ->count()
+                : 0,
         ];
     }
 };
@@ -56,18 +72,41 @@ new class extends Component {
     </div>
 
     @if ($profile)
+        @php
+            $maxPending = $profile->max_pending_requests ?: 1;
+            $fillPct    = min(100, (int) round($activePendingCount / $maxPending * 100));
+            $barColor   = $fillPct >= 100 ? 'bg-red-500' : ($fillPct >= 70 ? 'bg-amber-400' : 'bg-emerald-500');
+            $textColor  = $fillPct >= 100 ? 'text-red-600' : ($fillPct >= 70 ? 'text-amber-600' : 'text-slate-900');
+        @endphp
         <div class="mt-6 grid gap-4 md:grid-cols-3">
+            {{-- Card 1: Trạng thái (giữ nguyên) --}}
             <div class="rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
                 <p class="text-xs font-semibold text-slate-500">Trạng thái</p>
                 <p class="mt-2 text-lg font-bold text-slate-900">{{ $profile->availability_status->label() }}</p>
             </div>
+
+            {{-- Card 2: Đang xử lý (X/max + progress bar) --}}
             <div class="rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
-                <p class="text-xs font-semibold text-slate-500">Độ hoàn thiện</p>
-                <p class="mt-2 text-lg font-bold text-slate-900">{{ $profile->getProfileCompletenessScore() }}%</p>
+                <p class="text-xs font-semibold text-slate-500">Đang xử lý</p>
+                <div class="mt-2 flex items-end gap-1.5">
+                    <p class="text-lg font-bold {{ $textColor }}">{{ $activePendingCount }}</p>
+                    <p class="mb-0.5 text-sm font-semibold text-slate-400">/ {{ $maxPending }}</p>
+                </div>
+                <div class="mt-2 h-1.5 w-full rounded-full bg-slate-100">
+                    <div class="h-1.5 rounded-full transition-all {{ $barColor }}" style="width: {{ $fillPct }}%"></div>
+                </div>
+                @if ($fillPct >= 100)
+                    <p class="mt-1.5 text-xs font-bold text-red-500">Đã đạt giới hạn — không nhận yêu cầu mới</p>
+                @else
+                    <p class="mt-1.5 text-xs text-slate-400">{{ $maxPending - $activePendingCount }} lượt còn trống</p>
+                @endif
             </div>
+
+            {{-- Card 3: Đã hoàn thành --}}
             <div class="rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
-                <p class="text-xs font-semibold text-slate-500">Giới hạn đang chờ</p>
-                <p class="mt-2 text-lg font-bold text-slate-900">{{ $profile->max_pending_requests }}</p>
+                <p class="text-xs font-semibold text-slate-500">Đã hoàn thành</p>
+                <p class="mt-2 text-lg font-bold text-slate-900">{{ $completedCount }}</p>
+                <p class="mt-1.5 text-xs text-slate-400">phiên tư vấn</p>
             </div>
         </div>
     @elseif (!$pendingRequest)
