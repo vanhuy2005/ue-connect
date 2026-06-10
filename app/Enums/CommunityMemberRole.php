@@ -13,7 +13,7 @@ enum CommunityMemberRole: string
     {
         return match ($this) {
             self::Owner => 'Chủ sở hữu',
-            self::Manager => 'Quản lý CLB',
+            self::Manager => 'Quản lý cộng đồng',
             self::Moderator => 'Kiểm duyệt viên',
             self::Member => 'Thành viên',
         };

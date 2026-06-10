@@ -15,6 +15,9 @@ class Faculty extends Model
         'slug',
         'description',
         'status',
+        'code',
+        'normalized_name',
+        'source_url',
     ];
 
     /**

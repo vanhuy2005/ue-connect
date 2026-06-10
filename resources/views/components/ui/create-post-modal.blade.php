@@ -88,7 +88,7 @@
                         <label for="modal-post-visibility" class="sr-only">Quyền xem</label>
                         <select
                             id="modal-post-visibility"
-                            wire:model="visibility"
+                            wire:model.live="visibility"
                             class="absolute inset-0 w-full h-full opacity-0 z-10 cursor-pointer"
                         >
                             <option value="verified_users">Chỉ sinh viên xác thực</option>

@@ -82,27 +82,23 @@ $secondaryNav = [
 
 @if(isset($shell) && $shell === 'admin')
 <nav
-    class="ue-shell__sidebar hidden lg:flex flex-col py-4 px-4 justify-between h-100dvh sticky top-0 border-r border-ue-border/80"
+    class="ue-shell__sidebar hidden lg:flex flex-col py-4 px-3 justify-between h-100dvh sticky top-0 border-r border-ue-border/80"
+    :class="collapsed ? 'ue-shell__sidebar--collapsed' : 'ue-shell__sidebar--expanded'"
     aria-label="Điều hướng quản trị"
     role="navigation"
-    x-data="{ moreOpen: false }"
+    x-data="{ moreOpen: false, collapsed: true }"
+    @mouseenter="collapsed = false"
+    @mouseleave="collapsed = true"
 >
     <div class="flex flex-col gap-5 flex-1 min-h-0 overflow-y-auto pr-1">
         {{-- Logo --}}
-        <div class="px-1">
-            <a href="{{ route('dashboard') }}" wire:navigate.hover class="inline-flex items-center ue-focus-ring rounded-lg" aria-label="UEConnect - Trang chủ">
-                <x-brand.logo variant="horizontal" size="lg" class="h-8 w-auto" />
+        <div class="pl-1.5">
+            <a href="{{ route('dashboard') }}" wire:navigate.hover class="inline-flex items-center gap-2 ue-focus-ring rounded-lg" aria-label="UEConnect - Trang chủ">
+                <x-brand.logo variant="mark" size="lg" class="h-8 w-8 flex-shrink-0" x-show="collapsed" />
+                <x-brand.logo variant="horizontal" size="lg" class="h-8 w-auto" x-show="!collapsed" />
             </a>
-        </div>
-
-        {{-- Back to App Link --}}
-        <div class="px-1 flex flex-col gap-1">
-            <a href="{{ route('dashboard') }}" wire:navigate.hover class="inline-flex items-center gap-1.5 text-xs font-semibold text-ue-brand-active hover:underline">
-                <x-ui.icon name="arrow-left" size="xs" />
-                Quay lại ứng dụng
-            </a>
-            <h2 class="text-sm font-bold text-ue-text mt-1.5 leading-tight">Quản trị UEConnect</h2>
-            <p class="text-[10px] text-ue-text-muted mt-1 leading-normal">Vận hành, kiểm duyệt và bảo mật hệ thống</p>
+            <h2 class="ue-text-subheading mt-1.5 leading-tight">Quản trị UEConnect</h2>
+            <p class="ue-text-meta mt-1 leading-normal">Vận hành, kiểm duyệt và bảo mật hệ thống</p>
         </div>
 
         {{-- Category Admin Navigation --}}
@@ -131,10 +127,11 @@ $secondaryNav = [
                     wire:navigate.hover
                     class="ue-admin-nav-link {{ $active ? 'active' : '' }}"
                     @if($active) aria-current="page" @endif
+                    :title="collapsed ? '{{ $group['vn_label'] }}' : ''"
                 >
                     <x-ui.icon :name="$group['icon']" size="sm" class="flex-shrink-0" />
                     <span class="min-w-0 flex-1 truncate">{{ $group['vn_label'] }}</span>
-                    <span class="rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-bold text-slate-500">{{ count($group['items']) }}</span>
+                    <span class="rounded-full bg-slate-100 px-2 py-0.5 ue-text-meta font-bold text-slate-550">{{ count($group['items']) }}</span>
                 </a>
             @endforeach
         </div>
@@ -146,8 +143,8 @@ $secondaryNav = [
             type="button"
             @click="moreOpen = !moreOpen"
             @click.away="moreOpen = false"
-            class="ue-admin-nav-link w-full flex items-center justify-between"
-            :class="moreOpen ? 'bg-ue-brand-soft text-ue-brand-active' : ''"
+            class="flex items-center justify-between px-3 py-2 rounded-xl text-ue-text hover:bg-ue-surface-hover border transition-colors duration-150 w-60 ue-focus-ring"
+            :class="collapsed ? 'bg-white shadow-md border-ue-border/50' : ('border-transparent ' + (moreOpen ? 'bg-ue-brand-soft text-ue-brand-active' : 'bg-transparent'))"
             aria-haspopup="true"
             :aria-expanded="moreOpen"
             aria-label="Xem thêm menu"
@@ -168,7 +165,7 @@ $secondaryNav = [
             x-transition:leave="transition ease-in duration-75"
             x-transition:leave-start="transform opacity-100 scale-100 translate-y-0"
             x-transition:leave-end="transform opacity-0 scale-95 translate-y-2"
-            class="absolute left-0 bottom-full mb-2 w-full bg-white rounded-2xl shadow-lg ring-1 ring-black/5 py-2 z-dropdown"
+            class="absolute left-0 bottom-full mb-2 w-60 bg-white rounded-2xl shadow-lg ring-1 ring-black/5 py-2 z-dropdown"
             style="display: none;"
             @keydown.escape.window="moreOpen = false"
         >
@@ -176,6 +173,14 @@ $secondaryNav = [
                 <x-ui.icon name="settings" size="sm" class="text-ue-text-muted" />
                 <span>Cài đặt cá nhân</span>
             </a>
+
+            <a href="{{ route('dashboard') }}" wire:navigate.hover class="flex items-center gap-3 px-4 py-2 text-xs font-semibold text-ue-text-secondary hover:bg-ue-surface-hover hover:text-ue-brand-active transition-colors">
+                <x-ui.icon name="arrow-left" size="sm" class="text-ue-text-muted" />
+                <span>Quay lại ứng dụng</span>
+            </a>
+
+            <div class="h-px bg-ue-border/60 my-1"></div>
+
             <form method="POST" action="{{ route('logout') }}" class="w-full">
                 @csrf
                 <button
@@ -210,7 +215,7 @@ $secondaryNav = [
     >
     <div class="flex flex-col gap-7 flex-1 min-h-0 overflow-y-auto pr-1">
         {{-- Logo --}}
-        <div class="pl-1.5">
+        <div class="ue-sidebar-logo-wrapper pl-1.5">
             <a href="{{ route('dashboard') }}" wire:navigate.hover class="inline-flex items-center gap-2.5 ue-focus-ring rounded-lg" aria-label="UEConnect - Trang chủ" @click="notificationsOpen = false">
                 <x-brand.logo variant="mark" size="lg" class="h-9 w-9 flex-shrink-0" />
                 <span x-show="!collapsed" x-transition:enter="transition ease-out duration-200 delay-75" x-transition:enter-start="opacity-0 translate-x-[-8px]" x-transition:enter-end="opacity-100 translate-x-0" x-transition:leave="transition ease-in duration-100" x-transition:leave-start="opacity-100" x-transition:leave-end="opacity-0" class="font-bold text-lg text-ue-brand tracking-tight whitespace-nowrap">UEConnect</span>
@@ -250,10 +255,10 @@ $secondaryNav = [
         </div>
 
         {{-- Secondary Navigation Divider & List --}}
-        <div class="pt-1 flex flex-col gap-1.5">
+        <div class="ue-sidebar-secondary-section pt-1 flex flex-col gap-1.5">
             <p
                 :class="collapsed ? 'opacity-0 pointer-events-none' : 'opacity-100'"
-                class="px-3 text-[10px] font-bold uppercase tracking-wider text-ue-text-muted/70 whitespace-nowrap transition-opacity duration-200 delay-75"
+                class="px-3 ue-text-meta font-bold uppercase tracking-wider text-ue-text-secondary whitespace-nowrap transition-opacity duration-200 delay-75"
             >
                 Mở rộng
             </p>
@@ -317,33 +322,33 @@ $secondaryNav = [
             {{-- User info summary --}}
             @if ($currentUser)
                 <div class="px-4 py-2 border-b border-ue-border mb-1">
-                    <p class="text-ue-text font-bold truncate text-xs">{{ $currentUser->name }}</p>
-                    <p class="text-[10px] text-ue-text-muted truncate mt-0.5">{{ $currentUser->email }}</p>
+                    <p class="ue-text-body-strong truncate">{{ $currentUser->name }}</p>
+                    <p class="ue-text-caption truncate mt-0.5">{{ $currentUser->email }}</p>
                 </div>
             @endif
 
             {{-- General options --}}
-            <button type="button" class="w-full text-left flex items-center gap-3 px-4 py-2 text-xs font-semibold text-ue-text-secondary hover:bg-ue-surface-hover hover:text-ue-brand-active transition-colors">
+            <button type="button" class="w-full text-left flex items-center gap-3 px-4 py-2 ue-text-caption font-semibold text-ue-text-secondary hover:bg-ue-surface-hover hover:text-ue-brand-active transition-colors">
                 <x-ui.icon name="eye" size="sm" class="text-ue-text-muted" />
                 <span>Giao diện</span>
             </button>
 
-            <a href="{{ route('settings') }}" wire:navigate.hover class="flex items-center gap-3 px-4 py-2 text-xs font-semibold text-ue-text-secondary hover:bg-ue-surface-hover hover:text-ue-brand-active transition-colors">
+            <a href="{{ route('settings') }}" wire:navigate.hover class="flex items-center gap-3 px-4 py-2 ue-text-caption font-semibold text-ue-text-secondary hover:bg-ue-surface-hover hover:text-ue-brand-active transition-colors">
                 <x-ui.icon name="settings" size="sm" class="text-ue-text-muted" />
                 <span>Cài đặt</span>
             </a>
 
-            <a href="{{ route('posts.saved') }}" wire:navigate.hover class="flex items-center gap-3 px-4 py-2 text-xs font-semibold text-ue-text-secondary hover:bg-ue-surface-hover hover:text-ue-brand-active transition-colors">
+            <a href="{{ route('posts.saved') }}" wire:navigate.hover class="flex items-center gap-3 px-4 py-2 ue-text-caption font-semibold text-ue-text-secondary hover:bg-ue-surface-hover hover:text-ue-brand-active transition-colors">
                 <x-ui.icon name="bookmark" size="sm" class="text-ue-text-muted" />
                 <span>Bài viết đã lưu</span>
             </a>
 
-            <a href="{{ route('settings', ['section' => 'support']) }}" wire:navigate.hover class="flex items-center gap-3 px-4 py-2 text-xs font-semibold text-ue-text-secondary hover:bg-ue-surface-hover hover:text-ue-brand-active transition-colors">
+            <a href="{{ route('settings', ['section' => 'support']) }}" wire:navigate.hover class="flex items-center gap-3 px-4 py-2 ue-text-caption font-semibold text-ue-text-secondary hover:bg-ue-surface-hover hover:text-ue-brand-active transition-colors">
                 <x-ui.icon name="help-circle" size="sm" class="text-ue-text-muted" />
                 <span>Trung tâm hỗ trợ</span>
             </a>
 
-            <a href="{{ route('settings', ['section' => 'support']) }}" wire:navigate.hover class="flex items-center gap-3 px-4 py-2 text-xs font-semibold text-ue-text-secondary hover:bg-ue-surface-hover hover:text-ue-brand-active transition-colors">
+            <a href="{{ route('settings', ['section' => 'support']) }}" wire:navigate.hover class="flex items-center gap-3 px-4 py-2 ue-text-caption font-semibold text-ue-text-secondary hover:bg-ue-surface-hover hover:text-ue-brand-active transition-colors">
                 <x-ui.icon name="alert-triangle" size="sm" class="text-ue-text-muted" />
                 <span>Báo cáo sự cố</span>
             </a>
@@ -351,22 +356,22 @@ $secondaryNav = [
             {{-- Admin items --}}
             @if ($isAdmin)
                 <div class="h-2"></div>
-                <p class="px-4 py-1 text-[9px] font-bold text-ue-text-muted uppercase tracking-wider">Quản trị</p>
+                <p class="px-4 py-1 ue-text-meta font-bold text-ue-text-muted uppercase tracking-wider">Quản trị</p>
                 
-                <a href="{{ route('admin.dashboard') }}" wire:navigate.hover class="flex items-center gap-3 px-4 py-2 text-xs font-semibold text-ue-text-secondary hover:bg-ue-surface-hover hover:text-ue-brand-active transition-colors">
+                <a href="{{ route('admin.dashboard') }}" wire:navigate.hover class="flex items-center gap-3 px-4 py-2 ue-text-caption font-semibold text-ue-text-secondary hover:bg-ue-surface-hover hover:text-ue-brand-active transition-colors">
                     <x-ui.icon name="shield" size="sm" class="text-ue-text-muted" />
                     <span>Tổng quan quản trị</span>
                 </a>
 
                 @if($canReviewVerification)
-                    <a href="{{ route('admin.verifications.queue') }}" wire:navigate.hover class="flex items-center gap-3 px-4 py-2 text-xs font-semibold text-ue-text-secondary hover:bg-ue-surface-hover hover:text-ue-brand-active transition-colors">
+                    <a href="{{ route('admin.verifications.queue') }}" wire:navigate.hover class="flex items-center gap-3 px-4 py-2 ue-text-caption font-semibold text-ue-text-secondary hover:bg-ue-surface-hover hover:text-ue-brand-active transition-colors">
                         <x-ui.icon name="shield-check" size="sm" class="text-ue-text-muted" />
                         <span>Duyệt xác thực</span>
                     </a>
                 @endif
 
                 @if($canManageReports)
-                    <a href="{{ route('admin.reports.index') }}" wire:navigate.hover class="flex items-center gap-3 px-4 py-2 text-xs font-semibold text-ue-text-secondary hover:bg-ue-surface-hover hover:text-ue-brand-active transition-colors">
+                    <a href="{{ route('admin.reports.index') }}" wire:navigate.hover class="flex items-center gap-3 px-4 py-2 ue-text-caption font-semibold text-ue-text-secondary hover:bg-ue-surface-hover hover:text-ue-brand-active transition-colors">
                         <x-ui.icon name="flag" size="sm" class="text-ue-text-muted" />
                         <span>Báo cáo vi phạm</span>
                     </a>
@@ -379,7 +384,7 @@ $secondaryNav = [
                 @csrf
                 <button
                     type="submit"
-                    class="w-full text-left flex items-center gap-3 px-4 py-2 text-xs font-semibold text-red-600 hover:bg-red-50/60 transition-colors"
+                    class="w-full text-left flex items-center gap-3 px-4 py-2 ue-text-caption font-semibold text-red-650 hover:bg-red-50/60 transition-colors"
                 >
                     <x-ui.icon name="log-out" size="sm" class="text-red-500" />
                     <span>Đăng xuất</span>

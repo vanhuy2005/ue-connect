@@ -23,7 +23,7 @@ class ClubManagerRevokedNotification extends Notification
             'type' => 'club_manager_revoked',
             'community_id' => $this->community->id,
             'community_name' => $this->community->name,
-            'title' => 'Quyền Quản lý CLB đã bị thu hồi',
+            'title' => 'Quyền Quản lý cộng đồng đã bị thu hồi',
             'body' => 'Quyền Quản lý trong cộng đồng '.$this->community->name.' của bạn đã bị thu hồi.',
             'action_url' => route('community.show', ['community' => $this->community->id]),
         ];

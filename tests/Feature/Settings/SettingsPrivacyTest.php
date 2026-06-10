@@ -4,6 +4,8 @@ namespace Tests\Feature\Settings;
 
 use App\Actions\Settings\EnsureUserSettingsExistAction;
 use App\Enums\AccountStatus;
+use App\Enums\PostStatus;
+use App\Enums\PostVisibility;
 use App\Models\AcademicProgram;
 use App\Models\Faculty;
 use App\Models\User;
@@ -150,5 +152,62 @@ class SettingsPrivacyTest extends TestCase
 
         Volt::test('pages.app.discovery')
             ->assertDontSee('Private Person');
+    }
+
+    public function test_private_profile_hides_content_for_non_connections(): void
+    {
+        $otherUser = User::factory()->create([
+            'account_status' => AccountStatus::ACTIVE,
+            'name' => 'Private Student',
+        ]);
+        $otherUser->assignRole('student');
+
+        $otherProfile = $otherUser->profile()->create([
+            'display_name' => 'Private Student Display',
+            'role_type' => 'student',
+            'profile_status' => 'complete',
+            'discoverable' => true,
+        ]);
+        $otherProfile->studentProfile()->create([
+            'student_code' => '49.01.104.777',
+            'faculty_id' => $this->faculty->id,
+            'academic_program_id' => $this->program->id,
+        ]);
+
+        app(EnsureUserSettingsExistAction::class)->execute($otherUser);
+        $otherUser->profilePrivacySetting()->update(['profile_visibility' => 'connections_only']);
+
+        // Create a post for other user
+        $otherUser->posts()->create([
+            'body' => 'Secret message for friends only',
+            'visibility' => PostVisibility::VERIFIED_USERS,
+            'status' => PostStatus::PUBLISHED,
+        ]);
+
+        $this->actingAs($this->user);
+
+        // Render target profile as a stranger (not connected)
+        Volt::test('pages.app.profile', ['user' => $otherUser])
+            ->assertSee('Trang cá nhân riêng tư')
+            ->assertDontSee('Secret message for friends only');
+    }
+
+    public function test_updating_new_privacy_preferences_persists_in_database(): void
+    {
+        $this->actingAs($this->user);
+
+        Volt::test('pages.app.settings', ['section' => 'privacy'])
+            ->set('mentions_preference', 'connections')
+            ->set('tags_preference', 'nobody')
+            ->set('online_status_visibility', 'nobody')
+            ->call('savePrivacy')
+            ->assertHasNoErrors();
+
+        $this->assertDatabaseHas('profile_privacy_settings', [
+            'user_id' => $this->user->id,
+            'mentions_preference' => 'connections',
+            'tags_preference' => 'nobody',
+            'online_status_visibility' => 'nobody',
+        ]);
     }
 }

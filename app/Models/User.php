@@ -392,4 +392,59 @@ class User extends Authenticatable implements MustVerifyEmail
     {
         return $this->hasMany(CommunityJoinRequest::class);
     }
+
+    /**
+     * Determine if a viewer is authorized to see this user's online status.
+     */
+    public function canSeeOnlineStatus(User $viewer): bool
+    {
+        if ($this->id === $viewer->id) {
+            return true;
+        }
+
+        $privacy = $this->profilePrivacySetting;
+        $visibility = $privacy ? $privacy->online_status_visibility : 'connections';
+
+        if ($visibility === 'nobody') {
+            return false;
+        }
+
+        // Check if there is an active direct connection between this user and the viewer
+        $isConnected = Connection::where(function ($q) use ($viewer) {
+            $q->where('user_one_id', min($this->id, $viewer->id))
+                ->where('user_two_id', max($this->id, $viewer->id));
+        })->where('status', ConnectionStatus::ACTIVE)->exists();
+
+        if ($visibility === 'connections') {
+            return $isConnected;
+        }
+
+        if ($visibility === 'mutual_connections') {
+            if ($isConnected) {
+                return true;
+            }
+
+            // Get this user's active connection user IDs
+            $myConnections = Connection::where(function ($q) {
+                $q->where('user_one_id', $this->id)->orWhere('user_two_id', $this->id);
+            })->where('status', ConnectionStatus::ACTIVE)
+                ->get()
+                ->map(fn ($c) => $c->user_one_id === $this->id ? $c->user_two_id : $c->user_one_id)
+                ->toArray();
+
+            // Get viewer's active connection user IDs
+            $viewerConnections = Connection::where(function ($q) use ($viewer) {
+                $q->where('user_one_id', $viewer->id)->orWhere('user_two_id', $viewer->id);
+            })->where('status', ConnectionStatus::ACTIVE)
+                ->get()
+                ->map(fn ($c) => $c->user_one_id === $viewer->id ? $c->user_two_id : $c->user_one_id)
+                ->toArray();
+
+            $mutual = array_intersect($myConnections, $viewerConnections);
+
+            return ! empty($mutual);
+        }
+
+        return false;
+    }
 }

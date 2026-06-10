@@ -168,11 +168,11 @@ class StudentCardFieldExtractor
             // Skip known label words
             $lower = mb_strtolower($line, 'UTF-8');
             $skipKeywords = [
-                'khoa', 'ngành', 'khóa', 'trường', 'đại học', 'hcmue', 'mssv', 'student', 
-                'university', 'faculty', 'thành phố', 'hồ chí minh', 'thẻ sinh viên', 
-                'chất lượng', 'nhân văn', 'sáng tạo', 'education', 'sp', 'tp', 'city'
+                'khoa', 'ngành', 'khóa', 'trường', 'đại học', 'hcmue', 'mssv', 'student',
+                'university', 'faculty', 'thành phố', 'hồ chí minh', 'thẻ sinh viên',
+                'chất lượng', 'nhân văn', 'sáng tạo', 'education', 'sp', 'tp', 'city',
             ];
-            
+
             $hasSkipKeyword = false;
             foreach ($skipKeywords as $keyword) {
                 if (str_contains($lower, $keyword)) {

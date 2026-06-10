@@ -932,7 +932,12 @@ new #[Layout('layouts.app')] class extends Component
                 >
                     <div class="flex items-center gap-3 min-w-0 flex-1">
                         @if ($convo['recipient'])
-                            <x-ui.avatar :user="$convo['recipient']" size="md" />
+                            <div class="relative flex-shrink-0">
+                                <x-ui.avatar :user="$convo['recipient']" size="md" />
+                                @if ($convo['recipient']->isOnline() && $convo['recipient']->canSeeOnlineStatus(auth()->user()))
+                                    <span class="absolute bottom-0 right-0 block h-2.5 w-2.5 rounded-full bg-green-500 border-2 border-white ring-1 ring-slate-100" title="Trực tuyến"></span>
+                                @endif
+                            </div>
                             <div class="min-w-0 flex-1">
                                 <div class="flex items-center justify-between gap-2">
                                     <h2 class="text-xs font-bold text-slate-800 flex items-center gap-1 truncate">
@@ -1170,7 +1175,12 @@ new #[Layout('layouts.app')] class extends Component
 
                     @if ($recipient)
                         <a href="{{ route('profile.show', $recipient) }}" class="block rounded-full focus:outline-none focus:ring-2 focus:ring-ue-brand/30" aria-label="Xem trang cá nhân của {{ $recipient->name }}">
-                            <x-ui.avatar :user="$recipient" size="sm" />
+                            <div class="relative flex-shrink-0">
+                                <x-ui.avatar :user="$recipient" size="sm" />
+                                @if ($recipient->isOnline() && $recipient->canSeeOnlineStatus(auth()->user()))
+                                    <span class="absolute bottom-0 right-0 block h-2 w-2 rounded-full bg-green-500 border-2 border-white ring-1 ring-slate-100" title="Trực tuyến"></span>
+                                @endif
+                            </div>
                         </a>
                         <div class="min-w-0">
                             @if ($recipientNickname)
@@ -1185,7 +1195,14 @@ new #[Layout('layouts.app')] class extends Component
                                 </a>
                             @endif
                             @if ($recipient->profile && $recipient->profile->faculty)
-                                <p class="text-[9px] text-slate-400 font-semibold truncate leading-none mt-0.5">{{ $recipient->profile->faculty }}</p>
+                                <p class="text-[9px] text-slate-400 font-semibold truncate leading-none mt-0.5">
+                                    {{ $recipient->profile->faculty }}
+                                    @if ($recipient->isOnline() && $recipient->canSeeOnlineStatus(auth()->user()))
+                                        <span class="text-green-500 font-bold ml-1.5">• Đang hoạt động</span>
+                                    @endif
+                                </p>
+                            @elseif ($recipient->isOnline() && $recipient->canSeeOnlineStatus(auth()->user()))
+                                <p class="text-[9px] text-green-500 font-bold truncate leading-none mt-0.5">Đang hoạt động</p>
                             @endif
                         </div>
                     @else
@@ -1339,8 +1356,9 @@ new #[Layout('layouts.app')] class extends Component
                     </div>
                 </div>
 
-                <div class="text-center py-6">
-                    <x-ui.icon name="shield-alert" size="md" class="text-slate-300 mx-auto" />
+                <div wire:loading.remove wire:target="selectConversation" class="space-y-4 flex flex-col flex-1">
+                    <div class="text-center py-6">
+                        <x-ui.icon name="shield-alert" size="md" class="text-slate-300 mx-auto" />
                     <p class="text-[10px] text-slate-400 font-medium max-w-xs mx-auto mt-2 leading-relaxed">
                         Cuộc trò chuyện này được mã hóa bảo mật và chỉ giới hạn hiển thị giữa hai thành viên xác thực học đường. Hãy trao đổi văn minh lịch sự.
                     </p>
@@ -1590,18 +1608,22 @@ new #[Layout('layouts.app')] class extends Component
                     </div>
                 </div>
 
-                <div id="server-message-client-ids" data-ids="{{ json_encode($messages->pluck('client_message_id')->filter()->values()->toArray()) }}" class="hidden"></div>
+                    <div id="server-message-client-ids" data-ids="{{ json_encode($messages->pluck('client_message_id')->filter()->values()->toArray()) }}" class="hidden"></div>
+                </div>
             </div>
 
             {{-- Message Composer or Restricted Banner --}}
             <div class="p-3 border-t border-slate-150 bg-white flex-shrink-0">
-                <div wire:loading.delay wire:target="selectConversation" class="flex items-center gap-2">
-                    <div class="ue-skeleton h-10 w-10 rounded-xl"></div>
-                    <div class="ue-skeleton h-10 flex-1 rounded-xl"></div>
-                    <div class="ue-skeleton h-10 w-10 rounded-xl"></div>
+                <div wire:loading.delay wire:target="selectConversation">
+                    <div class="flex items-center gap-2">
+                        <div class="ue-skeleton h-10 w-10 rounded-xl"></div>
+                        <div class="ue-skeleton h-10 flex-1 rounded-xl"></div>
+                        <div class="ue-skeleton h-10 w-10 rounded-xl"></div>
+                    </div>
                 </div>
 
-                @if ($isRestricted)
+                <div wire:loading.remove wire:target="selectConversation">
+                    @if ($isRestricted)
                     <div class="bg-slate-50 border border-slate-150 rounded-xl p-3.5 flex items-center gap-3 text-xxs font-semibold text-slate-500">
                         <x-ui.icon name="shield-alert" size="sm" class="text-slate-400 flex-shrink-0" />
                         <span class="leading-normal">
@@ -1703,6 +1725,7 @@ new #[Layout('layouts.app')] class extends Component
                         </button>
                     </form>
                 @endif
+                </div>
             </div>
         @else
             <div class="flex-1 flex flex-col items-center justify-center text-center p-8">

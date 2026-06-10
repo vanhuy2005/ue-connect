@@ -36,7 +36,7 @@ $hasError = $hasError || ($name && $errors->has($name));
 
 $variantClasses = match($variant) {
     'filled' =>
-        'block w-full px-3.5 py-3 text-base ' .
+        'block w-full px-3.5 py-3 ue-text-input ' .
         'bg-ue-surface-subtle border border-ue-border rounded-xl ' .
         'text-ue-text placeholder-ue-text-disabled ' .
         'transition-colors duration-sm ease-out ' .
@@ -45,7 +45,7 @@ $variantClasses = match($variant) {
         'resize-y',
 
     'composer' =>
-        'block w-full px-4 py-3 text-base ' .
+        'block w-full px-4 py-3 ue-text-input ' .
         'bg-ue-surface-subtle border border-transparent rounded-2xl ' .
         'text-ue-text placeholder-ue-text-disabled ' .
         'transition-colors duration-sm ease-out ' .
@@ -53,7 +53,7 @@ $variantClasses = match($variant) {
         'resize-none',
 
     default =>
-        'ue-input block w-full px-3.5 py-3 text-base resize-y',
+        'ue-input block w-full px-3.5 py-3 ue-text-input resize-y',
 };
 
 $errorClasses = $hasError ? 'border-[var(--danger)] focus:shadow-focus-danger' : '';

@@ -5,10 +5,13 @@ namespace Tests\Feature\Social;
 use App\Actions\Comments\CreateComment;
 use App\Actions\Comments\DeleteComment;
 use App\Actions\Comments\UpdateComment;
+use App\Actions\Settings\EnsureUserSettingsExistAction;
 use App\Enums\AccountStatus;
 use App\Enums\CommentStatus;
+use App\Enums\ConnectionStatus;
 use App\Enums\PostStatus;
 use App\Models\Comment;
+use App\Models\Connection;
 use App\Models\Post;
 use App\Models\User;
 use Database\Seeders\Reference\AccessControlReferenceSeeder;
@@ -342,5 +345,104 @@ class CommentInteractionTest extends TestCase
         $action->execute($this->user, $hiddenPost, [
             'body' => 'Trying to comment on a hidden post.',
         ]);
+    }
+
+    public function test_search_mention_users_returns_matching_results(): void
+    {
+        $this->actingAs($this->user);
+
+        // Make sure user settings exist
+        app(EnsureUserSettingsExistAction::class)->execute($this->otherUser);
+
+        $component = Volt::test('pages.app.post-detail', ['post' => $this->post]);
+
+        // 1. Target user has default ('everyone') preference but NOT connected -> should NOT show up
+        $resultsOther = $component->instance()->searchMentionUsers('Other');
+        $this->assertEmpty($resultsOther);
+
+        // 2. Connect them
+        Connection::create([
+            'user_one_id' => min($this->user->id, $this->otherUser->id),
+            'user_two_id' => max($this->user->id, $this->otherUser->id),
+            'status' => ConnectionStatus::ACTIVE,
+        ]);
+
+        // 3. Target user has default ('everyone') preference and IS connected -> should show up
+        $resultsOtherConnectedDefault = $component->instance()->searchMentionUsers('Other');
+        $this->assertCount(1, $resultsOtherConnectedDefault);
+        $this->assertEquals($this->otherUser->name, $resultsOtherConnectedDefault[0]['name']);
+
+        // 4. Target user has 'nobody' preference -> should NOT show up
+        $this->otherUser->profilePrivacySetting()->update(['mentions_preference' => 'nobody']);
+        $resultsOtherNobody = $component->instance()->searchMentionUsers('Other');
+        $this->assertEmpty($resultsOtherNobody);
+
+        // 5. Target user has 'connections' preference and NOT connected -> should NOT show up
+        Connection::query()->forceDelete();
+        $this->otherUser->profilePrivacySetting()->update(['mentions_preference' => 'connections']);
+        $resultsOtherNotConnected = $component->instance()->searchMentionUsers('Other');
+        $this->assertEmpty($resultsOtherNotConnected);
+
+        // 6. Target user has 'connections' preference and ARE connected -> should show up
+        Connection::create([
+            'user_one_id' => min($this->user->id, $this->otherUser->id),
+            'user_two_id' => max($this->user->id, $this->otherUser->id),
+            'status' => ConnectionStatus::ACTIVE,
+        ]);
+        $resultsOtherConnected = $component->instance()->searchMentionUsers('Other');
+        $this->assertCount(1, $resultsOtherConnected);
+        $this->assertEquals($this->otherUser->name, $resultsOtherConnected[0]['name']);
+
+        // 7. Search query containing spaces should also return matches (e.g. searching display name "Other Student")
+        $resultsWithSpace = $component->instance()->searchMentionUsers('Other Student');
+        $this->assertCount(1, $resultsWithSpace);
+        $this->assertEquals($this->otherUser->name, $resultsWithSpace[0]['name']);
+    }
+
+    public function test_user_is_notified_when_mentioned_in_comment(): void
+    {
+        // 1. Tagging a connected friend
+        Connection::create([
+            'user_one_id' => min($this->user->id, $this->otherUser->id),
+            'user_two_id' => max($this->user->id, $this->otherUser->id),
+            'status' => ConnectionStatus::ACTIVE,
+        ]);
+
+        $action = resolve(CreateComment::class);
+
+        // Tagging display name "Other Student"
+        $comment = $action->execute($this->user, $this->post, [
+            'body' => 'Hello @Other Student! Check this out.',
+        ]);
+
+        $this->assertCount(1, $this->otherUser->notifications);
+        $notification = $this->otherUser->notifications->first();
+        $this->assertEquals('user_mentioned', $notification->data['type']);
+        $this->assertEquals($this->user->name, $notification->data['sender_name']);
+        $this->assertEquals($comment->id, $notification->data['comment_id']);
+
+        // Clear notifications
+        $this->otherUser->notifications()->delete();
+
+        // 2. Tagging a non-connected user
+        $nonFriend = User::factory()->create();
+        $nonFriend->profile()->create([
+            'display_name' => 'Non Friend',
+            'role_type' => 'student',
+            'profile_status' => 'complete',
+        ]);
+
+        $action->execute($this->user, $this->post, [
+            'body' => 'Hello @Non Friend! Check this out.',
+        ]);
+
+        $this->assertCount(0, $nonFriend->notifications);
+
+        // 3. Tagging self does not notify self
+        $action->execute($this->user, $this->post, [
+            'body' => 'Hello @Active Student! Check this out.',
+        ]);
+
+        $this->assertCount(0, $this->user->notifications);
     }
 }

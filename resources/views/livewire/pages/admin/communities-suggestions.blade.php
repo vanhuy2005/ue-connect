@@ -5,6 +5,7 @@ use App\Enums\CommunitySuggestionStatus;
 use App\Models\CommunitySuggestion;
 use Livewire\Volt\Component;
 use Livewire\WithPagination;
+use Livewire\Attributes\Computed;
 
 new class extends Component {
     use WithPagination;
@@ -23,7 +24,8 @@ new class extends Component {
         $this->authorize('manage_communities');
     }
 
-    public function getSuggestionsProperty()
+    #[Computed]
+    public function suggestions()
     {
         $query = CommunitySuggestion::with('submitter', 'convertedCommunity')
             ->latest();
@@ -35,7 +37,8 @@ new class extends Component {
         return $query->paginate(20);
     }
 
-    public function getStatusesProperty(): array
+    #[Computed]
+    public function statuses(): array
     {
         return [
             ['value' => '', 'label' => 'Tất cả'],
@@ -110,7 +113,7 @@ new class extends Component {
             };
         @endphp
         <x-ui.card>
-            <div class="flex items-start justify-between gap-4">
+            <div class="flex flex-col md:flex-row md:items-start md:justify-between gap-4">
                 <div class="flex-1 min-w-0">
                     <div class="flex items-center gap-2 flex-wrap mb-1">
                         <p class="font-bold text-ue-text">{{ $suggestion->suggested_name }}</p>
@@ -127,11 +130,9 @@ new class extends Component {
                     @endif
                 </div>
                 @if (in_array($suggestion->status?->value, ['submitted', 'under_review', 'need_more_information']))
-                <div class="flex flex-wrap gap-2 flex-shrink-0">
+                <div class="flex flex-wrap gap-2 md:flex-shrink-0">
                     <button wire:click="openReview({{ $suggestion->id }}, 'create_community')"
                         class="px-3 py-1.5 bg-teal-600 text-white rounded text-xs font-semibold hover:bg-teal-700">Tạo cộng đồng</button>
-                    <button wire:click="openReview({{ $suggestion->id }}, 'approve')"
-                        class="px-3 py-1.5 bg-green-600 text-white rounded text-xs font-semibold hover:bg-green-700">Chấp thuận</button>
                     <button wire:click="openReview({{ $suggestion->id }}, 'need_more_information')"
                         class="px-3 py-1.5 bg-yellow-500 text-white rounded text-xs font-semibold hover:bg-yellow-600">Cần thêm TT</button>
                     <button wire:click="openReview({{ $suggestion->id }}, 'reject')"

@@ -1066,8 +1066,8 @@ new #[Layout('layouts.app')] class extends Component
             {{-- Desktop: Title + Tabs side-by-side --}}
             <div class="hidden sm:flex ue-feed-header__top">
                 <div>
-                    <h1 class="text-xl font-bold text-slate-800">Bảng tin</h1>
-                    <p class="text-xs text-slate-400 font-medium mt-0.5">HCMUE Student-verified community updates</p>
+                    <h1 class="ue-text-heading">Bảng tin</h1>
+                    <p class="ue-text-caption mt-1">HCMUE Student-verified community updates</p>
                 </div>
                 
                 {{-- Tabs --}}
@@ -1077,7 +1077,7 @@ new #[Layout('layouts.app')] class extends Component
                         wire:click="setFeedTab('for_you')"
                         wire:loading.attr="disabled"
                         wire:target="setFeedTab"
-                        class="px-3 py-1.5 rounded-full text-xxs font-bold transition-colors {{ $activeFeedTab === 'for_you' ? 'bg-ue-brand-soft text-ue-brand' : 'text-slate-400 hover:bg-slate-50' }}"
+                        class="px-3 py-1.5 rounded-full ue-text-button transition-colors {{ $activeFeedTab === 'for_you' ? 'bg-ue-brand-soft text-ue-brand' : 'text-slate-500 hover:bg-slate-50' }}"
                     >
                         Dành cho bạn
                     </button>
@@ -1086,7 +1086,7 @@ new #[Layout('layouts.app')] class extends Component
                         wire:click="setFeedTab('following')"
                         wire:loading.attr="disabled"
                         wire:target="setFeedTab"
-                        class="px-3 py-1.5 rounded-full text-xxs font-bold transition-colors {{ $activeFeedTab === 'following' ? 'bg-ue-brand-soft text-ue-brand' : 'text-slate-400 hover:bg-slate-50' }}"
+                        class="px-3 py-1.5 rounded-full ue-text-button transition-colors {{ $activeFeedTab === 'following' ? 'bg-ue-brand-soft text-ue-brand' : 'text-slate-500 hover:bg-slate-50' }}"
                     >
                         Theo dõi
                     </button>
@@ -1100,7 +1100,7 @@ new #[Layout('layouts.app')] class extends Component
                     wire:click="setFeedTab('for_you')"
                     wire:loading.attr="disabled"
                     wire:target="setFeedTab"
-                    class="flex-1 py-2 text-xs text-center transition-colors {{ $activeFeedTab === 'for_you' ? 'font-bold text-slate-800 border-b-2 border-slate-800' : 'font-medium text-slate-400 border-b-2 border-transparent' }}"
+                    class="flex-1 py-2 text-center transition-colors ue-text-button {{ $activeFeedTab === 'for_you' ? 'text-slate-800 border-b-2 border-slate-800' : 'text-slate-400 border-b-2 border-transparent' }}"
                 >
                     Dành cho bạn
                 </button>
@@ -1109,7 +1109,7 @@ new #[Layout('layouts.app')] class extends Component
                     wire:click="setFeedTab('following')"
                     wire:loading.attr="disabled"
                     wire:target="setFeedTab"
-                    class="flex-1 py-2 text-xs text-center transition-colors {{ $activeFeedTab === 'following' ? 'font-bold text-slate-800 border-b-2 border-slate-800' : 'font-medium text-slate-400 border-b-2 border-transparent' }}"
+                    class="flex-1 py-2 text-center transition-colors ue-text-button {{ $activeFeedTab === 'following' ? 'text-slate-800 border-b-2 border-slate-800' : 'text-slate-400 border-b-2 border-transparent' }}"
                 >
                     Theo dõi
                 </button>
@@ -1140,7 +1140,7 @@ new #[Layout('layouts.app')] class extends Component
                                         wire:model="body"
                                         placeholder="Có gì mới trong cộng đồng HCMUE hôm nay?"
                                         rows="2"
-                                        class="ue-composer__textarea focus:outline-none"
+                                        class="ue-composer__textarea focus:outline-none ue-text-body"
                                         maxlength="3000"
                                     ></textarea>
                                     @error('body')
@@ -1198,7 +1198,7 @@ new #[Layout('layouts.app')] class extends Component
                                             <label for="post-visibility" class="sr-only">Quyền xem</label>
                                             <select
                                                 id="post-visibility"
-                                                wire:model="visibility"
+                                                wire:model.live="visibility"
                                                 class="absolute inset-0 w-full h-full opacity-0 z-10 cursor-pointer"
                                             >
                                                 <option value="verified_users">Chỉ sinh viên xác thực</option>
@@ -1257,7 +1257,7 @@ new #[Layout('layouts.app')] class extends Component
                     if (window.Echo) {
                         window.Echo.private('feed')
                             .listen('.PostCreated', (e) => {
-                                if (e.author_id != {{ Auth::id() }}) {
+                                if (e.author_id != {{ Auth::id() ?? 'null' }}) {
                                     count++;
                                     showBanner = true;
                                 }

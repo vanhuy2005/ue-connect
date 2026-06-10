@@ -7,6 +7,7 @@ use App\Actions\Posts\TogglePostLike;
 use App\Actions\Posts\TogglePostSave;
 use App\Actions\Posts\DeletePost;
 use App\Actions\Posts\UpdatePost;
+use App\Actions\Posts\TogglePostRepost;
 use App\Actions\Reports\CreateReport;
 use App\Actions\Messaging\SendSharedPostMessage;
 use App\Actions\Messaging\FindOrCreateDirectConversation;
@@ -77,7 +78,7 @@ new #[Layout('layouts.app')] class extends Component
     public function mount(Post $post): void
     {
         Gate::authorize('view', $post);
-        $this->post = $post->loadMissing(['user.profile', 'likes', 'saves', 'media.variants']);
+        $this->post = $post->loadMissing(['user.profile', 'likes', 'saves', 'media.variants', 'reposts']);
     }
 
     /**
@@ -135,6 +136,24 @@ new #[Layout('layouts.app')] class extends Component
             $post = Post::findOrFail($postId);
             $togglePostSave->execute(Auth::user(), $post);
             $this->feedbackMessage = 'Đã cập nhật lưu bài viết.';
+        } catch (\Illuminate\Auth\Access\AuthorizationException $e) {
+            $this->feedbackMessage = $e->getMessage();
+        }
+    }
+
+    /**
+     * Toggle post repost from detail.
+     */
+    public function togglePostRepost(int $postId, TogglePostRepost $togglePostRepost): void
+    {
+        try {
+            $post = Post::findOrFail($postId);
+            $isReposted = $togglePostRepost->execute(Auth::user(), $post);
+            
+            // Reload post relations to update the UI
+            $this->post->load('reposts');
+            
+            $this->feedbackMessage = $isReposted ? 'Đã đăng lại bài viết.' : 'Đã hủy đăng lại bài viết.';
         } catch (\Illuminate\Auth\Access\AuthorizationException $e) {
             $this->feedbackMessage = $e->getMessage();
         }
@@ -574,8 +593,82 @@ new #[Layout('layouts.app')] class extends Component
 
         return $connections->values();
     }
-};
 
+    /**
+     * Search users for mentions dropdown.
+     */
+    public function searchMentionUsers(string $search): array
+    {
+        $search = trim($search);
+        if ($search === '') {
+            return [];
+        }
+
+        $currentUserId = Auth::id();
+
+        // Get active connection user IDs
+        $friendIds = Connection::where(function ($query) use ($currentUserId) {
+                $query->where('user_one_id', $currentUserId)
+                    ->orWhere('user_two_id', $currentUserId);
+            })
+            ->where('status', ConnectionStatus::ACTIVE)
+            ->get()
+            ->map(function ($conn) use ($currentUserId) {
+                return $conn->user_one_id === $currentUserId ? $conn->user_two_id : $conn->user_one_id;
+            })
+            ->push($currentUserId) // Allow self tagging
+            ->toArray();
+
+        $driver = \Illuminate\Support\Facades\DB::connection()->getDriverName();
+
+        // Get matching users from connections/self
+        $users = User::whereIn('id', $friendIds)
+            ->where(function ($query) use ($search, $driver) {
+                if ($driver === 'sqlsrv') {
+                    $query->whereRaw("name COLLATE Latin1_General_CI_AI LIKE ?", ["%{$search}%"])
+                        ->orWhereHas('profile', function ($q) use ($search) {
+                            $q->whereRaw("display_name COLLATE Latin1_General_CI_AI LIKE ?", ["%{$search}%"]);
+                        });
+                } else {
+                    $query->where('name', 'like', "%{$search}%")
+                        ->orWhereHas('profile', function ($q) use ($search) {
+                            $q->where('display_name', 'like', "%{$search}%");
+                        });
+                }
+            })
+            ->with(['profile', 'profilePrivacySetting'])
+            ->get();
+
+        // Filter based on their privacy preferences
+        $filteredUsers = $users->filter(function ($targetUser) use ($currentUserId) {
+            if ($targetUser->id === $currentUserId) {
+                return true;
+            }
+
+            // Respect the target user's privacy preference
+            $privacy = $targetUser->profilePrivacySetting;
+            $preference = $privacy ? $privacy->mentions_preference : 'everyone';
+
+            if ($preference === 'nobody') {
+                return false;
+            }
+
+            return true;
+        });
+
+        $results = $filteredUsers->take(5)
+            ->map(fn($u) => [
+                'id' => $u->id,
+                'name' => $u->name,
+                'display_name' => $u->profile?->display_name ?? $u->name,
+                'avatar_url' => $u->profile?->avatar_url ?? null,
+            ])
+            ->values()
+            ->toArray();
+
+        return $results;
+    }
+};
 ?>
 
 <div class="ue-feed-layout">
@@ -618,6 +711,9 @@ new #[Layout('layouts.app')] class extends Component
                     ? $post->media->where('status', 'ready')->values()
                     : $post->media()->where('status', 'ready')->with('variants')->get();
                 $mediaCount = $mediaItems->count();
+                $commentCount = $post->comments()->whereIn('status', [\App\Enums\CommentStatus::PUBLISHED, \App\Enums\CommentStatus::EDITED])->count();
+                $repostCount = $post->reposts->count();
+                $isReposted = $post->reposts->where('user_id', $currentUser->id)->isNotEmpty();
             @endphp
 
             <div class="ue-feed-surface">
@@ -636,7 +732,7 @@ new #[Layout('layouts.app')] class extends Component
                             <div class="ue-post-card__header">
                                 <div>
                                     <div class="flex items-center gap-1.5">
-                                        <a href="{{ $authorProfileUrl }}" class="text-sm font-bold text-slate-800 leading-tight hover:text-ue-brand hover:underline">
+                                        <a href="{{ $authorProfileUrl }}" class="text-[15px] font-bold text-slate-800 leading-tight hover:text-ue-brand hover:underline">
                                             {{ $author->name }}
                                         </a>
                                         <x-ui.icon name="check-circle" size="xs" class="text-ue-brand flex-shrink-0" />
@@ -645,7 +741,7 @@ new #[Layout('layouts.app')] class extends Component
                                         </span>
                                     </div>
                                     @if ($profile)
-                                        <div class="text-[10px] text-slate-400 font-medium mt-0.5 leading-none">
+                                        <div class="text-xs text-slate-400 font-medium mt-1 leading-none">
                                             {{ Str::ucfirst($profile->role_type) }}
                                             @if ($profile->faculty)
                                                 · {{ $profile->faculty }}
@@ -758,15 +854,15 @@ new #[Layout('layouts.app')] class extends Component
                                     </div>
                                 </div>
                             @else
-                                <div class="ue-post-card__content mt-2 text-slate-800 text-sm sm:text-base whitespace-pre-wrap leading-relaxed">{{ $post->body }}</div>
+                                <div class="ue-post-card__content mt-3 text-slate-800 text-base sm:text-lg whitespace-pre-wrap leading-relaxed">{{ $post->body }}</div>
                                 
                                 {{-- Polymorphic Media Grid --}}
                                 @if ($mediaCount > 0)
-                                    <div class="mt-3 max-w-lg select-none">
+                                    <div class="mt-3 w-full max-w-lg select-none mr-auto">
                                         @if ($mediaCount === 1)
                                             {{-- 1 image: full width, smart ratio --}}
                                             <div class="ue-media-frame">
-                                                <a href="{{ $mediaUrlAction->execute($mediaItems[0], 'detail', $currentUser) ?? $mediaUrlAction->execute($mediaItems[0], 'original', $currentUser) }}" target="_blank" rel="noopener noreferrer" class="block w-full h-full">
+                                                <a href="{{ $mediaUrlAction->execute($mediaItems[0], 'detail', $currentUser) ?? $mediaUrlAction->execute($mediaItems[0], 'original', $currentUser) }}" target="_blank" rel="noopener noreferrer" class="block">
                                                     <img
                                                         src="{{ $mediaUrlAction->execute($mediaItems[0], 'feed', $currentUser) }}"
                                                         alt="Hình ảnh đính kèm"
@@ -830,9 +926,9 @@ new #[Layout('layouts.app')] class extends Component
                                         @endif
                                     </div>
                                 @elseif ($post->media_url)
-                                    <div class="mt-3 max-w-lg select-none">
+                                    <div class="mt-3 w-full max-w-lg select-none mr-auto">
                                         <div class="ue-media-frame">
-                                            <a href="{{ $post->media_url }}" target="_blank" rel="noopener noreferrer" class="block w-full h-full">
+                                            <a href="{{ $post->media_url }}" target="_blank" rel="noopener noreferrer" class="block">
                                                 <img src="{{ $post->media_url }}" alt="Media post" class="ue-media-image" />
                                             </a>
                                         </div>
@@ -861,10 +957,28 @@ new #[Layout('layouts.app')] class extends Component
                                 />
 
                                 {{-- Comments Link --}}
-                                <span class="ue-action-button flex items-center gap-1.5 text-xs font-semibold text-slate-500">
+                                <button
+                                    type="button"
+                                    onclick="document.getElementById('comment-text').focus()"
+                                    class="ue-action-button flex items-center gap-1.5 text-xs font-semibold text-slate-500 hover:text-ue-brand transition-colors"
+                                >
                                     <x-ui.icon name="message-circle" size="md" class="ue-action-button__icon text-current" />
-                                    <span class="ue-action-button__count">Thảo luận</span>
-                                </span>
+                                    <span class="ue-action-button__count">{{ $commentCount }}</span>
+                                </button>
+
+                                {{-- Repost --}}
+                                @if (! $isOwner)
+                                    <x-ui.post-action-button
+                                        icon="repost"
+                                        activeIcon="repost"
+                                        label="Đăng lại"
+                                        :count="$repostCount"
+                                        :selected="$isReposted"
+                                        wireClick="togglePostRepost({{ $post->id }})"
+                                        wire:loading.attr="disabled"
+                                        wire:target="togglePostRepost({{ $post->id }})"
+                                    />
+                                @endif
 
                                 {{-- Share --}}
                                 <x-ui.post-action-button
@@ -899,7 +1013,79 @@ new #[Layout('layouts.app')] class extends Component
                         </div>
                         
                         {{-- Right Column: Form --}}
-                        <div class="min-w-0">
+                        <div class="min-w-0 relative" x-data="{
+                            showDropdown: false,
+                            suggestions: [],
+                            searchQuery: '',
+                            cursorPosition: 0,
+                            selectedIndex: 0,
+                            handleInput(event) {
+                                const textarea = event.target;
+                                const value = textarea.value;
+                                const pos = textarea.selectionStart;
+                                this.cursorPosition = pos;
+
+                                const textBeforeCursor = value.slice(0, pos);
+                                const lastAt = textBeforeCursor.lastIndexOf('@');
+
+                                if (lastAt !== -1 && (lastAt === 0 || /\s/.test(textBeforeCursor[lastAt - 1]))) {
+                                    const query = textBeforeCursor.slice(lastAt + 1);
+                                    if (query.length > 0 && query.length <= 50 && !/\s{2,}/.test(query) && !/^\s/.test(query)) {
+                                        this.searchQuery = query;
+                                        this.$wire.searchMentionUsers(query).then(results => {
+                                            this.suggestions = results;
+                                            this.showDropdown = results.length > 0;
+                                            this.selectedIndex = 0;
+                                        });
+                                        return;
+                                    }
+                                }
+                                this.closeDropdown();
+                            },
+                            selectNext() {
+                                if (!this.showDropdown) return;
+                                this.selectedIndex = (this.selectedIndex + 1) % this.suggestions.length;
+                            },
+                            selectPrev() {
+                                if (!this.showDropdown) return;
+                                this.selectedIndex = (this.selectedIndex - 1 + this.suggestions.length) % this.suggestions.length;
+                            },
+                            confirmSelection() {
+                                if (!this.showDropdown || this.suggestions.length === 0) return;
+                                this.insertMention(this.suggestions[this.selectedIndex]);
+                            },
+                            insertMention(user) {
+                                const textarea = document.getElementById('comment-text');
+                                const value = textarea.value;
+                                const pos = this.cursorPosition;
+                                
+                                const textBeforeCursor = value.slice(0, pos);
+                                const lastAt = textBeforeCursor.lastIndexOf('@');
+                                
+                                const before = value.slice(0, lastAt);
+                                const after = value.slice(pos);
+                                
+                                const mentionText = '@' + user.display_name + ' ';
+                                const newValue = before + mentionText + after;
+                                
+                                textarea.value = newValue;
+                                this.$wire.set('commentBody', newValue);
+                                
+                                textarea.focus();
+                                const newPos = lastAt + mentionText.length;
+                                this.$nextTick(() => {
+                                    textarea.setSelectionRange(newPos, newPos);
+                                });
+                                
+                                this.closeDropdown();
+                            },
+                            closeDropdown() {
+                                this.showDropdown = false;
+                                this.suggestions = [];
+                                this.searchQuery = '';
+                                this.selectedIndex = 0;
+                            }
+                        }">
                             @if ($replyingToCommentId)
                                 <div class="mb-3 px-3 py-1.5 rounded-lg bg-blue-50 border border-blue-100 text-xxs text-ue-brand font-bold flex items-center justify-between ue-animate-fade-in">
                                     <span>Đang phản hồi một bình luận</span>
@@ -915,6 +1101,11 @@ new #[Layout('layouts.app')] class extends Component
                                     <textarea
                                         id="comment-text"
                                         wire:model="commentBody"
+                                        @input="handleInput($event)"
+                                        @keydown.arrow-down.prevent="showDropdown ? selectNext() : true"
+                                        @keydown.arrow-up.prevent="showDropdown ? selectPrev() : true"
+                                        @keydown.enter="showDropdown ? ($event.preventDefault() || confirmSelection()) : true"
+                                        @keydown.escape="showDropdown ? ($event.preventDefault() || closeDropdown()) : true"
                                         placeholder="{{ $replyingToCommentId ? 'Nhập phản hồi của bạn...' : 'Viết bình luận công khai...' }}"
                                         rows="2"
                                         class="ue-composer__textarea focus:outline-none"
@@ -923,6 +1114,30 @@ new #[Layout('layouts.app')] class extends Component
                                     @error('commentBody')
                                         <p class="text-xs text-red-650 font-semibold mt-1">{{ $message }}</p>
                                     @enderror
+
+                                    {{-- Suggestion Dropdown --}}
+                                    <div 
+                                        x-show="showDropdown" 
+                                        x-transition
+                                        class="absolute left-0 right-0 mt-1 bg-white border border-slate-200 rounded-xl shadow-lg z-50 max-h-48 overflow-y-auto divide-y divide-slate-50"
+                                        style="display: none;"
+                                    >
+                                        <template x-for="(user, index) in suggestions" :key="user.id">
+                                            <button
+                                                type="button"
+                                                @click="insertMention(user)"
+                                                @mouseenter="selectedIndex = index"
+                                                class="w-full text-left px-4 py-2 flex items-center gap-3 transition-colors"
+                                                :class="selectedIndex === index ? 'bg-slate-50 text-ue-brand' : 'text-slate-700'"
+                                            >
+                                                <img :src="user.avatar_url || 'https://www.gravatar.com/avatar/' + user.id + '?d=mp&s=100'" class="w-6 h-6 rounded-full object-cover border border-slate-100" />
+                                                <div class="flex-1 min-w-0">
+                                                    <span class="text-xxs font-bold block truncate" x-text="user.display_name"></span>
+                                                    <span class="text-[9px] text-slate-400 block truncate" x-text="'@' + user.name"></span>
+                                                </div>
+                                            </button>
+                                        </template>
+                                    </div>
                                 </div>
 
                                 <div class="ue-composer__toolbar">
@@ -949,7 +1164,7 @@ new #[Layout('layouts.app')] class extends Component
 
             {{-- 3. COMMENTS LIST (THREADS-STYLE THREADING) --}}
             <div class="bg-white border border-slate-150 rounded-2xl p-4 sm:p-5 shadow-xs space-y-6 mt-6">
-                <h3 class="text-xs font-bold text-slate-800 flex items-center gap-1.5 pb-3 border-b border-slate-100">
+                <h3 class="text-sm font-bold text-slate-800 flex items-center gap-1.5 pb-3 border-b border-slate-100">
                     <x-ui.icon name="message-circle" size="xs" class="text-ue-brand" />
                     Thảo luận cộng đồng
                 </h3>

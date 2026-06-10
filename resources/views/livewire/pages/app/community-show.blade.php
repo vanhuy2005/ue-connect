@@ -3,9 +3,11 @@
 use App\Actions\Community\ApproveJoinRequestAction;
 use App\Actions\Community\CreateCommunityEventAction;
 use App\Actions\Community\CreateCommunityPostAction;
+use App\Actions\Community\GrantClubManagerAction;
 use App\Actions\Community\LeaveCommunityAction;
 use App\Actions\Community\RejectJoinRequestAction;
 use App\Actions\Community\RequestJoinCommunityAction;
+use App\Actions\Community\RevokeClubManagerAction;
 use App\Actions\Community\RsvpCommunityEventAction;
 use App\Actions\Community\SubmitCommunityResourceAction;
 use App\Actions\Messaging\FindOrCreateDirectConversation;
@@ -30,12 +32,14 @@ use App\Models\Connection;
 use App\Models\MediaFile;
 use App\Models\Post;
 use App\Models\User;
+use App\Models\PermissionGrant;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Str;
 use Livewire\Volt\Component;
 use Livewire\WithFileUploads;
 use Livewire\WithPagination;
+use Livewire\Attributes\Computed;
 use App\Actions\Media\StoreTemporaryMediaAction;
 use App\Actions\Media\AttachMediaToModelAction;
 use App\Actions\Media\DeleteMediaAction;
@@ -152,6 +156,13 @@ new class extends Component
 
     public array $selectedInviteUserIds = [];
 
+    // Member role management
+    public bool $showChangeRoleModal = false;
+
+    public ?int $selectedMemberIdForRole = null;
+
+    public string $newRole = '';
+
     public function mount(Community $community): void
     {
         $this->authorize('view', $community);
@@ -216,14 +227,16 @@ new class extends Component
         ]);
     }
 
-    public function getMembershipProperty(): ?CommunityMember
+    #[Computed]
+    public function membership(): ?CommunityMember
     {
         return CommunityMember::where('community_id', $this->community->id)
             ->where('user_id', auth()->id())
             ->first();
     }
 
-    public function getIsActiveMemberProperty(): bool
+    #[Computed]
+    public function isActiveMember(): bool
     {
         if (auth()->check() && $this->community->isOwnedBy(auth()->user())) {
             return true;
@@ -232,7 +245,8 @@ new class extends Component
         return $this->membership?->status === CommunityMemberStatus::Active;
     }
 
-    public function getHasPendingRequestProperty(): bool
+    #[Computed]
+    public function hasPendingRequest(): bool
     {
         return CommunityJoinRequest::where('community_id', $this->community->id)
             ->where('user_id', auth()->id())
@@ -240,7 +254,8 @@ new class extends Component
             ->exists();
     }
 
-    public function getFeedPostsProperty()
+    #[Computed]
+    public function feedPosts()
     {
         return Post::inCommunity($this->community->id)
             ->where('status', PostStatus::PUBLISHED->value)
@@ -261,7 +276,8 @@ new class extends Component
             ->paginate(15, pageName: 'feedPage');
     }
 
-    public function getUpcomingEventsProperty()
+    #[Computed]
+    public function upcomingEvents()
     {
         $query = CommunityEvent::where('community_id', $this->community->id)
             ->upcoming()
@@ -276,7 +292,8 @@ new class extends Component
         return $query->get();
     }
 
-    public function getPublishedResourcesProperty()
+    #[Computed]
+    public function publishedResources()
     {
         return $this->community->publishedResources()
             ->with(['submitter', 'mediaFile'])
@@ -284,14 +301,16 @@ new class extends Component
             ->paginate(12, pageName: 'resourcesPage');
     }
 
-    public function getMembersProperty()
+    #[Computed]
+    public function members()
     {
         return $this->community->activeMembers()
             ->with('user.profile')
             ->paginate(15, pageName: 'membersPage');
     }
 
-    public function getCanCreateEventsProperty(): bool
+    #[Computed]
+    public function canCreateEvents(): bool
     {
         return auth()->check()
             && $this->community->isActive()
@@ -537,7 +556,8 @@ new class extends Component
 
     // ─── Owner Management ──────────────────────────────────────────────────────
 
-    public function getCanManageProperty(): bool
+    #[Computed]
+    public function canManage(): bool
     {
         if (! auth()->check()) {
             return false;
@@ -548,7 +568,8 @@ new class extends Component
             || $user->can('manageMember', $this->community);
     }
 
-    public function getCanManuallyAddMembersProperty(): bool
+    #[Computed]
+    public function canManuallyAddMembers(): bool
     {
         if (! auth()->check()) {
             return false;
@@ -655,7 +676,8 @@ new class extends Component
         };
     }
 
-    public function getBehaviorPreviewProperty(): array
+    #[Computed]
+    public function behaviorPreview(): array
     {
         $visibility = $this->visibilityBehavior();
         $joinPolicy = $this->joinPolicyBehavior();
@@ -763,7 +785,8 @@ new class extends Component
         $this->community->refresh();
     }
 
-    public function getPendingJoinRequestsProperty()
+    #[Computed]
+    public function pendingJoinRequests()
     {
         if (! $this->canManage) {
             return collect();
@@ -823,6 +846,147 @@ new class extends Component
         $this->rejectionReason = '';
         $this->dispatch('notify', type: 'success', message: 'Đã từ chối yêu cầu tham gia.');
         $this->community->refresh();
+    }
+
+    #[Computed]
+    public function selectedMemberForRole(): ?CommunityMember
+    {
+        return $this->selectedMemberIdForRole
+            ? CommunityMember::with('user')->find($this->selectedMemberIdForRole)
+            : null;
+    }
+
+    public function openChangeRoleModal(int $memberId): void
+    {
+        $this->authorize('manageMemberRoles', $this->community);
+        $member = CommunityMember::findOrFail($memberId);
+
+        if ($member->role === CommunityMemberRole::Owner) {
+            $this->dispatch('notify', type: 'error', message: 'Không thể thay đổi quyền của chủ sở hữu hiện tại.');
+
+            return;
+        }
+
+        $this->selectedMemberIdForRole = $memberId;
+        $this->newRole = $member->role->value;
+        $this->showChangeRoleModal = true;
+    }
+
+    public function confirmChangeRole(
+        GrantClubManagerAction $grantAction,
+        RevokeClubManagerAction $revokeAction
+    ): void {
+        $this->authorize('manageMemberRoles', $this->community);
+
+        if (! $this->selectedMemberIdForRole) {
+            return;
+        }
+
+        $member = CommunityMember::findOrFail($this->selectedMemberIdForRole);
+        $targetUser = $member->user;
+        $oldRole = $member->role;
+        $requestedRole = CommunityMemberRole::from($this->newRole);
+
+        if ($oldRole === $requestedRole) {
+            $this->showChangeRoleModal = false;
+
+            return;
+        }
+
+        DB::transaction(function () use ($member, $targetUser, $oldRole, $requestedRole, $grantAction, $revokeAction) {
+            $actor = auth()->user();
+
+            // 1. If old role was Manager, revoke manager permission grant
+            if ($oldRole === CommunityMemberRole::Manager) {
+                $revokeAction->execute($actor, $this->community, $targetUser, 'Thu hồi quyền quản lý do thay đổi vai trò.');
+            }
+
+            // 2. If old role was Moderator, revoke moderator permission grant
+            if ($oldRole === CommunityMemberRole::Moderator) {
+                PermissionGrant::where('user_id', $targetUser->id)
+                    ->where('permission_key', 'moderate_community_posts')
+                    ->where('scope_type', 'community')
+                    ->where('scope_id', $this->community->id)
+                    ->where('status', 'active')
+                    ->update([
+                        'status' => 'revoked',
+                        'revoked_at' => now(),
+                        'revoked_by' => $actor->id,
+                        'reason' => 'Thu hồi quyền kiểm duyệt do thay đổi vai trò.',
+                    ]);
+            }
+
+            // 3. If new role is Owner (Transfer ownership)
+            if ($requestedRole === CommunityMemberRole::Owner) {
+                // Update community owner
+                $this->community->update([
+                    'owner_id' => $targetUser->id,
+                ]);
+
+                // Set new owner member role
+                $member->update([
+                    'role' => CommunityMemberRole::Owner->value,
+                    'role_label' => 'Chủ sở hữu',
+                ]);
+
+                // Demote old owner (actor) to Manager
+                $oldOwnerMember = CommunityMember::where('community_id', $this->community->id)
+                    ->where('user_id', $actor->id)
+                    ->first();
+
+                if ($oldOwnerMember) {
+                    $oldOwnerMember->update([
+                        'role' => CommunityMemberRole::Manager->value,
+                        'role_label' => 'Quản lý cộng đồng',
+                    ]);
+
+                    // Grant manager permissions to old owner
+                    $grantAction->execute($actor, $this->community, $actor, 'Chuyển giao quyền sở hữu cộng đồng.');
+                }
+
+                $this->dispatch('notify', type: 'success', message: 'Đã chuyển giao quyền sở hữu nhóm thành công.');
+            }
+            // 4. If new role is Manager
+            elseif ($requestedRole === CommunityMemberRole::Manager) {
+                $grantAction->execute($actor, $this->community, $targetUser, 'Được bổ nhiệm làm quản lý bởi chủ cộng đồng.');
+                $this->dispatch('notify', type: 'success', message: 'Đã thăng chức thành Quản lý cộng đồng.');
+            }
+            // 5. If new role is Moderator
+            elseif ($requestedRole === CommunityMemberRole::Moderator) {
+                // Create a PermissionGrant for moderate_community_posts
+                PermissionGrant::create([
+                    'user_id' => $targetUser->id,
+                    'permission_key' => 'moderate_community_posts',
+                    'scope_type' => 'community',
+                    'scope_id' => $this->community->id,
+                    'granted_by' => $actor->id,
+                    'reason' => 'Bổ nhiệm kiểm duyệt viên cộng đồng.',
+                    'starts_at' => now(),
+                    'status' => 'active',
+                ]);
+
+                $member->update([
+                    'role' => CommunityMemberRole::Moderator->value,
+                    'role_label' => 'Kiểm duyệt viên',
+                ]);
+
+                $this->dispatch('notify', type: 'success', message: 'Đã thăng chức thành Kiểm duyệt viên.');
+            }
+            // 6. If new role is Member
+            elseif ($requestedRole === CommunityMemberRole::Member) {
+                $member->update([
+                    'role' => CommunityMemberRole::Member->value,
+                    'role_label' => null,
+                ]);
+
+                $this->dispatch('notify', type: 'success', message: 'Đã chuyển vai trò về Thành viên.');
+            }
+        });
+
+        $this->showChangeRoleModal = false;
+        $this->selectedMemberIdForRole = null;
+        $this->community->refresh();
+        $this->resetPage('membersPage');
     }
 
     // ─── Persistent Left Sidebar Data ───────────────────────────────────────
@@ -1226,7 +1390,7 @@ new class extends Component
                 {{-- CTAs row --}}
                 <div class="flex flex-wrap items-center justify-center gap-2 relative z-10 pt-2 md:pt-0">
                     
-                    @if ($community->owner_id === auth()->id())
+                    @if ($community->isOwnedBy(auth()->user()))
                         <span class="px-3.5 py-2 bg-amber-50 text-amber-700 border border-amber-200 rounded-xl text-xs font-bold flex items-center gap-1 shadow-2xs">
                             <x-ui.icon name="shield" size="xs" />
                             <span>Chủ sở hữu</span>
@@ -1280,7 +1444,7 @@ new class extends Component
                                 <x-ui.icon name="bell" size="xs" class="text-slate-400" style="color: #000000 !important;" />
                                 <span style="color: #000000 !important;">Bật thông báo</span>
                             </button>
-                            @if ($this->isActiveMember && $community->owner_id !== auth()->id())
+                            @if ($this->isActiveMember && ! $community->isOwnedBy(auth()->user()))
                                 <button type="button" wire:click="openLeaveModal" @click="openMenu = false"
                                     class="w-full text-left px-4 py-2 hover:bg-red-50 flex items-center gap-2 border-t border-slate-100 text-red-600"
                                     style="color: #dc2626 !important;">
@@ -1328,7 +1492,7 @@ new class extends Component
                     {{-- 2.1 Tab Bảng tin --}}
                     @if ($activeTab === 'feed')
                         {{-- Composer Box --}}
-                        @if ($this->isActiveMember && $community->isActive())
+                        @if ($this->isActiveMember && ($community->isActive() || $this->canManage))
                             <div class="bg-white border border-slate-200 rounded-2xl p-4 shadow-2xs flex gap-3">
                                 <x-ui.avatar :user="auth()->user()" size="md" />
                                 <button wire:click="openPostComposer"
@@ -1554,9 +1718,18 @@ new class extends Component
                                             <span class="px-2 py-0.5 rounded text-[9px] font-bold uppercase tracking-wider
                                                 {{ $m->role?->value === 'owner' ? 'bg-amber-100 text-amber-800 border border-amber-200' : '' }}
                                                 {{ $m->role?->value === 'manager' ? 'bg-indigo-100 text-indigo-800 border border-indigo-200' : '' }}
+                                                {{ $m->role?->value === 'moderator' ? 'bg-purple-100 text-purple-800 border border-purple-200' : '' }}
                                                 {{ $m->role?->value === 'member' ? 'bg-slate-100 text-slate-600 border border-slate-200' : '' }}">
                                                 {{ $m->role?->label() }}
                                             </span>
+
+                                            @if (auth()->check() && auth()->user()->can('manageMemberRoles', $community) && $m->role?->value !== 'owner')
+                                                <button type="button" wire:click="openChangeRoleModal({{ $m->id }})"
+                                                    class="p-1 hover:bg-slate-150 rounded text-slate-400 hover:text-ue-brand transition flex items-center justify-center"
+                                                    title="Cấp quyền">
+                                                    <x-ui.icon name="settings" size="2xs" />
+                                                </button>
+                                            @endif
                                         </div>
                                     </div>
                                 @empty
@@ -1777,6 +1950,69 @@ new class extends Component
     </main>
 
     {{-- MODALS --}}
+
+    {{-- Post Composer Modal --}}
+    @if ($showPostComposer)
+        <div class="fixed inset-0 bg-slate-900/60 backdrop-blur-xs z-50 flex items-center justify-center p-4">
+            <div class="bg-white rounded-3xl border border-slate-200 shadow-2xl max-w-lg w-full overflow-hidden flex flex-col animate-fade-in">
+                <div class="px-5 py-4 border-b border-slate-100 flex items-center justify-between">
+                    <h3 class="text-sm font-extrabold text-slate-805 flex items-center gap-2">
+                        <x-ui.icon name="edit-3" size="xs" class="text-ue-brand" />
+                        Tạo bài viết mới
+                    </h3>
+                    <button type="button" wire:click="closeTransientUi" class="text-slate-400 hover:text-slate-650 transition">
+                        <x-ui.icon name="x" size="xs" />
+                    </button>
+                </div>
+
+                <form wire:submit.prevent="createPost" class="p-5 space-y-4">
+                    <div class="flex gap-3">
+                        <div class="flex-shrink-0">
+                            <x-ui.avatar :user="auth()->user()" size="md" />
+                        </div>
+                        <div class="flex-1 min-w-0">
+                            <label for="modal-post-body" class="sr-only">Nội dung bài viết</label>
+                            <textarea
+                                id="modal-post-body"
+                                wire:model.live="postBody"
+                                placeholder="Có gì mới trong cộng đồng của bạn hôm nay?"
+                                rows="5"
+                                class="w-full border-0 focus:ring-0 p-0 text-slate-700 placeholder-slate-400 text-sm resize-none bg-transparent focus:outline-none"
+                                maxlength="10000"
+                            ></textarea>
+                            @error('postBody')
+                                <p class="text-xs text-red-650 mt-1 font-semibold">{{ $message }}</p>
+                            @enderror
+                        </div>
+                    </div>
+
+                    <div class="flex items-center justify-between pt-4 border-t border-slate-100">
+                        <span class="text-xxs text-slate-400 font-semibold">
+                            {{ mb_strlen($postBody) }}/10000
+                        </span>
+
+                        <div class="flex items-center justify-end gap-2.5">
+                            <button 
+                                type="button" 
+                                wire:click="closeTransientUi" 
+                                class="px-4 py-2 border border-slate-250 text-slate-600 hover:bg-slate-50 text-xs font-bold rounded-xl transition"
+                            >
+                                Hủy bỏ
+                            </button>
+                            <button type="submit"
+                                wire:loading.attr="disabled"
+                                wire:target="createPost"
+                                class="px-5 py-2 bg-ue-brand text-white text-xs font-bold rounded-xl hover:bg-opacity-95 transition shadow-sm disabled:opacity-60 disabled:cursor-not-allowed flex items-center gap-1.5">
+                                <x-ui.icon name="send" size="xs" wire:loading.remove wire:target="createPost" />
+                                <span wire:loading.remove wire:target="createPost">Đăng bài</span>
+                                <span wire:loading wire:target="createPost">Đang đăng...</span>
+                            </button>
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
+    @endif
 
     {{-- Join Modal --}}
     @if ($showJoinModal)
@@ -2216,4 +2452,65 @@ new class extends Component
         </div>
     @endif
 
+    {{-- Change Member Role Modal --}}
+    @if ($showChangeRoleModal)
+        <div class="fixed inset-0 bg-slate-900/60 backdrop-blur-xs z-50 flex items-center justify-center p-4">
+            <div class="bg-white rounded-3xl border border-slate-200 shadow-2xl max-w-md w-full overflow-hidden flex flex-col">
+                <div class="px-5 py-4 border-b border-slate-100 flex items-center justify-between">
+                    <h3 class="text-sm font-extrabold text-slate-805 flex items-center gap-2">
+                        <x-ui.icon name="shield" size="xs" class="text-ue-brand" />
+                        Cấp quyền thành viên
+                    </h3>
+                    <button type="button" wire:click="$set('showChangeRoleModal', false)" class="text-slate-400 hover:text-slate-650 transition">
+                        <x-ui.icon name="x" size="xs" />
+                    </button>
+                </div>
+
+                <div class="p-5 space-y-4">
+                    @if ($this->selectedMemberForRole)
+                        <div class="flex items-center gap-3 p-3 bg-slate-50 rounded-2xl border border-slate-150">
+                            <x-ui.avatar :user="$this->selectedMemberForRole->user" size="sm" />
+                            <div>
+                                <h4 class="text-xs font-bold text-slate-800 leading-tight">{{ $this->selectedMemberForRole->user?->name }}</h4>
+                                <p class="text-[10px] text-slate-400 mt-1 font-semibold">Vai trò hiện tại: {{ $this->selectedMemberForRole->role?->label() }}</p>
+                            </div>
+                        </div>
+
+                        <div class="space-y-1.5">
+                            <label class="text-xs font-bold text-slate-600">Chọn vai trò mới</label>
+                            <select wire:model.live="newRole" class="w-full px-3 py-2 text-xs border rounded-xl focus:outline-none focus:ring-2 focus:ring-ue-brand border-slate-200 bg-white">
+                                <option value="member">Thành viên (Member)</option>
+                                <option value="moderator">Kiểm duyệt viên (Moderator)</option>
+                                <option value="manager">Quản lý cộng đồng (Manager / Phó nhóm)</option>
+                                <option value="owner">Chủ sở hữu (Owner / Trưởng nhóm)</option>
+                            </select>
+                        </div>
+
+                        @if ($newRole === 'owner')
+                            <div class="p-3 bg-amber-50 border border-amber-250 rounded-2xl text-[10px] text-amber-800 font-semibold space-y-1 flex items-start gap-2">
+                                <x-ui.icon name="alert-triangle" size="xs" class="mt-0.5 text-amber-600 flex-shrink-0" />
+                                <div>
+                                    <p class="font-bold">⚠️ Cảnh báo chuyển giao quyền sở hữu:</p>
+                                    <p class="mt-0.5 leading-relaxed">Hành động này sẽ chuyển quyền Trưởng nhóm cho {{ $this->selectedMemberForRole->user?->name }}. Bạn sẽ trở thành vai trò Quản lý cộng đồng (Phó nhóm).</p>
+                                </div>
+                            </div>
+                        @endif
+                    @endif
+                </div>
+
+                <div class="flex items-center justify-end gap-2 px-5 py-3.5 bg-slate-50 border-t border-slate-100">
+                    <button type="button" wire:click="$set('showChangeRoleModal', false)" class="px-4 py-2 text-xs font-bold text-slate-500 hover:text-slate-700 transition">
+                        Hủy
+                    </button>
+                    <button type="button" wire:click="confirmChangeRole" wire:loading.attr="disabled" wire:target="confirmChangeRole"
+                        class="px-5 py-2 bg-ue-brand text-white text-xs font-bold rounded-xl transition hover:bg-opacity-95 shadow-2xs">
+                        <span wire:loading.remove wire:target="confirmChangeRole">Xác nhận</span>
+                        <span wire:loading wire:target="confirmChangeRole">Đang cập nhật...</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+    @endif
+
 </div>
+

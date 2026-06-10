@@ -234,14 +234,18 @@ new class extends Component
     </div>
 
     {{-- Mentor grid --}}
-    <div wire:loading.delay.remove wire:target="search,selectTopic,availabilityFilter,nextPage,previousPage,gotoPage" class="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+    <div
+        wire:loading.delay.remove
+        wire:target="search,selectTopic,availabilityFilter,nextPage,previousPage,gotoPage"
+        class="grid gap-4 md:grid-cols-2 xl:grid-cols-3"
+    >
         @forelse ($mentors as $mentor)
             @php
                 $mentorUserProfileUrl = route('profile.show', $mentor->user);
             @endphp
-            <article class="rounded-xl border border-slate-200 bg-white p-4 shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-all">
+            <article class="ue-loadable-card rounded-xl border border-slate-200 bg-white p-4 shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-all">
                 <div class="flex items-start gap-3">
-                    <a href="{{ $mentorUserProfileUrl }}" wire:navigate class="block rounded-full focus:outline-none focus:ring-2 focus:ring-ue-brand/30 flex-shrink-0">
+                    <a href="{{ $mentorUserProfileUrl }}" wire:navigate class="block rounded-full focus:outline-none focus:ring-2 focus:ring-ue-brand/30 flex-shrink-0" aria-label="Xem trang cá nhân của {{ $mentor->user->name }}">
                         <x-ui.avatar :user="$mentor->user" size="md" />
                     </a>
                     <div class="min-w-0 flex-1">
