@@ -2,6 +2,8 @@
 
 namespace App\AI\HcmueChatbot\LLM;
 
+use Illuminate\Http\Client\ConnectionException;
+use Illuminate\Http\Client\RequestException;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 
@@ -57,17 +59,25 @@ class GeminiProvider implements LlmProviderInterface
         }
 
         try {
-            $response = Http::withHeaders([
-                'Content-Type' => 'application/json',
-            ])
+            $response = Http::retry(3, function (int $attempt) {
+                return [2000, 5000, 10000][$attempt - 1] ?? 10000;
+            }, function (\Throwable $exception) {
+                if ($exception instanceof RequestException) {
+                    $status = $exception->response->status();
+
+                    return $status === 429 || $status === 503;
+                }
+
+                return $exception instanceof ConnectionException;
+            })
+                ->withHeaders([
+                    'Content-Type' => 'application/json',
+                ])
                 ->withOptions([
                     'verify' => false, // Bypass SSL issues in local Laragon environment
                 ])
-                ->post($url, $body);
-
-            if ($response->failed()) {
-                throw new \Exception('Gemini API Error: Status '.$response->status().' - '.$response->body());
-            }
+                ->post($url, $body)
+                ->throw();
 
             $data = $response->json();
             $text = $data['candidates'][0]['content']['parts'][0]['text'] ?? '';
@@ -113,17 +123,25 @@ class GeminiProvider implements LlmProviderInterface
         ];
 
         try {
-            $response = Http::withHeaders([
-                'Content-Type' => 'application/json',
-            ])
+            $response = Http::retry(3, function (int $attempt) {
+                return [2000, 5000, 10000][$attempt - 1] ?? 10000;
+            }, function (\Throwable $exception) {
+                if ($exception instanceof RequestException) {
+                    $status = $exception->response->status();
+
+                    return $status === 429 || $status === 503;
+                }
+
+                return $exception instanceof ConnectionException;
+            })
+                ->withHeaders([
+                    'Content-Type' => 'application/json',
+                ])
                 ->withOptions([
                     'verify' => false, // Bypass SSL issues in local Laragon environment
                 ])
-                ->post($url, $body);
-
-            if ($response->failed()) {
-                throw new \Exception('Gemini Embedding API Error: Status '.$response->status().' - '.$response->body());
-            }
+                ->post($url, $body)
+                ->throw();
 
             $data = $response->json();
 
@@ -162,17 +180,25 @@ class GeminiProvider implements LlmProviderInterface
         }
 
         try {
-            $response = Http::withHeaders([
-                'Content-Type' => 'application/json',
-            ])
+            $response = Http::retry(3, function (int $attempt) {
+                return [3000, 7000, 15000][$attempt - 1] ?? 15000;
+            }, function (\Throwable $exception) {
+                if ($exception instanceof RequestException) {
+                    $status = $exception->response->status();
+
+                    return $status === 429 || $status === 503;
+                }
+
+                return $exception instanceof ConnectionException;
+            })
+                ->withHeaders([
+                    'Content-Type' => 'application/json',
+                ])
                 ->withOptions([
                     'verify' => false,
                 ])
-                ->post($url, ['requests' => $requests]);
-
-            if ($response->failed()) {
-                throw new \Exception('Gemini Batch Embedding API Error: Status '.$response->status().' - '.$response->body());
-            }
+                ->post($url, ['requests' => $requests])
+                ->throw();
 
             $data = $response->json();
             $results = [];

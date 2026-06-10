@@ -30,7 +30,8 @@ class HcmueChatService
         protected RagRetrievalService $ragRetrieval,
         protected AnswerComposerService $composer,
         protected CitationVerifierService $citationVerifier,
-        protected HallucinationGuardService $guard
+        protected HallucinationGuardService $guard,
+        protected ConversationContextService $contextService
     ) {}
 
     /**
@@ -56,15 +57,71 @@ class HcmueChatService
             'message_preview' => mb_substr($userMessage, 0, 100),
         ]);
 
-        // === Step 1: Normalize question ===
-        $normResult = $this->normalizer->normalize($userMessage);
-        $normalizedQuestion = $normResult['normalized_question'];
-        $detectedTerms = $normResult['detected_terms'];
+        // === Step 0: Check conversation context for follow-up ===
+        $contextResult = $this->contextService->resolveFollowUp($userMessage, $session->id, $this->normalizer);
+        $isFollowUp = $contextResult['is_follow_up'];
 
-        // === Step 2: Route question ===
-        $routerResult = $this->router->route($normalizedQuestion, $detectedTerms);
-        $source = $routerResult['source'];
-        $intent = $routerResult['intent'];
+        if ($isFollowUp) {
+            $normalizedQuestion = $contextResult['resolved_question'];
+            $intent = $contextResult['intent'];
+            $source = $contextResult['source'] ?: 'rag';
+            $detectedTerms = [
+                'cohort' => $contextResult['cohort'],
+                'canonical_cohort' => $contextResult['cohort'],
+                'detected_cohort' => $contextResult['overridden_cohort'] ?: $contextResult['cohort'],
+                'cohort_alias' => $contextResult['overridden_cohort'] ?: $contextResult['cohort'],
+                'major' => $contextResult['major'],
+                'canonical_major' => $contextResult['major'],
+                'detected_major' => $contextResult['overridden_major'] ?: $contextResult['major'],
+                'matched_alias' => null,
+                'faculty' => null,
+                'course' => null,
+                'policy_topic' => $contextResult['policy_topic'],
+                'document_type' => $contextResult['knowledge_type'] === 'student_handbook' ? 'student_handbook' : 'unknown',
+            ];
+
+            $routerResult = [
+                'intent' => $intent,
+                'source' => $source,
+                'confidence' => 1.0,
+                'entities' => $detectedTerms,
+                'missing_required_fields' => [],
+                'reason' => 'Kế thừa từ ngữ cảnh hội thoại (Follow-up)',
+            ];
+        } else {
+            // === Step 1: Normalize question ===
+            $normResult = $this->normalizer->normalize($userMessage);
+            $normalizedQuestion = $normResult['normalized_question'];
+            $detectedTerms = $normResult['detected_terms'];
+
+            // === Step 2: Route question ===
+            $routerResult = $this->router->route($normalizedQuestion, $detectedTerms);
+            $source = $routerResult['source'];
+            $intent = $routerResult['intent'];
+        }
+
+        // Initialize extra debug tracing variables
+        $extraDebug = [
+            'is_follow_up' => $isFollowUp,
+            'inherited_intent' => $isFollowUp ? $contextResult['intent'] : null,
+            'inherited_policy_topic' => $isFollowUp ? $contextResult['policy_topic'] : null,
+            'overridden_cohort' => $isFollowUp ? $contextResult['overridden_cohort'] : null,
+            'resolved_question' => $isFollowUp ? $normalizedQuestion : null,
+            'inherited_context' => $isFollowUp ? [
+                'intent' => $contextResult['intent'],
+                'knowledge_type' => $contextResult['knowledge_type'],
+                'policy_topic' => $contextResult['policy_topic'],
+                'major' => $contextResult['major'],
+                'cohort' => $contextResult['cohort'],
+            ] : null,
+            'detected_cohort' => $detectedTerms['detected_cohort'] ?? null,
+            'canonical_cohort' => $detectedTerms['canonical_cohort'] ?? null,
+            'cohort_alias' => $detectedTerms['cohort_alias'] ?? null,
+            'detected_major' => $detectedTerms['detected_major'] ?? null,
+            'canonical_major' => $detectedTerms['canonical_major'] ?? null,
+            'matched_alias' => $detectedTerms['matched_alias'] ?? null,
+            'fallback_attempts' => [],
+        ];
 
         // === Step 3: Log the question ===
         $aiQuestion = AiQuestion::create([
@@ -87,13 +144,13 @@ class HcmueChatService
 
             $this->logAnswer($aiQuestion->id, $answerText, 0);
 
-            return $this->buildResponse($answerText, [], $source, $intent, true, $aiQuestion->id);
+            return $this->buildResponse($answerText, [], $source, $intent, true, $aiQuestion->id, null, $extraDebug);
         }
 
         if ($source === 'none' && $intent === 'unsupported') {
             $this->logAnswer($aiQuestion->id, self::UNSUPPORTED_MESSAGE, 0);
 
-            return $this->buildResponse(self::UNSUPPORTED_MESSAGE, [], $source, $intent, false, $aiQuestion->id);
+            return $this->buildResponse(self::UNSUPPORTED_MESSAGE, [], $source, $intent, false, $aiQuestion->id, null, $extraDebug);
         }
 
         // === Step 5: Retrieve data based on route ===
@@ -108,7 +165,7 @@ class HcmueChatService
                 $clarificationText = self::CLARIFICATION_PREFIX.($queryPlan['clarification_question'] ?? '');
                 $this->logAnswer($aiQuestion->id, $clarificationText, 0);
 
-                return $this->buildResponse($clarificationText, [], $source, $intent, true, $aiQuestion->id);
+                return $this->buildResponse($clarificationText, [], $source, $intent, true, $aiQuestion->id, null, $extraDebug);
             }
 
             $structuredResult = $this->structuredRetrieval->retrieve($queryPlan);
@@ -117,10 +174,20 @@ class HcmueChatService
             $this->logStructuredQuery($aiQuestion->id, $queryPlan, $structuredResult);
         }
 
-        if (in_array($source, ['rag', 'hybrid'])) {
+        // Fall back to RAG if structured DB query failed to find data
+        $shouldFallbackToRag = ($source === 'structured_db') &&
+            (! $structuredResult || ! ($structuredResult['success'] ?? false));
+
+        if (in_array($source, ['rag', 'hybrid']) || $shouldFallbackToRag) {
+            if ($shouldFallbackToRag) {
+                $source = 'rag';
+            }
             $ragFilters = [];
             if (! empty($detectedTerms['cohort'])) {
                 $ragFilters['cohort'] = $detectedTerms['cohort'];
+            }
+            if (! empty($detectedTerms['major'])) {
+                $ragFilters['major'] = $detectedTerms['major'];
             }
 
             $ragChunks = $this->ragRetrieval->retrieve($normalizedQuestion, $ragFilters);
@@ -159,7 +226,50 @@ class HcmueChatService
         // === Step 10: Build sources for frontend ===
         $sources = $this->buildSources($ragChunks, $structuredResult);
 
-        return $this->buildResponse($finalAnswer, $sources, $source, $intent, false, $aiQuestion->id, $aiAnswer->id ?? null);
+        // === Step 11: Update conversation context ===
+        $knowledgeType = null;
+        $loaiTaiLieu = null;
+        $policyTopic = $detectedTerms['policy_topic'] ?? null;
+        $cohort = $detectedTerms['cohort'] ?? null;
+        $major = $detectedTerms['major'] ?? null;
+
+        if (! empty($ragChunks)) {
+            $topChunk = $ragChunks[0];
+            $knowledgeType = $topChunk['metadata']['knowledge_type'] ?? $topChunk['document_type'] ?? null;
+            if ($knowledgeType === 'so_tay_sinh_vien' || $knowledgeType === 'quyet_dinh_ban_hanh' || $knowledgeType === 'student_handbook') {
+                $knowledgeType = 'student_handbook';
+            }
+            $loaiTaiLieu = $topChunk['document_type'] ?? $topChunk['metadata']['loai_tai_lieu'] ?? null;
+
+            if (empty($cohort)) {
+                $cohort = $topChunk['cohort'] ?? $topChunk['metadata']['khoa_hoc'] ?? null;
+            }
+            if (empty($major)) {
+                $major = $topChunk['metadata']['nganh'] ?? null;
+            }
+        }
+
+        $structured_found = ! empty($structuredResult) && ($structuredResult['success'] ?? false);
+        $rag_found = ! empty($ragChunks);
+        $lastSuccess = $structured_found || $rag_found;
+
+        $this->contextService->setContext($session->id, [
+            'last_intent' => $intent,
+            'last_knowledge_type' => $knowledgeType,
+            'last_loai_tai_lieu' => $loaiTaiLieu,
+            'last_khoa_hoc' => $cohort,
+            'last_nganh' => $major,
+            'last_policy_topic' => $policyTopic,
+            'last_rewritten_query' => $this->ragRetrieval->lastRewrittenQuery ?? $normalizedQuestion,
+            'last_question' => $normalizedQuestion,
+            'last_source' => $source,
+            'updated_at' => time(),
+            'last_success' => $lastSuccess,
+        ]);
+
+        $extraDebug['fallback_attempts'] = $this->ragRetrieval->fallbackAttemptsLogs ?? [];
+
+        return $this->buildResponse($finalAnswer, $sources, $source, $intent, false, $aiQuestion->id, $aiAnswer->id ?? null, $extraDebug);
     }
 
     /**
@@ -300,9 +410,10 @@ class HcmueChatService
         string $intent,
         bool $requiresClarification,
         ?int $questionId,
-        ?int $answerId = null
+        ?int $answerId = null,
+        array $extraDebug = []
     ): array {
-        return [
+        return array_merge([
             'answer' => $answer,
             'sources' => $sources,
             'route' => $route,
@@ -310,6 +421,6 @@ class HcmueChatService
             'requires_clarification' => $requiresClarification,
             'question_id' => $questionId,
             'answer_id' => $answerId,
-        ];
+        ], $extraDebug);
     }
 }

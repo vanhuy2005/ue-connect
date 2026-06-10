@@ -26,14 +26,16 @@ class RetrievalUpgradeTest extends TestCase
 
         // Query 1
         $res1 = $analyzer->analyze('Chuẩn đầu ra ngành Công nghệ thông tin K51 là gì?');
-        $this->assertEquals('K51', $res1['cohort']);
+        // K51 is normalized to "2025 - Khóa 51" by the analyzer
+        $this->assertEquals('2025 - Khóa 51', $res1['cohort']);
         $this->assertEquals('Công nghệ thông tin', $res1['major']);
         $this->assertEquals('learning_outcome', $res1['document_type']);
         $this->assertContains('chuẩn đầu ra', $res1['topics']);
 
         // Query 2
         $res2 = $analyzer->analyze('Quy chế học vụ K50 về cảnh báo học tập và tín chỉ');
-        $this->assertEquals('K50', $res2['cohort']);
+        // K50 is normalized to "2024 - Khóa 50"
+        $this->assertEquals('2024 - Khóa 50', $res2['cohort']);
         $this->assertEquals('academic_regulation', $res2['document_type']);
         $this->assertContains('cảnh báo học tập', $res2['topics']);
         $this->assertContains('tín chỉ', $res2['topics']);
@@ -48,7 +50,7 @@ class RetrievalUpgradeTest extends TestCase
         $doc1 = SourceDocument::create([
             'title' => 'Sổ tay sinh viên K51',
             'document_type' => 'student_handbook',
-            'cohort' => 'K51',
+            'cohort' => '2025 - Khóa 51',
             'effective_year' => 2025,
             'status' => 'active',
         ]);
@@ -61,10 +63,11 @@ class RetrievalUpgradeTest extends TestCase
             'metadata_json' => [
                 'document_name' => 'Sổ tay sinh viên K51',
                 'document_type' => 'student_handbook',
-                'cohort' => 'K51',
+                // Use new Qdrant payload key format
+                'khoa_hoc' => '2025 - Khóa 51',
                 'academic_year' => '2025',
                 'faculty' => 'Khoa Công nghệ thông tin',
-                'major' => 'Công nghệ thông tin',
+                'nganh' => 'Công nghệ thông tin',
             ],
             'embedding_status' => 'success',
         ]);
@@ -72,7 +75,7 @@ class RetrievalUpgradeTest extends TestCase
         $doc2 = SourceDocument::create([
             'title' => 'Quy chế học tập K49',
             'document_type' => 'regulation',
-            'cohort' => 'K49',
+            'cohort' => '2023 - Khóa 49',
             'effective_year' => 2023,
             'status' => 'active',
         ]);
@@ -85,10 +88,11 @@ class RetrievalUpgradeTest extends TestCase
             'metadata_json' => [
                 'document_name' => 'Quy chế học tập K49',
                 'document_type' => 'regulation',
-                'cohort' => 'K49',
+                // Use new Qdrant payload key format
+                'khoa_hoc' => '2023 - Khóa 49',
                 'academic_year' => '2023',
                 'faculty' => 'Khoa Công nghệ thông tin',
-                'major' => 'Công nghệ thông tin',
+                'nganh' => 'Công nghệ thông tin',
             ],
             'embedding_status' => 'success',
         ]);
@@ -96,7 +100,7 @@ class RetrievalUpgradeTest extends TestCase
         // 2. Mock vectorStore and embeddingService
         $mockEmbedding = $this->createMock(EmbeddingService::class);
         $mockEmbedding->method('batchEmbed')
-            ->willReturn(array_fill(0, 5, array_fill(0, 768, 0.1)));
+            ->willReturn(array_fill(0, 5, array_fill(0, 1024, 0.1)));
 
         $mockQdrant = $this->createMock(QdrantVectorStore::class);
         $mockQdrant->method('search')
@@ -116,12 +120,12 @@ class RetrievalUpgradeTest extends TestCase
         // 3. Retrieve
         $retrieval = new RagRetrievalService($mockEmbedding, $mockQdrant, new AcademicQueryAnalyzer);
 
-        // Target cohort is K51, document_type is student_handbook
+        // Target cohort is K51 (expands to 2025-Khóa 51), document_type is student_handbook
         $results = $retrieval->retrieve('Đăng ký tín chỉ K51 công nghệ thông tin');
 
         $this->assertNotEmpty($results);
 
-        // Assert chunk1 has higher rerank score due to matches, even though chunk2 had higher initial score
+        // Assert chunk1 has higher rerank score due to cohort match, even though chunk2 had higher initial score
         $resultMap = collect($results)->keyBy('id');
 
         $this->assertTrue($resultMap->has($chunk1->id));

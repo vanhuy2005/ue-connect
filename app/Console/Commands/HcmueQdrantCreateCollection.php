@@ -44,7 +44,7 @@ class HcmueQdrantCreateCollection extends Command
                 $vectorStore->deleteCollection($collectionName);
             } else {
                 $this->info("Collection '{$collectionName}' already exists. Verifying parameters...");
-                
+
                 // Verify parameters by querying Qdrant directly
                 $url = rtrim(config('ai.qdrant.url'), '/');
                 $apiKey = config('ai.qdrant.api_key');
@@ -65,14 +65,17 @@ class HcmueQdrantCreateCollection extends Command
                     if ($currentSize == $vectorSize && strtolower($currentDistance) == strtolower($distance)) {
                         $this->info("Collection verified! Parameters match (Dimensions: {$currentSize}, Distance: {$currentDistance}).");
                         $this->createAllPayloadIndexes($vectorStore, $collectionName);
+
                         return self::SUCCESS;
                     } else {
                         $this->error("Parameter mismatch! Collection has size {$currentSize} ({$currentDistance}), expected {$vectorSize} ({$distance}).");
-                        $this->line("Please run with --recreate to fix the configuration.");
+                        $this->line('Please run with --recreate to fix the configuration.');
+
                         return self::FAILURE;
                     }
                 } else {
-                    $this->error("Failed to query collection configuration: " . $response->body());
+                    $this->error('Failed to query collection configuration: '.$response->body());
+
                     return self::FAILURE;
                 }
             }
@@ -83,6 +86,7 @@ class HcmueQdrantCreateCollection extends Command
 
         if (! $created) {
             $this->error("Failed to create collection '{$collectionName}'.");
+
             return self::FAILURE;
         }
 
@@ -109,6 +113,14 @@ class HcmueQdrantCreateCollection extends Command
             'source_document_id' => 'integer',
             'visibility' => 'keyword',
             'knowledge_batch_id' => 'keyword',
+
+            // New payload schema fields
+            'khoa_hoc' => 'keyword',
+            'khoa' => 'keyword',
+            'nganh' => 'keyword',
+            'knowledge_type' => 'keyword',
+            'loai_tai_lieu' => 'keyword',
+            'source_file' => 'keyword',
         ];
 
         foreach ($indexes as $field => $type) {

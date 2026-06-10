@@ -92,7 +92,7 @@ class LlmGatewayOllamaFallbackTest extends TestCase
             'Câu hỏi test',
             ['intent' => 'academic_policy', 'source' => 'rag'],
             null,
-            []
+            [['chunk_text' => 'dummy', 'document_name' => 'doc']]
         );
 
         $this->assertNotEmpty($result['answer_text']);
@@ -122,7 +122,7 @@ class LlmGatewayOllamaFallbackTest extends TestCase
             'Câu hỏi test',
             ['intent' => 'academic_policy', 'source' => 'rag'],
             null,
-            []
+            [['chunk_text' => 'dummy', 'document_name' => 'doc']]
         );
 
         $this->assertStringContainsString('lỗi', $result['answer_text']);

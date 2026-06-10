@@ -83,13 +83,11 @@ class ChatUiAndAdminLogsTest extends TestCase
         $question = AiQuestion::where('session_id', $session->id)->first();
         $this->assertNotNull($question);
 
-        $this->assertDatabaseHas('ai_answers', [
-            'question_id' => $question->id,
-            'answer_text' => 'Đây là câu trả lời kiểm thử.',
-        ]);
-
+        // The answer may include a source citation footer appended after the LLM answer text.
+        // Assert the core answer text is present using a partial model check.
         $answer = AiAnswer::where('question_id', $question->id)->first();
         $this->assertNotNull($answer);
+        $this->assertStringContainsString('Đây là câu trả lời kiểm thử.', $answer->answer_text);
 
         // Submit rating feedback
         $component->call('submitRating', $answer->id, 5)

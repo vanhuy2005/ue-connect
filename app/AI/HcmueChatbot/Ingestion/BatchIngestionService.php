@@ -150,6 +150,10 @@ class BatchIngestionService
             $points = [];
 
             for ($i = 0; $i < $chunkCount; $i += $batchSize) {
+                if ($i > 0) {
+                    Log::info('BatchIngestionService: Sleeping 3 seconds between embedding batches to respect rate limits...');
+                    sleep(3);
+                }
                 $batchDbChunks = array_slice($dbChunks, $i, $batchSize);
                 $batchTexts = array_map(fn ($c) => $c->chunk_text, $batchDbChunks);
 

@@ -54,6 +54,66 @@ class QueryRouterService
             }
         }
 
+        // Decision document query keywords -> RAG directly (no major/cohort required)
+        $decisionKeywords = [
+            'quyết định ban hành',
+            'quyết định',
+            'văn bản ban hành',
+            'quy định ban hành',
+            'số quyết định',
+            'ban hành quy định',
+            'tổ chức hoạt động nghiên cứu khoa học',
+            'nghiên cứu khoa học của sinh viên',
+        ];
+        foreach ($decisionKeywords as $kw) {
+            if (str_contains($lower, $kw)) {
+                return $this->buildRoute('decision_document_query', 'rag', 0.95, $detectedTerms, [], 'Câu hỏi về văn bản quyết định, định tuyến trực tiếp đến RAG.');
+            }
+        }
+
+        // Student policy keywords -> RAG student_handbook directly (no major/cohort required)
+        $isMajorOutcomeQuery = false;
+        if (str_contains($lower, 'chuẩn đầu ra') || str_contains($lower, 'cdr')) {
+            if (str_contains($lower, 'ngành') || ! empty($detectedTerms['major'])) {
+                $isMajorOutcomeQuery = true;
+            }
+        }
+
+        $studentPolicyKeywords = [
+            'hạ bằng',
+            'hạ xếp loại',
+            'xếp loại tốt nghiệp',
+            'học lại',
+            'học cải thiện',
+            '5% số tín chỉ',
+            '5% tín chỉ',
+            'cảnh báo học vụ',
+            'buộc thôi học',
+            'thôi học',
+            'đình chỉ',
+            'bảo lưu',
+            'nghỉ học tạm thời',
+            'quy chế',
+            'học phí',
+            'miễn giảm học phí',
+            'học bổng',
+            'điểm rèn luyện',
+            'kỷ luật',
+            'chuẩn đầu ra ngoại ngữ',
+            'chuẩn đầu ra tin học',
+        ];
+
+        if (! $isMajorOutcomeQuery) {
+            $studentPolicyKeywords[] = 'chuẩn đầu ra';
+            $studentPolicyKeywords[] = 'điều kiện tốt nghiệp';
+        }
+
+        foreach ($studentPolicyKeywords as $kw) {
+            if (str_contains($lower, $kw)) {
+                return $this->buildRoute('student_policy', 'rag', 0.95, $detectedTerms, [], 'Câu hỏi về quy định, chính sách sinh viên, định tuyến trực tiếp đến RAG sổ tay sinh viên.');
+            }
+        }
+
         // Direct total credits / program requirements check to structured_db
         $creditKeywords = ['tín chỉ', 'tc', 'tổng số tín chỉ', 'tổng tín chỉ'];
         $isCreditQuery = false;
@@ -73,6 +133,7 @@ class QueryRouterService
                 if (empty($detectedTerms['major'])) {
                     $missing[] = 'major';
                 }
+
                 return $this->buildRoute('clarification', 'none', 0.90, $detectedTerms, $missing, 'Thiếu thông tin khóa hoặc ngành để tra cứu tín chỉ CTĐT.');
             }
 
@@ -154,12 +215,18 @@ class QueryRouterService
                 return $this->fallbackRoute();
             }
 
+            $intent = $parsed['intent'] ?? 'unsupported';
+            $missingFields = $parsed['missing_required_fields'] ?? [];
+            if (in_array($intent, ['student_policy', 'decision_document_query'], true)) {
+                $missingFields = [];
+            }
+
             return [
-                'intent' => $parsed['intent'] ?? 'unsupported',
+                'intent' => $intent,
                 'source' => $parsed['source'] ?? 'none',
                 'confidence' => (float) ($parsed['confidence'] ?? 0.5),
                 'entities' => $parsed['entities'] ?? [],
-                'missing_required_fields' => $parsed['missing_required_fields'] ?? [],
+                'missing_required_fields' => $missingFields,
                 'reason' => $parsed['reason'] ?? '',
             ];
         } catch (\Exception $e) {

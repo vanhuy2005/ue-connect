@@ -19,7 +19,7 @@ return [
         'url' => env('QDRANT_URL', 'http://localhost:6333'),
         'api_key' => env('QDRANT_API_KEY', ''),
         'collection' => env('QDRANT_COLLECTION', 'hcmue_academic_chunks'),
-        'vector_size' => (int) env('QDRANT_VECTOR_SIZE', 768),
+        'vector_size' => (int) env('QDRANT_VECTOR_SIZE', 1024),
         'end_point' => env('QDRANT_END_POINT', ''),
     ],
 
@@ -31,19 +31,32 @@ return [
     'retrieval' => [
         'top_k' => (int) env('AI_RETRIEVAL_TOP_K', 8),
         'rerank_top_k' => (int) env('AI_RERANK_TOP_K', 5),
-        'min_score' => (float) env('AI_MIN_RETRIEVAL_SCORE', 0.65),
+        'min_score' => (float) env('AI_MIN_RETRIEVAL_SCORE', 0.55),
+        // Larger candidate pool when intent is total_credits to improve recall
+        'total_credits_top_k' => (int) env('AI_TOTAL_CREDITS_TOP_K', 20),
     ],
 
     /*
     |--------------------------------------------------------------------------
     | Embedding
     |--------------------------------------------------------------------------
-    | Supported provider: "gemini"
+    | Supported provider: "gemini", "bge_m3"
+    | When EMBEDDING_PROVIDER=bge_m3, Laravel calls BGE_EMBEDDING_URL instead of Gemini.
     */
     'embedding' => [
         'provider' => env('EMBEDDING_PROVIDER', 'gemini'),
         'model' => env('GEMINI_EMBEDDING_MODEL', 'gemini-embedding-001'),
-        'dimensions' => (int) env('GEMINI_EMBEDDING_DIMENSIONS', 768),
+        'dimensions' => (int) env('GEMINI_EMBEDDING_DIMENSIONS', 1024),
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
+    | BGE-M3 Embedding (Hugging Face Space)
+    |--------------------------------------------------------------------------
+    */
+    'bge_m3' => [
+        'url' => env('BGE_EMBEDDING_URL', 'https://ntkhoi2005-hcmue-bge-m3-embedding.hf.space'),
+        'timeout' => (int) env('BGE_EMBEDDING_TIMEOUT', 120),
     ],
 
     /*
