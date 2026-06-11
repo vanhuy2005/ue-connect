@@ -6,8 +6,21 @@ server {
 
     charset utf-8;
 
-    # Cấu hình proxy cho Reverb WebSockets
-    location ~ ^/(app|apps)/ {
+    # Xử lý các request bắt đầu bằng /app/
+    location ~ ^/app/ {
+        error_page 418 = @reverb;
+        
+        # Nếu là request WebSocket (từ Reverb JS client), đẩy sang Reverb
+        if ($http_upgrade ~* "websocket") {
+            return 418;
+        }
+
+        # Nếu là request HTTP bình thường (người dùng truy cập /app/home), đẩy cho Laravel xử lý
+        try_files $uri $uri/ /index.php?$query_string;
+    }
+
+    # Location riêng cho Reverb WebSockets
+    location @reverb {
         proxy_pass http://127.0.0.1:8080;
         proxy_http_version 1.1;
         proxy_set_header Host $http_host;
