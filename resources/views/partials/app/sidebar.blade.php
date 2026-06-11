@@ -146,20 +146,18 @@ $secondaryNav = [
             type="button"
             @click="moreOpen = !moreOpen"
             @click.away="moreOpen = false"
-            class="ue-nav-link w-full flex items-center justify-between"
+            class="ue-nav-link w-full"
             :class="moreOpen ? 'bg-ue-brand-soft text-ue-brand-active' : ''"
             aria-haspopup="true"
             :aria-expanded="moreOpen"
             aria-label="Xem thêm menu"
             :title="collapsed ? '{{ $currentUser?->name }}' : ''"
         >
-            <div class="flex items-center gap-3">
-                <div class="relative flex items-center justify-center">
-                    <x-ui.avatar size="xs" class="flex-shrink-0" />
-                </div>
-                <span x-show="!collapsed" x-transition:enter="transition ease-out duration-200 delay-75" x-transition:enter-start="opacity-0 translate-x-[-8px]" x-transition:enter-end="opacity-100 translate-x-0" x-transition:leave="transition ease-in duration-100" x-transition:leave-start="opacity-100" x-transition:leave-end="opacity-0" class="truncate text-sm font-semibold whitespace-nowrap">{{ $currentUser?->name }}</span>
+            <div class="relative flex items-center justify-center">
+                <x-ui.avatar :user="$currentUser" size="xs" class="flex-shrink-0" />
             </div>
-            <x-ui.icon name="chevron-up" size="xs" x-show="!collapsed" x-transition:enter="transition ease-out duration-200 delay-75" x-transition:enter-start="opacity-0" x-transition:enter-end="opacity-100" x-transition:leave="transition ease-in duration-100" x-transition:leave-start="opacity-100" x-transition:leave-end="opacity-0" class="text-ue-text-muted/60 transition-transform duration-150" x-bind:class="moreOpen ? 'rotate-180' : ''" />
+            <span x-show="!collapsed" x-transition:enter="transition ease-out duration-200 delay-75" x-transition:enter-start="opacity-0 translate-x-[-8px]" x-transition:enter-end="opacity-100 translate-x-0" x-transition:leave="transition ease-in duration-100" x-transition:leave-start="opacity-100" x-transition:leave-end="opacity-0" class="truncate text-sm font-semibold whitespace-nowrap">{{ $currentUser?->name }}</span>
+            <x-ui.icon name="chevron-up" size="xs" x-show="!collapsed" x-transition:enter="transition ease-out duration-200 delay-75" x-transition:enter-start="opacity-0" x-transition:enter-end="opacity-100" x-transition:leave="transition ease-in duration-100" x-transition:leave-start="opacity-100" x-transition:leave-end="opacity-0" class="ml-auto text-ue-text-muted/60 transition-transform duration-150" x-bind:class="moreOpen ? 'rotate-180' : ''" />
         </button>
 
         {{-- More popover menu --}}
@@ -297,18 +295,18 @@ $secondaryNav = [
             type="button"
             @click="moreOpen = !moreOpen; notificationsOpen = false"
             @click.away="moreOpen = false"
-            class="ue-nav-link w-full flex items-center justify-between"
+            class="ue-nav-link w-full"
             :class="moreOpen ? 'bg-ue-brand-soft text-ue-brand-active' : ''"
             aria-haspopup="true"
             :aria-expanded="moreOpen"
             aria-label="Xem thêm menu"
             :title="collapsed ? 'Xem thêm' : ''"
         >
-            <div class="flex items-center gap-3">
+            <div class="relative flex items-center justify-center">
                 <x-ui.icon name="menu" size="md" class="flex-shrink-0" />
-                <span x-show="!collapsed" x-transition:enter="transition ease-out duration-200 delay-75" x-transition:enter-start="opacity-0 translate-x-[-8px]" x-transition:enter-end="opacity-100 translate-x-0" x-transition:leave="transition ease-in duration-100" x-transition:leave-start="opacity-100" x-transition:leave-end="opacity-0" class="whitespace-nowrap">Xem thêm</span>
             </div>
-            <x-ui.icon name="chevron-up" size="xs" x-show="!collapsed" x-transition:enter="transition ease-out duration-200 delay-75" x-transition:enter-start="opacity-0" x-transition:enter-end="opacity-100" x-transition:leave="transition ease-in duration-100" x-transition:leave-start="opacity-100" x-transition:leave-end="opacity-0" class="text-ue-text-muted/60 transition-transform duration-150" x-bind:class="moreOpen ? 'rotate-180' : ''" />
+            <span x-show="!collapsed" x-transition:enter="transition ease-out duration-200 delay-75" x-transition:enter-start="opacity-0 translate-x-[-8px]" x-transition:enter-end="opacity-100 translate-x-0" x-transition:leave="transition ease-in duration-100" x-transition:leave-start="opacity-100" x-transition:leave-end="opacity-0" class="whitespace-nowrap">Xem thêm</span>
+            <x-ui.icon name="chevron-up" size="xs" x-show="!collapsed" x-transition:enter="transition ease-out duration-200 delay-75" x-transition:enter-start="opacity-0" x-transition:enter-end="opacity-100" x-transition:leave="transition ease-in duration-100" x-transition:leave-start="opacity-100" x-transition:leave-end="opacity-0" class="ml-auto text-ue-text-muted/60 transition-transform duration-150" x-bind:class="moreOpen ? 'rotate-180' : ''" />
         </button>
 
         {{-- More popover menu --}}
