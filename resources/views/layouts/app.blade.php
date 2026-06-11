@@ -10,6 +10,12 @@
 
         <meta name="description" content="{{ $description ?? 'UEConnect — Kết nối cộng đồng sinh viên HCMUE.' }}">
 
+        {{-- Realtime Meta Config --}}
+        <meta name="reverb-app-key" content="{{ config('reverb.apps.apps.0.key', env('REVERB_APP_KEY')) }}">
+        <meta name="reverb-host" content="{{ config('reverb.servers.reverb.host', env('REVERB_HOST')) }}">
+        <meta name="reverb-port" content="{{ config('reverb.servers.reverb.port', env('REVERB_PORT')) }}">
+        <meta name="reverb-scheme" content="{{ config('reverb.servers.reverb.scheme', env('REVERB_SCHEME')) }}">
+
         {{-- Fonts: Be Vietnam Pro — weights 400/500/600/700 only --}}
         <link rel="preconnect" href="https://fonts.googleapis.com">
         <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
