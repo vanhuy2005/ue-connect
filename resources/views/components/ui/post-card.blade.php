@@ -121,17 +121,35 @@
                         </div>
                     @endif
 
-                    @if ($post->post_type && $post->post_type !== \App\Enums\PostType::STANDARD)
+                    @php
+                        $tags = $post->tags ?? [];
+                        if (empty($tags)) {
+                            if ($post->post_type && $post->post_type !== \App\Enums\PostType::STANDARD) {
+                                if ($post->post_type === \App\Enums\PostType::EXPERIENCE || $post->post_type === \App\Enums\PostType::CAREER_INSIGHT) {
+                                    $tags[] = 'experience';
+                                } elseif ($post->post_type === \App\Enums\PostType::OPPORTUNITY) {
+                                    $tags[] = 'opportunity';
+                                    if ($post->opportunity?->category === 'pedagogy') {
+                                        $tags[] = 'pedagogy';
+                                    }
+                                }
+                            }
+                        }
+                    @endphp
+
+                    @if (! empty($tags) || ($post->post_type === \App\Enums\PostType::OPPORTUNITY && ($post->opportunity?->is_expired || $post->moderation_status !== \App\Enums\ModerationStatus::NONE)))
                         <div class="mt-1 flex items-center gap-1.5 flex-wrap">
-                            @if ($post->post_type === \App\Enums\PostType::EXPERIENCE)
-                                <x-ui.badge variant="experience" size="sm" no-icon>Chia sẻ kinh nghiệm</x-ui.badge>
-                            @elseif ($post->post_type === \App\Enums\PostType::CAREER_INSIGHT)
-                                <x-ui.badge variant="career-insight" size="sm" no-icon>Kinh nghiệm nghề nghiệp</x-ui.badge>
-                            @elseif ($post->post_type === \App\Enums\PostType::OPPORTUNITY)
-                                <x-ui.badge variant="warning" size="sm" no-icon>Cơ hội</x-ui.badge>
-                                @if ($post->opportunity?->category === 'pedagogy')
-                                    <x-ui.badge variant="warning" size="sm" no-icon>Sư phạm</x-ui.badge>
+                            @foreach ($tags as $tag)
+                                @if ($tag === 'experience')
+                                    <x-ui.badge variant="experience" size="sm" no-icon>Kinh nghiệm</x-ui.badge>
+                                @elseif ($tag === 'opportunity')
+                                    <x-ui.badge variant="opportunity" size="sm" no-icon>Cơ hội</x-ui.badge>
+                                @elseif ($tag === 'pedagogy')
+                                    <x-ui.badge variant="pedagogy" size="sm" no-icon>Sư phạm</x-ui.badge>
                                 @endif
+                            @endforeach
+
+                            @if ($post->post_type === \App\Enums\PostType::OPPORTUNITY)
                                 @if ($post->opportunity?->is_expired)
                                     <x-ui.badge variant="danger" size="sm" no-icon>Đã hết hạn</x-ui.badge>
                                 @endif

@@ -76,7 +76,7 @@ $sendMessage = action(function (HcmueChatService $chatService) {
 
 ?>
 
-<div class="fixed bottom-24 right-4 lg:bottom-28 lg:right-8 z-[999] flex flex-col items-end pointer-events-none" style="position: fixed; bottom: 96px; right: 16px; z-index: 9999; display: flex; flex-direction: column; align-items: flex-end;">
+<div class="fixed bottom-[calc(var(--layout-bottom-nav-h)+80px)] right-4 lg:bottom-[calc(2rem+64px)] lg:right-8 z-[999] flex flex-col items-end pointer-events-none">
     <!-- Chat Window -->
     @if($isOpen)
         <div class="bg-white dark:bg-zinc-900 w-80 sm:w-96 rounded-2xl shadow-2xl border border-zinc-200 dark:border-zinc-800 mb-4 overflow-hidden flex flex-col pointer-events-auto transition-all duration-300 transform origin-bottom-right" style="height: 500px; max-height: calc(100vh - 120px); width: 380px; max-width: 90vw; border-radius: 16px; box-shadow: 0 25px 50px -12px rgba(0,0,0,0.25); display: flex; flex-direction: column; overflow: hidden; margin-bottom: 16px;">

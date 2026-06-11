@@ -63,8 +63,11 @@ new #[Layout('layouts.app')] class extends Component
     public string $activeFeedTab = 'for_you';
     public string $activeTypeFilter = 'all';
     public ?int $selectedCommunityId = null;
-    public string $postType = 'standard';
-    public bool $oppIsPedagogy = false;
+    public array $selectedTags = [];
+    
+    // Modal state properties
+    public bool $showVisModal = false;
+    public bool $showTagModal = false;
     
     // Quick follow properties
     public bool $showQuickFollowModal = false;
@@ -109,8 +112,16 @@ new #[Layout('layouts.app')] class extends Component
         'body' => 'required|string|max:3000',
         'visibility' => 'required|string|in:verified_users,connections_only,community,private',
         'selectedCommunityId' => 'nullable|integer|exists:communities,id',
-        'postType' => 'required|string|in:standard,experience,career_insight,opportunity',
-        'oppIsPedagogy' => 'nullable|boolean',
+        'selectedTags' => 'nullable|array',
+        'selectedTags.*' => 'string|in:experience,opportunity,pedagogy',
+    ];
+
+    protected array $validationAttributes = [
+        'body' => 'nội dung bài viết',
+    ];
+
+    protected array $messages = [
+        'body.required' => 'Nội dung bài viết không được để trống.',
     ];
 
     /**
@@ -124,11 +135,13 @@ new #[Layout('layouts.app')] class extends Component
     }
 
     /**
-     * Hook to handle post type changes. If opportunity is chosen, auto-detect pedagogy.
+     * Hook to handle selected tags changes. If opportunity is selected, auto-suggest pedagogy if user is in pedagogy program/faculty.
      */
-    public function updatedPostType(string $value): void
+    public function updatedSelectedTags($value = null): void
     {
-        if ($value === 'opportunity') {
+        $tags = $this->selectedTags;
+
+        if (in_array('opportunity', $tags, true) && ! in_array('pedagogy', $tags, true)) {
             $user = Auth::user();
             $programName = $user->profile?->alumniProfile?->academicProgram?->name
                 ?? $user->profile?->studentProfile?->academicProgram?->name
@@ -137,7 +150,9 @@ new #[Layout('layouts.app')] class extends Component
             $facultyName = $user->profile?->faculty ?? '';
 
             $isPedagogy = str_contains(strtolower($programName), 'sư phạm') || str_contains(strtolower($facultyName), 'sư phạm');
-            $this->oppIsPedagogy = $isPedagogy;
+            if ($isPedagogy) {
+                $this->selectedTags[] = 'pedagogy';
+            }
         }
     }
 
@@ -206,8 +221,10 @@ new #[Layout('layouts.app')] class extends Component
             'body' => 'required|string|max:3000',
             'visibility' => 'required|string|in:verified_users,connections_only,community,private',
             'selectedCommunityId' => 'nullable|required_if:visibility,community|integer|exists:communities,id',
-            'postType' => 'required|string|in:standard,experience,career_insight,opportunity',
+            'selectedTags' => 'nullable|array',
+            'selectedTags.*' => 'string|in:experience,opportunity,pedagogy',
         ], [
+            'body.required' => 'Nội dung bài viết không được để trống.',
             'selectedCommunityId.required_if' => 'Vui lòng chọn cộng đồng để đăng bài.',
             'selectedCommunityId.exists' => 'Cộng đồng đã chọn không khả dụng.',
         ]);
@@ -216,14 +233,8 @@ new #[Layout('layouts.app')] class extends Component
             'body' => $this->body,
             'visibility' => $this->visibility,
             'community_id' => $this->selectedCommunityId,
-            'post_type' => $this->postType,
+            'tags' => $this->selectedTags,
         ];
-
-        if ($this->postType === 'opportunity') {
-            $postData['opportunity'] = [
-                'category' => $this->oppIsPedagogy ? 'pedagogy' : 'non_pedagogy',
-            ];
-        }
 
         $post = $createPost->execute(Auth::user(), $postData);
 
@@ -236,10 +247,9 @@ new #[Layout('layouts.app')] class extends Component
         $this->body = '';
         $this->visibility = PostVisibility::VERIFIED_USERS->value;
         $this->selectedCommunityId = null;
-        $this->postType = 'standard';
+        $this->selectedTags = [];
         $this->composerImages = [];
         $this->imageFiles = [];
-        $this->oppIsPedagogy = false;
         $this->feedbackMessage = 'Đăng bài viết thành công.';
         $this->dispatch('post-created');
         $this->perPage = self::FEED_PAGE_SIZE;
@@ -770,7 +780,7 @@ new #[Layout('layouts.app')] class extends Component
      */
     public function setTypeFilter(string $filter): void
     {
-        if (! in_array($filter, ['all', 'experience', 'career_insight', 'opportunity'], true)) {
+        if (! in_array($filter, ['all', 'experience', 'career_insight', 'opportunity', 'pedagogy'], true)) {
             return;
         }
 
@@ -820,7 +830,14 @@ new #[Layout('layouts.app')] class extends Component
         $query = $this->applyVisibleFeedPostConstraints($query, $user);
 
         if ($this->activeTypeFilter !== 'all') {
-            $query->where('post_type', $this->activeTypeFilter);
+            if ($this->activeTypeFilter === 'experience') {
+                $query->whereIn('post_type', ['experience', 'career_insight']);
+            } elseif ($this->activeTypeFilter === 'pedagogy') {
+                $query->where('post_type', 'opportunity')
+                    ->whereHas('opportunity', fn ($q) => $q->where('category', 'pedagogy'));
+            } else {
+                $query->where('post_type', $this->activeTypeFilter);
+            }
         }
 
         return $query;
@@ -892,13 +909,27 @@ new #[Layout('layouts.app')] class extends Component
 
                 $this->applyVisibleFeedPostConstraints($query, $user);
                 if ($this->activeTypeFilter !== 'all') {
-                    $query->where('post_type', $this->activeTypeFilter);
+                    if ($this->activeTypeFilter === 'experience') {
+                        $query->whereIn('post_type', ['experience', 'career_insight']);
+                    } elseif ($this->activeTypeFilter === 'pedagogy') {
+                        $query->where('post_type', 'opportunity')
+                            ->whereHas('opportunity', fn ($q) => $q->where('category', 'pedagogy'));
+                    } else {
+                        $query->where('post_type', $this->activeTypeFilter);
+                    }
                 }
             },
         ])->whereHas('post', function (Builder $query) use ($user): void {
             $this->applyVisibleFeedPostConstraints($query, $user);
             if ($this->activeTypeFilter !== 'all') {
-                $query->where('post_type', $this->activeTypeFilter);
+                if ($this->activeTypeFilter === 'experience') {
+                    $query->whereIn('post_type', ['experience', 'career_insight']);
+                } elseif ($this->activeTypeFilter === 'pedagogy') {
+                    $query->where('post_type', 'opportunity')
+                        ->whereHas('opportunity', fn ($q) => $q->where('category', 'pedagogy'));
+                } else {
+                    $query->where('post_type', $this->activeTypeFilter);
+                }
             }
         });
     }
@@ -1171,14 +1202,14 @@ new #[Layout('layouts.app')] class extends Component
                 </div>
                 
                 {{-- Tabs & Filters inline --}}
-                <div class="flex items-center gap-1 py-1 select-none">
+                <div class="flex items-start gap-1 py-1 select-none">
                     <div class="ue-feed-tabs">
                         <button
                             type="button"
                             wire:click="setFeedTab('for_you')"
                             wire:loading.attr="disabled"
                             wire:target="setFeedTab"
-                            class="px-3 py-1.5 rounded-full text-xxs font-bold transition-colors {{ ($activeFeedTab === 'for_you' && $activeTypeFilter === 'all') ? 'bg-ue-brand-soft text-ue-brand' : 'text-slate-400 hover:bg-slate-50' }}"
+                            class="px-3 py-1.5 rounded-full text-xxs font-bold transition-colors {{ ($activeFeedTab === 'for_you' && $activeTypeFilter === 'all') ? 'bg-ue-brand-soft text-ue-brand' : 'bg-slate-50 text-slate-600 hover:bg-slate-100' }}"
                         >
                             Dành cho bạn
                         </button>
@@ -1187,7 +1218,7 @@ new #[Layout('layouts.app')] class extends Component
                             wire:click="setFeedTab('following')"
                             wire:loading.attr="disabled"
                             wire:target="setFeedTab"
-                            class="px-3 py-1.5 rounded-full text-xxs font-bold transition-colors {{ ($activeFeedTab === 'following' && $activeTypeFilter === 'all') ? 'bg-ue-brand-soft text-ue-brand' : 'text-slate-400 hover:bg-slate-50' }}"
+                            class="px-3 py-1.5 rounded-full text-xxs font-bold transition-colors {{ ($activeFeedTab === 'following' && $activeTypeFilter === 'all') ? 'bg-ue-brand-soft text-ue-brand' : 'bg-slate-50 text-slate-600 hover:bg-slate-100' }}"
                         >
                             Theo dõi
                         </button>
@@ -1201,30 +1232,31 @@ new #[Layout('layouts.app')] class extends Component
                             wire:click="setTypeFilter('experience')"
                             wire:loading.attr="disabled"
                             wire:target="setTypeFilter"
-                            class="px-3 py-1.5 rounded-full text-xxs font-bold transition-colors whitespace-nowrap {{ $activeTypeFilter === 'experience' ? 'bg-ue-brand-soft text-ue-brand' : 'text-slate-400 hover:bg-slate-50' }}"
+                            class="px-3 py-1.5 rounded-full text-xxs font-bold transition-colors whitespace-nowrap {{ $activeTypeFilter === 'experience' ? 'bg-ue-brand-soft text-ue-brand' : 'bg-slate-50 text-slate-600 hover:bg-slate-100' }}"
                         >
-                            Chia sẻ KN
-                        </button>
-                        <button
-                            type="button"
-                            wire:click="setTypeFilter('career_insight')"
-                            wire:loading.attr="disabled"
-                            wire:target="setTypeFilter"
-                            class="px-3 py-1.5 rounded-full text-xxs font-bold transition-colors whitespace-nowrap {{ $activeTypeFilter === 'career_insight' ? 'bg-ue-brand-soft text-ue-brand' : 'text-slate-400 hover:bg-slate-50' }}"
-                        >
-                            KN nghề nghiệp
+                            Kinh nghiệm
                         </button>
                         <button
                             type="button"
                             wire:click="setTypeFilter('opportunity')"
                             wire:loading.attr="disabled"
                             wire:target="setTypeFilter"
-                            class="px-3 py-1.5 rounded-full text-xxs font-bold transition-colors whitespace-nowrap {{ $activeTypeFilter === 'opportunity' ? 'bg-ue-brand-soft text-ue-brand' : 'text-slate-400 hover:bg-slate-50' }}"
+                            class="px-3 py-1.5 rounded-full text-xxs font-bold transition-colors whitespace-nowrap {{ $activeTypeFilter === 'opportunity' ? 'bg-ue-brand-soft text-ue-brand' : 'bg-slate-50 text-slate-600 hover:bg-slate-100' }}"
                         >
                             Cơ hội
                         </button>
+                        <button
+                            type="button"
+                            wire:click="setTypeFilter('pedagogy')"
+                            wire:loading.attr="disabled"
+                            wire:target="setTypeFilter"
+                            class="px-3 py-1.5 rounded-full text-xxs font-bold transition-colors whitespace-nowrap {{ $activeTypeFilter === 'pedagogy' ? 'bg-ue-brand-soft text-ue-brand' : 'bg-slate-50 text-slate-600 hover:bg-slate-100' }}"
+                        >
+                            Sư phạm
+                        </button>
                     </div>
                 </div>
+
             </div>
 
             {{-- Mobile Layout (Scrollable inline list, hidden scrollbar via custom CSS inline to be safe) --}}
@@ -1241,7 +1273,7 @@ new #[Layout('layouts.app')] class extends Component
                     wire:click="setFeedTab('for_you')"
                     wire:loading.attr="disabled"
                     wire:target="setFeedTab"
-                    class="px-3 py-1.5 rounded-full text-xxs font-bold transition-colors whitespace-nowrap {{ ($activeFeedTab === 'for_you' && $activeTypeFilter === 'all') ? 'bg-ue-brand-soft text-ue-brand' : 'text-slate-400 hover:bg-slate-50' }}"
+                    class="px-3 py-1.5 rounded-full text-xxs font-bold transition-colors whitespace-nowrap {{ ($activeFeedTab === 'for_you' && $activeTypeFilter === 'all') ? 'bg-ue-brand-soft text-ue-brand' : 'bg-slate-50 text-slate-600 hover:bg-slate-100' }}"
                 >
                     Dành cho bạn
                 </button>
@@ -1250,7 +1282,7 @@ new #[Layout('layouts.app')] class extends Component
                     wire:click="setFeedTab('following')"
                     wire:loading.attr="disabled"
                     wire:target="setFeedTab"
-                    class="px-3 py-1.5 rounded-full text-xxs font-bold transition-colors whitespace-nowrap {{ ($activeFeedTab === 'following' && $activeTypeFilter === 'all') ? 'bg-ue-brand-soft text-ue-brand' : 'text-slate-400 hover:bg-slate-50' }}"
+                    class="px-3 py-1.5 rounded-full text-xxs font-bold transition-colors whitespace-nowrap {{ ($activeFeedTab === 'following' && $activeTypeFilter === 'all') ? 'bg-ue-brand-soft text-ue-brand' : 'bg-slate-50 text-slate-600 hover:bg-slate-100' }}"
                 >
                     Theo dõi
                 </button>
@@ -1262,27 +1294,27 @@ new #[Layout('layouts.app')] class extends Component
                     wire:click="setTypeFilter('experience')"
                     wire:loading.attr="disabled"
                     wire:target="setTypeFilter"
-                    class="px-3 py-1.5 rounded-full text-xxs font-bold transition-colors whitespace-nowrap {{ $activeTypeFilter === 'experience' ? 'bg-ue-brand-soft text-ue-brand' : 'text-slate-400 hover:bg-slate-50' }}"
+                    class="px-3 py-1.5 rounded-full text-xxs font-bold transition-colors whitespace-nowrap {{ $activeTypeFilter === 'experience' ? 'bg-ue-brand-soft text-ue-brand' : 'bg-slate-50 text-slate-600 hover:bg-slate-100' }}"
                 >
-                    Chia sẻ KN
-                </button>
-                <button
-                    type="button"
-                    wire:click="setTypeFilter('career_insight')"
-                    wire:loading.attr="disabled"
-                    wire:target="setTypeFilter"
-                    class="px-3 py-1.5 rounded-full text-xxs font-bold transition-colors whitespace-nowrap {{ $activeTypeFilter === 'career_insight' ? 'bg-ue-brand-soft text-ue-brand' : 'text-slate-400 hover:bg-slate-50' }}"
-                >
-                    KN nghề nghiệp
+                    Kinh nghiệm
                 </button>
                 <button
                     type="button"
                     wire:click="setTypeFilter('opportunity')"
                     wire:loading.attr="disabled"
                     wire:target="setTypeFilter"
-                    class="px-3 py-1.5 rounded-full text-xxs font-bold transition-colors whitespace-nowrap {{ $activeTypeFilter === 'opportunity' ? 'bg-ue-brand-soft text-ue-brand' : 'text-slate-400 hover:bg-slate-50' }}"
+                    class="px-3 py-1.5 rounded-full text-xxs font-bold transition-colors whitespace-nowrap {{ $activeTypeFilter === 'opportunity' ? 'bg-ue-brand-soft text-ue-brand' : 'bg-slate-50 text-slate-600 hover:bg-slate-100' }}"
                 >
                     Cơ hội
+                </button>
+                <button
+                    type="button"
+                    wire:click="setTypeFilter('pedagogy')"
+                    wire:loading.attr="disabled"
+                    wire:target="setTypeFilter"
+                    class="px-3 py-1.5 rounded-full text-xxs font-bold transition-colors whitespace-nowrap {{ $activeTypeFilter === 'pedagogy' ? 'bg-ue-brand-soft text-ue-brand' : 'bg-slate-50 text-slate-600 hover:bg-slate-100' }}"
+                >
+                    Sư phạm
                 </button>
             </div>
         </header>
@@ -1304,58 +1336,312 @@ new #[Layout('layouts.app')] class extends Component
                         {{-- Right Column: Form content --}}
                         <div class="min-w-0">
                             <form wire:submit.prevent="submitPost">
-                                <div>
-                                    @if ($currentUser->canPostType(\App\Enums\PostType::EXPERIENCE))
-                                        <div class="flex items-center gap-2 mb-2 select-none flex-wrap">
-                                            <span class="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Đăng làm:</span>
-                                            <div class="inline-flex items-center gap-1 p-0.5 bg-slate-100 rounded-lg border border-slate-200">
-                                                <label class="relative flex items-center justify-center cursor-pointer">
-                                                    <input type="radio" wire:model.live="postType" value="standard" class="sr-only peer" />
-                                                    <span class="px-2.5 py-1 text-[11px] font-bold text-slate-500 rounded-md transition-all peer-checked:bg-white peer-checked:text-slate-800 peer-checked:shadow-sm">Bài viết</span>
-                                                </label>
-                                                <label class="relative flex items-center justify-center cursor-pointer">
-                                                    <input type="radio" wire:model.live="postType" value="experience" class="sr-only peer" />
-                                                    <span class="px-2.5 py-1 text-[11px] font-bold text-slate-500 rounded-md transition-all peer-checked:bg-emerald-500 peer-checked:text-white peer-checked:shadow-sm">Chia sẻ KN</span>
-                                                </label>
-                                                <label class="relative flex items-center justify-center cursor-pointer">
-                                                    <input type="radio" wire:model.live="postType" value="career_insight" class="sr-only peer" />
-                                                    <span class="px-2.5 py-1 text-[11px] font-bold text-slate-500 rounded-md transition-all peer-checked:bg-purple-500 peer-checked:text-white peer-checked:shadow-sm">KN nghề nghiệp</span>
-                                                </label>
-                                                @if ($currentUser->canPostType(\App\Enums\PostType::OPPORTUNITY))
-                                                    <label class="relative flex items-center justify-center cursor-pointer">
-                                                        <input type="radio" wire:model.live="postType" value="opportunity" class="sr-only peer" />
-                                                        <span class="px-2.5 py-1 text-[11px] font-bold text-slate-500 rounded-md transition-all peer-checked:bg-amber-500 peer-checked:text-white peer-checked:shadow-sm">Cơ hội</span>
-                                                    </label>
-                                                @endif
+                                {{-- Author name + controls row (Facebook-style) --}}
+                                @php
+                                    $visibilityLabel = match ($visibility) {
+                                        'connections_only' => 'Chỉ bạn bè',
+                                        'community'        => 'Cộng đồng',
+                                        default            => 'Chỉ sinh viên xác thực',
+                                    };
+                                    $visibilityIcon = match ($visibility) {
+                                        'connections_only' => 'users',
+                                        'community'        => 'globe',
+                                        default            => 'shield-check',
+                                    };
+                                    $postTypeLabel = 'Bài viết';
+                                    if (! empty($selectedTags)) {
+                                        $labelParts = [];
+                                        if (in_array('experience', $selectedTags, true)) {
+                                            $labelParts[] = 'Kinh nghiệm';
+                                        }
+                                        if (in_array('opportunity', $selectedTags, true)) {
+                                            $labelParts[] = 'Cơ hội';
+                                        }
+                                        if (in_array('pedagogy', $selectedTags, true)) {
+                                            $labelParts[] = 'Sư phạm';
+                                        }
+                                        if (! empty($labelParts)) {
+                                            $postTypeLabel = implode(', ', $labelParts);
+                                        }
+                                    }
+                                @endphp
+                                <div class="flex flex-wrap items-center gap-1.5 mb-2 select-none">
+                                    <span class="text-sm font-bold text-slate-800 mr-0.5">{{ $currentUser->name }}</span>
+
+                                    {{-- Visibility custom panel (Facebook-style) --}}
+                                    <div class="relative flex-shrink-0">
+                                        <button
+                                            type="button"
+                                            wire:click="$set('showVisModal', true)"
+                                            class="flex items-center gap-1 px-2 py-1 bg-slate-100 text-slate-600 border border-slate-200 rounded-lg whitespace-nowrap flex-shrink-0 hover:bg-slate-200 transition-colors cursor-pointer"
+                                        >
+                                            <x-ui.icon name="{{ $visibilityIcon }}" size="xs" class="text-ue-brand flex-shrink-0" />
+                                            <span class="text-xxs font-bold">{{ $visibilityLabel }}</span>
+                                            <x-ui.icon name="chevron-down" size="xs" class="text-slate-400 flex-shrink-0" />
+                                        </button>
+
+                                        @if ($showVisModal)
+                                        <div x-data="{ selectedVis: @js($visibility) }" wire:ignore>
+                                        {{-- Center Modal Overlay --}}
+                                        <div
+                                            x-show="true"
+                                            x-transition:enter="transition ease-out duration-300"
+                                            x-transition:enter-start="opacity-0"
+                                            x-transition:enter-end="opacity-100"
+                                            x-transition:leave="transition ease-in duration-200"
+                                            x-transition:leave-start="opacity-100"
+                                            x-transition:leave-end="opacity-0"
+                                            class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs"
+                                            @click.self="$wire.set('showVisModal', false)"
+                                        >
+                                            <div
+                                                class="bg-white rounded-2xl max-w-md w-full border border-slate-200 shadow-2xl overflow-hidden ue-animate-scale-in"
+                                                @click.stopPropagation()
+                                            >
+                                                {{-- Header --}}
+                                                <div class="px-5 py-4 border-b border-slate-100 flex items-center justify-between">
+                                                    <div class="flex items-center gap-2">
+                                                        <button type="button" @click="$wire.set('showVisModal', false); $wire.set('visibility', selectedVis)" class="text-slate-400 hover:text-slate-600 transition-colors cursor-pointer mr-1">
+                                                            <x-ui.icon name="arrow-left" size="sm" />
+                                                        </button>
+                                                        <h3 class="text-sm font-bold text-slate-900">Ai có thể xem bài viết của bạn?</h3>
+                                                    </div>
+                                                    <button
+                                                        type="button"
+                                                        @click="$wire.set('showVisModal', false); $wire.set('visibility', selectedVis)"
+                                                        class="text-slate-400 hover:text-slate-600 transition-colors cursor-pointer"
+                                                        aria-label="Đóng"
+                                                    >
+                                                        <x-ui.icon name="x" size="xs" />
+                                                    </button>
+                                                </div>
+
+                                                {{-- Sub-header --}}
+                                                <div class="px-5 py-3.5 bg-slate-50 border-b border-slate-100">
+                                                    <p class="text-xs text-slate-500 font-semibold leading-relaxed">Bài viết sẽ hiển thị cho những người được chọn.</p>
+                                                </div>
+
+                                                {{-- Options --}}
+                                                <div class="divide-y divide-slate-100">
+                                                    <button
+                                                        type="button"
+                                                        @click="selectedVis = 'verified_users'"
+                                                        class="w-full flex items-center justify-between px-5 py-4 hover:bg-slate-50 transition-colors"
+                                                        x-bind:class="selectedVis === 'verified_users' ? 'bg-ue-brand-soft/40' : ''"
+                                                    >
+                                                        <div class="text-left min-w-0">
+                                                            <p class="text-sm font-bold text-slate-800">Sinh viên xác thực</p>
+                                                            <p class="text-xs text-slate-500 mt-0.5">Chỉ sinh viên đã xác thực tài khoản mới thấy</p>
+                                                        </div>
+                                                        <div class="flex-shrink-0 ml-3">
+                                                            <div x-show="selectedVis === 'verified_users'" class="w-5 h-5 rounded-full border-2 border-ue-brand bg-ue-brand flex items-center justify-center">
+                                                                <div class="w-2 h-2 rounded-full bg-white"></div>
+                                                            </div>
+                                                            <div x-show="selectedVis !== 'verified_users'" class="w-5 h-5 rounded-full border-2 border-slate-300"></div>
+                                                        </div>
+                                                    </button>
+
+                                                    <button
+                                                        type="button"
+                                                        @click="selectedVis = 'connections_only'"
+                                                        class="w-full flex items-center justify-between px-5 py-4 hover:bg-slate-50 transition-colors"
+                                                        x-bind:class="selectedVis === 'connections_only' ? 'bg-ue-brand-soft/40' : ''"
+                                                    >
+                                                        <div class="text-left min-w-0">
+                                                            <p class="text-sm font-bold text-slate-800">Chỉ bạn bè</p>
+                                                            <p class="text-xs text-slate-500 mt-0.5">Chỉ những người bạn đã kết nối mới thấy</p>
+                                                        </div>
+                                                        <div class="flex-shrink-0 ml-3">
+                                                            <div x-show="selectedVis === 'connections_only'" class="w-5 h-5 rounded-full border-2 border-ue-brand bg-ue-brand flex items-center justify-center">
+                                                                <div class="w-2 h-2 rounded-full bg-white"></div>
+                                                            </div>
+                                                            <div x-show="selectedVis !== 'connections_only'" class="w-5 h-5 rounded-full border-2 border-slate-300"></div>
+                                                        </div>
+                                                    </button>
+
+                                                    <button
+                                                        type="button"
+                                                        @click="selectedVis = 'community'"
+                                                        class="w-full flex items-center justify-between px-5 py-4 hover:bg-slate-50 transition-colors"
+                                                        x-bind:class="selectedVis === 'community' ? 'bg-ue-brand-soft/40' : ''"
+                                                    >
+                                                        <div class="text-left min-w-0">
+                                                            <p class="text-sm font-bold text-slate-800">Cộng đồng</p>
+                                                            <p class="text-xs text-slate-500 mt-0.5">Chỉ thành viên cộng đồng được chọn mới thấy</p>
+                                                        </div>
+                                                        <div class="flex-shrink-0 ml-3">
+                                                            <div x-show="selectedVis === 'community'" class="w-5 h-5 rounded-full border-2 border-ue-brand bg-ue-brand flex items-center justify-center">
+                                                                <div class="w-2 h-2 rounded-full bg-white"></div>
+                                                            </div>
+                                                            <div x-show="selectedVis !== 'community'" class="w-5 h-5 rounded-full border-2 border-slate-300"></div>
+                                                        </div>
+                                                    </button>
+                                                </div>
+
+                                                {{-- Footer --}}
+                                                <div class="px-5 py-4 border-t border-slate-100 flex items-center justify-end bg-slate-50">
+                                                    <button
+                                                        type="button"
+                                                        @click="$wire.set('showVisModal', false); $wire.set('visibility', selectedVis)"
+                                                        class="px-5 py-2 rounded-xl bg-ue-brand hover:bg-ue-brand-dark text-white text-xs font-bold transition-colors cursor-pointer"
+                                                    >
+                                                        Xong
+                                                    </button>
+                                                </div>
                                             </div>
                                         </div>
+                                        </div>
+                                        @endif
+                                    </div>
+
+                                </div>
+
+                                    {{-- Tag Modal Overlay (triggered from bottom section) --}}
+                                    @if ($currentUser->canPostType(\App\Enums\PostType::EXPERIENCE))
+                                        @if ($showTagModal)
+                                        <div x-data="{ localTags: [...$wire.selectedTags] }" wire:ignore>
+                                        {{-- Center Modal Overlay --}}
+                                        <div
+                                            x-show="true"
+                                            x-transition:enter="transition ease-out duration-300"
+                                            x-transition:enter-start="opacity-0"
+                                            x-transition:enter-end="opacity-100"
+                                            x-transition:leave="transition ease-in duration-200"
+                                            x-transition:leave-start="opacity-100"
+                                            x-transition:leave-end="opacity-0"
+                                            class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs"
+                                            @click.self="$wire.set('showTagModal', false)"
+                                        >
+                                                <div
+                                                    class="bg-white rounded-2xl max-w-md w-full border border-slate-200 shadow-2xl overflow-hidden ue-animate-scale-in"
+                                                    @click.stopPropagation()
+                                                >
+                                                    {{-- Header --}}
+                                                    <div class="px-5 py-4 border-b border-slate-100 flex items-center justify-between">
+                                                        <div class="flex items-center gap-2">
+                                                            <button type="button" @click="$wire.set('showTagModal', false); $wire.set('selectedTags', localTags)" class="text-slate-400 hover:text-slate-600 transition-colors cursor-pointer mr-1">
+                                                                <x-ui.icon name="arrow-left" size="sm" />
+                                                            </button>
+                                                            <h3 class="text-sm font-bold text-slate-900">Chọn nhãn bài viết</h3>
+                                                        </div>
+                                                        <button
+                                                            type="button"
+                                                            @click="$wire.set('showTagModal', false); $wire.set('selectedTags', localTags)"
+                                                            class="text-slate-400 hover:text-slate-600 transition-colors cursor-pointer"
+                                                            aria-label="Đóng"
+                                                        >
+                                                            <x-ui.icon name="x" size="xs" />
+                                                        </button>
+                                                    </div>
+
+                                                    {{-- Sub-header info --}}
+                                                    <div class="px-5 py-3.5 bg-slate-50 border-b border-slate-100">
+                                                        <p class="text-xs text-slate-500 font-semibold leading-relaxed">Chọn các nhãn để người đọc dễ dàng lọc và tìm kiếm bài viết của bạn. Bạn có thể gắn nhiều nhãn cùng lúc.</p>
+                                                    </div>
+
+                                                    {{-- Content --}}
+                                                    <div class="divide-y divide-slate-100 max-h-80 overflow-y-auto">
+                                                        {{-- Option 1: Kinh nghiệm --}}
+                                                        <label class="flex items-center justify-between px-5 py-4 hover:bg-slate-50/50 transition-colors cursor-pointer">
+                                                            <div class="min-w-0">
+                                                                <p class="text-sm font-bold text-slate-800">Kinh nghiệm</p>
+                                                                <p class="text-xs text-slate-400 mt-0.5">Chia sẻ kinh nghiệm học tập hoặc công việc</p>
+                                                            </div>
+                                                            <input
+                                                                type="checkbox"
+                                                                x-model="localTags"
+                                                                value="experience"
+                                                                class="w-5 h-5 rounded border-slate-300 text-ue-brand focus:ring-ue-brand/20 cursor-pointer flex-shrink-0 ml-3"
+                                                            />
+                                                        </label>
+
+                                                        {{-- Option 2: Cơ hội --}}
+                                                        @if ($currentUser->canPostType(\App\Enums\PostType::OPPORTUNITY))
+                                                            <label class="flex items-center justify-between px-5 py-4 hover:bg-slate-50/50 transition-colors cursor-pointer">
+                                                                <div class="min-w-0">
+                                                                    <p class="text-sm font-bold text-slate-800">Cơ hội</p>
+                                                                    <p class="text-xs text-slate-400 mt-0.5">Đăng cơ hội việc làm, học bổng hoặc sự kiện</p>
+                                                                </div>
+                                                                <input
+                                                                    type="checkbox"
+                                                                    x-model="localTags"
+                                                                    value="opportunity"
+                                                                    class="w-5 h-5 rounded border-slate-300 text-ue-brand focus:ring-ue-brand/20 cursor-pointer flex-shrink-0 ml-3"
+                                                                />
+                                                            </label>
+                                                        @endif
+
+                                                        {{-- Option 3: Sư phạm --}}
+                                                        @if ($currentUser->canPostType(\App\Enums\PostType::OPPORTUNITY))
+                                                            <label class="flex items-center justify-between px-5 py-4 hover:bg-slate-50/50 transition-colors cursor-pointer">
+                                                                <div class="min-w-0">
+                                                                    <p class="text-sm font-bold text-slate-800">Sư phạm</p>
+                                                                    <p class="text-xs text-slate-400 mt-0.5">Nội dung thuộc khối ngành Sư phạm</p>
+                                                                </div>
+                                                                <input
+                                                                    type="checkbox"
+                                                                    x-model="localTags"
+                                                                    value="pedagogy"
+                                                                    class="w-5 h-5 rounded border-slate-300 text-ue-brand focus:ring-ue-brand/20 cursor-pointer flex-shrink-0 ml-3"
+                                                                />
+                                                            </label>
+                                                        @endif
+                                                    </div>
+
+                                                    {{-- Footer --}}
+                                                    <div class="px-5 py-4 border-t border-slate-100 flex items-center justify-end bg-slate-50">
+                                                        <button
+                                                            type="button"
+                                                            @click="$wire.set('showTagModal', false); $wire.set('selectedTags', localTags)"
+                                                            class="px-5 py-2 rounded-xl bg-ue-brand hover:bg-ue-brand-dark text-white text-xs font-bold transition-colors cursor-pointer"
+                                                        >
+                                                            Xong
+                                                        </button>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        @endif
                                     @endif
-                                    <label for="post-body" class="sr-only">Nội dung bài viết</label>
-                                    <textarea
-                                        id="post-body"
-                                        wire:model="body"
-                                        placeholder="Có gì mới trong cộng đồng HCMUE hôm nay?"
-                                        rows="2"
-                                        class="ue-composer__textarea focus:outline-none ue-text-body"
-                                        maxlength="3000"
-                                    ></textarea>
+
+                                <div>
+                                    <div class="flex items-start gap-2">
+                                        <div class="flex-1 min-w-0">
+                                            <label for="post-body" class="sr-only">Nội dung bài viết</label>
+                                            <textarea
+                                                id="post-body"
+                                                wire:model="body"
+                                                placeholder="Có gì mới trong cộng đồng HCMUE hôm nay?"
+                                                rows="2"
+                                                class="ue-composer__textarea focus:outline-none ue-text-body"
+                                                maxlength="3000"
+                                            ></textarea>
+                                        </div>
+                                        @if ($currentUser->canPostType(\App\Enums\PostType::EXPERIENCE))
+                                            <button
+                                                type="button"
+                                                wire:click="$set('showTagModal', true)"
+                                                class="flex items-center gap-1 px-2 py-1.5 bg-slate-100 text-slate-500 border border-slate-200 rounded-lg text-xxs font-semibold hover:bg-slate-200 transition-colors cursor-pointer flex-shrink-0 mt-0.5"
+                                                title="Gắn nhãn bài viết"
+                                            >
+                                                <x-ui.icon name="tag" size="xs" class="text-slate-400" />
+                                                @if (!empty($selectedTags))
+                                                    @php
+                                                        $tagLabels = [];
+                                                        if (in_array('experience', $selectedTags, true)) { $tagLabels[] = 'KN'; }
+                                                        if (in_array('opportunity', $selectedTags, true)) { $tagLabels[] = 'CH'; }
+                                                        if (in_array('pedagogy', $selectedTags, true)) { $tagLabels[] = 'SP'; }
+                                                    @endphp
+                                                    <span class="text-ue-brand font-bold">{{ implode(',', $tagLabels) }}</span>
+                                                @else
+                                                    <span>Gắn nhãn</span>
+                                                @endif
+                                            </button>
+                                        @endif
+                                    </div>
                                     @error('body')
                                         <p class="text-xs text-red-650 font-semibold mt-1">{{ $message }}</p>
                                     @enderror
-
-                                    @if ($postType === 'opportunity')
-                                        <div class="mt-3 p-3.5 bg-amber-50/55 hover:bg-amber-50 rounded-xl border border-amber-100 flex items-center gap-2.5 text-slate-750 transition-colors duration-200">
-                                            <input
-                                                type="checkbox"
-                                                id="opp-is-pedagogy"
-                                                wire:model="oppIsPedagogy"
-                                                class="w-4 h-4 rounded border-amber-300 text-amber-600 focus:ring-amber-500/20 focus:ring-2 focus:ring-offset-0 cursor-pointer transition-all duration-200"
-                                            />
-                                            <label for="opp-is-pedagogy" class="text-xs font-bold text-slate-700 cursor-pointer select-none">
-                                                Đây là cơ hội thuộc khối ngành Sư phạm
-                                            </label>
-                                        </div>
-                                    @endif
 
                                     {{-- Image Previews inside composer --}}
                                     @if (!empty($composerImages))
@@ -1384,6 +1670,7 @@ new #[Layout('layouts.app')] class extends Component
                                         <span class="animate-spin rounded-full h-3.5 w-3.5 border border-slate-300 border-t-ue-brand"></span>
                                         Đang tải ảnh và xử lý phiên bản tối ưu...
                                     </div>
+
                                 </div>
 
                                 <div class="ue-composer__toolbar">
@@ -1397,31 +1684,8 @@ new #[Layout('layouts.app')] class extends Component
                                         <span class="ue-composer__counter text-slate-400 text-xxs font-semibold whitespace-nowrap flex-shrink-0">
                                             {{ mb_strlen($body) }}/3000
                                         </span>
-                                        @php
-                                            $visibilityLabel = match ($visibility) {
-                                                'connections_only' => 'Chỉ bạn bè',
-                                                'community' => 'Cộng đồng',
-                                                default => 'Chỉ sinh viên xác thực',
-                                            };
-                                        @endphp
-                                        <div class="relative flex-shrink-0">
-                                            <label for="post-visibility" class="sr-only">Quyền xem</label>
-                                            <select
-                                                id="post-visibility"
-                                                wire:model.live="visibility"
-                                                class="absolute inset-0 w-full h-full opacity-0 z-10 cursor-pointer"
-                                            >
-                                                <option value="verified_users">Chỉ sinh viên xác thực</option>
-                                                <option value="connections_only">Chỉ bạn bè</option>
-                                                <option value="community">Chỉ cộng đồng</option>
-                                            </select>
-                                            <div class="flex items-center gap-1 px-2 py-1 bg-slate-50 text-slate-500 rounded-lg select-none pointer-events-none whitespace-nowrap flex-shrink-0">
-                                                <x-ui.icon name="shield-check" size="xs" class="text-ue-brand fill-ue-brand/10 flex-shrink-0" />
-                                                <span class="hidden sm:inline text-xxs font-bold">{{ $visibilityLabel }}</span>
-                                                <span class="sm:hidden text-[10px] font-bold whitespace-nowrap flex-shrink-0">{{ $visibility === 'verified_users' ? 'Xác thực' : $visibilityLabel }}</span>
-                                                <x-ui.icon name="chevron-down" size="xs" class="text-slate-400 flex-shrink-0" />
-                                            </div>
-                                        </div>
+
+                                        {{-- Community selector (only shown if visibility = community) --}}
                                         @if ($visibility === 'community')
                                             <div class="relative min-w-[120px] flex-shrink-0">
                                                 <label for="post-community" class="sr-only">Chọn cộng đồng</label>
@@ -1463,17 +1727,7 @@ new #[Layout('layouts.app')] class extends Component
             {{-- Real-time New Posts Banner --}}
             <div 
                 x-data="{ showBanner: false, count: 0 }"
-                x-init="
-                    if (window.Echo) {
-                        window.Echo.private('feed')
-                            .listen('.PostCreated', (e) => {
-                                if (e.author_id != {{ Auth::id() ?? 'null' }}) {
-                                    count++;
-                                    showBanner = true;
-                                }
-                            });
-                    }
-                }"
+                x-init="if (window.Echo) { window.Echo.private('feed').listen('.PostCreated', (e) => { if (e.author_id != {{ Auth::id() ?? 'null' }}) { count++; showBanner = true; } }); }"
                 x-show="showBanner"
                 x-collapse
                 class="mb-4"
@@ -1620,6 +1874,9 @@ new #[Layout('layouts.app')] class extends Component
         :visibility="$visibility"
         :selectedCommunityId="$selectedCommunityId"
         :communities="$availableCommunities"
+        :selectedTags="$selectedTags"
+        :canPostExperience="$currentUser->canPostType(\App\Enums\PostType::EXPERIENCE)"
+        :canPostOpportunity="$currentUser->canPostType(\App\Enums\PostType::OPPORTUNITY)"
     />
     <x-ui.floating-action-button />
 

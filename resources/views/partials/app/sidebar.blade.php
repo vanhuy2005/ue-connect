@@ -97,8 +97,8 @@ $secondaryNav = [
                 <x-brand.logo variant="mark" size="lg" class="h-8 w-8 flex-shrink-0" x-show="collapsed" />
                 <x-brand.logo variant="horizontal" size="lg" class="h-8 w-auto" x-show="!collapsed" />
             </a>
-            <h2 class="ue-text-subheading mt-1.5 leading-tight">Quản trị UEConnect</h2>
-            <p class="ue-text-meta mt-1 leading-normal">Vận hành, kiểm duyệt và bảo mật hệ thống</p>
+            <h2 x-show="!collapsed" x-transition:enter="transition ease-out duration-200 delay-75" x-transition:enter-start="opacity-0 translate-x-[-8px]" x-transition:enter-end="opacity-100 translate-x-0" x-transition:leave="transition ease-in duration-100" x-transition:leave-start="opacity-100" x-transition:leave-end="opacity-0" class="ue-text-subheading mt-1.5 leading-tight">Quản trị UEConnect</h2>
+            <p x-show="!collapsed" x-transition:enter="transition ease-out duration-200 delay-75" x-transition:enter-start="opacity-0 translate-x-[-8px]" x-transition:enter-end="opacity-100 translate-x-0" x-transition:leave="transition ease-in duration-100" x-transition:leave-start="opacity-100" x-transition:leave-end="opacity-0" class="ue-text-meta mt-1 leading-normal">Vận hành, kiểm duyệt và bảo mật hệ thống</p>
         </div>
 
         {{-- Category Admin Navigation --}}
@@ -130,8 +130,8 @@ $secondaryNav = [
                     :title="collapsed ? '{{ $group['vn_label'] }}' : ''"
                 >
                     <x-ui.icon :name="$group['icon']" size="sm" class="flex-shrink-0" />
-                    <span class="min-w-0 flex-1 truncate">{{ $group['vn_label'] }}</span>
-                    <span class="rounded-full bg-slate-100 px-2 py-0.5 ue-text-meta font-bold text-slate-550">{{ count($group['items']) }}</span>
+                    <span x-show="!collapsed" x-transition:enter="transition ease-out duration-200 delay-75" x-transition:enter-start="opacity-0 translate-x-[-8px]" x-transition:enter-end="opacity-100 translate-x-0" x-transition:leave="transition ease-in duration-100" x-transition:leave-start="opacity-100" x-transition:leave-end="opacity-0" class="min-w-0 flex-1 truncate whitespace-nowrap">{{ $group['vn_label'] }}</span>
+                    <span x-show="!collapsed" x-transition:enter="transition ease-out duration-200 delay-75" x-transition:enter-start="opacity-0" x-transition:enter-end="opacity-100" x-transition:leave="transition ease-in duration-100" x-transition:leave-start="opacity-100" x-transition:leave-end="opacity-0" class="rounded-full bg-slate-100 px-2 py-0.5 ue-text-meta font-bold text-slate-550">{{ count($group['items']) }}</span>
                 </a>
             @endforeach
         </div>
@@ -143,17 +143,17 @@ $secondaryNav = [
             type="button"
             @click="moreOpen = !moreOpen"
             @click.away="moreOpen = false"
-            class="flex items-center justify-between px-3 py-2 rounded-xl text-ue-text hover:bg-ue-surface-hover border transition-colors duration-150 w-60 ue-focus-ring"
-            :class="collapsed ? 'bg-white shadow-md border-ue-border/50' : ('border-transparent ' + (moreOpen ? 'bg-ue-brand-soft text-ue-brand-active' : 'bg-transparent'))"
+            class="flex items-center justify-between px-3 py-2 rounded-xl text-ue-text hover:bg-ue-surface-hover border transition-colors duration-150 ue-focus-ring"
+            :class="collapsed ? 'bg-white shadow-md border-ue-border/50 w-auto justify-center' : 'border-transparent w-full ' + (moreOpen ? 'bg-ue-brand-soft text-ue-brand-active' : 'bg-transparent')"
             aria-haspopup="true"
             :aria-expanded="moreOpen"
             aria-label="Xem thêm menu"
         >
             <div class="flex items-center gap-2.5">
                 <x-ui.avatar size="sm" />
-                <span class="truncate text-xs font-semibold">{{ $currentUser?->name }}</span>
+                <span x-show="!collapsed" x-transition:enter="transition ease-out duration-200 delay-75" x-transition:enter-start="opacity-0 translate-x-[-8px]" x-transition:enter-end="opacity-100 translate-x-0" x-transition:leave="transition ease-in duration-100" x-transition:leave-start="opacity-100" x-transition:leave-end="opacity-0" class="truncate text-xs font-semibold">{{ $currentUser?->name }}</span>
             </div>
-            <x-ui.icon name="chevron-up" size="xs" class="text-ue-text-muted/60 transition-transform duration-150" x-bind:class="moreOpen ? 'rotate-180' : ''" />
+            <x-ui.icon name="chevron-up" size="xs" x-show="!collapsed" x-transition:enter="transition ease-out duration-200 delay-75" x-transition:enter-start="opacity-0" x-transition:enter-end="opacity-100" x-transition:leave="transition ease-in duration-100" x-transition:leave-start="opacity-100" x-transition:leave-end="opacity-0" class="text-ue-text-muted/60 transition-transform duration-150" x-bind:class="moreOpen ? 'rotate-180' : ''" />
         </button>
 
         {{-- More popover menu --}}
