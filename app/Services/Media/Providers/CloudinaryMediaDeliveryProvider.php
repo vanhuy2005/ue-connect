@@ -43,7 +43,7 @@ class CloudinaryMediaDeliveryProvider implements MediaStorageProvider
         try {
             $this->ensureConfigured();
 
-            $response = $this->upload($contents, $publicId, $options['mime_type'] ?? 'image/png');
+            $response = $this->upload($contents, $publicId, $options['mime_type'] ?? 'image/png', $options);
             $data = $response->json();
 
             if ($response->successful()) {
@@ -79,11 +79,11 @@ class CloudinaryMediaDeliveryProvider implements MediaStorageProvider
     /**
      * @return array{public_id: string, version: int|null, secure_url: string|null, format: string|null, bytes: int|null, resource_type: string|null}
      */
-    public function uploadVariant(string $publicId, string $contents, string $mimeType = 'image/webp'): array
+    public function uploadVariant(string $publicId, string $contents, string $mimeType = 'image/webp', array $options = []): array
     {
         $this->ensureConfigured();
 
-        $response = $this->upload($contents, $publicId, $mimeType);
+        $response = $this->upload($contents, $publicId, $mimeType, $options);
 
         if (! $response->successful()) {
             throw new RuntimeException($this->errorMessage($response));
@@ -140,15 +140,37 @@ class CloudinaryMediaDeliveryProvider implements MediaStorageProvider
         throw new RuntimeException('Cloudinary provider is for public delivery only.');
     }
 
+    public function buildTransformationUrl(string $publicId, array $transformations = [], ?string $version = null): string
+    {
+        $this->ensureConfigured();
+
+        $scheme = $this->secure ? 'https' : 'http';
+        $transformationString = '';
+
+        if (! empty($transformations)) {
+            $parts = [];
+            foreach ($transformations as $key => $val) {
+                if (is_numeric($key)) {
+                    $parts[] = $val;
+                } else {
+                    $parts[] = "{$key}_{$val}";
+                }
+            }
+            $transformationString = implode(',', $parts).'/';
+        }
+
+        $versionPath = $version ? "v{$version}/" : '';
+
+        return "{$scheme}://res.cloudinary.com/{$this->cloudName}/image/upload/{$transformationString}{$versionPath}{$publicId}";
+    }
+
     public function publicUrl(string $path): ?string
     {
         if (empty($this->cloudName)) {
             return null;
         }
 
-        $scheme = $this->secure ? 'https' : 'http';
-
-        return "{$scheme}://res.cloudinary.com/{$this->cloudName}/image/upload/{$path}";
+        return $this->buildTransformationUrl($path);
     }
 
     public function publicId(string $collection, string $mediaUuid, string $variantName): string
@@ -182,7 +204,7 @@ class CloudinaryMediaDeliveryProvider implements MediaStorageProvider
         }
     }
 
-    protected function upload(string $contents, string $publicId, string $mimeType): Response
+    protected function upload(string $contents, string $publicId, string $mimeType, array $options = []): Response
     {
         $timestamp = time();
         $params = [
@@ -190,6 +212,19 @@ class CloudinaryMediaDeliveryProvider implements MediaStorageProvider
             'public_id' => $publicId,
             'timestamp' => $timestamp,
         ];
+
+        if (isset($options['invalidate'])) {
+            $params['invalidate'] = $options['invalidate'] ? 'true' : 'false';
+        }
+        if (isset($options['folder'])) {
+            $params['folder'] = $options['folder'];
+        }
+        if (isset($options['overwrite'])) {
+            $params['overwrite'] = $options['overwrite'] ? 'true' : 'false';
+        }
+        if (isset($options['public_id'])) {
+            $params['public_id'] = $options['public_id'];
+        }
 
         return Http::timeout(20)->asMultipart()->post(
             "https://api.cloudinary.com/v1_1/{$this->cloudName}/image/upload",

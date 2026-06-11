@@ -212,12 +212,17 @@
                 
                 {{-- Polymorphic Media Grid --}}
                 @if ($mediaCount > 0)
+                    @php
+                        $lightboxImages = $mediaItems->map(function ($item) use ($mediaUrlAction, $currentUser) {
+                            return $mediaUrlAction->execute($item, 'detail', $currentUser) ?? $mediaUrlAction->execute($item, 'original', $currentUser);
+                        })->values()->toJson();
+                    @endphp
                     <div class="mt-2.5 w-full max-w-lg select-none mr-auto">
                         @if ($mediaCount === 1)
                             {{-- 1 image: full width, smart ratio --}}
                             @php($dimensions = $mediaDimensions($mediaItems[0]))
                             <div class="ue-media-frame">
-                                <a href="{{ $mediaUrlAction->execute($mediaItems[0], 'detail', $currentUser) ?? $mediaUrlAction->execute($mediaItems[0], 'original', $currentUser) }}" target="_blank" rel="noopener noreferrer" class="block">
+                                <a href="#" @click.prevent="window.dispatchEvent(new CustomEvent('open-lightbox', { detail: { images: {!! htmlspecialchars($lightboxImages, ENT_QUOTES, 'UTF-8') !!}, index: 0 } }))" class="block">
                                     <img
                                         src="{{ $mediaUrlAction->execute($mediaItems[0], 'feed', $currentUser) }}"
                                         alt="Hình ảnh đính kèm"
@@ -234,7 +239,7 @@
                             <div class="grid grid-cols-2 gap-2 overflow-hidden rounded-2xl border border-slate-150 bg-slate-50">
                                 @foreach ($mediaItems as $mediaItem)
                                     @php($dimensions = $mediaDimensions($mediaItem))
-                                    <a href="{{ $mediaUrlAction->execute($mediaItem, 'detail', $currentUser) ?? $mediaUrlAction->execute($mediaItem, 'original', $currentUser) }}" target="_blank" rel="noopener noreferrer" class="aspect-[4/3] overflow-hidden block">
+                                    <a href="#" @click.prevent="window.dispatchEvent(new CustomEvent('open-lightbox', { detail: { images: {!! htmlspecialchars($lightboxImages, ENT_QUOTES, 'UTF-8') !!}, index: {{ $loop->index }} } }))" class="aspect-[4/3] overflow-hidden block">
                                         <img 
                                             src="{{ $mediaUrlAction->execute($mediaItem, 'feed', $currentUser) }}" 
                                             alt="Hình ảnh đính kèm" 
@@ -251,7 +256,7 @@
                             {{-- 3 images: one large + two stacked --}}
                             @php($dimensions = $mediaDimensions($mediaItems[0]))
                             <div class="grid grid-cols-3 gap-2 overflow-hidden rounded-2xl border border-slate-150 bg-slate-50">
-                                <a href="{{ $mediaUrlAction->execute($mediaItems[0], 'detail', $currentUser) ?? $mediaUrlAction->execute($mediaItems[0], 'original', $currentUser) }}" target="_blank" rel="noopener noreferrer" class="col-span-2 aspect-[4/3] overflow-hidden block">
+                                <a href="#" @click.prevent="window.dispatchEvent(new CustomEvent('open-lightbox', { detail: { images: {!! htmlspecialchars($lightboxImages, ENT_QUOTES, 'UTF-8') !!}, index: 0 } }))" class="col-span-2 aspect-[4/3] overflow-hidden block">
                                     <img 
                                         src="{{ $mediaUrlAction->execute($mediaItems[0], 'feed', $currentUser) }}" 
                                         alt="Hình ảnh" 
@@ -265,7 +270,7 @@
                                 <div class="grid grid-rows-2 gap-2">
                                     @foreach ($mediaItems->slice(1, 2) as $mediaItem)
                                         @php($dimensions = $mediaDimensions($mediaItem))
-                                        <a href="{{ $mediaUrlAction->execute($mediaItem, 'detail', $currentUser) ?? $mediaUrlAction->execute($mediaItem, 'original', $currentUser) }}" target="_blank" rel="noopener noreferrer" class="aspect-square overflow-hidden block">
+                                        <a href="#" @click.prevent="window.dispatchEvent(new CustomEvent('open-lightbox', { detail: { images: {!! htmlspecialchars($lightboxImages, ENT_QUOTES, 'UTF-8') !!}, index: {{ $loop->index }} } }))" class="aspect-square overflow-hidden block">
                                             <img 
                                                 src="{{ $mediaUrlAction->execute($mediaItem, 'feed', $currentUser) }}" 
                                                 alt="Hình ảnh" 
@@ -284,15 +289,13 @@
                             <div class="grid grid-cols-2 gap-2 overflow-hidden rounded-2xl border border-slate-150 bg-slate-50">
                                 @foreach ($mediaItems->take(4) as $mediaItem)
                                     @php($dimensions = $mediaDimensions($mediaItem))
-                                    <a href="{{ $mediaUrlAction->execute($mediaItem, 'detail', $currentUser) ?? $mediaUrlAction->execute($mediaItem, 'original', $currentUser) }}" target="_blank" rel="noopener noreferrer" class="aspect-[4/3] overflow-hidden block">
+                                    <a href="#" @click.prevent="window.dispatchEvent(new CustomEvent('open-lightbox', { detail: { images: {!! htmlspecialchars($lightboxImages, ENT_QUOTES, 'UTF-8') !!}, index: {{ $loop->index }} } }))" class="aspect-[4/3] overflow-hidden block">
                                         <img 
                                             src="{{ $mediaUrlAction->execute($mediaItem, 'feed', $currentUser) }}" 
                                             alt="Hình ảnh" 
                                             class="w-full h-full object-cover hover:scale-[1.02] transition-transform duration-300 cursor-zoom-in"
                                             loading="lazy"
                                             decoding="async"
-                                            @if($dimensions['width']) width="{{ $dimensions['width'] }}" @endif
-                                            @if($dimensions['height']) height="{{ $dimensions['height'] }}" @endif
                                         />
                                     </a>
                                 @endforeach
@@ -302,7 +305,7 @@
                 @elseif (!empty($post->media_url))
                     <div class="mt-2.5 w-full max-w-lg select-none mr-auto">
                         <div class="ue-media-frame">
-                            <a href="{{ $post->media_url }}" target="_blank" rel="noopener noreferrer" class="block">
+                            <a href="#" @click.prevent="window.dispatchEvent(new CustomEvent('open-lightbox', { detail: { images: ['{{ $post->media_url }}'], index: 0 } }))" class="block">
                                 <img
                                     src="{{ $post->media_url }}"
                                     alt="Hình ảnh đính kèm"

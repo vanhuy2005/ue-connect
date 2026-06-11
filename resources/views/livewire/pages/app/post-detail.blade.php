@@ -957,11 +957,16 @@ new #[Layout('layouts.app')] class extends Component
                                 <div class="ue-post-card__content mt-2 text-slate-800 text-sm sm:text-base whitespace-pre-wrap leading-relaxed">{{ $post->body }}</div>
                                 {{-- Polymorphic Media Grid --}}
                                 @if ($mediaCount > 0)
+                                    @php
+                                        $lightboxImages = $mediaItems->map(function ($item) use ($mediaUrlAction, $currentUser) {
+                                            return $mediaUrlAction->execute($item, 'detail', $currentUser) ?? $mediaUrlAction->execute($item, 'original', $currentUser);
+                                        })->values()->toJson();
+                                    @endphp
                                     <div class="mt-3 w-full max-w-lg select-none mr-auto">
                                         @if ($mediaCount === 1)
                                             {{-- 1 image: full width, smart ratio --}}
                                             <div class="ue-media-frame">
-                                                <a href="{{ $mediaUrlAction->execute($mediaItems[0], 'detail', $currentUser) ?? $mediaUrlAction->execute($mediaItems[0], 'original', $currentUser) }}" target="_blank" rel="noopener noreferrer" class="block">
+                                                <a href="#" @click.prevent="window.dispatchEvent(new CustomEvent('open-lightbox', { detail: { images: {!! htmlspecialchars($lightboxImages, ENT_QUOTES, 'UTF-8') !!}, index: 0 } }))" class="block">
                                                     <img
                                                         src="{{ $mediaUrlAction->execute($mediaItems[0], 'feed', $currentUser) }}"
                                                         alt="Hình ảnh đính kèm"
@@ -974,7 +979,7 @@ new #[Layout('layouts.app')] class extends Component
                                             {{-- 2 images: two columns --}}
                                             <div class="grid grid-cols-2 gap-2 overflow-hidden rounded-2xl border border-slate-150 bg-slate-50">
                                                 @foreach ($mediaItems as $mediaItem)
-                                                    <a href="{{ $mediaUrlAction->execute($mediaItem, 'detail', $currentUser) ?? $mediaUrlAction->execute($mediaItem, 'original', $currentUser) }}" target="_blank" rel="noopener noreferrer" class="aspect-[4/3] overflow-hidden block">
+                                                    <a href="#" @click.prevent="window.dispatchEvent(new CustomEvent('open-lightbox', { detail: { images: {!! htmlspecialchars($lightboxImages, ENT_QUOTES, 'UTF-8') !!}, index: {{ $loop->index }} } }))" class="aspect-[4/3] overflow-hidden block">
                                                         <img 
                                                             src="{{ $mediaUrlAction->execute($mediaItem, 'feed', $currentUser) }}" 
                                                             alt="Hình ảnh đính kèm" 
@@ -987,7 +992,7 @@ new #[Layout('layouts.app')] class extends Component
                                         @elseif ($mediaCount === 3)
                                             {{-- 3 images: one large + two stacked --}}
                                             <div class="grid grid-cols-3 gap-2 overflow-hidden rounded-2xl border border-slate-150 bg-slate-50">
-                                                <a href="{{ $mediaUrlAction->execute($mediaItems[0], 'detail', $currentUser) ?? $mediaUrlAction->execute($mediaItems[0], 'original', $currentUser) }}" target="_blank" rel="noopener noreferrer" class="col-span-2 aspect-[4/3] overflow-hidden block">
+                                                <a href="#" @click.prevent="window.dispatchEvent(new CustomEvent('open-lightbox', { detail: { images: {!! htmlspecialchars($lightboxImages, ENT_QUOTES, 'UTF-8') !!}, index: 0 } }))" class="col-span-2 aspect-[4/3] overflow-hidden block">
                                                     <img 
                                                         src="{{ $mediaUrlAction->execute($mediaItems[0], 'feed', $currentUser) }}" 
                                                         alt="Hình ảnh" 
@@ -997,7 +1002,7 @@ new #[Layout('layouts.app')] class extends Component
                                                 </a>
                                                 <div class="grid grid-rows-2 gap-2">
                                                     @foreach ($mediaItems->slice(1, 2) as $mediaItem)
-                                                        <a href="{{ $mediaUrlAction->execute($mediaItem, 'detail', $currentUser) ?? $mediaUrlAction->execute($mediaItem, 'original', $currentUser) }}" target="_blank" rel="noopener noreferrer" class="aspect-square overflow-hidden block">
+                                                        <a href="#" @click.prevent="window.dispatchEvent(new CustomEvent('open-lightbox', { detail: { images: {!! htmlspecialchars($lightboxImages, ENT_QUOTES, 'UTF-8') !!}, index: {{ $loop->index }} } }))" class="aspect-square overflow-hidden block">
                                                             <img 
                                                                 src="{{ $mediaUrlAction->execute($mediaItem, 'feed', $currentUser) }}" 
                                                                 alt="Hình ảnh" 
@@ -1012,7 +1017,7 @@ new #[Layout('layouts.app')] class extends Component
                                             {{-- 4 images: 2x2 grid --}}
                                             <div class="grid grid-cols-2 gap-2 overflow-hidden rounded-2xl border border-slate-150 bg-slate-50">
                                                 @foreach ($mediaItems->take(4) as $mediaItem)
-                                                    <a href="{{ $mediaUrlAction->execute($mediaItem, 'detail', $currentUser) ?? $mediaUrlAction->execute($mediaItem, 'original', $currentUser) }}" target="_blank" rel="noopener noreferrer" class="aspect-[4/3] overflow-hidden block">
+                                                    <a href="#" @click.prevent="window.dispatchEvent(new CustomEvent('open-lightbox', { detail: { images: {!! htmlspecialchars($lightboxImages, ENT_QUOTES, 'UTF-8') !!}, index: {{ $loop->index }} } }))" class="aspect-[4/3] overflow-hidden block">
                                                         <img 
                                                             src="{{ $mediaUrlAction->execute($mediaItem, 'feed', $currentUser) }}" 
                                                             alt="Hình ảnh" 
@@ -1027,7 +1032,7 @@ new #[Layout('layouts.app')] class extends Component
                                 @elseif ($post->media_url)
                                     <div class="mt-3 w-full max-w-lg select-none mr-auto">
                                         <div class="ue-media-frame">
-                                            <a href="{{ $post->media_url }}" target="_blank" rel="noopener noreferrer" class="block">
+                                            <a href="#" @click.prevent="window.dispatchEvent(new CustomEvent('open-lightbox', { detail: { images: ['{{ $post->media_url }}'], index: 0 } }))" class="block">
                                                 <img src="{{ $post->media_url }}" alt="Media post" class="ue-media-image" />
                                             </a>
                                         </div>

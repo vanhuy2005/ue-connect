@@ -209,12 +209,14 @@ new class extends Component
                 // 1. Store the new avatar media
                 $media = $storeAction->execute(Auth::user(), $this->avatarFile, 'avatar', ['visibility' => 'public']);
 
-                // 2. Attach new avatar to the Profile
-                $attachAction->execute(Auth::user(), $this->user->profile, [$media->id], 'avatar');
+                // 2. Attach new avatar to the Profile if it is different
+                if (!$oldAvatar || $oldAvatar->id !== $media->id) {
+                    $attachAction->execute(Auth::user(), $this->user->profile, [$media->id], 'avatar');
 
-                // 3. Demote old avatar to history instead of deleting it
-                if ($oldAvatar) {
-                    $oldAvatar->update(['collection' => 'avatar_history']);
+                    // 3. Demote old avatar to history instead of deleting it
+                    if ($oldAvatar) {
+                        $oldAvatar->update(['collection' => 'avatar_history']);
+                    }
                 }
 
                 // 4. Optionally create a feed post
@@ -252,7 +254,15 @@ new class extends Component
             });
 
             $this->avatarFile = null;
-            $this->user->load('profile.media.variants');
+            $this->user->refresh();
+            $this->user->load([
+                'profile.media.variants',
+                'profile.studentProfile.faculty',
+                'profile.studentProfile.academicProgram',
+                'profile.alumniProfile',
+                'profile.advisorProfile',
+                'profilePrivacySetting',
+            ]);
             $this->feedbackMessage = 'Cập nhật ảnh đại diện thành công.';
         } catch (ValidationException $e) {
             $this->feedbackMessage = $e->validator->errors()->first();
@@ -284,17 +294,27 @@ new class extends Component
             }
 
             $oldCover = $this->user->profile->cover()->first();
-            if ($oldCover) {
-                $deleteAction->execute($oldCover);
-            }
 
             // Store new temporary media (public visibility)
             $media = $storeAction->execute(Auth::user(), $this->coverFile, 'profile_cover', ['visibility' => 'public']);
 
-            // Attach to the Profile
-            $attachAction->execute(Auth::user(), $this->user->profile, [$media->id], 'profile_cover');
+            // Attach to the Profile if it is different
+            if (!$oldCover || $oldCover->id !== $media->id) {
+                if ($oldCover) {
+                    $deleteAction->execute($oldCover);
+                }
+                $attachAction->execute(Auth::user(), $this->user->profile, [$media->id], 'profile_cover');
+            }
 
-            $this->user->load('profile.media.variants');
+            $this->user->refresh();
+            $this->user->load([
+                'profile.media.variants',
+                'profile.studentProfile.faculty',
+                'profile.studentProfile.academicProgram',
+                'profile.alumniProfile',
+                'profile.advisorProfile',
+                'profilePrivacySetting',
+            ]);
             $this->feedbackMessage = 'Cập nhật ảnh bìa thành công.';
         } catch (ValidationException $e) {
             $this->feedbackMessage = $e->validator->errors()->first();
@@ -2087,7 +2107,7 @@ new class extends Component
 </div>
 
     <!-- Crop Modal -->
-    <div x-data="avatarCropper()">
+    <div x-data="avatarCropper()" wire:ignore>
         <template x-teleport="body">
             <div
                 x-on:avatar-selected.window="handleFileSelect($event.detail.files)"
@@ -2195,8 +2215,21 @@ new class extends Component
                 </div>
 
                 <!-- Crop Preview Area -->
-                <div class="relative w-full h-64 sm:h-80 bg-slate-50 flex items-center justify-center overflow-hidden rounded-2xl border border-slate-100 shadow-inner">
+                <div class="relative w-full h-64 sm:h-80 bg-slate-50 flex items-center justify-center overflow-hidden rounded-2xl border border-slate-100 shadow-inner" wire:ignore>
                     <img x-ref="cropImage" :src="imageSrc" class="max-w-full max-h-full" alt="Avatar Crop Target" />
+
+                    <!-- Loading overlay overlaying the cropper during upload -->
+                    <div
+                        x-show="isUploading"
+                        class="absolute inset-0 bg-slate-900/60 backdrop-blur-xs flex flex-col items-center justify-center text-white z-10 transition-opacity"
+                        style="display: none;"
+                    >
+                        <svg class="animate-spin h-8 w-8 text-white mb-2" fill="none" viewBox="0 0 24 24">
+                            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                        </svg>
+                        <span class="text-xs font-bold">Đang tải lên (<span x-text="uploadProgress"></span>%)</span>
+                    </div>
                 </div>
 
                 <!-- Zoom Slider Control -->

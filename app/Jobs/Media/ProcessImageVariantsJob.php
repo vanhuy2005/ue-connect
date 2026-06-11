@@ -12,7 +12,6 @@ use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
 use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\SerializesModels;
-use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
 use RuntimeException;
@@ -64,6 +63,66 @@ class ProcessImageVariantsJob implements ShouldQueue
                 $outputFormat = 'jpeg';
             }
 
+            // --- Single Cloudinary Upload Logic ---
+            $cloudinaryResult = null;
+            $cloudinaryError = null;
+
+            if ($syncCloudinary) {
+                if ($quota->disableCloudinaryWhenLimitReached() && ! $quota->canSyncCloudinary()) {
+                    $cloudinaryError = [
+                        'cloudinary_sync_status' => 'skipped',
+                        'cloudinary_error_code' => $quota->cloudinaryLimitReason(),
+                        'cloudinary_error_message' => 'Cloudinary daily sync limit reached; using R2 fallback.',
+                    ];
+                } else {
+                    $isProfileImage = in_array($this->media->collection, ['avatar', 'community_avatar']);
+                    if ($isProfileImage) {
+                        $publicId = 'avatars/user_'.$this->media->user_id;
+                        $options = [
+                            'folder' => 'avatars',
+                            'public_id' => 'user_'.$this->media->user_id,
+                            'overwrite' => true,
+                            'invalidate' => true,
+                        ];
+                    } else {
+                        $publicId = $deliveryProvider->publicId($this->media->collection, $this->media->uuid, 'display');
+                        $options = [];
+                    }
+
+                    $hash = md5($contents);
+
+                    Log::info('CLOUDINARY_UPLOAD_CALL', [
+                        'user_id' => auth()->id() ?? $this->media->user_id,
+                        'hash' => $hash,
+                    ]);
+
+                    try {
+                        // Upload only the display/original source once to Cloudinary
+                        $result = $deliveryProvider->uploadVariant($publicId, $contents, $this->media->mime_type, $options);
+
+                        Log::info('CLOUDINARY_UPLOAD_SUCCESS', [
+                            'user_id' => auth()->id() ?? $this->media->user_id,
+                            'public_id' => $result['public_id'] ?? $publicId,
+                            'url' => $result['secure_url'] ?? null,
+                        ]);
+
+                        $cloudinaryResult = $result;
+                    } catch (\Throwable $e) {
+                        Log::warning('Cloudinary sync failed', [
+                            'media_id' => $this->media->id,
+                            'collection' => $this->media->collection,
+                            'message' => str($e->getMessage())->limit(240)->toString(),
+                        ]);
+
+                        $cloudinaryError = [
+                            'cloudinary_sync_status' => 'failed',
+                            'cloudinary_error_code' => 'upload_failed',
+                            'cloudinary_error_message' => str($e->getMessage())->limit(240)->toString(),
+                        ];
+                    }
+                }
+            }
+
             $processedVariants = [];
 
             foreach ($variantSpecs as $name => $spec) {
@@ -89,19 +148,43 @@ class ProcessImageVariantsJob implements ShouldQueue
 
                 $variantPath = "{$this->media->collection}s/{$this->media->user_id}/{$this->media->uuid}/{$name}.{$ext}";
                 $storedVariant = $primaryProvider->put($variantPath, $variantContents);
+
                 $cloudinaryData = [
                     'cloudinary_sync_status' => $syncCloudinary ? 'pending' : 'skipped',
                 ];
 
-                if ($syncCloudinary && $quota->disableCloudinaryWhenLimitReached() && ! $quota->canSyncCloudinary()) {
-                    $cloudinaryData = [
-                        'cloudinary_sync_status' => 'skipped',
-                        'cloudinary_public_id' => $deliveryProvider->publicId($this->media->collection, $this->media->uuid, $name),
-                        'cloudinary_error_code' => $quota->cloudinaryLimitReason(),
-                        'cloudinary_error_message' => 'Cloudinary daily sync limit reached; using R2 fallback.',
-                    ];
-                } elseif ($syncCloudinary) {
-                    $cloudinaryData = $this->syncVariantToCloudinary($deliveryProvider, $name, $variantContents, $mimeType);
+                if ($syncCloudinary) {
+                    if ($cloudinaryError) {
+                        $cloudinaryData = $cloudinaryError + [
+                            'cloudinary_public_id' => $deliveryProvider->publicId($this->media->collection, $this->media->uuid, $name),
+                        ];
+                    } elseif ($cloudinaryResult) {
+                        // Derive URL using transformation from single public_id
+                        $transformations = $this->getCloudinaryTransformations($spec);
+                        $derivedUrl = $deliveryProvider->buildTransformationUrl(
+                            $cloudinaryResult['public_id'],
+                            $transformations,
+                            $cloudinaryResult['version']
+                        );
+
+                        Log::info('VARIANT_URL_GENERATED', [
+                            'variant' => $name,
+                            'url' => $derivedUrl,
+                        ]);
+
+                        $cloudinaryData = [
+                            'cloudinary_public_id' => $cloudinaryResult['public_id'],
+                            'cloudinary_version' => $cloudinaryResult['version'],
+                            'cloudinary_secure_url' => $derivedUrl,
+                            'cloudinary_format' => $cloudinaryResult['format'],
+                            'cloudinary_bytes' => $cloudinaryResult['bytes'],
+                            'cloudinary_resource_type' => $cloudinaryResult['resource_type'],
+                            'cloudinary_synced_at' => now(),
+                            'cloudinary_sync_status' => 'synced',
+                            'cloudinary_error_code' => null,
+                            'cloudinary_error_message' => null,
+                        ];
+                    }
                 }
 
                 $processedVariants[$name] = [
@@ -123,7 +206,7 @@ class ProcessImageVariantsJob implements ShouldQueue
                 MediaVariant::create($variantData + ['media_id' => $this->media->id]);
             }
 
-            $deliveryUrl = null;
+            $deliveryUrl = $cloudinaryResult['secure_url'] ?? null;
 
             $finalPath = $this->media->primary_path;
             $finalDisk = $this->media->primary_disk;
@@ -173,6 +256,10 @@ class ProcessImageVariantsJob implements ShouldQueue
                 'extension' => $newExt,
                 'mime_type' => $newMime,
             ]);
+
+            Log::info('IMAGE_DB_UPDATED', [
+                'user_id' => $this->media->user_id,
+            ]);
         } catch (\Throwable $e) {
             Log::error('Error processing media variants: '.$e->getMessage(), [
                 'media_id' => $this->media->id,
@@ -193,8 +280,8 @@ class ProcessImageVariantsJob implements ShouldQueue
     {
         return match ($collection) {
             'avatar', 'community_avatar' => [
-                'thumb' => ['w' => 96, 'h' => 96, 'crop' => true],
                 'display' => ['w' => 320, 'h' => 320, 'crop' => true],
+                'thumb' => ['w' => 96, 'h' => 96, 'crop' => true],
             ],
             'profile_cover', 'community_cover' => [
                 'mobile' => ['w' => 800, 'h' => 300, 'crop' => true],
@@ -248,53 +335,25 @@ class ProcessImageVariantsJob implements ShouldQueue
     }
 
     /**
-     * @return array{
-     *     cloudinary_public_id?: string,
-     *     cloudinary_version?: int|null,
-     *     cloudinary_secure_url?: string|null,
-     *     cloudinary_format?: string|null,
-     *     cloudinary_bytes?: int|null,
-     *     cloudinary_resource_type?: string|null,
-     *     cloudinary_synced_at?: Carbon,
-     *     cloudinary_sync_status: string,
-     *     cloudinary_error_code?: string|null,
-     *     cloudinary_error_message?: string|null
-     * }
+     * Generate transformation instructions for Cloudinary variants.
+     *
+     * @param  array{w: int, h: int, crop?: bool}  $spec
      */
-    protected function syncVariantToCloudinary(CloudinaryMediaDeliveryProvider $provider, string $variantName, string $contents, string $mimeType): array
+    protected function getCloudinaryTransformations(array $spec): array
     {
-        $publicId = $provider->publicId($this->media->collection, $this->media->uuid, $variantName);
+        $w = $spec['w'];
+        $h = $spec['h'];
+        $crop = $spec['crop'] ?? false;
 
-        try {
-            $result = $provider->uploadVariant($publicId, $contents, $mimeType);
-
-            return [
-                'cloudinary_public_id' => $result['public_id'],
-                'cloudinary_version' => $result['version'],
-                'cloudinary_secure_url' => $result['secure_url'],
-                'cloudinary_format' => $result['format'],
-                'cloudinary_bytes' => $result['bytes'],
-                'cloudinary_resource_type' => $result['resource_type'],
-                'cloudinary_synced_at' => now(),
-                'cloudinary_sync_status' => 'synced',
-                'cloudinary_error_code' => null,
-                'cloudinary_error_message' => null,
-            ];
-        } catch (\Throwable $e) {
-            Log::warning('Cloudinary variant sync failed', [
-                'media_id' => $this->media->id,
-                'collection' => $this->media->collection,
-                'variant' => $variantName,
-                'message' => str($e->getMessage())->limit(240)->toString(),
-            ]);
-
-            return [
-                'cloudinary_public_id' => $publicId,
-                'cloudinary_synced_at' => null,
-                'cloudinary_sync_status' => 'failed',
-                'cloudinary_error_code' => 'upload_failed',
-                'cloudinary_error_message' => str($e->getMessage())->limit(240)->toString(),
-            ];
+        $transformations = [];
+        if ($crop) {
+            $transformations['c'] = 'fill';
+        } else {
+            $transformations['c'] = 'limit';
         }
+        $transformations['w'] = $w;
+        $transformations['h'] = $h;
+
+        return $transformations;
     }
 }

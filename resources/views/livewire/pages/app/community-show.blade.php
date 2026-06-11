@@ -1179,15 +1179,17 @@ new class extends Component
             }
 
             $oldCover = $this->community->cover()->first();
-            if ($oldCover) {
-                $deleteAction->execute($oldCover);
-            }
 
             // Store new temporary media (public visibility)
             $media = $storeAction->execute(auth()->user(), $this->coverFile, 'community_cover', ['visibility' => 'public']);
 
-            // Attach to the Community model
-            $attachAction->execute(auth()->user(), $this->community, [$media->id], 'community_cover');
+            // Attach to the Community model if it is different
+            if (!$oldCover || $oldCover->id !== $media->id) {
+                if ($oldCover) {
+                    $deleteAction->execute($oldCover);
+                }
+                $attachAction->execute(auth()->user(), $this->community, [$media->id], 'community_cover');
+            }
 
             $this->community->load('media');
             $this->dispatch('notify', type: 'success', message: 'Cập nhật ảnh bìa cộng đồng thành công.');
@@ -1219,15 +1221,17 @@ new class extends Component
             }
 
             $oldAvatar = $this->community->avatar()->first();
-            if ($oldAvatar) {
-                $deleteAction->execute($oldAvatar);
-            }
 
             // Store new temporary media (public visibility)
             $media = $storeAction->execute(auth()->user(), $this->avatarFile, 'community_avatar', ['visibility' => 'public']);
 
-            // Attach to the Community model
-            $attachAction->execute(auth()->user(), $this->community, [$media->id], 'community_avatar');
+            // Attach to the Community model if it is different
+            if (!$oldAvatar || $oldAvatar->id !== $media->id) {
+                if ($oldAvatar) {
+                    $deleteAction->execute($oldAvatar);
+                }
+                $attachAction->execute(auth()->user(), $this->community, [$media->id], 'community_avatar');
+            }
 
             $this->community->load('media');
             $this->dispatch('notify', type: 'success', message: 'Cập nhật ảnh đại diện cộng đồng thành công.');

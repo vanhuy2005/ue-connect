@@ -1522,7 +1522,7 @@ new #[Layout('layouts.app')] class extends Component
                                     @if ($imageUrl)
                                         <div class="flex flex-col gap-2">
                                             <div class="rounded-2xl overflow-hidden border border-slate-150 max-w-[280px] bg-slate-100 shadow-2xs flex items-center justify-center">
-                                                <a href="{{ $originalUrl ?? $imageUrl }}" target="_blank" class="block cursor-zoom-in w-full h-full">
+                                                <a href="#" @click.prevent="window.dispatchEvent(new CustomEvent('open-lightbox', { detail: { images: ['{{ $originalUrl ?? $imageUrl }}'], index: 0 } }))" class="block cursor-zoom-in w-full h-full">
                                                     <img
                                                         src="{{ $imageUrl }}"
                                                         alt="Attachment"
