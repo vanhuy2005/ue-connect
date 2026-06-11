@@ -787,35 +787,43 @@ new #[Layout('layouts.app')] class extends Component
                                     @endif
 
                                     {{-- Post Type Badge --}}
-                                    @if ($post->post_type && $post->post_type !== PostType::STANDARD)
+                                    @php
+                                        $tags = $post->tags ?? [];
+                                        if (empty($tags)) {
+                                            if ($post->post_type && $post->post_type !== PostType::STANDARD) {
+                                                if ($post->post_type === PostType::EXPERIENCE || $post->post_type === PostType::CAREER_INSIGHT) {
+                                                    $tags[] = 'experience';
+                                                } elseif ($post->post_type === PostType::OPPORTUNITY) {
+                                                    $tags[] = 'opportunity';
+                                                    if ($post->opportunity?->category === 'pedagogy') {
+                                                        $tags[] = 'pedagogy';
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    @endphp
+
+                                    @if (! empty($tags) || ($post->post_type === PostType::OPPORTUNITY && ($post->opportunity?->is_expired || $post->moderation_status !== ModerationStatus::NONE)))
                                         <div class="mt-1.5 flex items-center gap-2 flex-wrap">
-                                            @if ($post->post_type === PostType::OPPORTUNITY)
-                                                <x-ui.badge
-                                                    variant="warning"
-                                                    size="sm"
-                                                    no-icon
-                                                >
-                                                    Cơ hội
-                                                </x-ui.badge>
-                                                @if ($post->opportunity?->category === 'pedagogy')
-                                                    <x-ui.badge variant="warning" size="sm" no-icon>Sư phạm</x-ui.badge>
+                                            @foreach ($tags as $tag)
+                                                @if ($tag === 'experience')
+                                                    <x-ui.badge variant="experience" size="sm" no-icon>Kinh nghiệm</x-ui.badge>
+                                                @elseif ($tag === 'opportunity')
+                                                    <x-ui.badge variant="opportunity" size="sm" no-icon>Cơ hội</x-ui.badge>
+                                                @elseif ($tag === 'pedagogy')
+                                                    <x-ui.badge variant="pedagogy" size="sm" no-icon>Sư phạm</x-ui.badge>
                                                 @endif
+                                            @endforeach
+
+                                            @if ($post->post_type === PostType::OPPORTUNITY)
                                                 @if ($post->opportunity?->is_expired)
                                                     <x-ui.badge variant="danger" size="sm" no-icon>Đã hết hạn</x-ui.badge>
                                                 @endif
                                                 @if ($post->moderation_status === ModerationStatus::PENDING)
-                                                    <x-ui.badge variant="pending" size="sm" no-icon>
-                                                        Chờ duyệt
-                                                    </x-ui.badge>
+                                                    <x-ui.badge variant="pending" size="sm" no-icon>Chờ duyệt</x-ui.badge>
                                                 @elseif ($post->moderation_status === ModerationStatus::REJECTED)
-                                                    <x-ui.badge variant="danger" size="sm" no-icon>
-                                                        Đã từ chối
-                                                    </x-ui.badge>
+                                                    <x-ui.badge variant="danger" size="sm" no-icon>Đã từ chối</x-ui.badge>
                                                 @endif
-                                            @elseif ($post->post_type === PostType::EXPERIENCE)
-                                                <x-ui.badge variant="experience" size="sm" no-icon>Chia sẻ kinh nghiệm</x-ui.badge>
-                                            @elseif ($post->post_type === PostType::CAREER_INSIGHT)
-                                                <x-ui.badge variant="career-insight" size="sm" no-icon>Kinh nghiệm nghề nghiệp</x-ui.badge>
                                             @endif
                                         </div>
                                     @endif
@@ -914,13 +922,13 @@ new #[Layout('layouts.app')] class extends Component
                                     @enderror
 
                                     @if ($post->post_type === PostType::OPPORTUNITY)
-                                        <div class="border border-amber-200 rounded-lg p-3 space-y-2.5 bg-white">
+                                        <div class="border border-blue-200 bg-blue-50/40 rounded-lg p-3 space-y-2.5">
                                             <div class="flex items-center gap-2 text-slate-705">
                                                 <input
                                                     type="checkbox"
                                                     id="edit-opp-is-pedagogy"
                                                     wire:model="editingOppIsPedagogy"
-                                                    class="rounded border-slate-300 text-amber-600 focus:ring-amber-200 focus:ring-2"
+                                                    class="rounded border-blue-300 text-ue-brand focus:ring-ue-brand/20 focus:ring-2"
                                                 />
                                                 <label for="edit-opp-is-pedagogy" class="text-xs font-bold text-slate-700 cursor-pointer select-none">
                                                     Đây là cơ hội thuộc khối ngành Sư phạm
@@ -1227,7 +1235,7 @@ new #[Layout('layouts.app')] class extends Component
                                                 @click="insertMention(user)"
                                                 @mouseenter="selectedIndex = index"
                                                 class="w-full text-left px-4 py-2 flex items-center gap-3 transition-colors"
-                                                :class="selectedIndex === index ? 'bg-slate-50 text-ue-brand' : 'text-slate-700'"
+                                                x-bind:class="selectedIndex === index ? 'bg-slate-50 text-ue-brand' : 'text-slate-700'"
                                             >
                                                 <img :src="user.avatar_url || 'https://www.gravatar.com/avatar/' + user.id + '?d=mp&s=100'" class="w-6 h-6 rounded-full object-cover border border-slate-100" />
                                                 <div class="flex-1 min-w-0">

@@ -100,10 +100,10 @@ new #[Layout('layouts.app', ['shell' => 'admin'])] class extends Component {
                 @if ($opp)
                     <div class="bg-slate-50 rounded-xl p-4 border border-slate-100 space-y-3">
                         <div class="text-xs">
-                            <span class="text-slate-400 block mb-0.5">Danh mục</span>
-                            <span class="text-slate-800 font-bold">
-                                {{ $opp->category === 'pedagogy' ? 'Sư phạm' : ($opp->category === 'non_pedagogy' ? 'Ngoài sư phạm' : 'Khác') }}
-                            </span>
+                            <span class="text-slate-400 block mb-1">Nhãn bài viết</span>
+                            <div class="flex flex-wrap gap-1 mt-1">
+                                <span class="text-slate-800 font-bold">Cơ hội</span>
+                            </div>
                         </div>
                     </div>
                 @else

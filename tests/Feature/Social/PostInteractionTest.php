@@ -21,7 +21,6 @@ use App\Models\UserFollow;
 use Database\Seeders\Reference\AccessControlReferenceSeeder;
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Foundation\Testing\RefreshDatabase;
-use Illuminate\Validation\ValidationException;
 use Livewire\Volt\Volt;
 use Tests\TestCase;
 
@@ -728,17 +727,18 @@ class PostInteractionTest extends TestCase
             ->assertDontSee('Hidden repost on profile.');
     }
 
-    public function test_student_cannot_create_non_standard_posts_via_action(): void
+    public function test_student_can_create_non_standard_posts_via_action(): void
     {
         $action = resolve(CreatePost::class);
 
-        $this->expectException(ValidationException::class);
-
-        $action->execute($this->user, [
+        $post = $action->execute($this->user, [
             'body' => 'Checking student restriction',
             'visibility' => 'verified_users',
             'post_type' => PostType::EXPERIENCE->value,
         ]);
+
+        $this->assertInstanceOf(Post::class, $post);
+        $this->assertEquals(PostType::EXPERIENCE, $post->post_type);
     }
 
     public function test_alumni_and_teacher_can_create_non_standard_posts_via_action(): void
@@ -785,15 +785,21 @@ class PostInteractionTest extends TestCase
         $this->assertEquals(PostType::CAREER_INSIGHT, $post2->post_type);
     }
 
-    public function test_student_cannot_create_non_standard_posts_via_component(): void
+    public function test_student_can_create_non_standard_posts_via_component(): void
     {
         $this->actingAs($this->user);
 
         Volt::test('pages.app.home-feed')
             ->set('body', 'Student attempting to post experience')
-            ->set('postType', PostType::EXPERIENCE->value)
+            ->set('selectedTags', [PostType::EXPERIENCE->value])
             ->call('submitPost')
-            ->assertHasErrors(['post_type']);
+            ->assertHasNoErrors();
+
+        $this->assertDatabaseHas('posts', [
+            'user_id' => $this->user->id,
+            'body' => 'Student attempting to post experience',
+            'post_type' => PostType::EXPERIENCE->value,
+        ]);
     }
 
     public function test_alumni_can_create_non_standard_posts_via_component(): void
@@ -812,7 +818,7 @@ class PostInteractionTest extends TestCase
 
         Volt::test('pages.app.home-feed')
             ->set('body', 'Alumni sharing experience via component')
-            ->set('postType', PostType::EXPERIENCE->value)
+            ->set('selectedTags', [PostType::EXPERIENCE->value])
             ->call('submitPost')
             ->assertHasNoErrors();
 
@@ -821,6 +827,38 @@ class PostInteractionTest extends TestCase
             'body' => 'Alumni sharing experience via component',
             'post_type' => PostType::EXPERIENCE->value,
         ]);
+    }
+
+    public function test_user_can_create_post_with_multiple_tags_via_component(): void
+    {
+        $alumni = User::factory()->create([
+            'account_status' => AccountStatus::ACTIVE,
+        ]);
+        $alumni->assignRole('alumni');
+        $alumni->profile()->create([
+            'display_name' => 'Alumni User Multi-tag',
+            'role_type' => 'alumni',
+            'profile_status' => 'complete',
+        ]);
+
+        $this->actingAs($alumni);
+
+        Volt::test('pages.app.home-feed')
+            ->set('body', 'Alumni multi-tag post')
+            ->set('selectedTags', ['opportunity', 'pedagogy'])
+            ->call('submitPost')
+            ->assertHasNoErrors();
+
+        $this->assertDatabaseHas('posts', [
+            'user_id' => $alumni->id,
+            'body' => 'Alumni multi-tag post',
+            'post_type' => PostType::OPPORTUNITY->value,
+        ]);
+
+        $post = Post::where('body', 'Alumni multi-tag post')->first();
+        $this->assertNotNull($post);
+        $this->assertContains('opportunity', $post->tags);
+        $this->assertContains('pedagogy', $post->tags);
     }
 
     public function test_home_feed_can_filter_posts_by_type(): void
@@ -859,12 +897,8 @@ class PostInteractionTest extends TestCase
             ->call('setTypeFilter', 'experience')
             ->assertSet('activeTypeFilter', 'experience')
             ->assertSee('Experience post to filter.')
-            ->assertDontSee('Career Insight post to filter.')
-            ->call('setTypeFilter', 'career_insight')
-            ->assertSet('activeTypeFilter', 'career_insight')
             ->assertSee('Career Insight post to filter.')
-            ->assertDontSee('Experience post to filter.')
-            ->call('setTypeFilter', 'career_insight')
+            ->call('setTypeFilter', 'experience')
             ->assertSet('activeTypeFilter', 'all')
             ->assertSee('Experience post to filter.')
             ->assertSee('Career Insight post to filter.');
@@ -882,8 +916,8 @@ class PostInteractionTest extends TestCase
             ->call('setFeedTab', 'following')
             ->assertSet('activeFeedTab', 'following')
             ->assertSet('activeTypeFilter', 'all')
-            ->call('setTypeFilter', 'career_insight')
-            ->assertSet('activeTypeFilter', 'career_insight')
+            ->call('setTypeFilter', 'opportunity')
+            ->assertSet('activeTypeFilter', 'opportunity')
             ->call('setFeedTab', 'for_you')
             ->assertSet('activeFeedTab', 'for_you')
             ->assertSet('activeTypeFilter', 'all');

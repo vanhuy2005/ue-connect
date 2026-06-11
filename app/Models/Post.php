@@ -41,6 +41,7 @@ class Post extends Model
         'moderation_status',
         'edited_at',
         'published_at',
+        'tags',
     ];
 
     /**
@@ -60,6 +61,7 @@ class Post extends Model
             'edited_at' => 'datetime',
             'published_at' => 'datetime',
             'pinned_at' => 'datetime',
+            'tags' => 'array',
         ];
     }
 

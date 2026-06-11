@@ -23,13 +23,10 @@ class MentorFeedbackSubmittedNotification extends Notification
         return [
             'type' => 'mentor_feedback_submitted',
             'mentor_feedback_id' => $this->feedback->id,
-            'mentor_request_id' => $this->feedback->mentor_request_id,
-            'student_id' => $this->feedback->student_id,
-            'student_name' => $this->feedback->student->name,
             'helpfulness_level' => $this->feedback->helpfulness_level->value,
             'title' => 'Bạn có phản hồi cố vấn mới',
-            'body' => $this->feedback->student->name.' đã gửi phản hồi riêng tư cho phiên cố vấn.',
-            'action_url' => route('mentor.requests.show', $this->feedback->mentor_request_id),
+            'body' => 'Một sinh viên đã gửi phản hồi ẩn danh cho phiên cố vấn của bạn.',
+            'action_url' => route('mentor.dashboard'),
         ];
     }
 }

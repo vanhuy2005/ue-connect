@@ -1862,25 +1862,42 @@
 
 .ue-shell__sidebar--collapsed {
     width: var(--layout-sidebar-w-collapsed) !important;
-    padding-left: 14px !important;
-    padding-right: 14px !important;
+    padding-left: 8px !important;
+    padding-right: 8px !important;
 }
 
 .ue-shell__sidebar--collapsed .ue-sidebar-logo-wrapper {
-    padding-left: 6px !important;
+    padding-left: 0 !important;
+    display: flex;
+    justify-content: center;
 }
 
 /* Keep icons aligned and fixed in position inside collapsed sidebar */
 .ue-shell__sidebar--collapsed .ue-nav-link {
-    padding-left: 10px !important;
-    padding-right: 10px !important;
+    padding-left: 8px !important;
+    padding-right: 8px !important;
     border-radius: 50%;
     gap: 0;
+    justify-content: center;
 }
 
 .ue-shell__sidebar--collapsed .ue-nav-link [x-show="!collapsed"],
 .ue-shell__sidebar--collapsed .ue-nav-link > span,
 .ue-shell__sidebar--collapsed .ue-nav-link svg:not(.flex-shrink-0) {
+    display: none !important;
+}
+
+.ue-shell__sidebar--collapsed .ue-admin-nav-link {
+    padding-left: 8px !important;
+    padding-right: 8px !important;
+    border-radius: 50%;
+    gap: 0;
+    justify-content: center;
+}
+
+.ue-shell__sidebar--collapsed .ue-admin-nav-link [x-show="!collapsed"],
+.ue-shell__sidebar--collapsed .ue-admin-nav-link > span,
+.ue-shell__sidebar--collapsed .ue-admin-nav-link svg:not(.flex-shrink-0) {
     display: none !important;
 }
 
@@ -1894,6 +1911,17 @@
 .ue-shell__sidebar--collapsed .ue-sidebar-secondary-section > p {
     opacity: 0 !important;
     pointer-events: none;
+}
+
+.ue-shell__sidebar--collapsed [x-show="!collapsed"] {
+    display: none !important;
+}
+
+/* Bottom account section - center when collapsed */
+.ue-shell__sidebar--collapsed .relative.mt-auto button {
+    padding-left: 8px !important;
+    padding-right: 8px !important;
+    justify-content: center;
 }
 
 /* Sub-navigation links styles (larger typography and premium states) */
@@ -1976,8 +2004,8 @@
     }
 
     .ue-shell--admin .ue-shell__main {
-        margin-left: var(--layout-sidebar-w) !important;
-        width: calc(100% - var(--layout-sidebar-w)) !important;
+        margin-left: var(--layout-sidebar-w-collapsed) !important;
+        width: calc(100% - var(--layout-sidebar-w-collapsed)) !important;
         flex: 1 !important;
     }
 }
