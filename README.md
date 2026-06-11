@@ -41,6 +41,7 @@
   <img src="https://img.shields.io/badge/Spatie-Permissions-EF4444?style=for-the-badge&logo=laravel&logoColor=white" alt="Spatie Permissions">
   <img src="https://img.shields.io/badge/PHPUnit-Testing-6E329D?style=for-the-badge&logo=phpunit&logoColor=white" alt="PHPUnit">
   <img src="https://img.shields.io/badge/Pint-Code%20Style-111827?style=for-the-badge&logo=laravel&logoColor=white" alt="Laravel Pint">
+  <img src="https://img.shields.io/badge/Webpush-Notifications-008080?style=for-the-badge&logo=webpush&logoColor=white" alt="Webpush">
 </p>
 
 ---
@@ -443,6 +444,14 @@ MAIL_MAILER=resend
 RESEND_API_KEY=
 MAIL_FROM_ADDRESS=no-reply@send.ueconnect.io.vn
 MAIL_FROM_NAME="${APP_NAME}"
+```
+
+### Web Push Notifications
+
+```env
+VAPID_SUBJECT=https://ueconnect.io.vn/
+VAPID_PUBLIC_KEY=
+VAPID_PRIVATE_KEY=
 ```
 
 ---

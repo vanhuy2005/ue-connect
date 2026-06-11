@@ -78,7 +78,7 @@ $mobileNavItems = [
                     aria-hidden="true"
                     class="{{ $item['active'] ? 'text-ue-brand' : 'text-current' }}"
                 />
-                <span class="absolute -top-1.5 -right-2 px-1 py-0.5 rounded-full bg-ue-brand text-white text-[8px] font-bold min-w-[14px] text-center leading-none {{ !empty($item['badge']) && $item['badge'] > 0 ? '' : 'hidden' }} js-badge-count-{{ $item['icon'] }}">
+                <span class="absolute -top-1.5 -right-2 px-1 py-0.5 rounded-full bg-red-500 text-white text-[8px] font-bold min-w-[14px] text-center leading-none {{ !empty($item['badge']) && $item['badge'] > 0 ? '' : 'hidden' }} js-badge-count-{{ $item['icon'] }}">
                     {{ $item['badge'] }}
                 </span>
             </div>

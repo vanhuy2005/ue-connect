@@ -57,6 +57,14 @@ new class extends Component
     public bool $moderation_notifications = true;
     public bool $system_notifications = true;
 
+    // Push Preferences Form State
+    public bool $push_messages_enabled = true;
+    public bool $push_greetings_enabled = true;
+    public bool $push_mentor_enabled = true;
+    public bool $push_community_enabled = true;
+    public bool $push_verification_enabled = true;
+    public bool $push_admin_announcements_enabled = true;
+
     // Support Form State
     public string $supportCategory = 'general';
     public string $supportDescription = '';
@@ -113,6 +121,13 @@ new class extends Component
             $this->safety_notifications = $noti->safety_notifications;
             $this->moderation_notifications = $noti->moderation_notifications;
             $this->system_notifications = $noti->system_notifications;
+            
+            $this->push_messages_enabled = $noti->push_messages_enabled ?? true;
+            $this->push_greetings_enabled = $noti->push_greetings_enabled ?? true;
+            $this->push_mentor_enabled = $noti->push_mentor_enabled ?? true;
+            $this->push_community_enabled = $noti->push_community_enabled ?? true;
+            $this->push_verification_enabled = $noti->push_verification_enabled ?? true;
+            $this->push_admin_announcements_enabled = $noti->push_admin_announcements_enabled ?? true;
         }
     }
 
@@ -225,6 +240,13 @@ new class extends Component
                 'safety_notifications' => $this->safety_notifications,
                 'moderation_notifications' => $this->moderation_notifications,
                 'system_notifications' => $this->system_notifications,
+
+                'push_messages_enabled' => $this->push_messages_enabled,
+                'push_greetings_enabled' => $this->push_greetings_enabled,
+                'push_mentor_enabled' => $this->push_mentor_enabled,
+                'push_community_enabled' => $this->push_community_enabled,
+                'push_verification_enabled' => $this->push_verification_enabled,
+                'push_admin_announcements_enabled' => $this->push_admin_announcements_enabled,
             ]);
 
             $this->feedbackMessage = 'Đã cập nhật thông báo thành công.';
@@ -892,14 +914,83 @@ new class extends Component
 
                 {{-- Notifications preferences detail page --}}
                 @elseif ($section === 'notifications')
-                    <div class="space-y-6">
+                    <div class="space-y-6" x-data="webPushManager()">
                         <div>
                             <h2 class="text-sm font-bold text-slate-800">Cấu hình thông báo</h2>
                             <p class="text-xxs text-slate-400 font-medium mt-0.5">Chọn lựa các loại tin nhắn và hoạt động nhận thông báo đẩy.</p>
                         </div>
 
-                        <form wire:submit.prevent="saveNotifications" class="space-y-4">
+                        <form wire:submit.prevent="saveNotifications" class="space-y-6">
+                            
+                            {{-- Browser Push Notifications --}}
                             <div class="bg-white border border-slate-150 rounded-2xl p-5 divide-y divide-slate-100 shadow-2xs">
+                                <h3 class="text-xs font-bold text-slate-800 mb-2 flex justify-between items-center">
+                                    <span>Thông báo Trình duyệt (Push)</span>
+                                    <div class="flex items-center gap-2">
+                                        <button type="button" x-show="isSubscribed" @click="testNotification" class="text-[10px] font-bold text-ue-brand px-2 py-1 bg-ue-brand-soft rounded-lg hover:bg-ue-brand-soft-hover transition-colors" style="display: none;">Thử gửi báo</button>
+                                        <input type="checkbox" id="browser-push-toggle" x-model="isSubscribed" @change="togglePush" class="h-4 w-4 rounded border-slate-200 text-ue-brand focus:ring-ue-brand" />
+                                    </div>
+                                </h3>
+                                
+                                <div class="py-2 text-[11px] text-slate-500 mb-2">
+                                    Nhận thông báo ngay cả khi bạn không mở ứng dụng, giúp bạn không bỏ lỡ thông tin quan trọng.
+                                </div>
+                                
+                                <div x-show="isSubscribed" x-transition class="space-y-0 divide-y divide-slate-50" style="display: none;">
+                                    {{-- Push Messages --}}
+                                    <div class="py-3 flex items-center justify-between gap-4">
+                                        <div class="flex-1 space-y-0.5">
+                                            <label for="push-msg-notif" class="text-xxs font-bold text-slate-800 block">Tin nhắn</label>
+                                            <span class="text-[10px] text-slate-400 block">Thông báo khi có tin nhắn mới.</span>
+                                        </div>
+                                        <input type="checkbox" id="push-msg-notif" wire:model="push_messages_enabled" class="h-4 w-4 rounded border-slate-200 text-ue-brand focus:ring-ue-brand" />
+                                    </div>
+
+                                    {{-- Push Greetings --}}
+                                    <div class="py-3 flex items-center justify-between gap-4">
+                                        <div class="flex-1 space-y-0.5">
+                                            <label for="push-greet-notif" class="text-xxs font-bold text-slate-800 block">Lời chào / Kết nối</label>
+                                            <span class="text-[10px] text-slate-400 block">Thông báo khi có lời mời kết nối bạn bè mới.</span>
+                                        </div>
+                                        <input type="checkbox" id="push-greet-notif" wire:model="push_greetings_enabled" class="h-4 w-4 rounded border-slate-200 text-ue-brand focus:ring-ue-brand" />
+                                    </div>
+
+                                    {{-- Push Mentor --}}
+                                    <div class="py-3 flex items-center justify-between gap-4">
+                                        <div class="flex-1 space-y-0.5">
+                                            <label for="push-mentor-notif" class="text-xxs font-bold text-slate-800 block">Mentor / Cố vấn</label>
+                                            <span class="text-[10px] text-slate-400 block">Yêu cầu hỗ trợ học tập mới hoặc cập nhật.</span>
+                                        </div>
+                                        <input type="checkbox" id="push-mentor-notif" wire:model="push_mentor_enabled" class="h-4 w-4 rounded border-slate-200 text-ue-brand focus:ring-ue-brand" />
+                                    </div>
+
+                                    {{-- Push Community --}}
+                                    <div class="py-3 flex items-center justify-between gap-4">
+                                        <div class="flex-1 space-y-0.5">
+                                            <label for="push-comm-notif" class="text-xxs font-bold text-slate-800 block">Cộng đồng / CLB</label>
+                                            <span class="text-[10px] text-slate-400 block">Hoạt động hoặc yêu cầu tham gia cộng đồng.</span>
+                                        </div>
+                                        <input type="checkbox" id="push-comm-notif" wire:model="push_community_enabled" class="h-4 w-4 rounded border-slate-200 text-ue-brand focus:ring-ue-brand" />
+                                    </div>
+                                    
+                                    <div class="py-3 flex items-center justify-between gap-4 bg-slate-50/50 -mx-5 px-5 select-none">
+                                        <div class="flex-1 space-y-0.5">
+                                            <span class="text-xxs font-bold text-slate-800 block flex items-center gap-1.5">
+                                                Xác thực & Quản trị hệ thống
+                                                <x-ui.icon name="shield-check" size="xs" class="text-slate-400" />
+                                            </span>
+                                            <span class="text-[10px] text-slate-400 block leading-normal">
+                                                Kết quả duyệt học đường, thông báo từ Admin. Luôn được bật.
+                                            </span>
+                                        </div>
+                                        <input type="checkbox" disabled checked class="h-4 w-4 rounded border-slate-200 text-ue-brand focus:ring-ue-brand opacity-60 cursor-not-allowed" />
+                                    </div>
+                                </div>
+                            </div>
+
+                            {{-- In-App Notifications --}}
+                            <div class="bg-white border border-slate-150 rounded-2xl p-5 divide-y divide-slate-100 shadow-2xs">
+                                <h3 class="text-xs font-bold text-slate-800 mb-2">Thông báo trong ứng dụng (In-App)</h3>
                                 
                                 {{-- Message notifications toggle --}}
                                 <div class="py-3 flex items-center justify-between gap-4">
@@ -962,6 +1053,153 @@ new class extends Component
                             </div>
                         </form>
                     </div>
+
+                    <script>
+                        document.addEventListener('alpine:init', () => {
+                            Alpine.data('webPushManager', () => ({
+                                isSubscribed: @entangle('browser_push_enabled'),
+                                isProcessing: false,
+                                vapidPublicKey: '{{ config('webpush.vapid.public_key') }}',
+
+                                async init() {
+                                    if (!('serviceWorker' in navigator) || !('PushManager' in window)) {
+                                        console.warn('Push messaging is not supported.');
+                                        return;
+                                    }
+                                    
+                                    const registration = await navigator.serviceWorker.ready;
+                                    if (registration) {
+                                        const subscription = await registration.pushManager.getSubscription();
+                                        if (subscription && !this.isSubscribed) {
+                                            // Sync state
+                                            this.isSubscribed = true;
+                                        } else if (!subscription && this.isSubscribed) {
+                                            this.isSubscribed = false;
+                                        }
+                                    } else {
+                                        if (this.isSubscribed) {
+                                            this.isSubscribed = false;
+                                        }
+                                    }
+                                },
+
+                                async togglePush() {
+                                    if (this.isProcessing) return;
+                                    this.isProcessing = true;
+                                    
+                                    if (this.isSubscribed) {
+                                        await this.subscribe();
+                                    } else {
+                                        await this.unsubscribe();
+                                    }
+                                    
+                                    this.isProcessing = false;
+                                },
+
+                                async subscribe() {
+                                    if (!('serviceWorker' in navigator)) {
+                                        alert('Trình duyệt của bạn không hỗ trợ Service Worker.');
+                                        this.isSubscribed = false;
+                                        return;
+                                    }
+                                    
+                                    try {
+                                        const permission = await Notification.requestPermission();
+                                        if (permission !== 'granted') {
+                                            alert('Bạn cần cấp quyền thông báo cho trình duyệt để sử dụng tính năng này.');
+                                            this.isSubscribed = false;
+                                            return;
+                                        }
+                                        
+                                        const registration = await navigator.serviceWorker.ready;
+                                        
+                                        // Generate converted VAPID key
+                                        const padding = '='.repeat((4 - this.vapidPublicKey.length % 4) % 4);
+                                        const base64 = (this.vapidPublicKey + padding).replace(/\-/g, '+').replace(/_/g, '/');
+                                        const rawData = window.atob(base64);
+                                        const outputArray = new Uint8Array(rawData.length);
+                                        for (let i = 0; i < rawData.length; ++i) {
+                                            outputArray[i] = rawData.charCodeAt(i);
+                                        }
+                                        
+                                        let subscription;
+                                        try {
+                                            subscription = await registration.pushManager.subscribe({
+                                                userVisibleOnly: true,
+                                                applicationServerKey: outputArray
+                                            });
+                                        } catch (e) {
+                                            // Handle InvalidStateError if the existing subscription used a different public key
+                                            if (e.name === 'InvalidStateError') {
+                                                const existingSub = await registration.pushManager.getSubscription();
+                                                if (existingSub) {
+                                                    await existingSub.unsubscribe();
+                                                }
+                                                subscription = await registration.pushManager.subscribe({
+                                                    userVisibleOnly: true,
+                                                    applicationServerKey: outputArray
+                                                });
+                                            } else {
+                                                throw e;
+                                            }
+                                        }
+                                        
+                                        // Save subscription to backend
+                                        const response = await fetch('/app/notifications/push-subscriptions', {
+                                            method: 'POST',
+                                            headers: {
+                                                'Content-Type': 'application/json',
+                                                'Accept': 'application/json',
+                                                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
+                                            },
+                                            body: JSON.stringify(subscription)
+                                        });
+                                        
+                                        if (!response.ok) {
+                                            const errorBody = await response.text();
+                                            console.error('Backend returned error:', errorBody);
+                                            throw new Error('Failed to save subscription');
+                                        }
+                                        
+                                    } catch (error) {
+                                        console.error('Lỗi khi đăng ký thông báo push:', error);
+                                        alert('Có lỗi xảy ra khi đăng ký thông báo: ' + error.message);
+                                        this.isSubscribed = false;
+                                    }
+                                },
+
+                                async unsubscribe() {
+                                    try {
+                                        const registration = await navigator.serviceWorker.ready;
+                                        const subscription = await registration.pushManager.getSubscription();
+                                        
+                                        if (subscription) {
+                                            // Send delete request to backend
+                                            await fetch('/app/notifications/push-subscriptions', {
+                                                method: 'DELETE',
+                                                headers: {
+                                                    'Content-Type': 'application/json',
+                                                    'Accept': 'application/json',
+                                                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
+                                                },
+                                                body: JSON.stringify({ endpoint: subscription.endpoint })
+                                            });
+                                            
+                                            // Unsubscribe locally
+                                            await subscription.unsubscribe();
+                                        }
+                                    } catch (error) {
+                                        console.error('Lỗi khi hủy đăng ký thông báo push:', error);
+                                    }
+                                },
+                                
+                                async testNotification() {
+                                    alert('Thông báo thử nghiệm sẽ được gửi đi trong vài giây nếu bạn lưu cấu hình...');
+                                    // Normally we would have a route to trigger a test notification, but the save action might suffice.
+                                }
+                            }));
+                        });
+                    </script>
 
                 {{-- Content Preferences detail page --}}
                 @elseif ($section === 'content')

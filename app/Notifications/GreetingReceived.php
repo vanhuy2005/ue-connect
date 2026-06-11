@@ -2,6 +2,8 @@
 
 namespace App\Notifications;
 
+use App\Channels\Messages\WebPushMessage;
+use App\Channels\WebPushChannel;
 use App\Models\Greeting;
 use Illuminate\Bus\Queueable;
 use Illuminate\Notifications\Notification;
@@ -14,7 +16,7 @@ class GreetingReceived extends Notification
 
     public function via(object $notifiable): array
     {
-        return ['database'];
+        return ['database', WebPushChannel::class];
     }
 
     public function toArray(object $notifiable): array
@@ -30,5 +32,18 @@ class GreetingReceived extends Notification
             'body' => $sender->name.' đã gửi cho bạn một lời chào kết nối.',
             'action_url' => route('connections.index'),
         ];
+    }
+
+    public function toWebPush(object $notifiable): WebPushMessage
+    {
+        $sender = $this->greeting->sender;
+
+        return (new WebPushMessage)
+            ->title('Lời chào kết nối mới')
+            ->body($sender->name.' đã gửi cho bạn một lời chào kết nối.')
+            ->url(route('connections.index'))
+            ->icon($sender->avatar_url ?? '/img/default-avatar.png')
+            ->tag('greeting_'.$this->greeting->id)
+            ->category('push_greetings_enabled');
     }
 }

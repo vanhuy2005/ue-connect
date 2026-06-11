@@ -14,15 +14,17 @@ new class extends Component
 
     protected $listeners = ['refreshNotifications' => '$refresh'];
 
-    /**
-     * Mark a single notification as read and redirect.
-     */
     public function readAndRedirect(string $id)
     {
         try {
             $notification = Auth::user()->notifications()->findOrFail($id);
-            $notification->markAsRead();
-            app(UserNavigationMetrics::class)->forgetForUser(Auth::id());
+            if (is_null($notification->read_at)) {
+                $notification->markAsRead();
+                app(UserNavigationMetrics::class)->forgetForUser(Auth::id());
+                
+                $metrics = app(UserNavigationMetrics::class)->forUser(Auth::user());
+                $this->dispatch('ue-notifications-updated', count: $metrics['unread_notifications'] + $metrics['unread_messages']);
+            }
             
             $actionUrl = $notification->data['action_url'] ?? route('dashboard');
             return redirect()->to($actionUrl);
@@ -31,29 +33,31 @@ new class extends Component
         }
     }
 
-    /**
-     * Mark a single notification as read without redirecting.
-     */
     public function markAsRead(string $id): void
     {
         try {
             $notification = Auth::user()->unreadNotifications()->findOrFail($id);
             $notification->markAsRead();
             app(UserNavigationMetrics::class)->forgetForUser(Auth::id());
+            
+            $metrics = app(UserNavigationMetrics::class)->forUser(Auth::user());
+            $this->dispatch('ue-notifications-updated', count: $metrics['unread_notifications'] + $metrics['unread_messages']);
+
             $this->feedbackMessage = 'Đã đánh dấu là đã đọc.';
         } catch (\Exception $e) {
             $this->feedbackMessage = $e->getMessage();
         }
     }
 
-    /**
-     * Mark all notifications as read.
-     */
     public function markAllAsRead(): void
     {
         try {
             Auth::user()->unreadNotifications->markAsRead();
             app(UserNavigationMetrics::class)->forgetForUser(Auth::id());
+            
+            $metrics = app(UserNavigationMetrics::class)->forUser(Auth::user());
+            $this->dispatch('ue-notifications-updated', count: $metrics['unread_notifications'] + $metrics['unread_messages']);
+
             $this->feedbackMessage = 'Đã đánh dấu tất cả đã đọc.';
         } catch (\Exception $e) {
             $this->feedbackMessage = $e->getMessage();

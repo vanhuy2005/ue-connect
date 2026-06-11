@@ -29,6 +29,7 @@ use App\Http\Controllers\Admin\VerificationActionController;
 use App\Http\Controllers\Admin\VerificationEvidenceController;
 use App\Http\Controllers\ChatController;
 use App\Http\Controllers\MediaController;
+use App\Http\Controllers\PushSubscriptionController;
 use App\Http\Controllers\UserFollowController;
 use App\Http\Middleware\EnsureAdminAccess;
 use App\Models\AuditLog;
@@ -44,7 +45,9 @@ use App\Models\Report;
 use App\Models\User;
 use App\Models\VerificationRequest;
 use App\Support\Navigation\AdminNavigation;
+use App\Support\Navigation\UserNavigationMetrics;
 use Illuminate\Auth\Access\AuthorizationException;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Gate;
@@ -60,8 +63,10 @@ Route::get('/render-logs', function () {
     if (file_exists($logPath)) {
         // Lấy 200 dòng cuối cùng
         $lines = array_slice(file($logPath), -200);
-        return response('<pre>' . implode('', $lines) . '</pre>')->header('Content-Type', 'text/html; charset=UTF-8');
+
+        return response('<pre>'.implode('', $lines).'</pre>')->header('Content-Type', 'text/html; charset=UTF-8');
     }
+
     return 'No logs found.';
 });
 
@@ -130,6 +135,18 @@ Route::middleware(['auth', 'active.account', 'verified.identity'])->group(functi
 
     Route::delete('users/{user}/follow', [UserFollowController::class, 'destroy'])
         ->name('users.unfollow');
+
+    Route::post('app/notifications/push-subscriptions', [PushSubscriptionController::class, 'store'])
+        ->name('push-subscriptions.store');
+
+    Route::delete('app/notifications/push-subscriptions', [PushSubscriptionController::class, 'destroy'])
+        ->name('push-subscriptions.destroy');
+
+    Route::get('app/notifications/unread-count', function (Request $request) {
+        return response()->json([
+            'unread_count' => $request->user()->unreadNotifications()->count() + app(UserNavigationMetrics::class)->forUser($request->user())['unread_messages'],
+        ]);
+    })->name('app.notifications.unread-count');
 
     Route::get('app/settings/{section?}/{subSection?}', function (?string $section = 'index', ?string $subSection = null) {
         $user = Auth::user();
@@ -566,8 +583,6 @@ Route::prefix('admin')
         Route::get('dashboard', function () {
             return view('admin.dashboard');
         })->name('dashboard');
-
-
 
         // Verification workflow
         Route::get('verification/evidence/{evidence}', [VerificationEvidenceController::class, 'show'])
