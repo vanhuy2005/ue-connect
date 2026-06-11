@@ -2,6 +2,8 @@
 
 namespace App\Notifications;
 
+use App\Channels\Messages\WebPushMessage;
+use App\Channels\WebPushChannel;
 use App\Models\Announcement;
 use Illuminate\Bus\Queueable;
 use Illuminate\Notifications\Notification;
@@ -14,7 +16,7 @@ class SystemAnnouncementNotification extends Notification
 
     public function via(object $notifiable): array
     {
-        return ['database'];
+        return ['database', WebPushChannel::class];
     }
 
     public function toArray(object $notifiable): array
@@ -27,5 +29,16 @@ class SystemAnnouncementNotification extends Notification
             'body' => $this->announcement->body,
             'action_url' => route('dashboard'),
         ];
+    }
+
+    public function toWebPush(object $notifiable): WebPushMessage
+    {
+        return (new WebPushMessage)
+            ->title($this->announcement->title)
+            ->body(str($this->announcement->body)->limit(50)->toString())
+            ->url(route('dashboard'))
+            ->icon('/images/icons/icon-192.png')
+            ->tag('announcement_'.$this->announcement->id)
+            ->category('push_admin_announcements_enabled');
     }
 }
