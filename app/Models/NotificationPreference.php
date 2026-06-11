@@ -23,6 +23,12 @@ class NotificationPreference extends Model
         'safety_notifications',
         'moderation_notifications',
         'system_notifications',
+        'push_messages_enabled',
+        'push_greetings_enabled',
+        'push_mentor_enabled',
+        'push_community_enabled',
+        'push_verification_enabled',
+        'push_admin_announcements_enabled',
     ];
 
     protected $casts = [
@@ -37,6 +43,12 @@ class NotificationPreference extends Model
         'safety_notifications' => 'boolean',
         'moderation_notifications' => 'boolean',
         'system_notifications' => 'boolean',
+        'push_messages_enabled' => 'boolean',
+        'push_greetings_enabled' => 'boolean',
+        'push_mentor_enabled' => 'boolean',
+        'push_community_enabled' => 'boolean',
+        'push_verification_enabled' => 'boolean',
+        'push_admin_announcements_enabled' => 'boolean',
     ];
 
     /**
