@@ -1,14 +1,14 @@
 <?php
 
-use Livewire\Component;
-use Livewire\Attributes\Computed;
+use Livewire\Volt\Component;
 use App\Actions\Admin\BuildAdminDashboardAction;
 
 new class extends Component {
-    #[Computed]
-    public function data(): array
+    public function with(): array
     {
-        return app(BuildAdminDashboardAction::class)->execute();
+        return [
+            'data' => app(BuildAdminDashboardAction::class)->execute(),
+        ];
     }
 };
 ?>
@@ -27,7 +27,6 @@ new class extends Component {
     </div>
 
     @php
-        $data = $this->data;
         $snapshot = $data['snapshot'];
         $priorityQueue = $data['priority_queue'];
         $systemHealth = $data['system_health'];

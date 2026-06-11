@@ -153,13 +153,7 @@ class User extends Authenticatable implements MustVerifyEmail
      */
     public function canPostType(PostType $postType): bool
     {
-        if ($postType === PostType::STANDARD) {
-            return true;
-        }
-
-        $roleType = $this->profile?->role_type;
-
-        return in_array($roleType, ['alumni', 'teacher'], true);
+        return true;
     }
 
     /**

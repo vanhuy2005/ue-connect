@@ -13,7 +13,6 @@ use App\Models\Post;
 use App\Models\User;
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Support\Facades\Gate;
-use Illuminate\Support\Facades\Validator;
 use Illuminate\Validation\ValidationException;
 
 class CreatePost
@@ -21,7 +20,7 @@ class CreatePost
     /**
      * Create a new post.
      *
-     * @param  array{body: string, visibility?: string, community_id?: int|null, post_type?: string|null, opportunity?: array}  $data
+     * @param  array{body: string, visibility?: string, community_id?: int|null, post_type?: string|null, tags?: array, opportunity?: array}  $data
      *
      * @throws AuthorizationException|ValidationException
      */
@@ -29,7 +28,20 @@ class CreatePost
     {
         Gate::forUser($user)->authorize('create', Post::class);
 
-        $postType = isset($data['post_type']) ? PostType::tryFrom($data['post_type']) : PostType::STANDARD;
+        $tags = $data['tags'] ?? [];
+        $postTypeValue = $data['post_type'] ?? null;
+
+        if (empty($postTypeValue) && ! empty($tags)) {
+            if (in_array('opportunity', $tags, true)) {
+                $postTypeValue = 'opportunity';
+            } elseif (in_array('experience', $tags, true)) {
+                $postTypeValue = 'experience';
+            } else {
+                $postTypeValue = 'standard';
+            }
+        }
+
+        $postType = $postTypeValue ? PostType::tryFrom($postTypeValue) : PostType::STANDARD;
 
         if ($postType !== PostType::STANDARD && ! $user->canPostType($postType)) {
             throw ValidationException::withMessages([
@@ -39,9 +51,10 @@ class CreatePost
 
         $oppData = [];
         if ($postType === PostType::OPPORTUNITY) {
-            $oppData = Validator::make($data['opportunity'] ?? [], [
-                'category' => 'nullable|string|in:pedagogy,non_pedagogy',
-            ])->validate();
+            $isPedagogy = in_array('pedagogy', $tags, true) || (($data['opportunity']['category'] ?? '') === 'pedagogy');
+            $oppData = [
+                'category' => $isPedagogy ? 'pedagogy' : 'non_pedagogy',
+            ];
         }
 
         $visibility = $data['visibility'] ?? PostVisibility::VERIFIED_USERS->value;
@@ -90,6 +103,7 @@ class CreatePost
             'status' => PostStatus::PUBLISHED->value,
             'moderation_status' => $postType === PostType::OPPORTUNITY ? 'pending' : 'none',
             'published_at' => now(),
+            'tags' => $tags,
         ]);
 
         if ($postType === PostType::OPPORTUNITY) {

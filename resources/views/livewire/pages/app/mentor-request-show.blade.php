@@ -24,6 +24,7 @@ new class extends Component {
     // Feedback form fields
     public string $feedbackLevel = '';
     public string $feedbackText = '';
+    public bool $isSubmittingFeedback = false;
 
     // Messages
     public ?string $statusMessage = null;
@@ -172,6 +173,12 @@ new class extends Component {
 
     public function submitFeedback(SubmitMentorFeedbackAction $action): void
     {
+        if ($this->isSubmittingFeedback || $this->hasFeedback()) {
+            return;
+        }
+
+        $this->isSubmittingFeedback = true;
+
         $this->validate([
             'feedbackLevel' => ['required', 'string', 'in:helpful,somewhat_helpful,not_helpful'],
             'feedbackText' => ['nullable', 'string', 'max:2000'],
@@ -182,16 +189,20 @@ new class extends Component {
                 'helpfulness_level' => $this->feedbackLevel,
                 'feedback_text' => $this->feedbackText ?: null,
             ]);
+            $this->mentorRequest->refresh();
             $this->feedbackLevel = '';
             $this->feedbackText = '';
             $this->statusMessage = 'Cảm ơn bạn đã gửi phản hồi!';
+            $this->dispatch('close-feedback-form');
         } catch (\Exception $e) {
             $this->errorMessage = $e->getMessage();
+        } finally {
+            $this->isSubmittingFeedback = false;
         }
     }
 }; ?>
 
-<div class="mx-auto max-w-4xl px-4 py-6 sm:px-6 lg:px-8" x-data="{ activeAction: null }" x-on:open-feedback.window="activeAction = 'feedback'">
+<div class="mx-auto max-w-4xl px-4 py-6 sm:px-6 lg:px-8" x-data="{ activeAction: null }" x-on:open-feedback.window="activeAction = 'feedback'" x-on:close-feedback-form.window="activeAction = null">
     <a href="{{ route('mentor.requests.index') }}" class="text-sm font-semibold text-ue-brand hover:underline">← Danh sách yêu cầu</a>
 
     @if ($statusMessage)
@@ -593,7 +604,8 @@ new class extends Component {
                 </label>
 
                 <div class="flex gap-2">
-                    <button wire:click="submitFeedback" wire:loading.attr="disabled"
+                    <button wire:click="submitFeedback" wire:loading.attr="disabled" wire:target="submitFeedback"
+                        @disabled($isSubmittingFeedback)
                         class="rounded-lg bg-ue-brand px-4 py-2 text-sm font-bold text-white hover:bg-ue-brand-dark disabled:opacity-60">
                         <span wire:loading.remove wire:target="submitFeedback">Gửi phản hồi</span>
                         <span wire:loading wire:target="submitFeedback">Đang gửi...</span>
@@ -603,17 +615,14 @@ new class extends Component {
             </div>
         </div>
 
-        {{-- Mentor Feedback Stats --}}
+        {{-- Mentor Feedback Indicator (ẩn danh — nội dung chi tiết xem tại Dashboard) --}}
         @if ($this->isMentorOwner() && $isCompleted && $this->hasFeedback())
-            @php $feedback = $mentorRequest->feedback; @endphp
-            <div class="mt-6 p-4 rounded-xl border border-slate-200 bg-slate-50">
-                <p class="text-xs font-bold text-slate-700">Phản hồi từ sinh viên</p>
-                <div class="mt-2">
-                    <span class="text-sm font-bold text-slate-800">{{ $feedback->helpfulness_level->label() }}</span>
+            <div class="mt-6 p-4 rounded-xl border border-emerald-100 bg-emerald-50 flex items-center gap-2">
+                <x-ui.icon name="check-circle" size="sm" class="text-emerald-500 flex-shrink-0" />
+                <div>
+                    <p class="text-sm font-bold text-emerald-800">Sinh viên đã gửi phản hồi</p>
+                    <p class="text-xs text-emerald-600 mt-0.5">Phản hồi được ẩn danh để bảo vệ thông tin sinh viên. Xem tổng hợp tại <a href="{{ route('mentor.dashboard') }}" class="underline font-semibold">Mentor Dashboard</a>.</p>
                 </div>
-                @if ($feedback->feedback_text)
-                    <p class="mt-2 text-sm text-slate-600 italic">"{{ $feedback->feedback_text }}"</p>
-                @endif
             </div>
         @endif
     </article>

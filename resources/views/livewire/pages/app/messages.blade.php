@@ -60,6 +60,7 @@ new #[Layout('layouts.app')] class extends Component
     public bool $showFeedbackModal = false;
     public string $feedbackLevel = '';
     public string $feedbackText = '';
+    public bool $isSubmittingFeedback = false;
 
     protected $listeners = ['refreshMessages' => '$refresh'];
 
@@ -395,6 +396,12 @@ new #[Layout('layouts.app')] class extends Component
      */
     public function submitMentorFeedback(\App\Actions\Mentor\SubmitMentorFeedbackAction $action): void
     {
+        if ($this->isSubmittingFeedback) {
+            return;
+        }
+
+        $this->isSubmittingFeedback = true;
+
         $this->validate([
             'feedbackLevel' => ['required', 'string', 'in:helpful,somewhat_helpful,not_helpful'],
             'feedbackText' => ['nullable', 'string', 'max:2000'],
@@ -403,6 +410,7 @@ new #[Layout('layouts.app')] class extends Component
         ]);
 
         if (! $this->selectedConversationId) {
+            $this->isSubmittingFeedback = false;
             return;
         }
 
@@ -415,12 +423,15 @@ new #[Layout('layouts.app')] class extends Component
                     'helpfulness_level' => $this->feedbackLevel,
                     'feedback_text' => $this->feedbackText ?: null,
                 ]);
+                $mentorRequest->refresh();
                 $this->feedbackLevel = '';
                 $this->feedbackText = '';
                 $this->showFeedbackModal = false;
                 $this->feedbackMessage = 'Cảm ơn bạn đã gửi phản hồi cho Mentor!';
             }
         }
+
+        $this->isSubmittingFeedback = false;
     }
 
     /**
@@ -2111,7 +2122,8 @@ new #[Layout('layouts.app')] class extends Component
                     <button type="button" wire:click="$set('showFeedbackModal', false)" class="px-4 py-2 rounded-xl text-slate-600 hover:bg-slate-100 text-xxs font-bold transition-colors">
                         Hủy
                     </button>
-                    <button type="button" wire:click="submitMentorFeedback" wire:loading.attr="disabled" wire:target="submitMentorFeedback" class="px-4 py-2 rounded-xl bg-ue-brand hover:bg-ue-brand-dark text-white text-xxs font-bold shadow-2xs hover:shadow-sm transition-all disabled:opacity-60 disabled:cursor-not-allowed">
+                    <button type="button" wire:click="submitMentorFeedback" wire:loading.attr="disabled" wire:target="submitMentorFeedback" @disabled($isSubmittingFeedback)
+                        class="px-4 py-2 rounded-xl bg-ue-brand hover:bg-ue-brand-dark text-white text-xxs font-bold shadow-2xs hover:shadow-sm transition-all disabled:opacity-60 disabled:cursor-not-allowed">
                         <span wire:loading.remove wire:target="submitMentorFeedback">Gửi đánh giá</span>
                         <span wire:loading wire:target="submitMentorFeedback">Đang gửi...</span>
                     </button>

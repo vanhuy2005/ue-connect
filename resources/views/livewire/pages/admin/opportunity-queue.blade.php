@@ -97,7 +97,7 @@ new #[Layout('layouts.app', ['shell' => 'admin'])] class extends Component {
                 <thead class="bg-ue-surface-subtle text-xs font-bold text-ue-text-muted uppercase tracking-wider">
                     <tr>
                         <th scope="col" class="px-6 py-4">Người đăng</th>
-                        <th scope="col" class="px-6 py-4">Danh mục</th>
+                        <th scope="col" class="px-6 py-4">Nhãn bài viết</th>
                         <th scope="col" class="px-6 py-4">Trạng thái</th>
                         <th scope="col" class="px-6 py-4">Ngày đăng</th>
                         <th scope="col" class="px-6 py-4 text-right">Hành động</th>
@@ -132,7 +132,7 @@ new #[Layout('layouts.app', ['shell' => 'admin'])] class extends Component {
                                 <div class="text-xs text-ue-text-muted mt-0.5">{{ $post->user?->email }}</div>
                             </td>
                             <td class="px-6 py-4 text-ue-text whitespace-nowrap font-medium">
-                                {{ $opp?->category === 'pedagogy' ? 'Sư phạm' : ($opp?->category === 'non_pedagogy' ? 'Ngoài sư phạm' : 'Khác') }}
+                                Cơ hội
                             </td>
                             <td class="px-6 py-4 whitespace-nowrap">
                                 <x-ui.badge :variant="$badgeVariant" :icon="$badgeIcon">

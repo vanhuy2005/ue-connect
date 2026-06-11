@@ -87,6 +87,12 @@ $variantClasses = match($variant) {
     'career-insight' =>
         'bg-purple-50 text-purple-700 border-purple-250',
 
+    'opportunity' =>
+        'bg-amber-50 text-amber-700 border-amber-250',
+
+    'pedagogy' =>
+        'bg-blue-50 text-blue-700 border-blue-250',
+
     /* Neutral/default */
     default =>
         'bg-white text-slate-700 border-slate-200',
