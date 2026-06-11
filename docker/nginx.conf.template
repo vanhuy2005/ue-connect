@@ -1,0 +1,57 @@
+server {
+    listen ${PORT} default_server;
+    listen [::]:${PORT} default_server;
+    root /var/www/html/public;
+    index index.php index.html index.htm;
+
+    charset utf-8;
+
+    # Xử lý các request bắt đầu bằng /app/
+    location ~ ^/app/ {
+        error_page 418 = @reverb;
+        
+        # Nếu là request WebSocket (từ Reverb JS client), đẩy sang Reverb
+        if ($http_upgrade ~* "websocket") {
+            return 418;
+        }
+
+        # Nếu là request HTTP bình thường (người dùng truy cập /app/home), đẩy cho Laravel xử lý
+        try_files $uri $uri/ /index.php?$query_string;
+    }
+
+    # Location riêng cho Reverb WebSockets
+    location @reverb {
+        proxy_pass http://127.0.0.1:8080;
+        proxy_http_version 1.1;
+        proxy_set_header Host $http_host;
+        proxy_set_header Scheme $scheme;
+        proxy_set_header SERVER_PORT $server_port;
+        proxy_set_header REMOTE_ADDR $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection "Upgrade";
+        proxy_read_timeout 60s;
+        proxy_send_timeout 60s;
+    }
+
+    # Cấu hình proxy cho Laravel PHP
+    location / {
+        try_files $uri $uri/ /index.php?$query_string;
+    }
+
+    location = /favicon.ico { access_log off; log_not_found off; }
+    location = /robots.txt  { access_log off; log_not_found off; }
+
+    error_page 404 /index.php;
+
+    location ~ \.php$ {
+        fastcgi_pass 127.0.0.1:9000;
+        fastcgi_param SCRIPT_FILENAME $realpath_root$fastcgi_script_name;
+        include fastcgi_params;
+        fastcgi_hide_header X-Powered-By;
+    }
+
+    location ~ /\.(?!well-known).* {
+        deny all;
+    }
+}

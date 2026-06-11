@@ -1,4 +1,4 @@
-FROM php:8.3-cli-bookworm
+FROM php:8.3-fpm-bookworm
 
 WORKDIR /var/www/html
 
@@ -21,6 +21,9 @@ RUN apt-get update && apt-get install -y \
     libxml2-dev \
     libicu-dev \
     unixodbc-dev \
+    nginx \
+    supervisor \
+    gettext-base \
     && rm -rf /var/lib/apt/lists/*
 
 # Microsoft ODBC Driver 18 for SQL Server
@@ -68,6 +71,11 @@ RUN composer dump-autoload --optimize \
     && mkdir -p storage/framework/cache storage/framework/sessions storage/framework/views storage/logs bootstrap/cache \
     && chmod -R 775 storage bootstrap/cache
 
+# Copy Nginx and Supervisor configs
+COPY docker/nginx.conf.template /etc/nginx/conf.d/default.conf.template
+COPY docker/supervisord.conf /etc/supervisor/conf.d/supervisord.conf
+
+# Setup start script
 COPY docker/start.sh /usr/local/bin/start-container
 RUN chmod +x /usr/local/bin/start-container
 

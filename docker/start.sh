@@ -1,14 +1,19 @@
 #!/usr/bin/env bash
 set -e
 
+echo "Setting up Nginx PORT..."
+export PORT=${PORT:-10000}
+envsubst '${PORT}' < /etc/nginx/conf.d/default.conf.template > /etc/nginx/conf.d/default.conf
+
 echo "Running Laravel migrations..."
 php artisan migrate --force
 
 echo "Clearing Laravel caches..."
 php artisan optimize:clear
 
-echo "Starting queue worker in background..."
-nohup php artisan queue:work --daemon --tries=3 --timeout=60 >> /var/www/html/storage/logs/queue-worker.log 2>&1 &
+echo "Fixing permissions..."
+chown -R www-data:www-data /var/www/html/storage /var/www/html/bootstrap/cache
+chmod -R 775 /var/www/html/storage /var/www/html/bootstrap/cache
 
-echo "Starting Laravel on port ${PORT:-10000}..."
-exec php artisan serve --host=0.0.0.0 --port="${PORT:-10000}"
+echo "Starting Supervisord..."
+exec /usr/bin/supervisord -c /etc/supervisor/conf.d/supervisord.conf
