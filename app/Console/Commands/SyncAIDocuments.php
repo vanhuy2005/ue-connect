@@ -2,6 +2,7 @@
 
 namespace App\Console\Commands;
 
+use App\AI\HcmueChatbot\LLM\GeminiKeyManager;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\File;
@@ -28,9 +29,10 @@ class SyncAIDocuments extends Command
      */
     public function handle()
     {
-        $apiKey = config('ai-verification.providers.gemini_flash.api_key');
+        $primaryKey = config('ai-verification.providers.gemini_flash.api_key');
+        $keyManager = new GeminiKeyManager($primaryKey ? [$primaryKey] : null);
 
-        if (empty($apiKey)) {
+        if (empty($keyManager->getKeys())) {
             $this->error('Gemini API Key is not configured in .env (GEMINI_API_KEY).');
 
             return Command::FAILURE;
@@ -79,31 +81,30 @@ class SyncAIDocuments extends Command
 
         foreach ($pdfFiles as $file) {
             $content = File::get($file->getRealPath());
-            $url = "https://generativelanguage.googleapis.com/upload/v1beta/files?uploadType=media&key={$apiKey}";
 
             try {
-                $response = Http::withoutVerifying()
-                    ->timeout(60)
-                    ->withBody($content, 'application/pdf')
-                    ->post($url);
+                $response = $keyManager->run(function (string $apiKey) use ($content) {
+                    $url = "https://generativelanguage.googleapis.com/upload/v1beta/files?uploadType=media&key={$apiKey}";
 
-                if ($response->successful()) {
-                    $data = $response->json();
-                    if (isset($data['file']['uri'])) {
-                        $uploadedData[] = [
-                            'name' => $file->getFilename(),
-                            'mime_type' => $data['file']['mimeType'] ?? 'application/pdf',
-                            'file_uri' => $data['file']['uri'],
-                            'gemini_name' => $data['file']['name'],
-                        ];
-                    }
-                } else {
-                    $this->newLine();
-                    $this->error('Failed to upload '.$file->getFilename().': '.$response->body());
+                    return Http::withoutVerifying()
+                        ->timeout(60)
+                        ->withBody($content, 'application/pdf')
+                        ->post($url)
+                        ->throw();
+                });
+
+                $data = $response->json();
+                if (isset($data['file']['uri'])) {
+                    $uploadedData[] = [
+                        'name' => $file->getFilename(),
+                        'mime_type' => $data['file']['mimeType'] ?? 'application/pdf',
+                        'file_uri' => $data['file']['uri'],
+                        'gemini_name' => $data['file']['name'],
+                    ];
                 }
             } catch (\Exception $e) {
                 $this->newLine();
-                $this->error('Exception uploading '.$file->getFilename().': '.$e->getMessage());
+                $this->error('Failed/Exception uploading '.$file->getFilename().': '.$e->getMessage());
             }
 
             // Giải phóng bộ nhớ và tránh Rate Limit của Google (15 requests / minute)

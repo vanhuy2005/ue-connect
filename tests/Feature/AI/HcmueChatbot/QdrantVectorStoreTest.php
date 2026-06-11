@@ -12,6 +12,13 @@ class QdrantVectorStoreTest extends TestCase
 
     protected string $collection = 'hcmue_academic_chunks';
 
+    protected function setUp(): void
+    {
+        parent::setUp();
+        config(['ai.qdrant.url' => 'http://localhost:6333']);
+        config(['ai.qdrant.collection' => 'hcmue_academic_chunks']);
+    }
+
     /**
      * Test checking if a collection exists.
      */

@@ -20,4 +20,4 @@ yarn-error.log
 /temp-laravel
 /.agents
 /skills-lock.json
-
+/database/AI/

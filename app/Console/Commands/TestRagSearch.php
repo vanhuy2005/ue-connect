@@ -54,7 +54,21 @@ class TestRagSearch extends Command
         }
 
         foreach ($results as $index => $result) {
-            $this->comment(sprintf('[%d] Score: %.4f | Doc: %s (%s)', $index + 1, $result['score'], $result['document_name'], $result['document_type']));
+            $metadata = $result['metadata'] ?? [];
+            $docId = $metadata['source_document_id'] ?? 'N/A';
+            $cohort = $result['cohort'] ?? $metadata['cohort'] ?? 'N/A';
+            $faculty = $metadata['faculty'] ?? 'N/A';
+            $major = $metadata['major'] ?? 'N/A';
+
+            $this->comment(sprintf('[%d] Score: %.4f | Doc ID: %s | Name: %s (%s)',
+                $index + 1,
+                $result['score'],
+                $docId,
+                $result['document_name'],
+                $result['document_type']
+            ));
+
+            $this->line(sprintf('Cohort: %s | Faculty: %s | Major: %s', $cohort, $faculty, $major));
 
             if ($result['part'] || $result['chapter'] || $result['section'] || $result['article']) {
                 $this->info(sprintf('Loc: Part: %s | Chap: %s | Sec: %s | Art: %s',
@@ -65,7 +79,8 @@ class TestRagSearch extends Command
                 ));
             }
 
-            $this->line('Page Start: '.($result['page_start'] ?: 'N/A').' | Page End: '.($result['page_end'] ?: 'N/A'));
+            $this->line('Page: '.($result['page_start'] ?: 'N/A').' - '.($result['page_end'] ?: 'N/A'));
+            $this->line('--------------------------------------------------');
             $this->line(trim($result['chunk_text']));
             $this->line('--------------------------------------------------');
         }

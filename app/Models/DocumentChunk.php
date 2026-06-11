@@ -25,6 +25,8 @@ class DocumentChunk extends Model
         'metadata_json',
         'embedding_status',
         'vector_id',
+        'knowledge_batch_id',
+        'knowledge_batch_key',
     ];
 
     protected $casts = [

@@ -6,6 +6,7 @@ use App\AI\Evidence\Contracts\EvidenceAnalyzer;
 use App\AI\Evidence\DTO\EvidenceAnalysisResultData;
 use App\AI\Evidence\DTO\ExtractedStudentCardFieldsData;
 use App\AI\Evidence\Services\StudentCardMatchingService;
+use App\AI\HcmueChatbot\LLM\GeminiKeyManager;
 use App\Enums\DetectedDocumentType;
 use App\Enums\EvidenceRiskFlag;
 use App\Models\VerificationEvidence;
@@ -29,9 +30,10 @@ class GeminiFlashStudentCardAnalyzer implements EvidenceAnalyzer
             return EvidenceAnalysisResultData::manualReview(EvidenceRiskFlag::ExternalProviderDisabled);
         }
 
-        $apiKey = config('ai-verification.providers.gemini_flash.api_key');
+        $primaryKey = config('ai-verification.providers.gemini_flash.api_key');
+        $keyManager = new GeminiKeyManager($primaryKey ? [$primaryKey] : null);
 
-        if (empty($apiKey)) {
+        if (empty($keyManager->getKeys())) {
             return EvidenceAnalysisResultData::manualReview(EvidenceRiskFlag::ExternalProviderUnavailable);
         }
 
@@ -54,24 +56,21 @@ class GeminiFlashStudentCardAnalyzer implements EvidenceAnalyzer
             $baseUrl = rtrim(config('ai-verification.providers.gemini_flash.base_url'), '/');
             $timeout = (int) config('ai-verification.providers.gemini_flash.timeout_seconds', 30);
 
-            $response = Http::timeout($timeout)
-                ->post("{$baseUrl}/v1beta/models/{$model}:generateContent?key={$apiKey}", [
-                    'contents' => [[
-                        'parts' => [
-                            ['text' => self::SYSTEM_PROMPT.'\n\n'.self::USER_PROMPT],
-                            ['inline_data' => ['mime_type' => $mimeType, 'data' => $imageBase64]],
+            $response = $keyManager->run(function (string $apiKey) use ($baseUrl, $model, $timeout, $mimeType, $imageBase64) {
+                return Http::timeout($timeout)
+                    ->post("{$baseUrl}/v1beta/models/{$model}:generateContent?key={$apiKey}", [
+                        'contents' => [[
+                            'parts' => [
+                                ['text' => self::SYSTEM_PROMPT.'\n\n'.self::USER_PROMPT],
+                                ['inline_data' => ['mime_type' => $mimeType, 'data' => $imageBase64]],
+                            ],
+                        ]],
+                        'generationConfig' => [
+                            'response_mime_type' => 'application/json',
                         ],
-                    ]],
-                    'generationConfig' => [
-                        'response_mime_type' => 'application/json',
-                    ],
-                ]);
-
-            if (! $response->successful()) {
-                Log::warning('GeminiFlashStudentCardAnalyzer: API error.', ['status' => $response->status()]);
-
-                return EvidenceAnalysisResultData::manualReview(EvidenceRiskFlag::ExternalProviderUnavailable);
-            }
+                    ])
+                    ->throw();
+            });
 
             $body = $response->json();
             $rawText = $body['candidates'][0]['content']['parts'][0]['text'] ?? null;
