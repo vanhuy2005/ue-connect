@@ -684,6 +684,9 @@ new #[Layout('layouts.app')] class extends Component
             ]);
 
         app(UserNavigationMetrics::class)->forgetForUser(Auth::id());
+        
+        $metrics = app(UserNavigationMetrics::class)->forUser(Auth::user());
+        $this->dispatch('ue-notifications-updated', count: $metrics['unread_notifications'] + $metrics['unread_messages']);
     }
 
     /**

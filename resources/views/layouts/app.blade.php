@@ -12,7 +12,7 @@
 
         {{-- Realtime Meta Config --}}
         <meta name="reverb-app-key" content="{{ config('reverb.apps.apps.0.key', env('REVERB_APP_KEY')) }}">
-        <meta name="reverb-host" content="{{ config('reverb.servers.reverb.host', env('REVERB_HOST')) }}">
+        <meta name="reverb-host" content="{{ env('REVERB_HOST', '127.0.0.1') }}">
         <meta name="reverb-port" content="{{ config('reverb.servers.reverb.port', env('REVERB_PORT')) }}">
         <meta name="reverb-scheme" content="{{ config('reverb.servers.reverb.scheme', env('REVERB_SCHEME')) }}">
 
@@ -179,7 +179,6 @@
                                                     >
                                                         <x-ui.icon :name="$group['icon']" size="sm" class="flex-shrink-0" />
                                                         <span class="min-w-0 flex-1 truncate">{{ $group['vn_label'] }}</span>
-                                                        <span class="rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-bold text-slate-500">{{ count($group['items']) }}</span>
                                                     </a>
                                                 @endforeach
                                             </nav>
@@ -218,7 +217,13 @@
         @stack('scripts')
 
         @auth
+            @php
+                $metrics = app(\App\Support\Navigation\UserNavigationMetrics::class)->forUser(auth()->user());
+                $initialUnreadCount = $metrics['unread_notifications'] + $metrics['unread_messages'];
+            @endphp
             <script>
+                window.ueInitialUnreadCount = {{ $initialUnreadCount }};
+
                 document.addEventListener('DOMContentLoaded', () => {
                     function updateBadge(iconName, val) {
                         let dotEls = document.querySelectorAll(`.js-badge-dot-${iconName}`);
@@ -237,14 +242,23 @@
                         window.Echo.private('user.{{ Auth::id() }}')
                             .listen('.UserNotificationCreated', (e) => {
                                 updateBadge('heart', 1);
+                                window.ueNotificationBadge?.increment(1);
                                 if (window.Livewire) {
                                     Livewire.dispatch('refreshNotifications');
                                 }
                             })
                             .listen('.ConversationUpdated', (e) => {
                                 updateBadge('message', 1);
+                                window.ueNotificationBadge?.increment(1);
                             });
                     }
+
+                    // Event listener for custom manual badge decrements/resets
+                    window.addEventListener('ue-notifications-updated', (e) => {
+                        if (e.detail && typeof e.detail.count !== 'undefined') {
+                            window.ueNotificationBadge?.setCount(e.detail.count);
+                        }
+                    });
 
                     // Presence Heartbeat Loop (throttled/visibility-aware & idle-aware)
                     let lastActiveTime = Date.now();

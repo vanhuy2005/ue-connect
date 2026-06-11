@@ -92,68 +92,74 @@ $secondaryNav = [
 >
     <div class="flex flex-col gap-5 flex-1 min-h-0 overflow-y-auto pr-1">
         {{-- Logo --}}
-        <div class="pl-1.5">
-            <a href="{{ route('dashboard') }}" wire:navigate.hover class="inline-flex items-center gap-2 ue-focus-ring rounded-lg" aria-label="UEConnect - Trang chủ">
-                <x-brand.logo variant="mark" size="lg" class="h-8 w-8 flex-shrink-0" x-show="collapsed" />
-                <x-brand.logo variant="horizontal" size="lg" class="h-8 w-auto" x-show="!collapsed" />
+        <div class="ue-sidebar-logo-wrapper pl-1.5">
+            <a href="{{ route('dashboard') }}" wire:navigate.hover class="inline-flex items-center gap-2.5 ue-focus-ring rounded-lg" aria-label="UEConnect - Trang chủ">
+                <x-brand.logo variant="mark" size="lg" class="h-9 w-9 flex-shrink-0" />
+                <span x-show="!collapsed" x-transition:enter="transition ease-out duration-200 delay-75" x-transition:enter-start="opacity-0 translate-x-[-8px]" x-transition:enter-end="opacity-100 translate-x-0" x-transition:leave="transition ease-in duration-100" x-transition:leave-start="opacity-100" x-transition:leave-end="opacity-0" class="font-bold text-lg text-ue-brand tracking-tight whitespace-nowrap">UEConnect</span>
             </a>
-            <h2 class="ue-text-subheading mt-1.5 leading-tight">Quản trị UEConnect</h2>
-            <p class="ue-text-meta mt-1 leading-normal">Vận hành, kiểm duyệt và bảo mật hệ thống</p>
         </div>
 
         {{-- Category Admin Navigation --}}
-        <div class="flex flex-col gap-1 pt-1">
-            @foreach(\App\Support\Navigation\AdminNavigation::getVisibleGroups() as $groupKey => $group)
-                @php
-                    $active = request()->routeIs('admin.console')
-                        && (request()->route('group') ?? array_key_first(\App\Support\Navigation\AdminNavigation::getVisibleGroups())) === $groupKey;
+        <div class="flex flex-col gap-1.5 pt-1">
+            <ul class="flex flex-col gap-1" role="list">
+                @foreach(\App\Support\Navigation\AdminNavigation::getVisibleGroups() as $groupKey => $group)
+                    @php
+                        $active = request()->routeIs('admin.console')
+                            && (request()->route('group') ?? array_key_first(\App\Support\Navigation\AdminNavigation::getVisibleGroups())) === $groupKey;
 
-                    if (! $active) {
-                        foreach ($group['items'] as $item) {
-                            $routeParts = explode('.', $item['route']);
-                            $baseRouteName = count($routeParts) >= 2
-                                ? $routeParts[0] . '.' . $routeParts[1]
-                                : $item['route'];
+                        if (! $active) {
+                            foreach ($group['items'] as $item) {
+                                $routeParts = explode('.', $item['route']);
+                                $baseRouteName = count($routeParts) >= 2
+                                    ? $routeParts[0] . '.' . $routeParts[1]
+                                    : $item['route'];
 
-                            if (request()->routeIs($item['route']) || request()->routeIs($baseRouteName . '.*')) {
-                                $active = true;
-                                break;
+                                if (request()->routeIs($item['route']) || request()->routeIs($baseRouteName . '.*')) {
+                                    $active = true;
+                                    break;
+                                }
                             }
                         }
-                    }
-                @endphp
-                <a
-                    href="{{ route('admin.console', ['group' => $groupKey]) }}"
-                    wire:navigate.hover
-                    class="ue-admin-nav-link {{ $active ? 'active' : '' }}"
-                    @if($active) aria-current="page" @endif
-                    :title="collapsed ? '{{ $group['vn_label'] }}' : ''"
-                >
-                    <x-ui.icon :name="$group['icon']" size="sm" class="flex-shrink-0" />
-                    <span class="min-w-0 flex-1 truncate">{{ $group['vn_label'] }}</span>
-                    <span class="rounded-full bg-slate-100 px-2 py-0.5 ue-text-meta font-bold text-slate-550">{{ count($group['items']) }}</span>
-                </a>
-            @endforeach
+                    @endphp
+                    <li role="listitem">
+                        <a
+                            href="{{ route('admin.console', ['group' => $groupKey]) }}"
+                            wire:navigate.hover
+                            class="ue-nav-link {{ $active ? 'active' : '' }}"
+                            @if($active) aria-current="page" @endif
+                            :title="collapsed ? '{{ $group['vn_label'] }}' : ''"
+                        >
+                            <div class="relative flex items-center justify-center">
+                                <x-ui.icon :name="$group['icon']" size="md" aria-hidden="true" class="flex-shrink-0" />
+                            </div>
+                            <span x-show="!collapsed" x-transition:enter="transition ease-out duration-200 delay-75" x-transition:enter-start="opacity-0 translate-x-[-8px]" x-transition:enter-end="opacity-100 translate-x-0" x-transition:leave="transition ease-in duration-100" x-transition:leave-start="opacity-100" x-transition:leave-end="opacity-0" class="whitespace-nowrap">{{ $group['vn_label'] }}</span>
+                        </a>
+                    </li>
+                @endforeach
+            </ul>
         </div>
     </div>
 
     {{-- Bottom Account trigger --}}
-    <div class="relative mt-auto pt-3 border-t border-ue-border/60">
+    <div class="relative mt-auto pt-4 flex flex-col gap-1.5">
         <button
             type="button"
             @click="moreOpen = !moreOpen"
             @click.away="moreOpen = false"
-            class="flex items-center justify-between px-3 py-2 rounded-xl text-ue-text hover:bg-ue-surface-hover border transition-colors duration-150 w-60 ue-focus-ring"
-            :class="collapsed ? 'bg-white shadow-md border-ue-border/50' : ('border-transparent ' + (moreOpen ? 'bg-ue-brand-soft text-ue-brand-active' : 'bg-transparent'))"
+            class="ue-nav-link w-full flex items-center justify-between"
+            :class="moreOpen ? 'bg-ue-brand-soft text-ue-brand-active' : ''"
             aria-haspopup="true"
             :aria-expanded="moreOpen"
             aria-label="Xem thêm menu"
+            :title="collapsed ? '{{ $currentUser?->name }}' : ''"
         >
-            <div class="flex items-center gap-2.5">
-                <x-ui.avatar size="sm" />
-                <span class="truncate text-xs font-semibold">{{ $currentUser?->name }}</span>
+            <div class="flex items-center gap-3">
+                <div class="relative flex items-center justify-center">
+                    <x-ui.avatar size="xs" class="flex-shrink-0" />
+                </div>
+                <span x-show="!collapsed" x-transition:enter="transition ease-out duration-200 delay-75" x-transition:enter-start="opacity-0 translate-x-[-8px]" x-transition:enter-end="opacity-100 translate-x-0" x-transition:leave="transition ease-in duration-100" x-transition:leave-start="opacity-100" x-transition:leave-end="opacity-0" class="truncate text-sm font-semibold whitespace-nowrap">{{ $currentUser?->name }}</span>
             </div>
-            <x-ui.icon name="chevron-up" size="xs" class="text-ue-text-muted/60 transition-transform duration-150" x-bind:class="moreOpen ? 'rotate-180' : ''" />
+            <x-ui.icon name="chevron-up" size="xs" x-show="!collapsed" x-transition:enter="transition ease-out duration-200 delay-75" x-transition:enter-start="opacity-0" x-transition:enter-end="opacity-100" x-transition:leave="transition ease-in duration-100" x-transition:leave-start="opacity-100" x-transition:leave-end="opacity-0" class="text-ue-text-muted/60 transition-transform duration-150" x-bind:class="moreOpen ? 'rotate-180' : ''" />
         </button>
 
         {{-- More popover menu --}}
@@ -245,7 +251,7 @@ $secondaryNav = [
                                 <span x-show="collapsed" class="absolute -top-1 -right-1 h-2 w-2 rounded-full bg-red-500 ring-2 ring-white {{ !empty($item['badge']) && $item['badge'] > 0 ? '' : 'hidden' }} js-badge-dot-{{ $item['icon'] }}"></span>
                             </div>
                             <span x-show="!collapsed" x-transition:enter="transition ease-out duration-200 delay-75" x-transition:enter-start="opacity-0 translate-x-[-8px]" x-transition:enter-end="opacity-100 translate-x-0" x-transition:leave="transition ease-in duration-100" x-transition:leave-start="opacity-100" x-transition:leave-end="opacity-0" class="whitespace-nowrap">{{ $item['label'] }}</span>
-                            <span x-show="!collapsed" x-transition:enter="transition ease-out duration-200 delay-75" x-transition:enter-start="opacity-0" x-transition:enter-end="opacity-100" x-transition:leave="transition ease-in duration-100" x-transition:leave-start="opacity-100" x-transition:leave-end="opacity-0" class="ml-auto px-2 py-0.5 rounded-full bg-ue-brand text-white text-[10px] font-bold {{ !empty($item['badge']) && $item['badge'] > 0 ? '' : 'hidden' }} js-badge-count-{{ $item['icon'] }}">
+                            <span x-show="!collapsed" x-transition:enter="transition ease-out duration-200 delay-75" x-transition:enter-start="opacity-0" x-transition:enter-end="opacity-100" x-transition:leave="transition ease-in duration-100" x-transition:leave-start="opacity-100" x-transition:leave-end="opacity-0" class="ml-auto px-2 py-0.5 rounded-full bg-red-500 text-white text-[10px] font-bold {{ !empty($item['badge']) && $item['badge'] > 0 ? '' : 'hidden' }} js-badge-count-{{ $item['icon'] }}">
                                 {{ $item['badge'] }}
                             </span>
                         </a>
