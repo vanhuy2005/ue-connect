@@ -437,7 +437,7 @@ class MediaAndExperienceTest extends TestCase
         $this->assertStringContainsString('res.cloudinary.com', $variant->cloudinary_secure_url);
         $this->assertStringContainsString('res.cloudinary.com', app(GenerateMediaUrlAction::class)->execute($media, 'display', $user));
 
-        Http::assertSentCount(2);
+        Http::assertSentCount(1);
     }
 
     public function test_private_media_is_never_sent_to_cloudinary_in_hybrid_mode(): void

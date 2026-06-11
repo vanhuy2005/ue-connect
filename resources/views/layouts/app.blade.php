@@ -299,5 +299,101 @@
             <livewire:partials.app.ai-chatbot />
         @endauth
 
+        <!-- Global Lightbox Modal -->
+        <div
+            x-data="{
+                isOpen: false,
+                images: [],
+                selectedIndex: 0,
+                get currentImage() {
+                    return this.images[this.selectedIndex] || '';
+                },
+                open(images, index = 0) {
+                    this.images = Array.isArray(images) ? images : [images];
+                    this.selectedIndex = index;
+                    this.isOpen = true;
+                    document.body.style.overflow = 'hidden';
+                },
+                close() {
+                    this.isOpen = false;
+                    document.body.style.overflow = '';
+                },
+                next() {
+                    if (this.images.length > 1) {
+                        this.selectedIndex = (this.selectedIndex + 1) % this.images.length;
+                    }
+                },
+                prev() {
+                    if (this.images.length > 1) {
+                        this.selectedIndex = (this.selectedIndex - 1 + this.images.length) % this.images.length;
+                    }
+                }
+            }"
+            x-on:open-lightbox.window="open($event.detail.images, $event.detail.index || 0)"
+            x-on:keydown.escape.window="close()"
+            x-on:keydown.arrow-right.window="next()"
+            x-on:keydown.arrow-left.window="prev()"
+            x-show="isOpen"
+            class="fixed inset-0 z-[9999] flex items-center justify-center bg-black/90 backdrop-blur-xs select-none"
+            style="display: none;"
+            role="dialog"
+            aria-modal="true"
+        >
+            <!-- Close Button -->
+            <button
+                type="button"
+                @click="close()"
+                class="absolute top-4 right-4 text-white/70 hover:text-white transition p-2 rounded-full hover:bg-white/10 z-[10000]"
+                aria-label="Đóng"
+            >
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor" class="w-6 h-6">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+                </svg>
+            </button>
+
+            <!-- Prev Button -->
+            <template x-if="images.length > 1">
+                <button
+                    type="button"
+                    @click="prev()"
+                    class="absolute left-4 top-1/2 -translate-y-1/2 text-white/70 hover:text-white transition p-3 rounded-full hover:bg-white/10 z-[10000] hidden md:block"
+                    aria-label="Ảnh trước"
+                >
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor" class="w-6 h-6">
+                      <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 19.5L8.25 12l7.5-7.5" />
+                    </svg>
+                </button>
+            </template>
+
+            <!-- Next Button -->
+            <template x-if="images.length > 1">
+                <button
+                    type="button"
+                    @click="next()"
+                    class="absolute right-4 top-1/2 -translate-y-1/2 text-white/70 hover:text-white transition p-3 rounded-full hover:bg-white/10 z-[10000] hidden md:block"
+                    aria-label="Ảnh sau"
+                >
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor" class="w-6 h-6">
+                      <path stroke-linecap="round" stroke-linejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5" />
+                    </svg>
+                </button>
+            </template>
+
+            <!-- Main Content (Click backdrop to close) -->
+            <div @click="close()" class="absolute inset-0 flex items-center justify-center p-4">
+                <img
+                    :src="currentImage"
+                    @click.stop
+                    class="max-w-[90vw] max-h-[90vh] object-contain rounded-md shadow-2xl transition-all duration-300"
+                    alt="Phóng to hình ảnh"
+                />
+            </div>
+
+            <!-- Mobile Swipe / Dots indicator -->
+            <div class="absolute bottom-4 left-1/2 -translate-x-1/2 flex items-center gap-2 text-white/60 text-xs font-semibold bg-black/40 px-3 py-1.5 rounded-full" x-show="images.length > 1">
+                <span x-text="(selectedIndex + 1) + ' / ' + images.length"></span>
+            </div>
+        </div>
+
     </body>
 </html>
