@@ -553,7 +553,19 @@ Route::prefix('admin')
             ]);
         })->name('console');
 
-        Route::view('dashboard', 'admin.dashboard')->name('dashboard');
+        Route::get('dashboard', function () {
+            return view('admin.dashboard');
+        })->name('dashboard');
+
+        Route::get('/render-logs', function () {
+            $logPath = storage_path('logs/laravel.log');
+            if (file_exists($logPath)) {
+                // Lấy 200 dòng cuối cùng
+                $lines = array_slice(file($logPath), -200);
+                return response('<pre>' . implode('', $lines) . '</pre>')->header('Content-Type', 'text/html; charset=UTF-8');
+            }
+            return 'No logs found.';
+        });
 
         // Verification workflow
         Route::get('verification/evidence/{evidence}', [VerificationEvidenceController::class, 'show'])
