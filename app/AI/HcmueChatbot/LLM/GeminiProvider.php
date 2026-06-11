@@ -5,7 +5,6 @@ namespace App\AI\HcmueChatbot\LLM;
 use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Http\Client\RequestException;
 use Illuminate\Support\Facades\Http;
-use Illuminate\Support\Facades\Log;
 
 class GeminiProvider implements LlmProviderInterface
 {
@@ -13,10 +12,24 @@ class GeminiProvider implements LlmProviderInterface
 
     protected string $model;
 
+    protected GeminiKeyManager $keyManager;
+
     public function __construct(?string $apiKey = null, string $model = 'gemini-2.0-flash')
     {
         $this->apiKey = $apiKey ?: config('services.gemini.key', env('GEMINI_API_KEY'));
         $this->model = $model;
+
+        // If an API key was explicitly passed, override the pool keys
+        $overrideKeys = ! empty($apiKey) ? [$apiKey] : null;
+        $this->keyManager = new GeminiKeyManager($overrideKeys);
+    }
+
+    /**
+     * Get the underlying KeyManager instance (useful for testing).
+     */
+    public function getKeyManager(): GeminiKeyManager
+    {
+        return $this->keyManager;
     }
 
     /**
@@ -24,48 +37,48 @@ class GeminiProvider implements LlmProviderInterface
      */
     public function generate(string $prompt, array $options = []): array
     {
-        $url = "https://generativelanguage.googleapis.com/v1beta/models/{$this->model}:generateContent?key={$this->apiKey}";
+        return $this->keyManager->run(function (string $apiKey) use ($prompt, $options) {
+            $url = "https://generativelanguage.googleapis.com/v1beta/models/{$this->model}:generateContent?key={$apiKey}";
 
-        $systemInstruction = $options['system_instruction'] ?? null;
-        $jsonMode = $options['json_mode'] ?? false;
-        $temperature = $options['temperature'] ?? 0.2;
+            $systemInstruction = $options['system_instruction'] ?? null;
+            $jsonMode = $options['json_mode'] ?? false;
+            $temperature = $options['temperature'] ?? 0.2;
 
-        $contents = [
-            [
-                'parts' => [
-                    ['text' => $prompt],
-                ],
-            ],
-        ];
-
-        // Format body
-        $body = [
-            'contents' => $contents,
-            'generationConfig' => [
-                'temperature' => $temperature,
-            ],
-        ];
-
-        if ($systemInstruction) {
-            $body['systemInstruction'] = [
-                'parts' => [
-                    ['text' => $systemInstruction],
+            $contents = [
+                [
+                    'parts' => [
+                        ['text' => $prompt],
+                    ],
                 ],
             ];
-        }
 
-        if ($jsonMode) {
-            $body['generationConfig']['responseMimeType'] = 'application/json';
-        }
+            // Format body
+            $body = [
+                'contents' => $contents,
+                'generationConfig' => [
+                    'temperature' => $temperature,
+                ],
+            ];
 
-        try {
+            if ($systemInstruction) {
+                $body['systemInstruction'] = [
+                    'parts' => [
+                        ['text' => $systemInstruction],
+                    ],
+                ];
+            }
+
+            if ($jsonMode) {
+                $body['generationConfig']['responseMimeType'] = 'application/json';
+            }
+
             $response = Http::retry(3, function (int $attempt) {
                 return [2000, 5000, 10000][$attempt - 1] ?? 10000;
             }, function (\Throwable $exception) {
                 if ($exception instanceof RequestException) {
                     $status = $exception->response->status();
 
-                    return $status === 429 || $status === 503;
+                    return $status === 503;
                 }
 
                 return $exception instanceof ConnectionException;
@@ -96,10 +109,7 @@ class GeminiProvider implements LlmProviderInterface
                     'total_tokens' => (int) $totalTokens,
                 ],
             ];
-        } catch (\Exception $e) {
-            Log::error('Gemini provider failed: '.$e->getMessage());
-            throw $e;
-        }
+        });
     }
 
     /**
@@ -107,29 +117,29 @@ class GeminiProvider implements LlmProviderInterface
      */
     public function embed(string $text): array
     {
-        $embeddingModel = str_contains($this->model, 'embedding') ? $this->model : 'text-embedding-004';
-        $cleanModel = ltrim($embeddingModel, 'models/');
+        return $this->keyManager->run(function (string $apiKey) use ($text) {
+            $embeddingModel = str_contains($this->model, 'embedding') ? $this->model : 'text-embedding-004';
+            $cleanModel = ltrim($embeddingModel, 'models/');
 
-        $url = "https://generativelanguage.googleapis.com/v1beta/models/{$cleanModel}:embedContent?key={$this->apiKey}";
+            $url = "https://generativelanguage.googleapis.com/v1beta/models/{$cleanModel}:embedContent?key={$apiKey}";
 
-        $body = [
-            'model' => "models/{$cleanModel}",
-            'content' => [
-                'parts' => [
-                    ['text' => $text],
+            $body = [
+                'model' => "models/{$cleanModel}",
+                'content' => [
+                    'parts' => [
+                        ['text' => $text],
+                    ],
                 ],
-            ],
-            'outputDimensionality' => config('ai.embedding.dimensions', 768),
-        ];
+                'outputDimensionality' => config('ai.embedding.dimensions', 768),
+            ];
 
-        try {
             $response = Http::retry(3, function (int $attempt) {
                 return [2000, 5000, 10000][$attempt - 1] ?? 10000;
             }, function (\Throwable $exception) {
                 if ($exception instanceof RequestException) {
                     $status = $exception->response->status();
 
-                    return $status === 429 || $status === 503;
+                    return $status === 503;
                 }
 
                 return $exception instanceof ConnectionException;
@@ -146,10 +156,7 @@ class GeminiProvider implements LlmProviderInterface
             $data = $response->json();
 
             return $data['embedding']['values'] ?? [];
-        } catch (\Exception $e) {
-            Log::error('Gemini embedding failed: '.$e->getMessage());
-            throw $e;
-        }
+        });
     }
 
     /**
@@ -160,33 +167,33 @@ class GeminiProvider implements LlmProviderInterface
      */
     public function batchEmbed(array $texts): array
     {
-        $embeddingModel = str_contains($this->model, 'embedding') ? $this->model : 'text-embedding-004';
-        $cleanModel = ltrim($embeddingModel, 'models/');
+        return $this->keyManager->run(function (string $apiKey) use ($texts) {
+            $embeddingModel = str_contains($this->model, 'embedding') ? $this->model : 'text-embedding-004';
+            $cleanModel = ltrim($embeddingModel, 'models/');
 
-        $url = "https://generativelanguage.googleapis.com/v1beta/models/{$cleanModel}:batchEmbedContents?key={$this->apiKey}";
+            $url = "https://generativelanguage.googleapis.com/v1beta/models/{$cleanModel}:batchEmbedContents?key={$apiKey}";
 
-        $requests = [];
-        $dims = config('ai.embedding.dimensions', 768);
-        foreach ($texts as $text) {
-            $requests[] = [
-                'model' => "models/{$cleanModel}",
-                'content' => [
-                    'parts' => [
-                        ['text' => $text],
+            $requests = [];
+            $dims = config('ai.embedding.dimensions', 768);
+            foreach ($texts as $text) {
+                $requests[] = [
+                    'model' => "models/{$cleanModel}",
+                    'content' => [
+                        'parts' => [
+                            ['text' => $text],
+                        ],
                     ],
-                ],
-                'outputDimensionality' => $dims,
-            ];
-        }
+                    'outputDimensionality' => $dims,
+                ];
+            }
 
-        try {
             $response = Http::retry(3, function (int $attempt) {
                 return [3000, 7000, 15000][$attempt - 1] ?? 15000;
             }, function (\Throwable $exception) {
                 if ($exception instanceof RequestException) {
                     $status = $exception->response->status();
 
-                    return $status === 429 || $status === 503;
+                    return $status === 503;
                 }
 
                 return $exception instanceof ConnectionException;
@@ -209,9 +216,6 @@ class GeminiProvider implements LlmProviderInterface
             }
 
             return $results;
-        } catch (\Exception $e) {
-            Log::error('Gemini batch embedding failed: '.$e->getMessage());
-            throw $e;
-        }
+        });
     }
 }
