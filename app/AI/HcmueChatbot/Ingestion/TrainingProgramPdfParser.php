@@ -7,13 +7,14 @@ use Illuminate\Support\Facades\Log;
 
 class TrainingProgramPdfParser
 {
-    protected string $apiKey;
+    protected GeminiKeyManager $keyManager;
 
     protected TrainingProgramImportService $importService;
 
     public function __construct(TrainingProgramImportService $importService)
     {
-        $this->apiKey = config('services.gemini.key', env('GEMINI_API_KEY'));
+        $primaryKey = config('services.gemini.key', env('GEMINI_API_KEY'));
+        $this->keyManager = new GeminiKeyManager($primaryKey ? [$primaryKey] : null);
         $this->importService = $importService;
     }
 
@@ -30,84 +31,83 @@ class TrainingProgramPdfParser
         }
 
         try {
-            // Check if key is placeholder or empty, in which case bypass immediately to avoid latency
-            if (empty($this->apiKey) || $this->apiKey === 'AIzaSyBhHX7CMwnWVfqd5WLw905_Audx7oDagsMr') {
-                throw new \Exception('Placeholder or empty API key detected. Skipping API call.');
+            if (empty($this->keyManager->getKeys())) {
+                throw new \Exception('No Gemini API keys configured.');
             }
 
             Log::info("Uploading PDF to Gemini File API: {$pdfPath}");
 
-            // 1. Upload file to Gemini File API
-            $fileContent = file_get_contents($pdfPath);
-            $uploadUrl = "https://generativelanguage.googleapis.com/upload/v1beta/files?uploadType=media&key={$this->apiKey}";
+            $importData = $this->keyManager->run(function (string $apiKey) use ($pdfPath, $metadata) {
+                if ($apiKey === 'AIzaSyBhHX7CMwnWVfqd5WLw905_Audx7oDagsMr') {
+                    throw new \Exception('Placeholder API key. Skipping.');
+                }
 
-            $uploadResponse = Http::withoutVerifying()
-                ->withBody($fileContent, 'application/pdf')
-                ->post($uploadUrl);
+                // 1. Upload file to Gemini File API
+                $fileContent = file_get_contents($pdfPath);
+                $uploadUrl = "https://generativelanguage.googleapis.com/upload/v1beta/files?uploadType=media&key={$apiKey}";
 
-            if ($uploadResponse->failed()) {
-                throw new \Exception('Failed to upload PDF to Gemini: '.$uploadResponse->body());
-            }
+                $uploadResponse = Http::withoutVerifying()
+                    ->withBody($fileContent, 'application/pdf')
+                    ->post($uploadUrl)
+                    ->throw();
 
-            $uploadData = $uploadResponse->json();
-            $fileUri = $uploadData['file']['uri'] ?? null;
-            $fileName = $uploadData['file']['name'] ?? null; // e.g. files/abc123xyz
+                $uploadData = $uploadResponse->json();
+                $fileUri = $uploadData['file']['uri'] ?? null;
+                $fileName = $uploadData['file']['name'] ?? null; // e.g. files/abc123xyz
 
-            if (! $fileUri || ! $fileName) {
-                throw new \Exception('Invalid upload response from Gemini: '.json_encode($uploadData));
-            }
+                if (! $fileUri || ! $fileName) {
+                    throw new \Exception('Invalid upload response from Gemini: '.json_encode($uploadData));
+                }
 
-            Log::info("PDF uploaded successfully. URI: {$fileUri}. Name: {$fileName}");
+                Log::info("PDF uploaded successfully. URI: {$fileUri}. Name: {$fileName}");
 
-            try {
-                // 2. Wait for file processing if necessary
-                sleep(3);
+                try {
+                    // 2. Wait for file processing if necessary
+                    sleep(3);
 
-                // 3. Prompt Gemini to extract structured curriculum JSON
-                $prompt = $this->buildExtractionPrompt($metadata);
-                $generateUrl = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key={$this->apiKey}";
+                    // 3. Prompt Gemini to extract structured curriculum JSON
+                    $prompt = $this->buildExtractionPrompt($metadata);
+                    $generateUrl = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key={$apiKey}";
 
-                $body = [
-                    'contents' => [
-                        [
-                            'parts' => [
-                                ['file_data' => ['mime_type' => 'application/pdf', 'file_uri' => $fileUri]],
-                                ['text' => $prompt],
+                    $body = [
+                        'contents' => [
+                            [
+                                'parts' => [
+                                    ['file_data' => ['mime_type' => 'application/pdf', 'file_uri' => $fileUri]],
+                                    ['text' => $prompt],
+                                ],
                             ],
                         ],
-                    ],
-                    'generationConfig' => [
-                        'temperature' => 0.1,
-                        'responseMimeType' => 'application/json',
-                    ],
-                ];
+                        'generationConfig' => [
+                            'temperature' => 0.1,
+                            'responseMimeType' => 'application/json',
+                        ],
+                    ];
 
-                Log::info('Requesting Gemini to extract structured curriculum JSON...');
-                $generateResponse = Http::withoutVerifying()
-                    ->timeout(120)
-                    ->post($generateUrl, $body);
+                    Log::info('Requesting Gemini to extract structured curriculum JSON...');
+                    $generateResponse = Http::withoutVerifying()
+                        ->timeout(120)
+                        ->post($generateUrl, $body)
+                        ->throw();
 
-                if ($generateResponse->failed()) {
-                    throw new \Exception('Failed to extract content from Gemini: '.$generateResponse->body());
+                    $generateData = $generateResponse->json();
+                    $jsonText = $generateData['candidates'][0]['content']['parts'][0]['text'] ?? '{}';
+
+                    Log::info('Received extraction response. Parsing JSON...');
+
+                    $parsedData = json_decode($jsonText, true);
+                    if (json_last_error() !== JSON_ERROR_NONE) {
+                        throw new \Exception('Invalid JSON returned by Gemini: '.json_last_error_msg());
+                    }
+
+                    return $this->mergeMetadataWithParsed($parsedData, $metadata);
+
+                } finally {
+                    // Delete file from Gemini File API to cleanup
+                    Log::info("Cleaning up Gemini file: {$fileName}");
+                    Http::withoutVerifying()->delete("https://generativelanguage.googleapis.com/v1beta/{$fileName}?key={$apiKey}");
                 }
-
-                $generateData = $generateResponse->json();
-                $jsonText = $generateData['candidates'][0]['content']['parts'][0]['text'] ?? '{}';
-
-                Log::info('Received extraction response. Parsing JSON...');
-
-                $parsedData = json_decode($jsonText, true);
-                if (json_last_error() !== JSON_ERROR_NONE) {
-                    throw new \Exception('Invalid JSON returned by Gemini: '.json_last_error_msg());
-                }
-
-                $importData = $this->mergeMetadataWithParsed($parsedData, $metadata);
-
-            } finally {
-                // Delete file from Gemini File API to cleanup
-                Log::info("Cleaning up Gemini file: {$fileName}");
-                Http::withoutVerifying()->delete("https://generativelanguage.googleapis.com/v1beta/{$fileName}?key={$this->apiKey}");
-            }
+            });
 
         } catch (\Exception $e) {
             Log::warning('Gemini extraction failed, using high-quality local mock generator: '.$e->getMessage());

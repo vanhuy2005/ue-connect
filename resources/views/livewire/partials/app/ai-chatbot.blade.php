@@ -3,6 +3,8 @@
 use function Livewire\Volt\{state, action, layout};
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Auth;
+use App\AI\HcmueChatbot\Chat\HcmueChatService;
 
 state([
     'isOpen' => false,
@@ -11,13 +13,14 @@ state([
         ['role' => 'model', 'content' => 'Xin chào! Tôi là trợ lý AI của UE Connect. Tôi có thể giúp gì cho bạn hôm nay?']
     ],
     'isTyping' => false,
+    'sessionId' => null,
 ]);
 
 $toggleChat = action(function () {
     $this->isOpen = !$this->isOpen;
 });
 
-$sendMessage = action(function () {
+$sendMessage = action(function (HcmueChatService $chatService) {
     if (trim($this->input) === '') {
         return;
     }
@@ -27,79 +30,42 @@ $sendMessage = action(function () {
     $this->input = '';
     $this->isTyping = true;
 
-    // Send request to AI Provider (Gemini Flash as default from config)
-    $apiKey = config('ai-verification.providers.gemini_flash.api_key');
-    
-    if (empty($apiKey)) {
-        $this->messages[] = ['role' => 'model', 'content' => 'Xin lỗi, hệ thống chưa được cấu hình API Key cho Chatbot.'];
+    $user = Auth::user();
+    if (!$user) {
+        $this->messages[] = ['role' => 'model', 'content' => 'Vui lòng đăng nhập để sử dụng trợ lý AI.'];
         $this->isTyping = false;
         return;
     }
 
     try {
-        // Prepare system instructions with cached documents
-        $systemParts = [
-            ['text' => "Bạn là trợ lý AI chính thức của UE Connect (mạng xã hội nội bộ trường đại học). Nhiệm vụ của bạn là giải đáp các thắc mắc của sinh viên một cách thân thiện và chính xác. Hãy ưu tiên sử dụng thông tin từ các tài liệu đính kèm (Sổ tay sinh viên, Chương trình đào tạo) để trả lời. Nếu không tìm thấy thông tin trong tài liệu, hãy nói rõ là bạn không có thông tin chắc chắn."],
-        ];
+        // Resolve session for the user
+        $session = $chatService->resolveSession($user, $this->sessionId);
+        $this->sessionId = $session->id;
 
-        $cachedDocuments = \Illuminate\Support\Facades\Cache::get('ai_chatbot_documents', []);
-        foreach ($cachedDocuments as $doc) {
-            $systemParts[] = [
-                'file_data' => [
-                    'mime_type' => $doc['mime_type'],
-                    'file_uri' => $doc['file_uri']
-                ]
-            ];
-        }
+        // Process message through HcmueChatService RAG pipeline (only Qdrant is queried)
+        $result = $chatService->chat($userMessage, $session, $user);
 
-        // Format messages for Gemini API
-        $formattedMessages = collect($this->messages)
-            ->filter(fn($msg) => in_array($msg['role'], ['user', 'model']))
-            ->map(function ($msg) {
-                return [
-                    'role' => $msg['role'],
-                    'parts' => [['text' => $msg['content']]],
-                ];
-            })->values()->toArray();
+        $this->messages[] = ['role' => 'model', 'content' => $result['answer']];
 
-        $baseUrl = config('ai-verification.providers.gemini_flash.base_url', 'https://generativelanguage.googleapis.com');
-        $model = config('ai-verification.providers.gemini_flash.model', 'gemini-2.0-flash');
-        $url = "{$baseUrl}/v1beta/models/{$model}:generateContent?key={$apiKey}";
+    } catch (\Illuminate\Http\Client\RequestException $e) {
+        $response = $e->response;
+        $errorData = $response->json();
+        $errorMessage = $errorData['error']['message'] ?? $response->body();
+        $errorCode = $response->status();
+        $errorStatus = $errorData['error']['status'] ?? 'UNKNOWN';
 
-        $response = Http::withoutVerifying()->timeout(60)->post($url, [
-            'system_instruction' => [
-                'parts' => $systemParts,
-            ],
-            'contents' => $formattedMessages,
-            'generationConfig' => [
-                'temperature' => 0.7,
-            ],
-        ]);
+        Log::error("Gemini API Error [{$errorCode} - {$errorStatus}]: " . $response->body());
 
-        if ($response->successful()) {
-            $data = $response->json();
-            $replyText = $data['candidates'][0]['content']['parts'][0]['text'] ?? 'Xin lỗi, tôi không thể trả lời lúc này.';
-            $this->messages[] = ['role' => 'model', 'content' => $replyText];
+        $details = "Lỗi kết nối với AI (HTTP {$errorCode}): ";
+        if ($errorCode == 429 || $errorStatus === 'RESOURCE_EXHAUSTED') {
+            $details .= "Bạn đã vượt quá giới hạn tài nguyên (Quota Exceeded) của API Key hiện tại. Vui lòng kiểm tra lại hạn mức tài khoản Google AI Studio hoặc đổi sang Key khác.";
+        } elseif ($errorCode == 400) {
+            $details .= "API Key không hợp lệ hoặc thiếu. Vui lòng điền đúng GEMINI_API_KEY trong file .env và clear cache config.";
         } else {
-            $errorData = $response->json();
-            $errorMessage = $errorData['error']['message'] ?? $response->body();
-            $errorCode = $errorData['error']['code'] ?? $response->status();
-            $errorStatus = $errorData['error']['status'] ?? 'UNKNOWN';
-
-            Log::error("Gemini API Error [{$errorCode} - {$errorStatus}]: " . $response->body());
-
-            $details = "Lỗi kết nối với AI (HTTP {$errorCode}): ";
-            if ($errorCode == 429 || $errorStatus === 'RESOURCE_EXHAUSTED') {
-                $details .= "Bạn đã vượt quá giới hạn tài nguyên (Quota Exceeded) của API Key hiện tại. Vui lòng kiểm tra lại hạn mức tài khoản Google AI Studio hoặc đổi sang Key khác.";
-            } elseif ($errorCode == 400) {
-                $details .= "API Key không hợp lệ hoặc thiếu. Vui lòng điền đúng GEMINI_API_KEY trong file .env và clear cache config.";
-            } else {
-                $details .= $errorMessage;
-            }
-
-            $this->messages[] = ['role' => 'model', 'content' => $details];
+            $details .= $errorMessage;
         }
 
+        $this->messages[] = ['role' => 'model', 'content' => $details];
     } catch (\Exception $e) {
         Log::error('Chatbot Exception: ' . $e->getMessage());
         $this->messages[] = ['role' => 'model', 'content' => 'Hệ thống đang bận. Chi tiết: ' . $e->getMessage()];

@@ -64,7 +64,7 @@ Hãy trả về JSON hợp lệ, không giải thích thêm.
 
 Schema:
 {
-  "intent": "training_program_lookup | curriculum_course_lookup | academic_policy | graduation_requirement | handbook_explanation | hybrid | clarification | unsupported",
+  "intent": "training_program_lookup | curriculum_course_lookup | academic_policy | student_policy | graduation_requirement | handbook_explanation | hybrid | clarification | unsupported",
   "source": "structured_db | rag | hybrid | none",
   "confidence": 0.0,
   "entities": {

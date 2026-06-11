@@ -19,7 +19,7 @@ class TestEmbedding extends Command
      *
      * @var string
      */
-    protected $description = 'Test embedding generation and verify dimensions';
+    protected $description = 'Test embedding generation: shows provider, endpoint, dimension, first 5 vector values, and elapsed time';
 
     /**
      * Execute the console command.
@@ -27,30 +27,59 @@ class TestEmbedding extends Command
     public function handle(EmbeddingService $embeddingService): int
     {
         $text = $this->argument('text');
-        $this->info("Sending text to embed: \"{$text}\"");
+        $provider = config('ai.embedding.provider', 'gemini');
+        $expectedDim = (int) config('ai.qdrant.vector_size', 1024);
+
+        $this->info('=================== EMBEDDING TEST ===================');
+        $this->line("Provider:          {$provider}");
+
+        if ($provider === 'bge_m3') {
+            $endpoint = config('ai.bge_m3.url', 'https://ntkhoi2005-hcmue-bge-m3-embedding.hf.space');
+            $timeout = config('ai.bge_m3.timeout', 120);
+            $this->line("Endpoint:          {$endpoint}/embed");
+            $this->line("Timeout:           {$timeout}s");
+        } else {
+            $model = config('ai.embedding.model', 'gemini-embedding-001');
+            $this->line("Model:             {$model}");
+        }
+
+        $this->line("Expected dim:      {$expectedDim}");
+        $this->line("Text:              \"{$text}\"");
+        $this->newLine();
 
         try {
+            $start = microtime(true);
             $vector = $embeddingService->embed($text);
-            $length = count($vector);
+            $elapsed = round((microtime(true) - $start) * 1000);
 
-            $this->info('Provider: '.env('AI_EMBEDDING_DRIVER', 'gemini'));
-            $this->info('Model: '.env('AI_EMBEDDING_MODEL', 'text-embedding-004'));
-            $this->info('Configured dimension: '.config('ai.qdrant.vector_size', 768));
-            $this->info("Actual vector length: {$length}");
+            $actualDim = count($vector);
+            $first5 = array_slice($vector, 0, 5);
+            $formattedFirst5 = implode(', ', array_map(fn ($v) => number_format($v, 6), $first5));
 
-            if ($length === (int) config('ai.qdrant.vector_size', 768)) {
-                $this->info('OK');
+            $this->line("Actual dimension:  {$actualDim}");
+            $this->line("First 5 values:    [{$formattedFirst5}]");
+            $this->line("Elapsed time:      {$elapsed} ms");
+            $this->newLine();
 
-                return 0;
-            } else {
-                $this->error('Dimension mismatch!');
+            if ($actualDim === $expectedDim) {
+                $this->info('✓ Dimension OK');
 
-                return 1;
+                // If using BGE-M3, do a quick sanity check on vector magnitude
+                if ($provider === 'bge_m3') {
+                    $magnitude = sqrt(array_sum(array_map(fn ($v) => $v * $v, $vector)));
+                    $this->line('Vector magnitude:  '.number_format($magnitude, 6).' (BGE-M3 typically ~1.0 for normalized)');
+                }
+
+                return self::SUCCESS;
             }
+
+            $this->error("✗ Dimension mismatch! Expected {$expectedDim}, got {$actualDim}.");
+
+            return self::FAILURE;
         } catch (\Exception $e) {
             $this->error('Failed to generate embedding: '.$e->getMessage());
 
-            return 1;
+            return self::FAILURE;
         }
     }
 }

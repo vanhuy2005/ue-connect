@@ -728,6 +728,7 @@ Route::prefix('admin')
         Route::get('source-documents', [AdminSourceDocumentController::class, 'index'])->name('source-documents.index');
         Route::post('source-documents', [AdminSourceDocumentController::class, 'store'])->name('source-documents.store');
         Route::post('source-documents/{sourceDocument}/ingest', [AdminSourceDocumentController::class, 'ingest'])->name('source-documents.ingest');
+        Route::post('source-documents/{sourceDocument}/repair', [AdminSourceDocumentController::class, 'repair'])->name('source-documents.repair');
         Route::delete('source-documents/{sourceDocument}', [AdminSourceDocumentController::class, 'destroy'])->name('source-documents.destroy');
         Route::get('source-documents/test-search', [AdminSourceDocumentController::class, 'testSearch'])->name('source-documents.test-search');
     });

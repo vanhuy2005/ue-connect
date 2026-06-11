@@ -23,11 +23,21 @@ class SourceDocument extends Model
         'status',
         'uploaded_by',
         'published_at',
+        'knowledge_batch_id',
+        'knowledge_batch_key',
     ];
 
     protected $casts = [
         'published_at' => 'datetime',
     ];
+
+    /**
+     * Get the knowledge batch that owns this document.
+     */
+    public function knowledgeBatch(): BelongsTo
+    {
+        return $this->belongsTo(KnowledgeBatch::class, 'knowledge_batch_id');
+    }
 
     /**
      * Get the user who uploaded the document.
@@ -43,5 +53,13 @@ class SourceDocument extends Model
     public function chunks(): HasMany
     {
         return $this->hasMany(DocumentChunk::class, 'source_document_id');
+    }
+
+    /**
+     * Get the first chunk for metadata prefilling.
+     */
+    public function firstChunk()
+    {
+        return $this->hasOne(DocumentChunk::class, 'source_document_id')->oldestOfMany();
     }
 }

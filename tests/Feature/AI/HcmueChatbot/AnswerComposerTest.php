@@ -73,6 +73,87 @@ class AnswerComposerTest extends TestCase
     }
 
     /**
+     * Case A: structured DB fails, RAG succeeds.
+     * Expected: prompt does NOT contain the structured failure message,
+     * and the LLM is called with rag_context only.
+     */
+    public function test_structured_failure_with_rag_success_uses_rag_context(): void
+    {
+        $ragAnswerText = 'Theo tài liệu 02_Chuong_trinh_khung.pdf, ngành Sư phạm Hóa học cần 150 tín chỉ.';
+        $this->mockLlm($ragAnswerText);
+
+        $service = new AnswerComposerService;
+
+        $structuredResult = [
+            'success' => false,
+            'data' => null,
+            'metadata' => [],
+            'message' => "Không tìm thấy chương trình đào tạo phù hợp cho ngành 'Sư phạm Hóa học' của khóa 'K50'.",
+        ];
+
+        $ragChunks = [
+            [
+                'id' => 99,
+                'score' => 0.70,
+                'chunk_text' => 'CHƯƠNG TRÌNH KHUNG Cử nhân Sư phạm Hoá học (Áp dụng từ khoá 50). Tổng tín chỉ toàn khóa: 150 tín chỉ.',
+                'document_name' => '02_Chuong_trinh_khung.pdf',
+                'document_type' => 'training_program',
+                'article' => null,
+                'page_start' => 1,
+                'page_end' => 1,
+                'cohort' => 'K50',
+            ],
+        ];
+
+        $result = $service->compose(
+            'Khoá 50 ngành sư phạm hoá cần bao nhiêu tín chỉ để ra trường',
+            'Khóa 50 ngành Sư phạm Hóa học cần bao nhiêu tín chỉ để ra trường',
+            ['intent' => 'get_program_total_credits', 'source' => 'structured_db', 'entities' => ['cohort' => 'K50', 'major' => 'Sư phạm Hóa học']],
+            $structuredResult,
+            $ragChunks
+        );
+
+        // The answer must not echo the structured DB failure phrase
+        $this->assertStringNotContainsString(
+            'Không tìm thấy chương trình đào tạo phù hợp',
+            $result['answer_text'],
+            'Structured DB failure message must not appear when RAG has results.'
+        );
+
+        // The LLM was reached and returned our mocked answer
+        $this->assertEquals($ragAnswerText, $result['answer_text']);
+        $this->assertNotEmpty($result['answer_text']);
+    }
+
+    /**
+     * Case B: both structured DB and RAG fail.
+     * Expected: a static "not found" message is returned without calling the LLM.
+     */
+    public function test_both_sources_empty_returns_not_found(): void
+    {
+        $service = new AnswerComposerService;
+
+        $structuredResult = [
+            'success' => false,
+            'data' => null,
+            'metadata' => [],
+            'message' => "Không tìm thấy chương trình đào tạo phù hợp cho ngành 'Sư phạm Hóa học' của khóa 'K50'.",
+        ];
+
+        $result = $service->compose(
+            'Khoá 50 ngành sư phạm hoá cần bao nhiêu tín chỉ để ra trường',
+            'Khóa 50 ngành Sư phạm Hóa học cần bao nhiêu tín chỉ để ra trường',
+            ['intent' => 'get_program_total_credits', 'source' => 'structured_db', 'entities' => ['cohort' => 'K50', 'major' => 'Sư phạm Hóa học']],
+            $structuredResult,
+            [] // empty RAG
+        );
+
+        // A static not-found message must be returned
+        $this->assertNotEmpty($result['answer_text']);
+        $this->assertEquals(0, $result['input_tokens'], 'LLM must NOT be called when both sources are empty.');
+    }
+
+    /**
      * Test that a failed LLM call returns a safe fallback answer.
      */
     public function test_returns_fallback_answer_on_llm_failure(): void

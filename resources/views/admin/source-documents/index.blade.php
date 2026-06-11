@@ -14,6 +14,91 @@
             </div>
         </div>
 
+        <!-- Data Coverage Dashboard -->
+        <div class="mb-8 grid grid-cols-1 md:grid-cols-5 gap-6">
+            <div class="rounded-2xl border border-ue-border bg-ue-input-bg p-5 shadow-sm">
+                <div class="text-xs font-semibold uppercase tracking-wider text-ue-text-muted font-bold">Tổng tài liệu</div>
+                <div class="mt-2 text-3xl font-extrabold text-ue-primary">{{ $stats['total_files'] }}</div>
+                <div class="mt-1 text-xs text-ue-text-muted">Lập chỉ mục: {{ $stats['total_files'] }} / Thư mục: {{ $stats['total_files_in_dir'] }}</div>
+            </div>
+            <div class="rounded-2xl border border-ue-border bg-ue-input-bg p-5 shadow-sm">
+                <div class="text-xs font-semibold uppercase tracking-wider text-ue-text-muted font-bold">Dữ liệu Vectors</div>
+                <div class="mt-2 text-3xl font-extrabold text-indigo-600">{{ $stats['total_vectors'] }}</div>
+                <div class="mt-1 text-xs text-ue-text-muted">Tổng chunks: {{ $stats['total_chunks'] }}</div>
+            </div>
+            <div class="rounded-2xl border border-ue-border bg-ue-input-bg p-5 shadow-sm col-span-1">
+                <div class="text-xs font-semibold uppercase tracking-wider text-ue-text-muted font-bold">Trạng thái xử lý</div>
+                <div class="mt-2 space-y-1 text-xs text-ue-text">
+                    <div class="flex justify-between">
+                        <span>Hoạt động:</span>
+                        <span class="font-bold text-emerald-600">{{ $stats['file_ingested'] }}</span>
+                    </div>
+                    <div class="flex justify-between">
+                        <span>Chưa Ingest:</span>
+                        <span class="font-bold text-blue-600">{{ $stats['file_not_ingested'] }}</span>
+                    </div>
+                    <div class="flex justify-between">
+                        <span>Cần OCR:</span>
+                        <span class="font-bold text-yellow-600">{{ $stats['file_needs_ocr'] }}</span>
+                    </div>
+                    <div class="flex justify-between">
+                        <span>Thất bại:</span>
+                        <span class="font-bold text-red-600">{{ $stats['file_failed'] }}</span>
+                    </div>
+                </div>
+            </div>
+            <div class="rounded-2xl border border-ue-border bg-ue-input-bg p-5 shadow-sm">
+                <div class="text-xs font-semibold uppercase tracking-wider text-ue-text-muted font-bold">Phân loại tài liệu</div>
+                <div class="mt-2 space-y-1 text-xs text-ue-text">
+                    @foreach($stats['type_distribution'] as $type => $count)
+                        <div class="flex justify-between">
+                            <span class="capitalize">{{ str_replace('_', ' ', $type) }}:</span>
+                            <span class="font-bold text-ue-primary">{{ $count }}</span>
+                        </div>
+                    @endforeach
+                </div>
+            </div>
+            <div class="rounded-2xl border border-ue-border bg-ue-input-bg p-5 shadow-sm">
+                <div class="text-xs font-semibold uppercase tracking-wider text-ue-text-muted font-bold">Phân phối theo Khóa</div>
+                <div class="mt-2 max-h-20 overflow-y-auto space-y-1 text-xs text-ue-text">
+                    @forelse($stats['cohort_distribution'] as $cohort => $count)
+                        <div class="flex justify-between">
+                            <span>Khóa {{ $cohort }}:</span>
+                            <span class="font-bold text-ue-primary">{{ $count }}</span>
+                        </div>
+                    @empty
+                        <div class="text-ue-text-muted text-xs">Không có khóa cụ thể.</div>
+                    @endforelse
+                </div>
+            </div>
+        </div>
+
+        @if(!empty($stats['faculty_distribution']))
+            <div class="mb-6 rounded-2xl border border-ue-border bg-ue-input-bg p-5 shadow-sm">
+                <h3 class="text-sm font-semibold text-ue-text uppercase tracking-wider mb-3">Phân phối tài liệu theo Khoa</h3>
+                <div class="flex flex-wrap gap-2">
+                    @foreach($stats['faculty_distribution'] as $fac => $count)
+                        <span class="inline-flex items-center px-3 py-1 rounded-xl text-xs font-medium bg-ue-primary/10 text-ue-primary">
+                            {{ $fac }}: <strong class="ml-1 text-ue-primary">{{ $count }}</strong>
+                        </span>
+                    @endforeach
+                </div>
+            </div>
+        @endif
+
+        @if(!empty($stats['major_distribution']))
+            <div class="mb-8 rounded-2xl border border-ue-border bg-ue-input-bg p-5 shadow-sm">
+                <h3 class="text-sm font-semibold text-ue-text uppercase tracking-wider mb-3">Phân phối tài liệu theo Ngành học</h3>
+                <div class="flex flex-wrap gap-2">
+                    @foreach($stats['major_distribution'] as $maj => $count)
+                        <span class="inline-flex items-center px-3 py-1 rounded-xl text-xs font-medium bg-indigo-50 text-indigo-700 border border-indigo-200 dark:bg-indigo-950 dark:text-indigo-300 dark:border-indigo-800">
+                            {{ $maj }}: <strong class="ml-1 font-bold">{{ $count }}</strong>
+                        </span>
+                    @endforeach
+                </div>
+            </div>
+        @endif
+
         @if (session('status'))
             <div class="mb-6 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800 dark:bg-emerald-950/30 dark:border-emerald-800 dark:text-emerald-400">
                 {{ session('status') }}
@@ -137,6 +222,10 @@
                                                 {{ $doc->chunks_count }}
                                             </td>
                                             <td class="py-4 px-4 text-right space-y-1 sm:space-y-0 sm:space-x-1">
+                                                <x-ui.button type="button" size="xs" variant="secondary" onclick="openRepairModal({{ json_encode($doc) }})">
+                                                    Sửa Metadata
+                                                </x-ui.button>
+
                                                 <form method="POST" action="{{ route('admin.source-documents.ingest', $doc) }}" class="inline">
                                                     @csrf
                                                     <x-ui.button type="submit" size="xs" variant="secondary" title="Re-ingest / embed document">
@@ -165,4 +254,91 @@
             </div>
         </div>
     </div>
+
+    <!-- Repair Metadata Modal -->
+    <div id="repair-modal" class="fixed inset-0 z-50 hidden overflow-y-auto" role="dialog" aria-modal="true">
+        <div class="flex items-end justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
+            <div class="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity" aria-hidden="true" onclick="closeRepairModal()"></div>
+
+            <span class="hidden sm:inline-block sm:align-middle sm:h-screen" aria-hidden="true">&#8203;</span>
+
+            <div class="inline-block align-bottom bg-white dark:bg-ue-card-bg border border-ue-border rounded-2xl px-4 pt-5 pb-4 text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg sm:w-full sm:p-6">
+                <form id="repair-form" method="POST" action="">
+                    @csrf
+                    <div class="space-y-4">
+                        <h3 class="text-lg leading-6 font-bold text-ue-text" id="modal-title">Sửa Metadata & payload tài liệu</h3>
+                        
+                        <div>
+                            <x-ui.label for="repair_document_type">Loại tài liệu</x-ui.label>
+                            <select id="repair_document_type" name="document_type" required class="mt-1 block w-full rounded-xl border border-ue-border bg-ue-input-bg p-2 text-sm text-ue-text dark:bg-gray-800">
+                                <option value="student_handbook">Sổ tay sinh viên</option>
+                                <option value="regulation">Quy chế & Quy định học vụ</option>
+                                <option value="general_policy">Chính sách chung</option>
+                            </select>
+                        </div>
+
+                        <div>
+                            <x-ui.label for="repair_cohort">Khóa tuyển sinh</x-ui.label>
+                            <x-ui.input id="repair_cohort" name="cohort" placeholder="Ví dụ: K51, K50" class="mt-1 w-full" />
+                        </div>
+
+                        <div>
+                            <x-ui.label for="repair_effective_year">Năm hiệu lực</x-ui.label>
+                            <x-ui.input id="repair_effective_year" name="effective_year" type="number" class="mt-1 w-full" />
+                        </div>
+
+                        <div>
+                            <x-ui.label for="repair_faculty">Khoa áp dụng</x-ui.label>
+                            <x-ui.input id="repair_faculty" name="faculty" placeholder="Ví dụ: Khoa Công nghệ thông tin" class="mt-1 w-full" />
+                        </div>
+
+                        <div>
+                            <x-ui.label for="repair_major">Ngành học áp dụng</x-ui.label>
+                            <x-ui.input id="repair_major" name="major" placeholder="Ví dụ: Sư phạm Tin học" class="mt-1 w-full" />
+                        </div>
+                    </div>
+
+                    <div class="mt-6 flex justify-end space-x-2">
+                        <x-ui.button type="button" variant="secondary" onclick="closeRepairModal()">Hủy</x-ui.button>
+                        <x-ui.button type="submit">Lưu thay đổi</x-ui.button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function openRepairModal(doc) {
+            const modal = document.getElementById('repair-modal');
+            const form = document.getElementById('repair-form');
+            
+            form.action = `/admin/source-documents/${doc.id}/repair`;
+            
+            document.getElementById('repair_document_type').value = doc.document_type || 'student_handbook';
+            document.getElementById('repair_cohort').value = doc.cohort || '';
+            document.getElementById('repair_effective_year').value = doc.effective_year || new Date().getFullYear();
+            
+            let faculty = '';
+            let major = '';
+            if (doc.first_chunk && doc.first_chunk.metadata_json) {
+                let meta = doc.first_chunk.metadata_json;
+                if (typeof meta === 'string') {
+                    try {
+                        meta = JSON.parse(meta);
+                    } catch(e) {}
+                }
+                faculty = meta.faculty || '';
+                major = meta.major || '';
+            }
+            
+            document.getElementById('repair_faculty').value = faculty;
+            document.getElementById('repair_major').value = major;
+
+            modal.classList.remove('hidden');
+        }
+
+        function closeRepairModal() {
+            document.getElementById('repair-modal').classList.add('hidden');
+        }
+    </script>
 </x-app-layout>

@@ -9,9 +9,9 @@ class LlmGateway
      *
      * Reads 'LLM_PROVIDER' first (via config('ai.llm_provider')),
      * falls back to legacy 'AI_LLM_DRIVER'.
-     * Supported: gemini, openrouter, ollama
+     * Supported: gemini, openrouter, ollama, bge_m3 (embedding only)
      *
-     * @param  string|null  $driver  Override provider name. Options: gemini, openai, openrouter, ollama
+     * @param  string|null  $driver  Override provider name. Options: gemini, openai, openrouter, ollama, bge_m3
      * @param  string|null  $model  Custom model name override.
      */
     public static function driver(?string $driver = null, ?string $model = null): LlmProviderInterface
@@ -19,23 +19,28 @@ class LlmGateway
         $driver = $driver ?: config('ai.llm_provider', 'gemini');
 
         return match ($driver) {
-            'openai' => new OpenAiProvider(
-                env('OPENAI_API_KEY'),
-                $model ?: env('OPENAI_MODEL', 'gpt-4o-mini')
-            ),
-            'openrouter' => new OpenRouterProvider(
-                config('ai.openrouter.api_key', env('OPENROUTER_API_KEY')),
-                $model ?: config('ai.openrouter.model', 'google/gemini-2.0-flash')
-            ),
-            'ollama' => new OllamaProvider(
-                config('ai.ollama.base_url'),
-                $model ?: config('ai.ollama.chat_model'),
-                config('ai.ollama.timeout'),
-            ),
-            default => new GeminiProvider(
-                config('ai.gemini.api_key', env('GEMINI_API_KEY')),
-                $model ?: config('ai.gemini.model', 'gemini-2.0-flash')
-            ),
+            'openai' => app(OpenAiProvider::class, [
+                'apiKey' => env('OPENAI_API_KEY'),
+                'model' => $model ?: env('OPENAI_MODEL', 'gpt-4o-mini'),
+            ]),
+            'openrouter' => app(OpenRouterProvider::class, [
+                'apiKey' => config('ai.openrouter.api_key', env('OPENROUTER_API_KEY')),
+                'model' => $model ?: config('ai.openrouter.model', 'google/gemini-2.0-flash'),
+            ]),
+            'ollama' => app(OllamaProvider::class, [
+                'baseUrl' => config('ai.ollama.base_url'),
+                'model' => $model ?: config('ai.ollama.chat_model'),
+                'timeout' => config('ai.ollama.timeout'),
+            ]),
+            'bge_m3' => app(BgeM3EmbeddingProvider::class, [
+                'baseUrl' => config('ai.bge_m3.url'),
+                'timeout' => config('ai.bge_m3.timeout', 120),
+                'expectedDimension' => config('ai.qdrant.vector_size', 1024),
+            ]),
+            default => app(GeminiProvider::class, [
+                'apiKey' => config('ai.gemini.api_key', env('GEMINI_API_KEY')),
+                'model' => $model ?: config('ai.gemini.model', 'gemini-2.0-flash'),
+            ]),
         };
     }
 
