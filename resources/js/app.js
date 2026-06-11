@@ -13,3 +13,24 @@ import "./ui";
  */
 
 import './echo';
+
+import './notification-badge-manager';
+
+if ('serviceWorker' in navigator) {
+    window.addEventListener('load', () => {
+        navigator.serviceWorker.register('/sw.js').then(registration => {
+            console.log('ServiceWorker registration successful with scope: ', registration.scope);
+        }).catch(err => {
+            console.error('ServiceWorker registration failed: ', err);
+        });
+    });
+}
+
+// Initialize notification badge
+document.addEventListener('DOMContentLoaded', () => {
+    window.ueNotificationBadge = new window.NotificationBadgeManager({
+        appName: 'UE Connect',
+        baseTitle: document.title || 'UE Connect',
+        initialUnreadCount: window.ueInitialUnreadCount || 0,
+    });
+});
