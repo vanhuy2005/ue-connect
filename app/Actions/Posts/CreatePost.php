@@ -4,6 +4,7 @@ namespace App\Actions\Posts;
 
 use App\Enums\CommunityMemberStatus;
 use App\Enums\PostStatus;
+use App\Enums\PostType;
 use App\Enums\PostVisibility;
 use App\Events\Feed\PostCreated;
 use App\Models\Community;
@@ -12,6 +13,7 @@ use App\Models\Post;
 use App\Models\User;
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Support\Facades\Gate;
+use Illuminate\Support\Facades\Validator;
 use Illuminate\Validation\ValidationException;
 
 class CreatePost
@@ -19,13 +21,28 @@ class CreatePost
     /**
      * Create a new post.
      *
-     * @param  array{body: string, visibility?: string, community_id?: int|null}  $data
+     * @param  array{body: string, visibility?: string, community_id?: int|null, post_type?: string|null, opportunity?: array}  $data
      *
      * @throws AuthorizationException|ValidationException
      */
     public function execute(User $user, array $data): Post
     {
         Gate::forUser($user)->authorize('create', Post::class);
+
+        $postType = isset($data['post_type']) ? PostType::tryFrom($data['post_type']) : PostType::STANDARD;
+
+        if ($postType !== PostType::STANDARD && ! $user->canPostType($postType)) {
+            throw ValidationException::withMessages([
+                'post_type' => 'Bạn không có quyền đăng loại bài viết này.',
+            ]);
+        }
+
+        $oppData = [];
+        if ($postType === PostType::OPPORTUNITY) {
+            $oppData = Validator::make($data['opportunity'] ?? [], [
+                'category' => 'nullable|string|in:pedagogy,non_pedagogy',
+            ])->validate();
+        }
 
         $visibility = $data['visibility'] ?? PostVisibility::VERIFIED_USERS->value;
         $scopeType = null;
@@ -69,11 +86,22 @@ class CreatePost
             'scope_id' => $scopeId,
             'body' => $data['body'],
             'visibility' => $visibility,
+            'post_type' => $postType->value,
             'status' => PostStatus::PUBLISHED->value,
+            'moderation_status' => $postType === PostType::OPPORTUNITY ? 'pending' : 'none',
             'published_at' => now(),
         ]);
 
-        PostCreated::dispatch($post);
+        if ($postType === PostType::OPPORTUNITY) {
+            $post->opportunity()->create([
+                'is_expired' => false,
+                'category' => $oppData['category'] ?? 'non_pedagogy',
+            ]);
+        }
+
+        if ($postType !== PostType::OPPORTUNITY) {
+            PostCreated::dispatch($post);
+        }
 
         return $post;
     }

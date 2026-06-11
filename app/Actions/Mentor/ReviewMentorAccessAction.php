@@ -5,6 +5,7 @@ namespace App\Actions\Mentor;
 use App\Enums\MentorAccessStatus;
 use App\Models\MentorAccessRequest;
 use App\Models\User;
+use App\Notifications\Mentor\MentorAccessNeedMoreInfoNotification;
 use App\Notifications\Mentor\MentorAccessRejectedNotification;
 use App\Services\AuditService;
 use Illuminate\Auth\Access\AuthorizationException;
@@ -49,6 +50,8 @@ class ReviewMentorAccessAction
         // Notify applicant
         if ($request->status === MentorAccessStatus::Rejected) {
             $request->user->notify(new MentorAccessRejectedNotification($request));
+        } elseif ($request->status === MentorAccessStatus::NeedMoreInfo) {
+            $request->user->notify(new MentorAccessNeedMoreInfoNotification($request));
         }
 
         $this->audit->log([

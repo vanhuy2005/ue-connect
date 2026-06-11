@@ -161,13 +161,41 @@ class ProfileSetupTest extends TestCase
             ->set('faculty_id', $this->faculty->id)
             ->set('academic_program_id', $this->program->id)
             ->call('save')
-            ->assertRedirect(route('dashboard'));
+            ->assertRedirect(route('mentor.apply'));
 
         $user->refresh();
         $this->assertEquals(AccountStatus::ACTIVE, $user->account_status);
         $this->assertDatabaseHas('alumni_profiles', [
             'graduation_year' => 2020,
             'willing_to_mentor' => true,
+            'faculty_id' => $this->faculty->id,
+            'academic_program_id' => $this->program->id,
+        ]);
+    }
+
+    public function test_profile_setup_completes_alumni_profile_without_mentoring_successfully(): void
+    {
+        $user = User::factory()->create([
+            'account_status' => AccountStatus::PROFILE_INCOMPLETE,
+        ]);
+
+        Volt::actingAs($user)
+            ->test('pages.app.profile-setup')
+            ->set('role_type', 'alumni')
+            ->set('display_name', 'Alumni Test 2')
+            ->set('bio', 'My alumni bio 2')
+            ->set('graduation_year', 2020)
+            ->set('willing_to_mentor', false)
+            ->set('faculty_id', $this->faculty->id)
+            ->set('academic_program_id', $this->program->id)
+            ->call('save')
+            ->assertRedirect(route('dashboard'));
+
+        $user->refresh();
+        $this->assertEquals(AccountStatus::ACTIVE, $user->account_status);
+        $this->assertDatabaseHas('alumni_profiles', [
+            'graduation_year' => 2020,
+            'willing_to_mentor' => false,
             'faculty_id' => $this->faculty->id,
             'academic_program_id' => $this->program->id,
         ]);

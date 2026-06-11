@@ -61,7 +61,7 @@ new class extends Component
             $query->where(function ($q) {
                 foreach ($this->selectedTopics as $topic) {
                     $q->whereJsonContains('expertise_topics', $topic)
-                        ->orWhereJsonContains('help_topics', $topic);
+                        ->orWhereJsonContains('preferred_request_types', $topic);
                 }
             });
         }
@@ -82,9 +82,8 @@ new class extends Component
                 ->toArray(),
             'helpTopics' => MentorProfile::discoverable()
                 ->get()
-                ->flatMap(fn ($p) => $p->help_topics ?? [])
+                ->flatMap(fn ($p) => $p->preferred_request_types ?? [])
                 ->unique()
-                ->sort()
                 ->values()
                 ->toArray(),
         ];
@@ -154,14 +153,7 @@ new class extends Component
             x-show="showFilters"
             class="flex flex-wrap items-center gap-2"
         >
-            <button
-                wire:click="$set('availabilityFilter', '{{ $availabilityFilter === 'available' ? '' : 'available' }}')"
-                class="inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-semibold border transition
-                {{ $availabilityFilter === 'available' ? 'bg-ue-brand border-ue-brand text-white' : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-50' }}"
-            >
-                <span class="inline-block w-1.5 h-1.5 rounded-full {{ $availabilityFilter === 'available' ? 'bg-white' : 'bg-slate-300' }}"></span>
-                Đang nhận yêu cầu
-            </button>
+
 
             @if (! empty($expertiseTopics))
                 <div class="w-full flex flex-wrap items-center gap-1.5">
@@ -178,17 +170,31 @@ new class extends Component
                 </div>
             @endif
 
+@php
+    $preferredRequestOptions = [
+        'cv_review' => 'Review CV / Portfolio',
+        'career_advice' => 'Định hướng nghề nghiệp',
+        'academic_guidance' => 'Định hướng học thuật',
+        'subject_support' => 'Hỗ trợ môn học',
+        'research_guidance' => 'Nghiên cứu khoa học',
+        'interview_prep' => 'Chuẩn bị phỏng vấn',
+        'internship_experience' => 'Kinh nghiệm thực tập',
+        'other' => 'Khác',
+    ];
+@endphp
             @if (! empty($helpTopics))
                 <div class="w-full flex flex-wrap items-center gap-1.5">
                     <span class="text-[10px] font-bold text-slate-400 uppercase tracking-wider mr-1">Hỗ trợ</span>
-                    @foreach ($helpTopics as $topic)
-                        <button
-                            wire:click="selectTopic('{{ $topic }}')"
-                            class="rounded-full px-3 py-1.5 text-xs font-semibold border transition
-                            {{ in_array($topic, $this->selectedTopics) ? 'bg-ue-brand border-ue-brand text-white font-bold' : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-50' }}"
-                        >
-                            {{ $topic }}
-                        </button>
+                    @foreach ($helpTopics as $type)
+                        @if (isset($preferredRequestOptions[$type]))
+                            <button
+                                wire:click="selectTopic('{{ $type }}')"
+                                class="rounded-full px-3 py-1.5 text-xs font-semibold border transition
+                                {{ in_array($type, $this->selectedTopics) ? 'bg-ue-brand border-ue-brand text-white font-bold' : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-50' }}"
+                            >
+                                {{ $preferredRequestOptions[$type] }}
+                            </button>
+                        @endif
                     @endforeach
                 </div>
             @endif
@@ -210,11 +216,34 @@ new class extends Component
         </p>
     </div>
 
+    {{-- Skeleton loading --}}
+    <div wire:loading.delay wire:target="search,selectTopic,availabilityFilter,nextPage,previousPage,gotoPage" class="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+        @foreach (range(1, 6) as $i)
+            <div class="rounded-xl border border-slate-200 bg-white p-4 animate-pulse">
+                <div class="flex items-start gap-3">
+                    <div class="h-10 w-10 rounded-full bg-slate-200 flex-shrink-0"></div>
+                    <div class="flex-1 space-y-2">
+                        <div class="h-4 w-24 bg-slate-200 rounded"></div>
+                        <div class="h-3 w-16 bg-slate-100 rounded"></div>
+                    </div>
+                </div>
+                <div class="mt-4 space-y-2">
+                    <div class="h-4 w-3/4 bg-slate-200 rounded"></div>
+                    <div class="h-3 w-full bg-slate-100 rounded"></div>
+                </div>
+                <div class="mt-3 flex gap-1.5">
+                    <div class="h-5 w-14 bg-slate-100 rounded-full"></div>
+                    <div class="h-5 w-20 bg-slate-100 rounded-full"></div>
+                </div>
+            </div>
+        @endforeach
+    </div>
+
     {{-- Mentor grid --}}
     <div
-        class="grid gap-4 md:grid-cols-2 xl:grid-cols-3"
-        wire:loading.delay.class="ue-content-loading"
+        wire:loading.delay.remove
         wire:target="search,selectTopic,availabilityFilter,nextPage,previousPage,gotoPage"
+        class="grid gap-4 md:grid-cols-2 xl:grid-cols-3"
     >
         @forelse ($mentors as $mentor)
             @php
@@ -222,7 +251,7 @@ new class extends Component
             @endphp
             <article class="ue-loadable-card rounded-xl border border-slate-200 bg-white p-4 shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-all">
                 <div class="flex items-start gap-3">
-                    <a href="{{ $mentorUserProfileUrl }}" wire:navigate class="block rounded-full focus:outline-none focus:ring-2 focus:ring-ue-brand/30 flex-shrink-0">
+                    <a href="{{ $mentorUserProfileUrl }}" wire:navigate class="block rounded-full focus:outline-none focus:ring-2 focus:ring-ue-brand/30 flex-shrink-0" aria-label="Xem trang cá nhân của {{ $mentor->user->name }}">
                         <x-ui.avatar :user="$mentor->user" size="md" />
                     </a>
                     <div class="min-w-0 flex-1">

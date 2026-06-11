@@ -98,6 +98,29 @@ class MentorProfile extends Model
     }
 
     /**
+     * Automatically sync availability_status based on current active pending request count.
+     *
+     * Rules:
+     * - If pending >= max AND status is Available or Paused → switch to Full.
+     * - If pending < max AND status is Full or Paused → switch back to Available.
+     * - Hidden is never auto-changed (mentor explicitly chose to hide).
+     */
+    public function syncAvailabilityFromPendingCount(): void
+    {
+        $activePending = $this->mentorRequests()
+            ->whereIn('status', ['submitted', 'accepted', 'need_more_info', 'updated_by_student'])
+            ->count();
+
+        $isFull = $activePending >= $this->max_pending_requests;
+
+        if ($isFull && in_array($this->availability_status, [MentorAvailabilityStatus::Available, MentorAvailabilityStatus::Paused])) {
+            $this->update(['availability_status' => MentorAvailabilityStatus::Full]);
+        } elseif (! $isFull && in_array($this->availability_status, [MentorAvailabilityStatus::Full, MentorAvailabilityStatus::Paused])) {
+            $this->update(['availability_status' => MentorAvailabilityStatus::Available]);
+        }
+    }
+
+    /**
      * Check if this mentor profile can receive new requests.
      */
     public function isAvailableForRequests(): bool
@@ -115,7 +138,7 @@ class MentorProfile extends Model
         }
 
         $pendingCount = $this->mentorRequests()
-            ->whereIn('status', ['submitted', 'accepted', 'need_more_info'])
+            ->whereIn('status', ['submitted', 'need_more_info', 'accepted', 'updated_by_student'])
             ->count();
 
         return $pendingCount < $this->max_pending_requests;
@@ -132,7 +155,6 @@ class MentorProfile extends Model
             && ! empty($this->headline)
             && ! empty($this->bio)
             && is_array($this->expertise_topics) && count($this->expertise_topics) >= 2
-            && is_array($this->help_topics) && count($this->help_topics) >= 2
             && is_array($this->preferred_request_types) && count($this->preferred_request_types) >= 1
             && ! empty($this->response_expectation_text);
     }

@@ -145,6 +145,13 @@ new class extends Component {
             'updateUrgency' => ['required', 'string', 'in:low,normal,high,time_sensitive'],
             'updateContext' => ['nullable', 'string', 'max:5000'],
             'updateExpectedOutcome' => ['nullable', 'string', 'max:1000'],
+        ], [
+            'updateTopic.required' => 'Vui lòng nhập chủ đề.',
+            'updateTopic.max' => 'Chủ đề không được vượt quá :max ký tự.',
+            'updateGoal.required' => 'Vui lòng nhập mục tiêu của bạn.',
+            'updateGoal.max' => 'Mục tiêu không được vượt quá :max ký tự.',
+            'updateQuestion.required' => 'Vui lòng nhập câu hỏi cụ thể.',
+            'updateQuestion.max' => 'Câu hỏi không được vượt quá :max ký tự.',
         ]);
 
         try {
@@ -246,32 +253,67 @@ new class extends Component {
             };
         @endphp
         <div class="mb-8 border-b border-slate-100 pb-6">
-            <div class="flex items-center justify-between text-xs font-semibold text-slate-500">
-                <div class="flex flex-col items-center gap-1.5">
-                    <span class="flex h-6 w-6 items-center justify-center rounded-full border-2 border-ue-brand bg-ue-brand-soft text-ue-brand">1</span>
-                    <span>Gửi yêu cầu</span>
+            <div class="relative max-w-xl mx-auto my-2">
+                <!-- Progress line track container -->
+                <div class="absolute left-12 right-12 top-3.5 h-0.5 -translate-y-1/2 z-0" aria-hidden="true">
+                    <!-- Progress line background -->
+                    <div class="absolute inset-0 bg-slate-200"></div>
+                    
+                    <!-- Progress line active -->
+                    @php
+                        $progressWidth = '0%';
+                        if ($step3Active || $step3Terminal) {
+                            $progressWidth = '100%';
+                        } elseif ($step2Active) {
+                            $progressWidth = '50%';
+                        }
+                    @endphp
+                    <div class="absolute left-0 top-0 bottom-0 bg-ue-brand transition-all duration-500" 
+                         style="width: {{ $progressWidth }};"></div>
                 </div>
-                <div class="h-0.5 flex-1 mx-2 {{ $step2Active || $step3Active || $step3Terminal ? 'bg-ue-brand' : 'bg-slate-200' }}"></div>
-                <div class="flex flex-col items-center gap-1.5">
-                    <span class="flex h-6 w-6 items-center justify-center rounded-full border-2 {{ $step2Active || $step3Active || $step3Terminal ? $step2Class : 'border-slate-200 text-slate-300' }}">
-                        {{ $step3Active || ($step3Terminal && !$isDeclined && !$isCancelled) ? '✓' : '2' }}
-                    </span>
-                    <span class="{{ $isNeedMoreInfo ? 'text-amber-600' : ($isUpdatedByStudent ? 'text-ue-brand' : '') }}">{{ $step2Label }}</span>
-                </div>
-                <div class="h-0.5 flex-1 mx-2 {{ $step3Active || $step3Terminal ? 'bg-ue-brand' : 'bg-slate-200' }}"></div>
-                <div class="flex flex-col items-center gap-1.5">
-                    @if ($step3Active || $step3Terminal)
-                        <span class="flex h-6 w-6 items-center justify-center rounded-full border-2
-                            {{ $isCompleted ? 'border-green-600 bg-green-50 text-green-700' : ($isAccepted ? 'border-emerald-600 bg-emerald-50 text-emerald-600' : ($isDeclined ? 'border-red-400 bg-red-50 text-red-600' : 'border-slate-400 bg-slate-100 text-slate-600')) }}">
-                            {{ $isCompleted ? '✓' : ($isAccepted ? '✓' : ($isDeclined ? '✕' : '–')) }}
+
+                <!-- Steps -->
+                <div class="relative flex justify-between z-10 text-xs font-semibold text-slate-500">
+                    <!-- Step 1 -->
+                    <div class="w-24 flex flex-col items-center">
+                        <span class="flex h-7 w-7 items-center justify-center rounded-full bg-ue-brand text-white font-bold text-xs shadow-xs ring-4 ring-white z-10">✓</span>
+                        <span class="text-ue-brand font-bold text-[10px] uppercase tracking-wide mt-2 text-center">Gửi yêu cầu</span>
+                    </div>
+                    
+                    <!-- Step-2 -->
+                    <div class="w-24 flex flex-col items-center">
+                        @php
+                            $step2Completed = $step3Active || ($step3Terminal && !$isDeclined && !$isCancelled);
+                            $step2Bg = 'bg-slate-200 text-slate-400';
+                            $step2Text = 'text-slate-400';
+                            if ($step2Active || $step3Active || $step3Terminal) {
+                                $step2Bg = $isNeedMoreInfo ? 'bg-amber-500 text-white shadow-xs' : 'bg-ue-brand text-white shadow-xs';
+                                $step2Text = $isNeedMoreInfo ? 'text-amber-600 font-bold' : 'text-ue-brand font-bold';
+                            }
+                        @endphp
+                        <span class="flex h-7 w-7 items-center justify-center rounded-full text-xs font-bold ring-4 ring-white z-10 {{ $step2Bg }}">
+                            {{ $step2Completed ? '✓' : '2' }}
                         </span>
-                        <span class="{{ $isCompleted ? 'text-green-700' : ($isAccepted ? 'text-emerald-600' : ($isDeclined ? 'text-red-600' : 'text-slate-600')) }}">
-                            {{ $isCompleted ? 'Hoàn thành' : ($isAccepted ? 'Đã chấp nhận' : ($isDeclined ? 'Đã từ chối' : 'Đã hủy')) }}
+                        <span class="text-[10px] uppercase tracking-wide mt-2 text-center {{ $step2Text }}">{{ $step2Label }}</span>
+                    </div>
+                    
+                    <!-- Step 3 -->
+                    <div class="w-24 flex flex-col items-center">
+                        @php
+                            $step3Bg = 'bg-slate-200 text-slate-400';
+                            $step3Text = 'text-slate-400';
+                            if ($step3Active || $step3Terminal) {
+                                $step3Bg = $isCompleted ? 'bg-green-600 text-white shadow-xs' : ($isAccepted ? 'bg-emerald-600 text-white shadow-xs' : ($isDeclined ? 'bg-red-500 text-white shadow-xs' : 'bg-slate-400 text-white shadow-xs'));
+                                $step3Text = $isCompleted ? 'text-green-700 font-bold' : ($isAccepted ? 'text-emerald-600 font-bold' : ($isDeclined ? 'text-red-600 font-bold' : 'text-slate-600 font-bold'));
+                            }
+                        @endphp
+                        <span class="flex h-7 w-7 items-center justify-center rounded-full text-xs font-bold ring-4 ring-white z-10 {{ $step3Bg }}">
+                            {{ $step3Active || $step3Terminal ? ($isCompleted ? '✓' : ($isAccepted ? '✓' : ($isDeclined ? '✕' : '–'))) : '3' }}
                         </span>
-                    @else
-                        <span class="flex h-6 w-6 items-center justify-center rounded-full border-2 border-slate-200 text-slate-300">3</span>
-                        <span>Kết quả</span>
-                    @endif
+                        <span class="text-[10px] uppercase tracking-wide mt-2 text-center {{ $step3Text }}">
+                            {{ $step3Active || $step3Terminal ? ($isCompleted ? 'Hoàn thành' : ($isAccepted ? 'Đã chấp nhận' : ($isDeclined ? 'Đã từ chối' : 'Đã hủy'))) : 'Kết quả' }}
+                        </span>
+                    </div>
                 </div>
             </div>
         </div>
@@ -296,8 +338,7 @@ new class extends Component {
                     <span class="rounded-full px-2.5 py-0.5 text-xs font-bold {{ $badgeClasses }}">
                         {{ $mentorRequest->status->label() }}
                     </span>
-                    <span class="text-slate-300">•</span>
-                    <span class="font-semibold text-slate-600">Độ khẩn cấp: {{ $mentorRequest->urgency->label() }}</span>
+
                 </div>
             </div>
             @if ($mentorRequest->conversation_id)
@@ -366,7 +407,7 @@ new class extends Component {
         @endif
 
         {{-- Actions --}}
-        <div class="mt-8 pt-6 border-t border-slate-100 space-y-4">
+        <div class="mt-6 pt-4 border-t border-slate-100 space-y-4">
             {{-- Mentor Actions --}}
             @if ($this->canAcceptOrDecline())
                 <div x-show="activeAction === null" class="flex flex-wrap gap-2">
@@ -433,10 +474,10 @@ new class extends Component {
 
             {{-- Student Actions --}}
             <div x-show="activeAction === null" class="flex flex-wrap gap-2">
-                @if ($this->canCancel())
+                @if ($this->canCancel() && ! $this->canUpdate())
                     <button wire:click="cancelRequest"
-                        class="rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm font-bold text-slate-700 hover:bg-slate-50 transition flex items-center gap-1.5">
-                        <x-ui.icon name="x-circle" size="xs" /> Hủy yêu cầu
+                        class="rounded-lg border border-red-200 bg-white px-4 py-2 text-sm font-bold text-red-600 hover:bg-red-50/50 transition flex items-center gap-1.5">
+                        <x-ui.icon name="x-circle" size="xs" class="text-red-500" /> Hủy yêu cầu
                     </button>
                 @endif
 
@@ -464,64 +505,49 @@ new class extends Component {
 
             {{-- Student Update Form --}}
             @if ($this->canUpdate())
-                <div class="mt-6 space-y-4 rounded-xl border border-amber-200 bg-amber-50/50 p-4">
-                <h3 class="text-sm font-bold text-slate-900">Cập nhật yêu cầu cố vấn</h3>
+                <div class="mt-6 space-y-5 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+                    <h3 class="text-sm font-bold text-slate-900 border-b border-slate-100 pb-3">Cập nhật yêu cầu cố vấn</h3>
 
-                <label class="block">
-                    <span class="text-xs font-bold text-slate-700">Chủ đề <span class="text-red-500">*</span></span>
-                    <input type="text" wire:model.live="updateTopic" maxlength="255" class="mt-1 w-full rounded-lg border-slate-200 text-sm focus:border-ue-brand focus:ring-ue-brand/20">
-                    @error('updateTopic') <p class="mt-1 text-xs text-red-600 font-semibold">{{ $message }}</p> @enderror
-                    <p class="mt-1 text-right text-[10px] text-slate-400">{{ strlen($updateTopic) }}/255</p>
-                </label>
+                    <div class="space-y-4">
+                        <label class="block">
+                            <span class="text-xs font-bold text-slate-700">Chủ đề <span class="text-red-500">*</span></span>
+                            <input type="text" wire:model.live="updateTopic" maxlength="255" class="mt-1 w-full rounded-lg border-slate-200 text-sm focus:border-ue-brand focus:ring-ue-brand/20">
+                            @error('updateTopic') <p class="mt-1 text-xs text-red-600 font-semibold">{{ $message }}</p> @enderror
+                        </label>
 
-                <label class="block">
-                    <span class="text-xs font-bold text-slate-700">Mục tiêu của bạn <span class="text-red-500">*</span></span>
-                    <textarea wire:model.live="updateGoal" rows="2" maxlength="5000" class="mt-1 w-full rounded-lg border-slate-200 text-sm focus:border-ue-brand focus:ring-ue-brand/20"></textarea>
-                    @error('updateGoal') <p class="mt-1 text-xs text-red-600 font-semibold">{{ $message }}</p> @enderror
-                    <p class="mt-1 text-right text-[10px] text-slate-400">{{ strlen($updateGoal) }}/5000</p>
-                </label>
+                        <label class="block">
+                            <span class="text-xs font-bold text-slate-700">Mục tiêu của bạn <span class="text-red-500">*</span></span>
+                            <textarea wire:model.live="updateGoal" rows="2" maxlength="5000" class="mt-1 w-full rounded-lg border-slate-200 text-sm focus:border-ue-brand focus:ring-ue-brand/20"></textarea>
+                            @error('updateGoal') <p class="mt-1 text-xs text-red-600 font-semibold">{{ $message }}</p> @enderror
+                        </label>
 
-                <label class="block">
-                    <span class="text-xs font-bold text-slate-700">Câu hỏi cụ thể <span class="text-red-500">*</span></span>
-                    <textarea wire:model.live="updateQuestion" rows="3" maxlength="5000" class="mt-1 w-full rounded-lg border-slate-200 text-sm focus:border-ue-brand focus:ring-ue-brand/20"></textarea>
-                    @error('updateQuestion') <p class="mt-1 text-xs text-red-600 font-semibold">{{ $message }}</p> @enderror
-                    <p class="mt-1 text-right text-[10px] text-slate-400">{{ strlen($updateQuestion) }}/5000</p>
-                </label>
+                        <label class="block">
+                            <span class="text-xs font-bold text-slate-700">Câu hỏi cụ thể muốn mentor hỗ trợ <span class="text-red-500">*</span></span>
+                            <textarea wire:model.live="updateQuestion" rows="3" maxlength="5000" class="mt-1 w-full rounded-lg border-slate-200 text-sm focus:border-ue-brand focus:ring-ue-brand/20"></textarea>
+                            @error('updateQuestion') <p class="mt-1 text-xs text-red-600 font-semibold">{{ $message }}</p> @enderror
+                        </label>
+                    </div>
 
-                <div class="grid gap-4 sm:grid-cols-2">
-                    <label class="block">
-                        <span class="text-xs font-bold text-slate-700">Độ khẩn cấp</span>
-                        <select wire:model.live="updateUrgency" class="mt-1 w-full rounded-lg border-slate-200 text-sm">
-                            <option value="low">Không gấp</option>
-                            <option value="normal">Bình thường</option>
-                            <option value="high">Gấp</option>
-                            <option value="time_sensitive">Rất gấp</option>
-                        </select>
-                    </label>
-                    <label class="block">
-                        <span class="text-xs font-bold text-slate-700">Kết quả mong đợi</span>
-                        <input type="text" wire:model.live="updateExpectedOutcome" maxlength="1000" class="mt-1 w-full rounded-lg border-slate-200 text-sm">
-                    </label>
+                    @error('updateRequest')
+                        <div class="rounded-lg bg-red-50 border border-red-200 px-4 py-3 text-sm text-red-700">{{ $message }}</div>
+                    @enderror
+
+                    <div class="flex items-center justify-between gap-3 pt-4 border-t border-slate-100">
+                        <div>
+                            @if ($this->canCancel())
+                                <button type="button" wire:click="cancelRequest"
+                                    class="rounded-lg border border-red-200 bg-white px-4 py-2 text-sm font-bold text-red-600 hover:bg-red-50/50 transition flex items-center gap-1.5">
+                                    <x-ui.icon name="x-circle" size="xs" class="text-red-500" /> Hủy yêu cầu
+                                </button>
+                            @endif
+                        </div>
+                        <button wire:click="updateRequest" wire:loading.attr="disabled"
+                            class="rounded-lg bg-ue-brand px-5 py-2 text-sm font-bold text-white hover:bg-ue-brand-dark disabled:opacity-60">
+                            <span wire:loading.remove wire:target="updateRequest">Lưu và Gửi lại</span>
+                            <span wire:loading wire:target="updateRequest">Đang gửi...</span>
+                        </button>
+                    </div>
                 </div>
-
-                <label class="block">
-                    <span class="text-xs font-bold text-slate-700">Bối cảnh bổ sung</span>
-                    <textarea wire:model.live="updateContext" rows="2" maxlength="5000" class="mt-1 w-full rounded-lg border-slate-200 text-sm focus:border-ue-brand focus:ring-ue-brand/20"></textarea>
-                    <p class="mt-1 text-right text-[10px] text-slate-400">{{ strlen($updateContext) }}/5000</p>
-                </label>
-
-                @error('updateRequest')
-                    <div class="rounded-lg bg-red-50 border border-red-200 px-4 py-3 text-sm text-red-700">{{ $message }}</div>
-                @enderror
-
-                <div class="flex gap-2">
-                    <button wire:click="updateRequest" wire:loading.attr="disabled"
-                        class="rounded-lg bg-ue-brand px-4 py-2 text-sm font-bold text-white hover:bg-ue-brand-dark disabled:opacity-60">
-                        <span wire:loading.remove wire:target="updateRequest">Lưu và Gửi lại</span>
-                        <span wire:loading wire:target="updateRequest">Đang gửi...</span>
-                    </button>
-                </div>
-            </div>
             @endif
 
             {{-- Feedback Form --}}

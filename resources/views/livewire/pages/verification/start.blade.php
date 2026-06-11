@@ -689,20 +689,26 @@ new #[Layout('layouts.app')] class extends Component
 
 <div class="max-w-3xl mx-auto py-8 px-4 sm:px-6">
     {{-- Wizard progress --}}
-    <div class="mb-10">
-        <div class="flex items-center justify-between">
+    <div class="mb-10 relative max-w-xl mx-auto my-2">
+        <!-- Progress line background -->
+        <div class="absolute left-5 right-5 top-5 h-0.5 bg-ue-border -translate-y-1/2 z-0" aria-hidden="true"></div>
+        
+        <!-- Progress line active -->
+        <div class="absolute left-5 top-5 h-0.5 bg-ue-brand -translate-y-1/2 transition-all duration-300 z-0" 
+             style="width: {{ $step === 1 ? '0px' : ($step === 2 ? 'calc(50% - 1.25rem)' : 'calc(100% - 2.5rem)') }}" aria-hidden="true"></div>
+
+        <!-- Steps -->
+        <div class="relative flex justify-between z-10">
             <div class="flex flex-col items-center">
-                <div class="w-10 h-10 rounded-full flex items-center justify-center font-bold transition-colors duration-md {{ $step >= 1 ? 'bg-ue-brand text-ue-text-inverse' : 'bg-ue-surface-hover text-ue-text-muted border border-ue-border' }}">1</div>
+                <div class="w-10 h-10 rounded-full flex items-center justify-center font-bold transition-all duration-300 ring-4 ring-white {{ $step >= 1 ? 'bg-ue-brand text-ue-text-inverse' : 'bg-ue-surface-hover text-ue-text-muted border border-ue-border' }}">1</div>
                 <span class="mt-2 text-xs font-semibold {{ $step >= 1 ? 'text-ue-brand' : 'text-ue-text-muted' }}">Chọn vai trò</span>
             </div>
-            <div class="flex-1 h-0.5 mx-4 transition-colors duration-md {{ $step >= 2 ? 'bg-ue-brand' : 'bg-ue-border' }}"></div>
             <div class="flex flex-col items-center">
-                <div class="w-10 h-10 rounded-full flex items-center justify-center font-bold transition-colors duration-md {{ $step >= 2 ? 'bg-ue-brand text-ue-text-inverse' : 'bg-ue-surface-hover text-ue-text-muted border border-ue-border' }}">2</div>
+                <div class="w-10 h-10 rounded-full flex items-center justify-center font-bold transition-all duration-300 ring-4 ring-white {{ $step >= 2 ? 'bg-ue-brand text-ue-text-inverse' : 'bg-ue-surface-hover text-ue-text-muted border border-ue-border' }}">2</div>
                 <span class="mt-2 text-xs font-semibold {{ $step >= 2 ? 'text-ue-brand' : 'text-ue-text-muted' }}">Nhập thông tin</span>
             </div>
-            <div class="flex-1 h-0.5 mx-4 transition-colors duration-md {{ $step >= 3 ? 'bg-ue-brand' : 'bg-ue-border' }}"></div>
             <div class="flex flex-col items-center">
-                <div class="w-10 h-10 rounded-full flex items-center justify-center font-bold transition-colors duration-md {{ $step >= 3 ? 'bg-ue-brand text-ue-text-inverse' : 'bg-ue-surface-hover text-ue-text-muted border border-ue-border' }}">3</div>
+                <div class="w-10 h-10 rounded-full flex items-center justify-center font-bold transition-all duration-300 ring-4 ring-white {{ $step >= 3 ? 'bg-ue-brand text-ue-text-inverse' : 'bg-ue-surface-hover text-ue-text-muted border border-ue-border' }}">3</div>
                 <span class="mt-2 text-xs font-semibold {{ $step >= 3 ? 'text-ue-brand' : 'text-ue-text-muted' }}">Minh chứng</span>
             </div>
         </div>

@@ -6,6 +6,7 @@ use App\Enums\MentorRequestStatus;
 use App\Models\MentorRequest;
 use App\Models\User;
 use App\Notifications\Mentor\MentorRequestUpdatedNotification;
+use App\Support\Navigation\UserNavigationMetrics;
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Support\Facades\Gate;
 
@@ -30,6 +31,8 @@ class UpdateMentorRequestAction
         ]));
 
         $mentorRequest->mentor->notify(new MentorRequestUpdatedNotification($mentorRequest));
+
+        app(UserNavigationMetrics::class)->forgetForUser($mentorRequest->mentor);
 
         return $mentorRequest->fresh();
     }

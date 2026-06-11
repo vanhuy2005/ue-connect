@@ -35,16 +35,6 @@ class MessagePolicy
 
         $conversation = $message->conversation;
 
-        // Must be an active conversation
-        if ($conversation->status !== ConversationStatus::ACTIVE) {
-            return false;
-        }
-
-        // Mentor conversations bypass connection check
-        if ($conversation->mentor_request_id) {
-            return true;
-        }
-
         // 1. Must be participant in conversation
         $isParticipant = $conversation->participants()->where('user_id', $user->id)->exists();
         if (! $isParticipant) {
@@ -72,7 +62,13 @@ class MessagePolicy
                 ->where('user_two_id', max($user->id, $recipient->id));
         })->where('status', 'active')->exists();
 
-        if (! $hasConnection) {
+        // Must be an active conversation OR a direct conversation where they are connected friends
+        if ($conversation->status !== ConversationStatus::ACTIVE && ! $hasConnection) {
+            return false;
+        }
+
+        // Connection check for active conversations (must be currently connected unless this is a mentor conversation)
+        if ($conversation->status === ConversationStatus::ACTIVE && ! $conversation->mentor_request_id && ! $hasConnection) {
             return false;
         }
 

@@ -11,6 +11,7 @@ use App\Actions\Messaging\SendSharedPostMessage;
 use App\Enums\AccountStatus;
 use App\Enums\ConversationStatus;
 use App\Enums\ConversationType;
+use App\Enums\MentorRequestStatus;
 use App\Enums\MessageStatus;
 use App\Enums\MessageType;
 use App\Enums\PostStatus;
@@ -30,7 +31,7 @@ use Tests\TestCase;
 
 class MessagingTest extends TestCase
 {
-    use RefreshDatabase;
+    use RefreshDatabase, \Tests\Feature\Concerns\BuildsMentorFixtures;
 
     protected User $user;
 
@@ -447,5 +448,67 @@ class MessagingTest extends TestCase
             'body' => 'Hi Volt!',
             'message_type' => MessageType::TEXT->value,
         ]);
+    }
+
+    public function test_completed_consultation_ux_renders_and_supports_feedback_submission(): void
+    {
+        // 1. Setup mentor, student, mentor request, and conversation
+        $mentor = $this->activeUser('alumni');
+        $student = $this->activeUser('student');
+
+        $mentorProfile = $this->mentorProfile($mentor, [
+            'headline' => 'UAT completed mentor headline',
+        ]);
+
+        $mentorRequest = $this->mentorRequest($student, $mentorProfile, [
+            'status' => MentorRequestStatus::Completed,
+        ]);
+
+        $conversation = Conversation::create([
+            'conversation_type' => ConversationType::DIRECT,
+            'status' => ConversationStatus::ARCHIVED, // completed requests set convo status to archived
+            'mentor_request_id' => $mentorRequest->id,
+        ]);
+
+        $conversation->participants()->create(['user_id' => $student->id]);
+        $conversation->participants()->create(['user_id' => $mentor->id]);
+
+        $mentorRequest->update(['conversation_id' => $conversation->id]);
+
+        // 2. Student views completed consultation UX
+        $this->actingAs($student);
+
+        Volt::test('pages.app.messages', ['activeConversation' => $conversation])
+            ->assertSet('selectedConversationId', $conversation->id)
+            ->assertSee('Phiên tư vấn đã hoàn thành')
+            ->assertSee('Đã đánh dấu hoàn thành phiên tư vấn này.')
+            ->assertSee('Đánh giá Mentor')
+            ->assertSee('Tạo yêu cầu mới')
+            // Click to show feedback modal
+            ->set('showFeedbackModal', true)
+            ->assertSet('showFeedbackModal', true)
+            // Submit feedback
+            ->set('feedbackLevel', 'helpful')
+            ->set('feedbackText', 'Mentor is very helpful!')
+            ->call('submitMentorFeedback')
+            ->assertHasNoErrors()
+            ->assertSet('feedbackMessage', 'Cảm ơn bạn đã gửi phản hồi cho Mentor!');
+
+        $this->assertDatabaseHas('mentor_feedback', [
+            'mentor_request_id' => $mentorRequest->id,
+            'helpfulness_level' => 'helpful',
+            'feedback_text' => 'Mentor is very helpful!',
+        ]);
+
+        // 3. Mentor views completed consultation UX and student feedback
+        $this->actingAs($mentor);
+
+        Volt::test('pages.app.messages', ['activeConversation' => $conversation])
+            ->assertSet('selectedConversationId', $conversation->id)
+            ->assertSee('Phiên tư vấn đã hoàn thành')
+            ->assertSee('Đã đánh dấu hoàn thành phiên tư vấn này.')
+            ->assertSee('Đánh giá từ sinh viên')
+            ->assertSee('Hữu ích')
+            ->assertSee('Mentor is very helpful!');
     }
 }

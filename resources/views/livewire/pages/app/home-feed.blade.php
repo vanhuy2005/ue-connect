@@ -17,7 +17,9 @@ use App\Actions\Media\StoreTemporaryMediaAction;
 use App\Actions\Follows\FollowUser;
 use App\Actions\Follows\UnfollowUser;
 use App\Enums\CommentStatus;
+use App\Enums\ModerationStatus;
 use App\Enums\PostStatus;
+use App\Enums\PostType;
 use App\Enums\PostVisibility;
 use App\Enums\ReportReason;
 use App\Enums\ConnectionStatus;
@@ -59,7 +61,10 @@ new #[Layout('layouts.app')] class extends Component
     public string $visibility = 'verified_users';
     public int $perPage = self::FEED_PAGE_SIZE;
     public string $activeFeedTab = 'for_you';
+    public string $activeTypeFilter = 'all';
     public ?int $selectedCommunityId = null;
+    public string $postType = 'standard';
+    public bool $oppIsPedagogy = false;
     
     // Quick follow properties
     public bool $showQuickFollowModal = false;
@@ -104,6 +109,8 @@ new #[Layout('layouts.app')] class extends Component
         'body' => 'required|string|max:3000',
         'visibility' => 'required|string|in:verified_users,connections_only,community,private',
         'selectedCommunityId' => 'nullable|integer|exists:communities,id',
+        'postType' => 'required|string|in:standard,experience,career_insight,opportunity',
+        'oppIsPedagogy' => 'nullable|boolean',
     ];
 
     /**
@@ -113,6 +120,24 @@ new #[Layout('layouts.app')] class extends Component
     {
         if ($value !== PostVisibility::COMMUNITY->value) {
             $this->selectedCommunityId = null;
+        }
+    }
+
+    /**
+     * Hook to handle post type changes. If opportunity is chosen, auto-detect pedagogy.
+     */
+    public function updatedPostType(string $value): void
+    {
+        if ($value === 'opportunity') {
+            $user = Auth::user();
+            $programName = $user->profile?->alumniProfile?->academicProgram?->name
+                ?? $user->profile?->studentProfile?->academicProgram?->name
+                ?? $user->profile?->advisorProfile?->academicProgram?->name
+                ?? '';
+            $facultyName = $user->profile?->faculty ?? '';
+
+            $isPedagogy = str_contains(strtolower($programName), 'sư phạm') || str_contains(strtolower($facultyName), 'sư phạm');
+            $this->oppIsPedagogy = $isPedagogy;
         }
     }
 
@@ -181,16 +206,26 @@ new #[Layout('layouts.app')] class extends Component
             'body' => 'required|string|max:3000',
             'visibility' => 'required|string|in:verified_users,connections_only,community,private',
             'selectedCommunityId' => 'nullable|required_if:visibility,community|integer|exists:communities,id',
+            'postType' => 'required|string|in:standard,experience,career_insight,opportunity',
         ], [
             'selectedCommunityId.required_if' => 'Vui lòng chọn cộng đồng để đăng bài.',
             'selectedCommunityId.exists' => 'Cộng đồng đã chọn không khả dụng.',
         ]);
 
-        $post = $createPost->execute(Auth::user(), [
+        $postData = [
             'body' => $this->body,
             'visibility' => $this->visibility,
             'community_id' => $this->selectedCommunityId,
-        ]);
+            'post_type' => $this->postType,
+        ];
+
+        if ($this->postType === 'opportunity') {
+            $postData['opportunity'] = [
+                'category' => $this->oppIsPedagogy ? 'pedagogy' : 'non_pedagogy',
+            ];
+        }
+
+        $post = $createPost->execute(Auth::user(), $postData);
 
         // Attach composer images polymorphically
         if (!empty($this->composerImages)) {
@@ -201,12 +236,28 @@ new #[Layout('layouts.app')] class extends Component
         $this->body = '';
         $this->visibility = PostVisibility::VERIFIED_USERS->value;
         $this->selectedCommunityId = null;
+        $this->postType = 'standard';
         $this->composerImages = [];
         $this->imageFiles = [];
+        $this->oppIsPedagogy = false;
         $this->feedbackMessage = 'Đăng bài viết thành công.';
         $this->dispatch('post-created');
         $this->perPage = self::FEED_PAGE_SIZE;
         $this->resetPage(); // Re-render feed at page 1
+    }
+
+    /**
+     * Mark an opportunity as expired.
+     */
+    public function markAsExpired(int $postId, \App\Actions\Posts\ModerateOpportunity $moderateOpportunity): void
+    {
+        try {
+            $post = Post::findOrFail($postId);
+            $moderateOpportunity->expire(Auth::user(), $post);
+            $this->feedbackMessage = 'Đã đánh dấu cơ hội đã hết hạn.';
+        } catch (\Illuminate\Auth\Access\AuthorizationException $e) {
+            $this->feedbackMessage = $e->getMessage();
+        }
     }
 
     /**
@@ -708,11 +759,27 @@ new #[Layout('layouts.app')] class extends Component
             return;
         }
 
-        if ($this->activeFeedTab === $tab) {
+        $this->activeFeedTab = $tab;
+        $this->activeTypeFilter = 'all';
+        $this->perPage = self::FEED_PAGE_SIZE;
+        $this->resetPage();
+    }
+
+    /**
+     * Switch the active post type filter.
+     */
+    public function setTypeFilter(string $filter): void
+    {
+        if (! in_array($filter, ['all', 'experience', 'career_insight', 'opportunity'], true)) {
             return;
         }
 
-        $this->activeFeedTab = $tab;
+        if ($this->activeTypeFilter === $filter) {
+            $this->activeTypeFilter = 'all';
+        } else {
+            $this->activeTypeFilter = $filter;
+        }
+
         $this->perPage = self::FEED_PAGE_SIZE;
         $this->resetPage();
     }
@@ -750,7 +817,13 @@ new #[Layout('layouts.app')] class extends Component
                 },
             ]);
 
-        return $this->applyVisibleFeedPostConstraints($query, $user);
+        $query = $this->applyVisibleFeedPostConstraints($query, $user);
+
+        if ($this->activeTypeFilter !== 'all') {
+            $query->where('post_type', $this->activeTypeFilter);
+        }
+
+        return $query;
     }
 
     /**
@@ -758,6 +831,8 @@ new #[Layout('layouts.app')] class extends Component
      */
     private function applyVisibleFeedPostConstraints($query, User $user)
     {
+        $isAdminOrModerator = $user->hasRole('admin') || $user->can('manage_reports');
+
         return $query
             ->whereIn('status', [PostStatus::PUBLISHED, PostStatus::EDITED])
             ->visibleTo($user)
@@ -766,6 +841,24 @@ new #[Layout('layouts.app')] class extends Component
                     $q->where('user_id', $user->id);
                 })
                 ->orWhereIn('id', $this->locallyHiddenPostIds);
+            })
+            ->where(function ($query) use ($user, $isAdminOrModerator) {
+                $query->where('post_type', '!=', PostType::OPPORTUNITY->value)
+                    ->orWhereIn('moderation_status', [
+                        ModerationStatus::APPROVED->value,
+                        ModerationStatus::EXPIRED->value,
+                    ])
+                    ->orWhere('user_id', $user->id)
+                    ->when($isAdminOrModerator, function ($q) {
+                        $q->orWhere('moderation_status', ModerationStatus::PENDING->value);
+                    });
+            })
+            ->where(function ($query) {
+                $query->where('post_type', '!=', PostType::OPPORTUNITY->value)
+                    ->orWhereIn('moderation_status', [
+                        ModerationStatus::APPROVED->value,
+                        ModerationStatus::EXPIRED->value,
+                    ]);
             });
     }
 
@@ -798,9 +891,15 @@ new #[Layout('layouts.app')] class extends Component
                     ]);
 
                 $this->applyVisibleFeedPostConstraints($query, $user);
+                if ($this->activeTypeFilter !== 'all') {
+                    $query->where('post_type', $this->activeTypeFilter);
+                }
             },
         ])->whereHas('post', function (Builder $query) use ($user): void {
             $this->applyVisibleFeedPostConstraints($query, $user);
+            if ($this->activeTypeFilter !== 'all') {
+                $query->where('post_type', $this->activeTypeFilter);
+            }
         });
     }
 
@@ -1063,44 +1162,86 @@ new #[Layout('layouts.app')] class extends Component
     <div class="ue-feed-column">
         {{-- Page-local Header --}}
         <header class="ue-feed-header">
-            {{-- Desktop: Title + Tabs side-by-side --}}
-            <div class="hidden sm:flex ue-feed-header__top">
-                <div>
-                    <h1 class="ue-text-heading">Bảng tin</h1>
-                    <p class="ue-text-caption mt-1">HCMUE Student-verified community updates</p>
+            {{-- Desktop Layout --}}
+            <div class="hidden sm:block">
+                {{-- Title & Description --}}
+                <div class="mb-3">
+                    <h1 class="text-xl font-bold text-slate-800">Bảng tin</h1>
+                    <p class="text-xs text-slate-400 font-medium mt-0.5">HCMUE Student-verified community updates</p>
                 </div>
                 
-                {{-- Tabs --}}
-                <div class="ue-feed-tabs">
-                    <button
-                        type="button"
-                        wire:click="setFeedTab('for_you')"
-                        wire:loading.attr="disabled"
-                        wire:target="setFeedTab"
-                        class="px-3 py-1.5 rounded-full ue-text-button transition-colors {{ $activeFeedTab === 'for_you' ? 'bg-ue-brand-soft text-ue-brand' : 'text-slate-500 hover:bg-slate-50' }}"
-                    >
-                        Dành cho bạn
-                    </button>
-                    <button
-                        type="button"
-                        wire:click="setFeedTab('following')"
-                        wire:loading.attr="disabled"
-                        wire:target="setFeedTab"
-                        class="px-3 py-1.5 rounded-full ue-text-button transition-colors {{ $activeFeedTab === 'following' ? 'bg-ue-brand-soft text-ue-brand' : 'text-slate-500 hover:bg-slate-50' }}"
-                    >
-                        Theo dõi
-                    </button>
+                {{-- Tabs & Filters inline --}}
+                <div class="flex items-center gap-1 py-1 select-none">
+                    <div class="ue-feed-tabs">
+                        <button
+                            type="button"
+                            wire:click="setFeedTab('for_you')"
+                            wire:loading.attr="disabled"
+                            wire:target="setFeedTab"
+                            class="px-3 py-1.5 rounded-full text-xxs font-bold transition-colors {{ ($activeFeedTab === 'for_you' && $activeTypeFilter === 'all') ? 'bg-ue-brand-soft text-ue-brand' : 'text-slate-400 hover:bg-slate-50' }}"
+                        >
+                            Dành cho bạn
+                        </button>
+                        <button
+                            type="button"
+                            wire:click="setFeedTab('following')"
+                            wire:loading.attr="disabled"
+                            wire:target="setFeedTab"
+                            class="px-3 py-1.5 rounded-full text-xxs font-bold transition-colors {{ ($activeFeedTab === 'following' && $activeTypeFilter === 'all') ? 'bg-ue-brand-soft text-ue-brand' : 'text-slate-400 hover:bg-slate-50' }}"
+                        >
+                            Theo dõi
+                        </button>
+                    </div>
+
+                    <span class="h-4 w-px bg-slate-200 mx-1"></span>
+
+                    <div class="flex items-center gap-1">
+                        <button
+                            type="button"
+                            wire:click="setTypeFilter('experience')"
+                            wire:loading.attr="disabled"
+                            wire:target="setTypeFilter"
+                            class="px-3 py-1.5 rounded-full text-xxs font-bold transition-colors whitespace-nowrap {{ $activeTypeFilter === 'experience' ? 'bg-ue-brand-soft text-ue-brand' : 'text-slate-400 hover:bg-slate-50' }}"
+                        >
+                            Chia sẻ KN
+                        </button>
+                        <button
+                            type="button"
+                            wire:click="setTypeFilter('career_insight')"
+                            wire:loading.attr="disabled"
+                            wire:target="setTypeFilter"
+                            class="px-3 py-1.5 rounded-full text-xxs font-bold transition-colors whitespace-nowrap {{ $activeTypeFilter === 'career_insight' ? 'bg-ue-brand-soft text-ue-brand' : 'text-slate-400 hover:bg-slate-50' }}"
+                        >
+                            KN nghề nghiệp
+                        </button>
+                        <button
+                            type="button"
+                            wire:click="setTypeFilter('opportunity')"
+                            wire:loading.attr="disabled"
+                            wire:target="setTypeFilter"
+                            class="px-3 py-1.5 rounded-full text-xxs font-bold transition-colors whitespace-nowrap {{ $activeTypeFilter === 'opportunity' ? 'bg-ue-brand-soft text-ue-brand' : 'text-slate-400 hover:bg-slate-50' }}"
+                        >
+                            Cơ hội
+                        </button>
+                    </div>
                 </div>
             </div>
 
-            {{-- Mobile: Threads-style centered tab strip only --}}
-            <div class="flex sm:hidden items-center justify-center border-b border-slate-100 pb-1">
+            {{-- Mobile Layout (Scrollable inline list, hidden scrollbar via custom CSS inline to be safe) --}}
+            <div class="flex sm:hidden items-center gap-1 overflow-x-auto pb-2 border-b border-slate-100 px-4 select-none" style="-ms-overflow-style: none; scrollbar-width: none;">
+                <style>
+                    /* Inline safety to ensure scrollbar is completely hidden on mobile webkit browsers */
+                    .ue-feed-header::-webkit-scrollbar,
+                    div.overflow-x-auto::-webkit-scrollbar {
+                        display: none !important;
+                    }
+                </style>
                 <button
                     type="button"
                     wire:click="setFeedTab('for_you')"
                     wire:loading.attr="disabled"
                     wire:target="setFeedTab"
-                    class="flex-1 py-2 text-center transition-colors ue-text-button {{ $activeFeedTab === 'for_you' ? 'text-slate-800 border-b-2 border-slate-800' : 'text-slate-400 border-b-2 border-transparent' }}"
+                    class="px-3 py-1.5 rounded-full text-xxs font-bold transition-colors whitespace-nowrap {{ ($activeFeedTab === 'for_you' && $activeTypeFilter === 'all') ? 'bg-ue-brand-soft text-ue-brand' : 'text-slate-400 hover:bg-slate-50' }}"
                 >
                     Dành cho bạn
                 </button>
@@ -1109,9 +1250,39 @@ new #[Layout('layouts.app')] class extends Component
                     wire:click="setFeedTab('following')"
                     wire:loading.attr="disabled"
                     wire:target="setFeedTab"
-                    class="flex-1 py-2 text-center transition-colors ue-text-button {{ $activeFeedTab === 'following' ? 'text-slate-800 border-b-2 border-slate-800' : 'text-slate-400 border-b-2 border-transparent' }}"
+                    class="px-3 py-1.5 rounded-full text-xxs font-bold transition-colors whitespace-nowrap {{ ($activeFeedTab === 'following' && $activeTypeFilter === 'all') ? 'bg-ue-brand-soft text-ue-brand' : 'text-slate-400 hover:bg-slate-50' }}"
                 >
                     Theo dõi
+                </button>
+
+                <span class="h-4 w-px bg-slate-200 mx-1 flex-shrink-0"></span>
+
+                <button
+                    type="button"
+                    wire:click="setTypeFilter('experience')"
+                    wire:loading.attr="disabled"
+                    wire:target="setTypeFilter"
+                    class="px-3 py-1.5 rounded-full text-xxs font-bold transition-colors whitespace-nowrap {{ $activeTypeFilter === 'experience' ? 'bg-ue-brand-soft text-ue-brand' : 'text-slate-400 hover:bg-slate-50' }}"
+                >
+                    Chia sẻ KN
+                </button>
+                <button
+                    type="button"
+                    wire:click="setTypeFilter('career_insight')"
+                    wire:loading.attr="disabled"
+                    wire:target="setTypeFilter"
+                    class="px-3 py-1.5 rounded-full text-xxs font-bold transition-colors whitespace-nowrap {{ $activeTypeFilter === 'career_insight' ? 'bg-ue-brand-soft text-ue-brand' : 'text-slate-400 hover:bg-slate-50' }}"
+                >
+                    KN nghề nghiệp
+                </button>
+                <button
+                    type="button"
+                    wire:click="setTypeFilter('opportunity')"
+                    wire:loading.attr="disabled"
+                    wire:target="setTypeFilter"
+                    class="px-3 py-1.5 rounded-full text-xxs font-bold transition-colors whitespace-nowrap {{ $activeTypeFilter === 'opportunity' ? 'bg-ue-brand-soft text-ue-brand' : 'text-slate-400 hover:bg-slate-50' }}"
+                >
+                    Cơ hội
                 </button>
             </div>
         </header>
@@ -1134,6 +1305,31 @@ new #[Layout('layouts.app')] class extends Component
                         <div class="min-w-0">
                             <form wire:submit.prevent="submitPost">
                                 <div>
+                                    @if ($currentUser->canPostType(\App\Enums\PostType::EXPERIENCE))
+                                        <div class="flex items-center gap-2 mb-2 select-none flex-wrap">
+                                            <span class="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Đăng làm:</span>
+                                            <div class="inline-flex items-center gap-1 p-0.5 bg-slate-100 rounded-lg border border-slate-200">
+                                                <label class="relative flex items-center justify-center cursor-pointer">
+                                                    <input type="radio" wire:model.live="postType" value="standard" class="sr-only peer" />
+                                                    <span class="px-2.5 py-1 text-[11px] font-bold text-slate-500 rounded-md transition-all peer-checked:bg-white peer-checked:text-slate-800 peer-checked:shadow-sm">Bài viết</span>
+                                                </label>
+                                                <label class="relative flex items-center justify-center cursor-pointer">
+                                                    <input type="radio" wire:model.live="postType" value="experience" class="sr-only peer" />
+                                                    <span class="px-2.5 py-1 text-[11px] font-bold text-slate-500 rounded-md transition-all peer-checked:bg-emerald-500 peer-checked:text-white peer-checked:shadow-sm">Chia sẻ KN</span>
+                                                </label>
+                                                <label class="relative flex items-center justify-center cursor-pointer">
+                                                    <input type="radio" wire:model.live="postType" value="career_insight" class="sr-only peer" />
+                                                    <span class="px-2.5 py-1 text-[11px] font-bold text-slate-500 rounded-md transition-all peer-checked:bg-purple-500 peer-checked:text-white peer-checked:shadow-sm">KN nghề nghiệp</span>
+                                                </label>
+                                                @if ($currentUser->canPostType(\App\Enums\PostType::OPPORTUNITY))
+                                                    <label class="relative flex items-center justify-center cursor-pointer">
+                                                        <input type="radio" wire:model.live="postType" value="opportunity" class="sr-only peer" />
+                                                        <span class="px-2.5 py-1 text-[11px] font-bold text-slate-500 rounded-md transition-all peer-checked:bg-amber-500 peer-checked:text-white peer-checked:shadow-sm">Cơ hội</span>
+                                                    </label>
+                                                @endif
+                                            </div>
+                                        </div>
+                                    @endif
                                     <label for="post-body" class="sr-only">Nội dung bài viết</label>
                                     <textarea
                                         id="post-body"
@@ -1146,6 +1342,20 @@ new #[Layout('layouts.app')] class extends Component
                                     @error('body')
                                         <p class="text-xs text-red-650 font-semibold mt-1">{{ $message }}</p>
                                     @enderror
+
+                                    @if ($postType === 'opportunity')
+                                        <div class="mt-3 p-3.5 bg-amber-50/55 hover:bg-amber-50 rounded-xl border border-amber-100 flex items-center gap-2.5 text-slate-750 transition-colors duration-200">
+                                            <input
+                                                type="checkbox"
+                                                id="opp-is-pedagogy"
+                                                wire:model="oppIsPedagogy"
+                                                class="w-4 h-4 rounded border-amber-300 text-amber-600 focus:ring-amber-500/20 focus:ring-2 focus:ring-offset-0 cursor-pointer transition-all duration-200"
+                                            />
+                                            <label for="opp-is-pedagogy" class="text-xs font-bold text-slate-700 cursor-pointer select-none">
+                                                Đây là cơ hội thuộc khối ngành Sư phạm
+                                            </label>
+                                        </div>
+                                    @endif
 
                                     {{-- Image Previews inside composer --}}
                                     @if (!empty($composerImages))

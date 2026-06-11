@@ -61,7 +61,7 @@ new class extends Component {
         $hasTrustedAvatar = (bool) ($profile?->avatar()->where('status', 'ready')->exists() || $profile?->avatar_media_file_id);
 
         return [
-            'profile' => $user->mentorProfile()->first(),
+            'profile' => $user->mentorProfile()->where('is_active', true)->first(),
             'latestRequest' => MentorAccessRequest::query()
                 ->where('user_id', $user->id)
                 ->latest()
@@ -85,7 +85,18 @@ new class extends Component {
         'other' => 'Khác',
     ];
 
-    $selectedRequestTypes = old('preferred_request_types', $profile?->preferred_request_types ?? []);
+    $selectedRequestTypes = collect(old('preferred_request_types', $profile?->preferred_request_types ?? []))->values()->all();
+    $customPreferredRequestVal = old('custom_preferred_request', '');
+    if (empty($customPreferredRequestVal)) {
+        foreach ($selectedRequestTypes as $key => $type) {
+            if (! isset($preferredRequestOptions[$type]) && $type !== 'other') {
+                $customPreferredRequestVal = $type;
+                $selectedRequestTypes[$key] = 'other';
+            }
+        }
+    }
+    $selectedRequestTypes = array_values(array_unique($selectedRequestTypes));
+
     $availabilityValue = old('availability_status', $profile?->availability_status?->value ?? MentorAvailabilityStatus::Available->value);
     $visibilityValue = (bool) old('mentor_visibility', $profile?->mentor_visibility ?? true);
     $isDiscoverable = $profile
@@ -95,7 +106,18 @@ new class extends Component {
         && $availabilityValue === MentorAvailabilityStatus::Available->value;
 @endphp
 
-<div class="mx-auto max-w-6xl px-4 py-6 sm:px-6 lg:px-8">
+<div class="mx-auto max-w-6xl px-4 py-6 sm:px-6 lg:px-8"
+     x-data="{
+         headline: @js(old('headline', $profile?->headline)),
+         bio: @js(old('bio', $profile?->bio)),
+         expertise_topics_text: @js(old('expertise_topics_text', implode(', ', $profile?->expertise_topics ?? []))),
+         availability_status: @js($availabilityValue),
+         max_pending_requests: @js(old('max_pending_requests', $profile?->max_pending_requests)),
+         response_expectation_text: @js(old('response_expectation_text', $profile?->response_expectation_text)),
+         office_hours_text: @js(old('office_hours_text', $profile?->office_hours_text)),
+         preferred_request_types: @js($selectedRequestTypes),
+         custom_preferred_request: @js($customPreferredRequestVal)
+     }">
     <div class="mb-6 flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
         <div>
             <a href="{{ route('mentor.discovery') }}" class="text-xs font-bold text-ue-brand hover:underline">← Quay lại danh sách mentor</a>
@@ -117,7 +139,6 @@ new class extends Component {
                             @if (empty($profile->headline)) <li>Thiếu Headline giới thiệu.</li> @endif
                             @if (empty($profile->bio)) <li>Thiếu phần Giới thiệu chi tiết (Bio).</li> @endif
                             @if (!is_array($profile->expertise_topics) || count($profile->expertise_topics) < 2) <li>Cần ít nhất 2 chủ đề chuyên môn.</li> @endif
-                            @if (!is_array($profile->help_topics) || count($profile->help_topics) < 2) <li>Cần ít nhất 2 chủ đề có thể hỗ trợ.</li> @endif
                             @if (!is_array($profile->preferred_request_types) || count($profile->preferred_request_types) < 1) <li>Chọn ít nhất 1 loại yêu cầu hỗ trợ.</li> @endif
                             @if (empty($profile->response_expectation_text)) <li>Thiếu thời gian phản hồi dự kiến.</li> @endif
                         </ul>
@@ -250,6 +271,7 @@ new class extends Component {
                                 maxlength="160"
                                 placeholder="Ví dụ: Frontend mentor hỗ trợ CV, portfolio và thực tập"
                                 class="mt-2 w-full rounded-xl border-slate-200 text-sm focus:border-ue-brand focus:ring-ue-brand/20"
+                                x-model="headline"
                             >
                             <span class="mt-1 block text-xs text-slate-400">Một câu cụ thể giúp người học hiểu ngay bạn phù hợp với nhu cầu nào.</span>
                         </label>
@@ -263,57 +285,25 @@ new class extends Component {
                                 maxlength="5000"
                                 placeholder="Bạn là ai, đã có trải nghiệm gì, và thường hỗ trợ người học theo cách nào?"
                                 class="mt-2 w-full rounded-xl border-slate-200 text-sm focus:border-ue-brand focus:ring-ue-brand/20"
+                                x-model="bio"
                             >{{ old('bio', $profile->bio) }}</textarea>
                             <span class="mt-1 block text-xs text-slate-400">Nên viết 2-5 câu, tránh quá chung chung như “mình sẵn sàng hỗ trợ”.</span>
                         </label>
 
-                        <div class="grid gap-4 md:grid-cols-2">
-                            <label class="block">
-                                <span class="text-sm font-bold text-slate-700">Chủ đề chuyên môn</span>
-                                <textarea
-                                    name="expertise_topics_text"
-                                    required
-                                    rows="3"
-                                    placeholder="Laravel, React, CV Review, IELTS"
-                                    class="mt-2 w-full rounded-xl border-slate-200 text-sm focus:border-ue-brand focus:ring-ue-brand/20"
-                                >{{ old('expertise_topics_text', implode(', ', $profile->expertise_topics ?? [])) }}</textarea>
-                                <span class="mt-1 block text-xs text-slate-400">Tối thiểu 2 mục, ngăn cách bằng dấu phẩy hoặc xuống dòng.</span>
-                            </label>
+                        <label class="block">
+                            <span class="text-sm font-bold text-slate-700">Chủ đề chuyên môn</span>
+                            <textarea
+                                name="expertise_topics_text"
+                                required
+                                rows="3"
+                                placeholder="Laravel, React, CV Review, IELTS"
+                                class="mt-2 w-full rounded-xl border-slate-200 text-sm focus:border-ue-brand focus:ring-ue-brand/20"
+                                x-model="expertise_topics_text"
+                            >{{ old('expertise_topics_text', implode(', ', $profile->expertise_topics ?? [])) }}</textarea>
+                            <span class="mt-1 block text-xs text-slate-400">Tối thiểu 2 mục, ngăn cách bằng dấu phẩy hoặc xuống dòng.</span>
+                        </label>
 
-                            <label class="block">
-                                <span class="text-sm font-bold text-slate-700">Bạn có thể hỗ trợ điều gì?</span>
-                                <textarea
-                                    name="help_topics_text"
-                                    required
-                                    rows="3"
-                                    placeholder="Review CV, định hướng thực tập, chọn đề tài NCKH"
-                                    class="mt-2 w-full rounded-xl border-slate-200 text-sm focus:border-ue-brand focus:ring-ue-brand/20"
-                                >{{ old('help_topics_text', implode(', ', $profile->help_topics ?? [])) }}</textarea>
-                                <span class="mt-1 block text-xs text-slate-400">Nói theo nhu cầu của người học, không chỉ theo kỹ năng của bạn.</span>
-                            </label>
-                        </div>
 
-                        <div class="grid gap-4 md:grid-cols-2">
-                            <label class="block">
-                                <span class="text-sm font-bold text-slate-700">Lộ trình nghề nghiệp / học thuật</span>
-                                <input
-                                    name="career_paths_text"
-                                    value="{{ old('career_paths_text', implode(', ', $profile->career_paths ?? [])) }}"
-                                    placeholder="Software Engineering, Teaching, Research"
-                                    class="mt-2 w-full rounded-xl border-slate-200 text-sm focus:border-ue-brand focus:ring-ue-brand/20"
-                                >
-                            </label>
-
-                            <label class="block">
-                                <span class="text-sm font-bold text-slate-700">Kỹ năng liên quan</span>
-                                <input
-                                    name="skills_text"
-                                    value="{{ old('skills_text', implode(', ', $profile->skills ?? [])) }}"
-                                    placeholder="Laravel, Figma, Data Analysis"
-                                    class="mt-2 w-full rounded-xl border-slate-200 text-sm focus:border-ue-brand focus:ring-ue-brand/20"
-                                >
-                            </label>
-                        </div>
                     </div>
                 </section>
 
@@ -323,16 +313,40 @@ new class extends Component {
 
                     <div class="mt-4 grid gap-2 sm:grid-cols-2">
                         @foreach ($preferredRequestOptions as $value => $label)
-                            <label class="flex items-center gap-2 rounded-xl border border-slate-200 px-3 py-2 text-sm font-semibold text-slate-700 hover:border-ue-brand/40 hover:bg-ue-brand-soft/30">
-                                <input
-                                    type="checkbox"
-                                    name="preferred_request_types[]"
-                                    value="{{ $value }}"
-                                    @checked(in_array($value, $selectedRequestTypes, true))
-                                    class="rounded border-slate-300 text-ue-brand focus:ring-ue-brand/30"
-                                >
-                                {{ $label }}
-                            </label>
+                            @if ($value === 'other')
+                                <label class="flex items-center gap-2 rounded-xl border border-slate-200 px-3 py-2 text-sm font-semibold text-slate-700 hover:border-ue-brand/40 hover:bg-ue-brand-soft/30">
+                                    <input
+                                        type="checkbox"
+                                        name="preferred_request_types[]"
+                                        value="other"
+                                        @checked(in_array('other', $selectedRequestTypes, true))
+                                        class="rounded border-slate-300 text-ue-brand focus:ring-ue-brand/30"
+                                        x-model="preferred_request_types"
+                                    >
+                                    <span x-show="!preferred_request_types.includes('other')">Khác</span>
+                                    <input
+                                        x-show="preferred_request_types.includes('other')"
+                                        type="text"
+                                        name="custom_preferred_request"
+                                        x-model="custom_preferred_request"
+                                        placeholder="Nhập yêu cầu khác..."
+                                        class="h-7 w-full border-0 border-b border-slate-300 p-0 text-sm focus:border-ue-brand focus:ring-0 bg-transparent"
+                                        onclick="event.stopPropagation()"
+                                    >
+                                </label>
+                            @else
+                                <label class="flex items-center gap-2 rounded-xl border border-slate-200 px-3 py-2 text-sm font-semibold text-slate-700 hover:border-ue-brand/40 hover:bg-ue-brand-soft/30">
+                                    <input
+                                        type="checkbox"
+                                        name="preferred_request_types[]"
+                                        value="{{ $value }}"
+                                        @checked(in_array($value, $selectedRequestTypes, true))
+                                        class="rounded border-slate-300 text-ue-brand focus:ring-ue-brand/30"
+                                        x-model="preferred_request_types"
+                                    >
+                                    {{ $label }}
+                                </label>
+                            @endif
                         @endforeach
                     </div>
                 </section>
@@ -342,7 +356,7 @@ new class extends Component {
                     <div class="mt-4 grid gap-4 md:grid-cols-2">
                         <label class="block">
                             <span class="text-sm font-bold text-slate-700">Tình trạng hiện tại</span>
-                            <select name="availability_status" class="mt-2 w-full rounded-xl border-slate-200 text-sm focus:border-ue-brand focus:ring-ue-brand/20">
+                            <select name="availability_status" class="mt-2 w-full rounded-xl border-slate-200 text-sm focus:border-ue-brand focus:ring-ue-brand/20" x-model="availability_status">
                                 @foreach (MentorAvailabilityStatus::cases() as $status)
                                     <option value="{{ $status->value }}" @selected($availabilityValue === $status->value)>{{ $status->label() }}</option>
                                 @endforeach
@@ -358,6 +372,7 @@ new class extends Component {
                                 name="max_pending_requests"
                                 value="{{ old('max_pending_requests', $profile->max_pending_requests) }}"
                                 class="mt-2 w-full rounded-xl border-slate-200 text-sm focus:border-ue-brand focus:ring-ue-brand/20"
+                                x-model="max_pending_requests"
                             >
                         </label>
                     </div>
@@ -372,6 +387,7 @@ new class extends Component {
                                 maxlength="255"
                                 placeholder="Ví dụ: Phản hồi trong 2-3 ngày làm việc"
                                 class="mt-2 w-full rounded-xl border-slate-200 text-sm focus:border-ue-brand focus:ring-ue-brand/20"
+                                x-model="response_expectation_text"
                             >
                         </label>
 
@@ -383,6 +399,7 @@ new class extends Component {
                                 maxlength="255"
                                 placeholder="Ví dụ: Tối thứ 3 và thứ 5"
                                 class="mt-2 w-full rounded-xl border-slate-200 text-sm focus:border-ue-brand focus:ring-ue-brand/20"
+                                x-model="office_hours_text"
                             >
                         </label>
                     </div>
@@ -415,32 +432,95 @@ new class extends Component {
                 </div>
             </form>
 
-            <aside class="space-y-5">
-                <section class="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm lg:sticky lg:top-6">
-                    <div class="flex items-center gap-3">
-                        <x-ui.avatar :user="$currentUser" size="md" />
-                        <div class="min-w-0">
-                            <p class="truncate text-sm font-bold text-slate-950">{{ $currentUser->name }}</p>
-                            <p class="text-xs font-semibold text-emerald-700">{{ MentorAvailabilityStatus::from($availabilityValue)->label() }}</p>
-                        </div>
-                    </div>
+                            <aside class="space-y-5 lg:sticky lg:top-6 self-start">
+                <div class="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+                    <h3 class="text-xs font-bold uppercase tracking-wide text-slate-400 mb-3.5">Preview thẻ hồ sơ mentor</h3>
 
-                    <div class="mt-4 rounded-xl border border-slate-200 bg-slate-50 p-4">
-                        <p class="text-xs font-bold uppercase tracking-wide text-slate-400">Preview hồ sơ</p>
-                        <h3 class="mt-3 text-base font-bold text-slate-950 break-words line-clamp-2">{{ old('headline', $profile->headline) ?: 'Headline mentor sẽ hiển thị ở đây' }}</h3>
-                        <p class="mt-2 line-clamp-4 text-sm leading-6 text-slate-600 break-words">{{ old('bio', $profile->bio) ?: 'Phần giới thiệu mentor giúp người học hiểu bạn là ai và nên gửi yêu cầu gì.' }}</p>
+                    <div class="ue-loadable-card bg-white border border-slate-200 rounded-2xl p-4 flex flex-col justify-between shadow-2xs">
+                        <div>
+                            {{-- Identity info --}}
+                            <div class="flex items-start justify-between gap-3">
+                                <div class="flex items-center gap-3">
+                                    <div class="relative">
+                                        <x-ui.avatar :user="$currentUser" size="md" class="border border-slate-100" />
+                                    </div>
+                                    <div class="min-w-0">
+                                        <span class="text-xs font-bold text-slate-800 flex items-center gap-1 leading-snug">
+                                            {{ $currentUser->name }}
+                                            <x-ui.icon name="shield-check" size="xs" class="text-ue-brand fill-ue-brand" />
+                                        </span>
+                                        <p class="text-[9px] text-slate-400 font-semibold tracking-wide uppercase mt-0.5">
+                                            @if ($currentUser->profile?->role_type === 'alumni') Cựu sinh viên
+                                            @elseif ($currentUser->profile?->role_type === 'teacher') Giảng viên
+                                            @elseif ($currentUser->profile?->role_type === 'exceptional_student') Sinh viên nổi bật
+                                            @else Mentor
+                                            @endif
+                                        </p>
+                                        <div class="mt-1 flex items-center gap-1.5">
+                                            <span class="inline-block w-1.5 h-1.5 rounded-full" :class="availability_status === 'available' ? 'bg-emerald-500' : 'bg-slate-400'"></span>
+                                            <span class="text-[9px] font-semibold" :class="availability_status === 'available' ? 'text-emerald-700' : 'text-slate-400'" x-text="{
+                                                available: 'Đang nhận yêu cầu',
+                                                paused: 'Tạm ngưng nhận',
+                                                full: 'Đầy lượt',
+                                                hidden: 'Ẩn hồ sơ'
+                                            }[availability_status] || availability_status"></span>
+                                        </div>
+                                    </div>
+                                </div>
 
-                        <div class="mt-4 flex flex-wrap gap-2">
-                            @foreach (array_slice(preg_split('/[\r\n,]+/', old('expertise_topics_text', implode(', ', $profile->expertise_topics ?? []))), 0, 5) as $topic)
-                                @if (trim($topic) !== '')
-                                    <span class="max-w-full truncate rounded-full bg-white px-2.5 py-1 text-xs font-semibold text-slate-600 ring-1 ring-slate-200" title="{{ trim($topic) }}">{{ trim($topic) }}</span>
+                                @if ($currentUser->profile?->faculty)
+                                    <span class="bg-slate-50 text-[9px] font-bold text-slate-500 px-2 py-0.5 rounded-md border border-slate-100 leading-none">
+                                        {{ $currentUser->profile->faculty }}
+                                    </span>
                                 @endif
-                            @endforeach
+                            </div>
+
+                            {{-- Headline --}}
+                            <h4 class="mt-3.5 text-xs font-bold text-slate-850 line-clamp-2 leading-snug" x-text="headline || 'Headline giới thiệu ngắn về bạn...'"></h4>
+
+                            {{-- Bio --}}
+                            <p class="text-xxs text-slate-500 font-medium leading-relaxed mt-2 line-clamp-3" x-text="bio || 'Viết một chút giới thiệu về bạn để học viên biết vì sao nên chọn kết nối.'"></p>
+
+                            {{-- Expertise Topics --}}
+                            <div class="mt-3.5">
+                                <span class="text-[9px] font-bold text-slate-400 block mb-1">Chuyên môn</span>
+                                <div class="flex flex-wrap gap-1.5" x-html="
+                                    expertise_topics_text.split(/[\r\n,]+/)
+                                        .map(t => t.trim())
+                                        .filter(t => t !== '')
+                                        .slice(0, 8)
+                                        .map(t => `<span class='bg-slate-50 text-[9px] font-semibold text-slate-600 px-2 py-0.5 rounded border border-slate-100 leading-none'>${t}</span>`)
+                                        .join('') || `<span class='text-xxs text-slate-350 italic'>Chưa nhập chủ đề chuyên môn</span>`
+                                "></div>
+                            </div>
+
+                            {{-- Preferred Request Types (Phạm vi hỗ trợ) --}}
+                            <div class="mt-3" x-show="preferred_request_types.length > 0">
+                                <span class="text-[9px] font-bold text-slate-400 block mb-1">Phạm vi hỗ trợ</span>
+                                <div class="flex flex-wrap gap-1">
+                                    <template x-for="type in preferred_request_types" :key="type">
+                                        <span class="bg-blue-50 text-[9px] font-bold text-blue-700 px-2 py-0.5 rounded-md border border-blue-100 leading-none"
+                                              x-text="type === 'other' ? (custom_preferred_request || 'Khác') : ({
+                                                  cv_review: 'Review CV / Portfolio',
+                                                  career_advice: 'Định hướng nghề nghiệp',
+                                                  academic_guidance: 'Định hướng học thuật',
+                                                  subject_support: 'Hỗ trợ môn học',
+                                                  research_guidance: 'Nghiên cứu khoa học',
+                                                  interview_prep: 'Chuẩn bị phỏng vấn',
+                                                  internship_experience: 'Kinh nghiệm thực tập',
+                                                  other: 'Khác'
+                                              }[type] || type)">
+                                        </span>
+                                    </template>
+                                </div>
+                            </div>
                         </div>
 
-                        <div class="mt-4 rounded-lg bg-white p-3 text-xs leading-5 text-slate-500 ring-1 ring-slate-200">
-                            <p><span class="font-bold text-slate-700">Phản hồi:</span> {{ old('response_expectation_text', $profile->response_expectation_text) ?: 'Chưa thiết lập' }}</p>
-                            <p class="mt-1"><span class="font-bold text-slate-700">Khung giờ:</span> {{ old('office_hours_text', $profile->office_hours_text) ?: 'Linh hoạt theo lịch hẹn' }}</p>
+                        {{-- Footer / Meta info --}}
+                        <div class="mt-4 pt-3 border-t border-slate-100 flex flex-col gap-0.5 text-[10px] text-slate-400">
+                            <span><span class="font-bold text-slate-600">Phản hồi:</span> <span x-text="response_expectation_text || 'N/A'"></span></span>
+                            <span x-show="office_hours_text"><span class="font-bold text-slate-600">Lịch hỗ trợ:</span> <span x-text="office_hours_text"></span></span>
+                            <span><span class="font-bold text-slate-600">Số yêu cầu đang chờ tối đa:</span> <span x-text="max_pending_requests"></span></span>
                         </div>
                     </div>
 
@@ -450,7 +530,7 @@ new class extends Component {
                         <p>• Có ít nhất 2 chuyên môn và 2 nội dung hỗ trợ.</p>
                         <p>• Trạng thái là “Đang nhận yêu cầu” và bật hiển thị.</p>
                     </div>
-                </section>
+                </div>
             </aside>
         </div>
     @endif

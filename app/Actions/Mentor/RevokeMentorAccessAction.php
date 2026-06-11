@@ -6,6 +6,7 @@ use App\Enums\MentorAccessStatus;
 use App\Models\MentorAccessRequest;
 use App\Models\MentorProfile;
 use App\Models\User;
+use App\Notifications\Mentor\MentorAccessRevokedNotification;
 use App\Services\AuditService;
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Support\Facades\DB;
@@ -51,6 +52,9 @@ class RevokeMentorAccessAction
             if ($mentorProfile->user?->hasDirectPermission('mentor_access')) {
                 $mentorProfile->user->revokePermissionTo('mentor_access');
             }
+
+            // Notify user
+            $mentorProfile->user->notify(new MentorAccessRevokedNotification($data['reason'] ?? null));
 
             // 3. Audit log
             $this->audit->log([

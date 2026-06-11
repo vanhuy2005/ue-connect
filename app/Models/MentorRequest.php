@@ -95,6 +95,7 @@ class MentorRequest extends Model
             MentorRequestStatus::Submitted->value,
             MentorRequestStatus::Accepted->value,
             MentorRequestStatus::NeedMoreInfo->value,
+            MentorRequestStatus::UpdatedByStudent->value,
         ]);
     }
 
@@ -103,6 +104,7 @@ class MentorRequest extends Model
         return $query->whereIn('status', [
             MentorRequestStatus::Submitted->value,
             MentorRequestStatus::NeedMoreInfo->value,
+            MentorRequestStatus::UpdatedByStudent->value,
         ]);
     }
 

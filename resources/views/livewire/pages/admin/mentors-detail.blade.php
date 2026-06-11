@@ -65,20 +65,20 @@ new class extends Component {
         <div class="space-y-6">
             {{-- Thông tin hồ sơ --}}
             <section class="rounded-lg border border-slate-200 bg-white p-6 shadow-sm">
-                <div class="flex items-start justify-between gap-4">
-                    <div class="flex items-center gap-4">
+                <div class="flex items-start justify-between gap-4 flex-wrap">
+                    <div class="flex items-center gap-4 min-w-0">
                         @if ($avatarUrl)
-                            <a href="{{ $avatarUrl }}" target="_blank" rel="noopener noreferrer">
-                                <img src="{{ $avatarUrl }}" class="h-14 w-14 rounded-full border-2 border-slate-200 object-cover shrink-0 hover:opacity-80 transition-opacity" alt="Avatar" title="Bấm để xem ảnh lớn" />
+                            <a href="{{ $avatarUrl }}" target="_blank" rel="noopener noreferrer" class="shrink-0">
+                                <img src="{{ $avatarUrl }}" class="h-14 w-14 rounded-full border-2 border-slate-200 object-cover hover:opacity-80 transition-opacity" alt="Avatar" title="Bấm để xem ảnh lớn" />
                             </a>
                         @else
                             <div class="h-14 w-14 rounded-full bg-slate-100 flex items-center justify-center shrink-0">
                                 <x-ui.icon name="user" size="lg" class="text-slate-400" />
                             </div>
                         @endif
-                        <div>
-                            <h1 class="text-2xl font-bold text-slate-900">Yêu cầu Mentor #{{ $request->id }}</h1>
-                            <p class="mt-0.5 text-sm text-slate-500">{{ $request->user?->name }} · {{ $request->user?->email }}</p>
+                        <div class="min-w-0">
+                            <h1 class="text-xl sm:text-2xl font-bold text-slate-900">Yêu cầu Mentor #{{ $request->id }}</h1>
+                            <p class="mt-0.5 text-sm text-slate-500 truncate">{{ $request->user?->name }} · {{ $request->user?->email }}</p>
                         </div>
                     </div>
                     <span class="shrink-0 rounded-full bg-slate-100 px-3 py-1 text-xs font-bold text-slate-700">{{ $request->status->label() }}</span>
@@ -164,7 +164,25 @@ new class extends Component {
                     @if ($request->preferred_request_types)
                         <div>
                             <dt class="font-bold text-slate-700">Loại yêu cầu nhận được</dt>
-                            <dd class="mt-1 text-slate-600">{{ implode(', ', $request->preferred_request_types) }}</dd>
+                            <dd class="mt-2 flex flex-wrap gap-2">
+                                @php
+                                    $preferredRequestOptions = [
+                                        'cv_review' => 'Review CV / Portfolio',
+                                        'career_advice' => 'Định hướng nghề nghiệp',
+                                        'academic_guidance' => 'Định hướng học thuật',
+                                        'subject_support' => 'Hỗ trợ môn học',
+                                        'research_guidance' => 'Nghiên cứu khoa học',
+                                        'interview_prep' => 'Chuẩn bị phỏng vấn',
+                                        'internship_experience' => 'Kinh nghiệm thực tập',
+                                        'other' => 'Khác',
+                                    ];
+                                @endphp
+                                @foreach ($request->preferred_request_types as $type)
+                                    <span class="rounded-full bg-blue-50 border border-blue-100 px-2.5 py-1 text-xs font-semibold text-blue-700">
+                                        {{ $preferredRequestOptions[$type] ?? $type }}
+                                    </span>
+                                @endforeach
+                            </dd>
                         </div>
                     @endif
 
@@ -225,7 +243,7 @@ new class extends Component {
                                 <dt class="font-bold text-slate-700">File minh chứng</dt>
                                 <dd class="mt-2">
                                     <a href="{{ $evidenceUrl }}" target="_blank" rel="noopener noreferrer">
-                                        <img src="{{ $evidenceUrl }}" class="max-h-60 rounded-lg border border-slate-200 shadow-sm object-contain" alt="{{ $evidenceFilename ?? 'Minh chứng' }}" title="{{ $evidenceFilename ?? 'Minh chứng' }}" />
+                                        <img src="{{ $evidenceUrl }}" class="max-h-60 max-w-full rounded-lg border border-slate-200 shadow-sm object-contain" alt="{{ $evidenceFilename ?? 'Minh chứng' }}" title="{{ $evidenceFilename ?? 'Minh chứng' }}" />
                                     </a>
                                     @if ($evidenceFilename)
                                         <p class="mt-1.5 text-xs text-slate-500">{{ $evidenceFilename }}</p>
@@ -248,28 +266,71 @@ new class extends Component {
         </div>
 
         <aside class="space-y-4">
-            <div class="rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
-                <h2 class="text-sm font-bold text-slate-900">Xử lý</h2>
-                <form method="POST" action="{{ route('admin.mentors.action', $request) }}" class="mt-4 space-y-3">
-                    @csrf
-                    <select name="action" class="w-full rounded-lg border-slate-200 text-sm">
-                        <option value="approve">Phê duyệt</option>
-                        <option value="reject">Từ chối</option>
-                        <option value="request_more_info">Cần thêm thông tin</option>
-                        <option value="revoke">Thu hồi</option>
-                    </select>
-                    <textarea name="reason" required rows="3" placeholder="Lý do xử lý (tối thiểu 10 ký tự)" class="w-full rounded-lg border-slate-200 text-sm"></textarea>
-                    <textarea name="instruction" rows="3" placeholder="Ghi chú nội bộ hoặc hướng dẫn bổ sung" class="w-full rounded-lg border-slate-200 text-sm"></textarea>
-                    <button class="w-full rounded-lg bg-ue-brand px-4 py-2 text-sm font-semibold text-white hover:bg-ue-brand-dark">Xác nhận</button>
-                </form>
-            </div>
+            @if (in_array($request->status, [\App\Enums\MentorAccessStatus::Submitted, \App\Enums\MentorAccessStatus::UnderReview]))
+                <div class="rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
+                    <h2 class="text-sm font-bold text-slate-900">Xử lý</h2>
+                    <form method="POST" action="{{ route('admin.mentors.action', $request) }}" class="mt-4 space-y-3">
+                        @csrf
+                        <div>
+                            <select name="action" class="w-full rounded-lg border-slate-200 text-sm focus:ring-2 focus:ring-ue-brand focus:border-ue-brand">
+                                <option value="approve">Phê duyệt</option>
+                                <option value="reject">Từ chối</option>
+                                <option value="request_more_info">Cần thêm thông tin</option>
+                            </select>
+                        </div>
+                        <div>
+                            <textarea name="reason" rows="3"
+                                class="w-full rounded-lg border-slate-200 text-sm focus:ring-2 focus:ring-ue-brand focus:border-ue-brand"
+                                placeholder="Ghi chú (không bắt buộc)"></textarea>
+                        </div>
+                        <button class="w-full rounded-lg bg-ue-brand px-4 py-2 text-sm font-semibold text-white hover:bg-ue-brand-dark transition-colors">
+                            Xác nhận
+                        </button>
+                    </form>
+                </div>
+            @elseif ($request->status === \App\Enums\MentorAccessStatus::Approved)
+                <div class="rounded-lg border border-slate-200 bg-white p-4 shadow-sm space-y-4">
+                    <div class="p-3 bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs font-semibold rounded-xl text-center">
+                        Yêu cầu mentor này đã được phê duyệt.
+                    </div>
+                    
+                    <div class="border-t border-slate-100 pt-3">
+                        <h3 class="text-xs font-bold text-red-600">Thu hồi quyền Mentor</h3>
+                        <p class="text-[10px] text-slate-400 mt-1 leading-normal">Hành động này sẽ thu hồi quyền làm mentor.</p>
+                        
+                        <form method="POST" action="{{ route('admin.mentors.action', $request) }}" class="mt-3">
+                            @csrf
+                            <input type="hidden" name="action" value="revoke" />
+                            <button class="w-full rounded-lg bg-red-600 px-4 py-2 text-sm font-semibold text-white hover:bg-red-700 transition-colors">
+                                Xác nhận thu hồi
+                            </button>
+                        </form>
+                    </div>
+                </div>
+            @else
+                <div class="rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
+                    <h2 class="text-sm font-bold text-slate-900">Xử lý</h2>
+                    <div class="mt-4">
+                        <p class="text-xs text-slate-500 font-semibold italic text-center py-2.5 bg-slate-50 rounded-xl border border-slate-150">
+                            @if ($request->status === \App\Enums\MentorAccessStatus::Rejected)
+                                Yêu cầu mentor này đã bị từ chối.
+                            @elseif ($request->status === \App\Enums\MentorAccessStatus::NeedMoreInfo)
+                                Yêu cầu này đang chờ bổ sung thông tin từ ứng viên.
+                            @elseif ($request->status === \App\Enums\MentorAccessStatus::Revoked)
+                                Quyền mentor của thành viên này đã bị thu hồi.
+                            @else
+                                Yêu cầu này đã được xử lý xong.
+                            @endif
+                        </p>
+                    </div>
+                </div>
+            @endif
 
             <div class="rounded-lg border border-slate-200 bg-white p-4 text-sm shadow-sm">
-                <h2 class="font-bold text-slate-900">Review</h2>
+                <h2 class="font-bold text-slate-900">Thông tin duyệt</h2>
                 <p class="mt-2 text-slate-500">Người duyệt: {{ $request->reviewer?->name ?? 'Chưa duyệt' }}</p>
                 <p class="mt-1 text-slate-500">Thời điểm: {{ $request->reviewed_at?->format('d/m/Y H:i') ?? 'N/A' }}</p>
-                <p class="mt-1 text-slate-500">Lý do: {{ $request->review_reason ?? 'N/A' }}</p>
-                <p class="mt-1 text-slate-500">Ghi chú: {{ $request->admin_notes ?? 'N/A' }}</p>
+                <p class="mt-1 text-slate-500">Hành động: {{ $request->status === \App\Enums\MentorAccessStatus::Approved ? 'Đã phê duyệt' : ($request->status === \App\Enums\MentorAccessStatus::Rejected ? 'Đã từ chối' : ($request->status === \App\Enums\MentorAccessStatus::NeedMoreInfo ? 'Cần thêm thông tin' : ($request->status === \App\Enums\MentorAccessStatus::Revoked ? 'Đã thu hồi' : ($request->status === \App\Enums\MentorAccessStatus::UnderReview ? 'Đang xem xét' : 'N/A')))) }}</p>
             </div>
         </aside>
     </div>

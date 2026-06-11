@@ -6,6 +6,7 @@ use App\Enums\AccountStatus;
 use App\Enums\ConnectionStatus;
 use App\Enums\IdentityType;
 use App\Enums\MentorAccessStatus;
+use App\Enums\PostType;
 use Database\Factories\UserFactory;
 use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
@@ -144,6 +145,21 @@ class User extends Authenticatable implements MustVerifyEmail
     public function profile(): HasOne
     {
         return $this->hasOne(Profile::class);
+    }
+
+    /**
+     * Check if the user can post a given post type.
+     * Alumni and teachers can post all types; students can only post standard.
+     */
+    public function canPostType(PostType $postType): bool
+    {
+        if ($postType === PostType::STANDARD) {
+            return true;
+        }
+
+        $roleType = $this->profile?->role_type;
+
+        return in_array($roleType, ['alumni', 'teacher'], true);
     }
 
     /**

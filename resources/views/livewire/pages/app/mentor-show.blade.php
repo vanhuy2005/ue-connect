@@ -45,6 +45,13 @@ new class extends Component
             'urgency' => ['required', 'string', 'in:low,normal,high,time_sensitive'],
             'context' => ['nullable', 'string', 'max:5000'],
             'expected_outcome' => ['nullable', 'string', 'max:1000'],
+        ], [
+            'topic.required' => 'Vui lòng nhập chủ đề.',
+            'topic.max' => 'Chủ đề không được vượt quá :max ký tự.',
+            'goal.required' => 'Vui lòng nhập mục tiêu của bạn.',
+            'goal.max' => 'Mục tiêu không được vượt quá :max ký tự.',
+            'question.required' => 'Vui lòng nhập câu hỏi cụ thể.',
+            'question.max' => 'Câu hỏi không được vượt quá :max ký tự.',
         ]);
 
         try {
@@ -88,7 +95,7 @@ new class extends Component
 ?>
 
 <div class="mx-auto max-w-4xl px-4 py-6 sm:px-6 lg:px-8"
-    x-data
+    x-data="{ showRequestForm: false }"
     @mentor-request-sent.window="window.location.href = '/app/mentor/requests/' + $event.detail.mentorRequestId">
     <div class="flex items-center justify-between mb-2">
         <a href="{{ route('mentor.discovery') }}" class="text-sm font-semibold text-ue-brand hover:underline">← Quay lại danh sách mentor</a>
@@ -102,7 +109,7 @@ new class extends Component
         </button>
     </div>
 
-    <section class="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
+    <section class="rounded-xl border border-slate-200 bg-white p-6 shadow-sm" x-show="!showRequestForm" x-transition.opacity.duration.300ms>
         <div class="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
             <div class="flex items-start gap-4">
                 <a href="{{ route('profile.show', $mentorProfile->user) }}" class="block rounded-full focus:outline-none focus:ring-2 focus:ring-ue-brand/30 flex-shrink-0" aria-label="Xem trang cá nhân của {{ $mentorProfile->user->name }}">
@@ -126,6 +133,18 @@ new class extends Component
 
         <p class="mt-6 break-words whitespace-pre-line text-sm leading-6 text-slate-600">{{ $mentorProfile->bio ?: 'Mentor chưa cập nhật phần giới thiệu.' }}</p>
 
+@php
+    $preferredRequestOptions = [
+        'cv_review' => 'Review CV / Portfolio',
+        'career_advice' => 'Định hướng nghề nghiệp',
+        'academic_guidance' => 'Định hướng học thuật',
+        'subject_support' => 'Hỗ trợ môn học',
+        'research_guidance' => 'Nghiên cứu khoa học',
+        'interview_prep' => 'Chuẩn bị phỏng vấn',
+        'internship_experience' => 'Kinh nghiệm thực tập',
+        'other' => 'Khác',
+    ];
+@endphp
         <div class="mt-6 grid gap-4 sm:grid-cols-2">
             <div>
                 <h2 class="text-sm font-bold text-slate-900">Chuyên môn</h2>
@@ -136,79 +155,99 @@ new class extends Component
                 </div>
             </div>
             <div>
-                <h2 class="text-sm font-bold text-slate-900">Có thể hỗ trợ</h2>
+                <h2 class="text-sm font-bold text-slate-900">Phạm vi hỗ trợ</h2>
                 <div class="mt-2 flex flex-wrap gap-2">
-                    @foreach ($mentorProfile->help_topics ?? [] as $topic)
-                        <span class="max-w-full truncate rounded-full bg-ue-brand-soft px-2.5 py-1 text-xs font-semibold text-ue-brand" title="{{ $topic }}">{{ $topic }}</span>
+                    @foreach ($mentorProfile->preferred_request_types ?? [] as $type)
+                        <span class="max-w-full truncate rounded-full bg-blue-50 border border-blue-100 px-2.5 py-1 text-xs font-semibold text-blue-700" title="{{ $preferredRequestOptions[$type] ?? $type }}">
+                            {{ $preferredRequestOptions[$type] ?? $type }}
+                        </span>
                     @endforeach
                 </div>
             </div>
         </div>
 
-        {{-- Request form --}}
-        <div>
-            <form wire:submit.prevent="submitRequest" class="mt-8 space-y-4 rounded-xl border border-slate-200 bg-slate-50 p-5">
-                @csrf
-                <h2 class="text-base font-bold text-slate-900">Gửi yêu cầu cố vấn</h2>
+        <div class="mt-6 border-t border-slate-100 pt-6 grid gap-4 sm:grid-cols-2">
+            <div>
+                <h2 class="text-sm font-bold text-slate-900">Thời gian phản hồi dự kiến</h2>
+                <p class="mt-2 text-sm text-slate-600 font-medium">{{ $mentorProfile->response_expectation_text ?: 'N/A' }}</p>
+            </div>
+            @if ($mentorProfile->office_hours_text)
+                <div>
+                    <h2 class="text-sm font-bold text-slate-900">Khung giờ hỗ trợ</h2>
+                    <p class="mt-2 text-sm text-slate-600 font-medium">{{ $mentorProfile->office_hours_text }}</p>
+                </div>
+            @endif
+        </div>
 
-                @if (! $this->isAvailable)
-                    <div class="rounded-lg bg-slate-100 px-4 py-3 text-sm text-slate-500">
-                        Mentor này hiện không nhận yêu cầu mới.
-                    </div>
-                @endif
+        {{-- Toggle Request form button --}}
+        <div class="mt-8 flex justify-center">
+            <button
+                type="button"
+                @click="showRequestForm = true"
+                @if (! $this->isAvailable) disabled @endif
+                class="w-full sm:w-auto px-8 py-3 bg-ue-brand hover:bg-ue-brand-dark text-white font-bold rounded-xl shadow-md transition-all
+                {{ ! $this->isAvailable ? 'opacity-50 cursor-not-allowed' : '' }}"
+            >
+                Gửi yêu cầu cố vấn
+            </button>
+        </div>
+    </section>
 
-                <div>
-                    <label class="block text-xs font-bold text-slate-700 mb-1">Chủ đề <span class="text-red-500">*</span></label>
-                    <input wire:model.live="topic" maxlength="255" placeholder="Ví dụ: Luyện phỏng vấn, Định hướng nghề nghiệp, Kỹ năng mềm..." class="w-full rounded-lg border-slate-200 text-sm focus:border-ue-brand focus:ring-ue-brand/20">
-                    @error('topic') <p class="mt-1 text-xs text-red-500">{{ $message }}</p> @enderror
-                    <p class="mt-1 text-right text-[10px] text-slate-400">{{ strlen($topic) }}/255</p>
-                </div>
-                <div>
-                    <label class="block text-xs font-bold text-slate-700 mb-1">Mục tiêu của bạn <span class="text-red-500">*</span></label>
-                    <textarea wire:model.live="goal" rows="2" maxlength="5000" placeholder="Bạn muốn đạt được điều gì sau buổi cố vấn này?" class="w-full rounded-lg border-slate-200 text-sm focus:border-ue-brand focus:ring-ue-brand/20"></textarea>
-                    @error('goal') <p class="mt-1 text-xs text-red-500">{{ $message }}</p> @enderror
-                    <p class="mt-1 text-right text-[10px] text-slate-400">{{ strlen($goal) }}/5000</p>
-                </div>
-                <div>
-                    <label class="block text-xs font-bold text-slate-700 mb-1">Câu hỏi cụ thể <span class="text-red-500">*</span></label>
-                    <textarea wire:model.live="question" rows="3" maxlength="5000" placeholder="Những điều bạn muốn mentor giải đáp hoặc hỗ trợ?" class="w-full rounded-lg border-slate-200 text-sm focus:border-ue-brand focus:ring-ue-brand/20"></textarea>
-                    @error('question') <p class="mt-1 text-xs text-red-500">{{ $message }}</p> @enderror
-                    <p class="mt-1 text-right text-[10px] text-slate-400">{{ strlen($question) }}/5000</p>
-                </div>
-                <div>
-                    <label class="block text-xs font-bold text-slate-700 mb-1">Độ khẩn cấp</label>
-                    <select wire:model.live="urgency" class="w-full rounded-lg border-slate-200 text-sm focus:border-ue-brand focus:ring-ue-brand/20">
-                        <option value="normal">Bình thường</option>
-                        <option value="low">Không gấp</option>
-                        <option value="high">Gấp</option>
-                        <option value="time_sensitive">Có hạn định / Gấp</option>
-                    </select>
-                </div>
-                <div>
-                    <label class="block text-xs font-bold text-slate-700 mb-1">Bối cảnh bổ sung</label>
-                    <textarea wire:model.live="context" rows="2" maxlength="5000" placeholder="Thông tin thêm giúp mentor hiểu rõ hoàn cảnh của bạn (không bắt buộc)" class="w-full rounded-lg border-slate-200 text-sm focus:border-ue-brand focus:ring-ue-brand/20"></textarea>
-                    <p class="mt-1 text-right text-[10px] text-slate-400">{{ strlen($context) }}/5000</p>
-                </div>
-                <div>
-                    <label class="block text-xs font-bold text-slate-700 mb-1">Kết quả mong đợi</label>
-                    <textarea wire:model.live="expected_outcome" rows="2" maxlength="1000" placeholder="Bạn kỳ vọng nhận được kết quả gì sau buổi cố vấn? (không bắt buộc)" class="w-full rounded-lg border-slate-200 text-sm focus:border-ue-brand focus:ring-ue-brand/20"></textarea>
-                    <p class="mt-1 text-right text-[10px] text-slate-400">{{ strlen($expected_outcome) }}/1000</p>
-                </div>
+    {{-- Request form card --}}
+    <section class="rounded-xl border border-slate-200 bg-white p-6 shadow-sm" x-show="showRequestForm" x-transition.opacity.duration.300ms style="display: none;">
+        <div class="flex items-center gap-3 border-b border-slate-100 pb-4 mb-6">
+            <button type="button" @click="showRequestForm = false" class="text-slate-400 hover:text-slate-600 transition" aria-label="Quay lại hồ sơ mentor">
+                <svg class="h-5 w-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7"/>
+                </svg>
+            </button>
+            <div>
+                <h2 class="text-lg font-bold text-slate-900">Gửi yêu cầu cố vấn</h2>
+                <p class="text-xs text-slate-500 font-medium">Đến mentor <span class="font-bold text-ue-brand">{{ $mentorProfile->user->name }}</span></p>
+            </div>
+        </div>
 
-                @error('submit')
-                    <div class="rounded-lg bg-red-50 border border-red-200 px-4 py-3 text-sm text-red-700">{{ $message }}</div>
-                @enderror
+        <form wire:submit.prevent="submitRequest" class="space-y-5">
+            @csrf
 
+            @if (! $this->isAvailable)
+                <div class="rounded-lg bg-slate-100 px-4 py-3 text-sm text-slate-500">
+                    Mentor này hiện không nhận yêu cầu mới.
+                </div>
+            @endif
+
+            <div>
+                <label class="block text-xs font-bold text-slate-700 mb-1">Chủ đề <span class="text-red-500">*</span></label>
+                <input wire:model.live="topic" maxlength="255" placeholder="Ví dụ: Luyện phỏng vấn, Định hướng nghề nghiệp, Kỹ năng mềm..." class="w-full rounded-lg border-slate-200 text-sm focus:border-ue-brand focus:ring-ue-brand/20">
+                @error('topic') <p class="mt-1 text-xs text-red-500">{{ $message }}</p> @enderror
+            </div>
+            <div>
+                <label class="block text-xs font-bold text-slate-700 mb-1">Mục tiêu của bạn <span class="text-red-500">*</span></label>
+                <textarea wire:model.live="goal" rows="2" maxlength="5000" placeholder="Bạn muốn đạt được điều gì sau buổi cố vấn này?" class="w-full rounded-lg border-slate-200 text-sm focus:border-ue-brand focus:ring-ue-brand/20"></textarea>
+                @error('goal') <p class="mt-1 text-xs text-red-500">{{ $message }}</p> @enderror
+            </div>
+            <div>
+                <label class="block text-xs font-bold text-slate-700 mb-1">Câu hỏi cụ thể <span class="text-red-500">*</span></label>
+                <textarea wire:model.live="question" rows="3" maxlength="5000" placeholder="Những điều bạn muốn mentor giải đáp hoặc hỗ trợ?" class="w-full rounded-lg border-slate-200 text-sm focus:border-ue-brand focus:ring-ue-brand/20"></textarea>
+                @error('question') <p class="mt-1 text-xs text-red-500">{{ $message }}</p> @enderror
+            </div>
+
+            @error('submit')
+                <div class="rounded-lg bg-red-50 border border-red-200 px-4 py-3 text-sm text-red-700">{{ $message }}</div>
+            @enderror
+
+            <div class="flex gap-3 pt-2">
+                <button type="button" @click="showRequestForm = false" class="flex-1 rounded-xl border border-slate-200 px-4 py-2.5 text-sm font-semibold text-slate-600 hover:bg-slate-50 transition">Huỷ</button>
                 <button
                     type="submit"
                     @if (! $this->isAvailable) disabled @endif
-                    class="w-full rounded-xl bg-ue-brand px-4 py-2.5 text-sm font-bold text-white hover:bg-ue-brand-dark transition
+                    class="flex-1 rounded-xl bg-ue-brand px-4 py-2.5 text-sm font-bold text-white hover:bg-ue-brand-dark transition
                     {{ ! $this->isAvailable ? 'opacity-50 cursor-not-allowed' : '' }}"
                 >
                     Gửi yêu cầu
                 </button>
-            </form>
-        </div>
+            </div>
+        </form>
     </section>
 
     {{-- Report modal --}}

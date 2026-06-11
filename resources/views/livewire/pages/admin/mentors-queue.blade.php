@@ -9,11 +9,11 @@ new class extends Component {
     use WithPagination;
 
     public string $search = '';
-    public string $status = 'submitted';
+    public string $status = 'all';
 
     protected array $queryString = [
         'search' => ['except' => ''],
-        'status' => ['except' => 'submitted'],
+        'status' => ['except' => 'all'],
     ];
 
     public function updatingSearch(): void
@@ -41,7 +41,10 @@ new class extends Component {
 
         return [
             'requests' => $query->paginate(15),
-            'statuses' => MentorAccessStatus::cases(),
+            'statuses' => array_filter(
+                MentorAccessStatus::cases(),
+                fn ($s) => !in_array($s, [MentorAccessStatus::Draft, MentorAccessStatus::UnderReview])
+            ),
         ];
     }
 };

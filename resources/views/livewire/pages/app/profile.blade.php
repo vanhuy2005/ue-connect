@@ -1,40 +1,50 @@
 <?php
 
-use App\Models\User;
-use App\Models\Profile;
-use App\Models\Connection;
-use App\Models\BlockedUser;
-use App\Models\Media;
-use App\Models\UserFollow;
-use App\Enums\ConnectionStatus;
-use App\Enums\PostStatus;
-use App\Enums\GreetingStatus;
-use App\Models\Greeting;
-use App\Actions\Connections\SendGreeting;
-use App\Actions\Connections\CancelGreeting;
 use App\Actions\Connections\AcceptGreeting;
-use App\Actions\Connections\RemoveConnection;
 use App\Actions\Connections\BlockUser;
+use App\Actions\Connections\CancelGreeting;
+use App\Actions\Connections\RemoveConnection;
+use App\Actions\Connections\SendGreeting;
+use App\Actions\Connections\UnblockUser;
 use App\Actions\Follows\FollowUser;
 use App\Actions\Follows\UnfollowUser;
-use App\Actions\Media\StoreTemporaryMediaAction;
 use App\Actions\Media\AttachMediaToModelAction;
 use App\Actions\Media\DeleteMediaAction;
 use App\Actions\Media\GenerateMediaUrlAction;
+use App\Actions\Media\StoreTemporaryMediaAction;
+use App\Actions\Messaging\FindOrCreateDirectConversation;
+use App\Actions\Messaging\SendSharedPostMessage;
+use App\Actions\Posts\CreatePost;
 use App\Actions\Posts\DeletePost;
-use App\Actions\Posts\UpdatePost;
+use App\Actions\Posts\HidePostFromFeed;
 use App\Actions\Posts\TogglePostLike;
 use App\Actions\Posts\TogglePostRepost;
 use App\Actions\Posts\TogglePostSave;
-use App\Actions\Posts\HidePostFromFeed;
+use App\Actions\Posts\UpdatePost;
 use App\Actions\Reports\CreateReport;
-use App\Actions\Messaging\SendSharedPostMessage;
-use App\Actions\Messaging\FindOrCreateDirectConversation;
+use App\Enums\CommentStatus;
+use App\Enums\ConnectionStatus;
+use App\Enums\GreetingStatus;
+use App\Enums\PostStatus;
+use App\Enums\PostVisibility;
+use App\Models\BlockedUser;
+use App\Models\Connection;
+use App\Models\Greeting;
+use App\Models\Media;
 use App\Models\Post;
+use App\Models\Profile;
 use App\Models\TemporaryAvatar;
+use App\Models\User;
+use App\Models\UserFollow;
+use App\Support\Media\MediaUrlResolver;
+use Carbon\Carbon;
+use Illuminate\Auth\Access\AuthorizationException;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Gate;
+use Illuminate\Support\Str;
+use Illuminate\Validation\ValidationException;
 use Livewire\Volt\Component;
 use Livewire\WithFileUploads;
 
@@ -43,41 +53,56 @@ new class extends Component
     use WithFileUploads;
 
     public User $user;
+
     public string $activeTab = 'posts'; // posts, replies, media, communities, reposts
+
     public ?string $feedbackMessage = null;
+
     public bool $isFollowing = false;
+
     public int $followersCount = 0;
+
     public int $followingCount = 0;
 
     // Files inputs
     public $avatarFile;
+
     public $coverFile;
 
     // Post actions / Composer properties
     public ?int $editingPostId = null;
+
     public string $editingBody = '';
 
     // Report properties
-    public ?\App\Models\Post $reportingPost = null;
+    public ?Post $reportingPost = null;
+
     public string $reportReason = 'spam';
+
     public string $reportDescription = '';
+
     public bool $showReportModal = false;
 
     // Custom delete modal properties
     public ?int $deletingPostId = null;
+
     public bool $showDeleteModal = false;
 
     // Sharing post properties
     public bool $showShareModal = false;
+
     public ?int $sharingPostId = null;
+
     public string $shareSearch = '';
+
     public array $selectedShareUserIds = [];
+
     public string $shareOptionalMessage = '';
 
     public function mount(User $user): void
     {
         $this->user = $user;
-        
+
         $profile = $user->profile()->withTrashed()->first();
         if (!$profile) {
             $user->profile()->create([
@@ -90,7 +115,7 @@ new class extends Component
         } elseif ($profile->trashed()) {
             $profile->restore();
         }
-        
+
         $this->user->load([
             'profile.media.variants',
             'profile.studentProfile.faculty',
@@ -126,7 +151,7 @@ new class extends Component
     {
         return Connection::where(function ($q) {
             $q->where('user_one_id', $this->user->id)
-              ->orWhere('user_two_id', $this->user->id);
+                ->orWhere('user_two_id', $this->user->id);
         })->where('status', ConnectionStatus::ACTIVE)->count();
     }
 
@@ -137,6 +162,10 @@ new class extends Component
     {
         return $this->user->posts()
             ->whereIn('status', [PostStatus::PUBLISHED, PostStatus::EDITED])
+            ->where(function ($query) {
+                $query->where('post_type', '!=', 'opportunity')
+                    ->orWhereIn('moderation_status', ['approved', 'expired']);
+            })
             ->visibleTo(Auth::user())
             ->count();
     }
@@ -157,11 +186,13 @@ new class extends Component
         try {
             if ($this->user->id !== Auth::id()) {
                 $this->feedbackMessage = 'Bạn chỉ có thể cập nhật hồ sơ của chính mình.';
+
                 return;
             }
 
             if (!$this->avatarFile) {
                 $this->feedbackMessage = 'Không tìm thấy tệp ảnh đại diện.';
+
                 return;
             }
 
@@ -177,7 +208,7 @@ new class extends Component
 
                 // 1. Store the new avatar media
                 $media = $storeAction->execute(Auth::user(), $this->avatarFile, 'avatar', ['visibility' => 'public']);
-                
+
                 // 2. Attach new avatar to the Profile
                 $attachAction->execute(Auth::user(), $this->user->profile, [$media->id], 'avatar');
 
@@ -188,12 +219,12 @@ new class extends Component
 
                 // 4. Optionally create a feed post
                 if ($shareToFeed) {
-                    $createPostAction = app(\App\Actions\Posts\CreatePost::class);
+                    $createPostAction = app(CreatePost::class);
                     $bodyText = $caption ?: 'đã cập nhật ảnh đại diện.';
-                    
+
                     $post = $createPostAction->execute(Auth::user(), [
                         'body' => $bodyText,
-                        'visibility' => \App\Enums\PostVisibility::VERIFIED_USERS->value,
+                        'visibility' => PostVisibility::VERIFIED_USERS->value,
                     ]);
 
                     // Store the avatar file again as post_image so it generates proper post variants
@@ -207,7 +238,7 @@ new class extends Component
                         '1_hour' => now()->addHour(),
                         '1_day' => now()->addDay(),
                         '7_days' => now()->addDays(7),
-                        'custom' => $customExpiresAt ? \Carbon\Carbon::parse($customExpiresAt) : now()->addDay(),
+                        'custom' => $customExpiresAt ? Carbon::parse($customExpiresAt) : now()->addDay(),
                         default => now()->addDay(),
                     };
 
@@ -223,11 +254,11 @@ new class extends Component
             $this->avatarFile = null;
             $this->user->load('profile.media.variants');
             $this->feedbackMessage = 'Cập nhật ảnh đại diện thành công.';
-        } catch (\Illuminate\Validation\ValidationException $e) {
+        } catch (ValidationException $e) {
             $this->feedbackMessage = $e->validator->errors()->first();
             throw $e;
-        } catch (\Exception $e) {
-            $this->feedbackMessage = 'Lỗi lưu ảnh đại diện: ' . $e->getMessage();
+        } catch (Exception $e) {
+            $this->feedbackMessage = 'Lỗi lưu ảnh đại diện: '.$e->getMessage();
         }
     }
 
@@ -265,11 +296,11 @@ new class extends Component
 
             $this->user->load('profile.media.variants');
             $this->feedbackMessage = 'Cập nhật ảnh bìa thành công.';
-        } catch (\Illuminate\Validation\ValidationException $e) {
+        } catch (ValidationException $e) {
             $this->feedbackMessage = $e->validator->errors()->first();
             throw $e;
-        } catch (\Exception $e) {
-            $this->feedbackMessage = 'Lỗi tải ảnh lên: ' . $e->getMessage();
+        } catch (Exception $e) {
+            $this->feedbackMessage = 'Lỗi tải ảnh lên: '.$e->getMessage();
         }
     }
 
@@ -307,18 +338,18 @@ new class extends Component
         }
 
         // Check greetings
-        $hasSent = \App\Models\Greeting::where('sender_id', $currentUserId)
+        $hasSent = Greeting::where('sender_id', $currentUserId)
             ->where('receiver_id', $this->user->id)
-            ->where('status', \App\Enums\GreetingStatus::PENDING)
+            ->where('status', GreetingStatus::PENDING)
             ->exists();
 
         if ($hasSent) {
             return 'pending_sent';
         }
 
-        $hasReceived = \App\Models\Greeting::where('sender_id', $this->user->id)
+        $hasReceived = Greeting::where('sender_id', $this->user->id)
             ->where('receiver_id', $currentUserId)
-            ->where('status', \App\Enums\GreetingStatus::PENDING)
+            ->where('status', GreetingStatus::PENDING)
             ->exists();
 
         if ($hasReceived) {
@@ -338,7 +369,7 @@ new class extends Component
                 'reason' => 'Blocked from profile page.',
             ]);
             $this->feedbackMessage = 'Đã chặn người dùng này thành công.';
-        } catch (\Exception $e) {
+        } catch (Exception $e) {
             $this->feedbackMessage = $e->getMessage();
         }
     }
@@ -346,12 +377,12 @@ new class extends Component
     /**
      * Unblock the user.
      */
-    public function unblockUser(\App\Actions\Connections\UnblockUser $unblockUser): void
+    public function unblockUser(UnblockUser $unblockUser): void
     {
         try {
             $unblockUser->execute(Auth::user(), $this->user);
             $this->feedbackMessage = 'Đã bỏ chặn người dùng này thành công.';
-        } catch (\Exception $e) {
+        } catch (Exception $e) {
             $this->feedbackMessage = $e->getMessage();
         }
     }
@@ -367,10 +398,10 @@ new class extends Component
             $this->isFollowing = true;
             $this->followersCount++;
             $this->feedbackMessage = 'Đã theo dõi người dùng này.';
-        } catch (\Illuminate\Validation\ValidationException $e) {
+        } catch (ValidationException $e) {
             $this->refreshFollowState();
             $this->feedbackMessage = collect($e->errors())->flatten()->first() ?: 'Không thể theo dõi người dùng này.';
-        } catch (\Exception $e) {
+        } catch (Exception $e) {
             $this->refreshFollowState();
             $this->feedbackMessage = $e->getMessage();
         }
@@ -387,10 +418,10 @@ new class extends Component
             $this->isFollowing = false;
             $this->followersCount = max(0, $this->followersCount - 1);
             $this->feedbackMessage = 'Đã bỏ theo dõi người dùng này.';
-        } catch (\Illuminate\Validation\ValidationException $e) {
+        } catch (ValidationException $e) {
             $this->refreshFollowState();
             $this->feedbackMessage = collect($e->errors())->flatten()->first() ?: 'Không thể bỏ theo dõi người dùng này.';
-        } catch (\Exception $e) {
+        } catch (Exception $e) {
             $this->refreshFollowState();
             $this->feedbackMessage = $e->getMessage();
         }
@@ -404,7 +435,7 @@ new class extends Component
         try {
             $sendGreeting->execute(Auth::user(), $this->user);
             $this->feedbackMessage = 'Đã gửi lời mời kết nối thành công.';
-        } catch (\Exception $e) {
+        } catch (Exception $e) {
             $this->feedbackMessage = $e->getMessage();
         }
     }
@@ -424,7 +455,7 @@ new class extends Component
                 $cancelGreeting->execute(Auth::user(), $greeting);
                 $this->feedbackMessage = 'Đã hủy yêu cầu kết nối.';
             }
-        } catch (\Exception $e) {
+        } catch (Exception $e) {
             $this->feedbackMessage = $e->getMessage();
         }
     }
@@ -444,7 +475,7 @@ new class extends Component
                 $acceptGreeting->execute(Auth::user(), $greeting);
                 $this->feedbackMessage = 'Đã chấp nhận lời mời kết nối.';
             }
-        } catch (\Exception $e) {
+        } catch (Exception $e) {
             $this->feedbackMessage = $e->getMessage();
         }
     }
@@ -467,7 +498,7 @@ new class extends Component
                 $removeConnection->execute(Auth::user(), $connection);
                 $this->feedbackMessage = 'Đã hủy kết bạn.';
             }
-        } catch (\Exception $e) {
+        } catch (Exception $e) {
             $this->feedbackMessage = $e->getMessage();
         }
     }
@@ -547,7 +578,7 @@ new class extends Component
         try {
             $post = Post::findOrFail($postId);
             $togglePostLike->execute(Auth::user(), $post);
-        } catch (\Illuminate\Auth\Access\AuthorizationException $e) {
+        } catch (AuthorizationException $e) {
             $this->feedbackMessage = $e->getMessage();
         }
     }
@@ -561,7 +592,7 @@ new class extends Component
             $post = Post::findOrFail($postId);
             $togglePostSave->execute(Auth::user(), $post);
             $this->feedbackMessage = 'Đã cập nhật lưu bài viết.';
-        } catch (\Illuminate\Auth\Access\AuthorizationException $e) {
+        } catch (AuthorizationException $e) {
             $this->feedbackMessage = $e->getMessage();
         }
     }
@@ -576,7 +607,7 @@ new class extends Component
         try {
             $isReposted = $togglePostRepost->execute(Auth::user(), $post);
             $this->feedbackMessage = $isReposted ? 'Đã đăng lại bài viết.' : 'Đã hủy đăng lại bài viết.';
-        } catch (\Illuminate\Auth\Access\AuthorizationException $e) {
+        } catch (AuthorizationException $e) {
             $this->feedbackMessage = $e->getMessage();
         }
     }
@@ -590,7 +621,7 @@ new class extends Component
             $post = Post::findOrFail($postId);
             $hidePostFromFeed->execute(Auth::user(), $post);
             $this->feedbackMessage = 'Đã ẩn bài viết khỏi bảng tin của bạn.';
-        } catch (\Illuminate\Auth\Access\AuthorizationException $e) {
+        } catch (AuthorizationException $e) {
             $this->feedbackMessage = $e->getMessage();
         }
     }
@@ -604,6 +635,7 @@ new class extends Component
 
         if (! Gate::allows('update', $post)) {
             $this->feedbackMessage = 'Bạn không có quyền chỉnh sửa bài viết này.';
+
             return;
         }
 
@@ -635,9 +667,9 @@ new class extends Component
             $this->editingPostId = null;
             $this->editingBody = '';
             $this->feedbackMessage = 'Đã cập nhật bài viết thành công.';
-        } catch (\Illuminate\Validation\ValidationException $e) {
+        } catch (ValidationException $e) {
             $this->addError('editingBody', $e->getMessage());
-        } catch (\Illuminate\Auth\Access\AuthorizationException $e) {
+        } catch (AuthorizationException $e) {
             $this->feedbackMessage = $e->getMessage();
             $this->editingPostId = null;
             $this->editingBody = '';
@@ -675,7 +707,7 @@ new class extends Component
             $post = Post::findOrFail($this->deletingPostId);
             $deletePost->execute(Auth::user(), $post);
             $this->feedbackMessage = 'Đã xóa bài viết thành công.';
-        } catch (\Illuminate\Auth\Access\AuthorizationException $e) {
+        } catch (AuthorizationException $e) {
             $this->feedbackMessage = $e->getMessage();
         }
 
@@ -714,9 +746,9 @@ new class extends Component
             $this->showReportModal = false;
             $this->reportingPost = null;
             $this->feedbackMessage = 'Báo cáo của bạn đã được gửi.';
-        } catch (\Illuminate\Validation\ValidationException $e) {
+        } catch (ValidationException $e) {
             $this->addError('report', $e->getMessage());
-        } catch (\Illuminate\Auth\Access\AuthorizationException $e) {
+        } catch (AuthorizationException $e) {
             $this->showReportModal = false;
             $this->reportingPost = null;
             $this->feedbackMessage = $e->getMessage();
@@ -741,6 +773,7 @@ new class extends Component
 
         if (! Gate::allows('share', $post)) {
             $this->feedbackMessage = 'Bạn không có quyền chia sẻ bài viết này.';
+
             return;
         }
 
@@ -806,7 +839,7 @@ new class extends Component
                     'body' => $this->shareOptionalMessage ?: null,
                 ]);
                 $sentCount++;
-            } catch (\Exception $e) {
+            } catch (Exception $e) {
                 $failedRecipients[] = User::find($recipientId)?->name ?? "ID {$recipientId}";
             }
         }
@@ -820,10 +853,12 @@ new class extends Component
 
             if ($failedRecipients === []) {
                 $this->feedbackMessage = "Đã chia sẻ bài viết qua tin nhắn cho {$sentCount} người nhận.";
+
                 return;
             }
 
             $this->feedbackMessage = "Đã gửi cho {$sentCount} người nhận. Không gửi được cho: ".implode(', ', $failedRecipients).'.';
+
             return;
         }
 
@@ -833,14 +868,14 @@ new class extends Component
     /**
      * Get connections list for sharing posts.
      */
-    public function getShareConnections(): \Illuminate\Support\Collection
+    public function getShareConnections(): Collection
     {
         $userId = Auth::id();
         $search = trim($this->shareSearch);
 
         $query = Connection::where(function ($q) use ($userId) {
-                $q->where('user_one_id', $userId)->orWhere('user_two_id', $userId);
-            })
+            $q->where('user_one_id', $userId)->orWhere('user_two_id', $userId);
+        })
             ->where('status', ConnectionStatus::ACTIVE)
             ->with(['userOne.profile', 'userTwo.profile']);
 
@@ -850,8 +885,8 @@ new class extends Component
 
         if (! empty($search)) {
             $connections = $connections->filter(function ($user) use ($search) {
-                return \Illuminate\Support\Str::contains(strtolower($user->name), strtolower($search)) ||
-                       ($user->profile && \Illuminate\Support\Str::contains(strtolower($user->profile->display_name), strtolower($search)));
+                return Str::contains(strtolower($user->name), strtolower($search)) ||
+                       ($user->profile && Str::contains(strtolower($user->profile->display_name), strtolower($search)));
             });
         }
 
@@ -863,7 +898,7 @@ new class extends Component
      */
     public function getAvatarUrlProperty(): string
     {
-        return \App\Support\Media\MediaUrlResolver::avatarUrl($this->user, 'display') ?: asset('images/default-avatar.svg');
+        return MediaUrlResolver::avatarUrl($this->user, 'display') ?: asset('images/default-avatar.svg');
     }
 
     /**
@@ -871,7 +906,7 @@ new class extends Component
      */
     public function getCoverUrlProperty(): ?string
     {
-        return \App\Support\Media\MediaUrlResolver::coverUrl($this->user, 'desktop');
+        return MediaUrlResolver::coverUrl($this->user, 'desktop');
     }
 
     public function with(): array
@@ -885,17 +920,17 @@ new class extends Component
         $targetPrivacy = $this->user->profilePrivacySetting;
         $isPrivateProfile = $targetPrivacy && in_array($targetPrivacy->profile_visibility, ['connections_only', 'private'], true);
         $isConnected = $this->connectionStatus === 'connected';
-        $canViewContent = $isOwn || !$isPrivateProfile || $isConnected;
+        $canViewContent = $isOwn || ! $isPrivateProfile || $isConnected;
 
         if ($canViewContent) {
             if ($this->activeTab === 'posts') {
                 $profilePosts = $this->user->posts()
-                    ->with('media.variants')
+                    ->with(['media.variants', 'opportunity'])
                     ->withCount([
                         'likes',
                         'reposts',
                         'comments as published_comments_count' => function ($query): void {
-                            $query->where('status', \App\Enums\CommentStatus::PUBLISHED->value);
+                            $query->where('status', CommentStatus::PUBLISHED->value);
                         },
                     ])
                     ->withCount([
@@ -910,6 +945,10 @@ new class extends Component
                         },
                     ])
                     ->whereIn('status', [PostStatus::PUBLISHED, PostStatus::EDITED])
+                    ->where(function ($query) {
+                        $query->where('post_type', '!=', 'opportunity')
+                            ->orWhereIn('moderation_status', ['approved', 'expired']);
+                    })
                     ->visibleTo(Auth::user())
                     ->latest()
                     ->take(10)
@@ -940,7 +979,7 @@ new class extends Component
                                 'likes',
                                 'reposts',
                                 'comments as published_comments_count' => function ($q): void {
-                                    $q->where('status', \App\Enums\CommentStatus::PUBLISHED->value);
+                                    $q->where('status', CommentStatus::PUBLISHED->value);
                                 },
                             ])->withCount([
                                 'likes as liked_by_current_user_count' => function ($q): void {
@@ -953,7 +992,7 @@ new class extends Component
                                     $q->where('user_id', Auth::id());
                                 },
                             ]);
-                        }
+                        },
                     ])
                     ->whereHas('post', function ($query): void {
                         $query->whereIn('status', [PostStatus::PUBLISHED, PostStatus::EDITED])
@@ -1186,7 +1225,13 @@ new class extends Component
 
                     {{-- Message --}}
                     @if ($this->connectionStatus === 'connected')
-                        <a href="{{ route('messages.index', ['conversation' => \App\Models\Conversation::where('conversation_type', \App\Enums\ConversationType::DIRECT)->whereHas('participants', function($q) { $q->where('user_id', $this->user->id); })->first()?->id]) }}" class="flex-1 bg-white hover:bg-slate-50 border border-slate-200 text-slate-800 text-xs font-bold py-2 rounded-xl shadow-3xs transition-colors flex items-center justify-center gap-1">
+                        @php
+                            $directConversationId = \App\Models\Conversation::where('conversation_type', \App\Enums\ConversationType::DIRECT)
+                                ->where('direct_user_low_id', min(Auth::id(), $this->user->id))
+                                ->where('direct_user_high_id', max(Auth::id(), $this->user->id))
+                                ->first()?->id;
+                        @endphp
+                        <a href="{{ route('messages.index', ['conversation' => $directConversationId]) }}" class="flex-1 bg-white hover:bg-slate-50 border border-slate-200 text-slate-800 text-xs font-bold py-2 rounded-xl shadow-3xs transition-colors flex items-center justify-center gap-1">
                             <x-ui.icon name="message-square" size="xs" class="text-slate-500" />
                             Nhắn tin
                         </a>
@@ -1454,7 +1499,13 @@ new class extends Component
 
                         {{-- Message --}}
                         @if ($this->connectionStatus === 'connected')
-                            <a href="{{ route('messages.index', ['conversation' => \App\Models\Conversation::where('conversation_type', \App\Enums\ConversationType::DIRECT)->whereHas('participants', function($q) { $q->where('user_id', $this->user->id); })->first()?->id]) }}" class="flex-1 sm:flex-none bg-white hover:bg-slate-50 border border-slate-200 text-slate-700 text-xxs font-bold px-5 py-2 rounded-xl shadow-2xs transition-colors flex items-center justify-center gap-1.5">
+                            @php
+                                $directConversationId = $directConversationId ?? \App\Models\Conversation::where('conversation_type', \App\Enums\ConversationType::DIRECT)
+                                    ->where('direct_user_low_id', min(Auth::id(), $this->user->id))
+                                    ->where('direct_user_high_id', max(Auth::id(), $this->user->id))
+                                    ->first()?->id;
+                            @endphp
+                            <a href="{{ route('messages.index', ['conversation' => $directConversationId]) }}" class="flex-1 sm:flex-none bg-white hover:bg-slate-50 border border-slate-200 text-slate-700 text-xxs font-bold px-5 py-2 rounded-xl shadow-2xs transition-colors flex items-center justify-center gap-1.5">
                                 <x-ui.icon name="message-square" size="xs" />
                                 Nhắn tin
                             </a>

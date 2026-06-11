@@ -55,6 +55,7 @@ class CreateMentorRequestAction
                 ->whereIn('status', [
                     MentorRequestStatus::Submitted->value,
                     MentorRequestStatus::NeedMoreInfo->value,
+                    MentorRequestStatus::UpdatedByStudent->value,
                 ])
                 ->exists();
 
@@ -79,6 +80,7 @@ class CreateMentorRequestAction
             ->whereIn('status', [
                 MentorRequestStatus::Submitted->value,
                 MentorRequestStatus::NeedMoreInfo->value,
+                MentorRequestStatus::UpdatedByStudent->value,
             ])
             ->count();
 

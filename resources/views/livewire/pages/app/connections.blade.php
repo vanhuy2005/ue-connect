@@ -716,8 +716,14 @@ new #[Layout('layouts.app')] class extends Component
                             </div>
 
                             <div class="flex items-center gap-1.5 flex-shrink-0" x-data="{ openOptions: false }" @click.away="openOptions = false">
+                                @php
+                                    $connectedConversationId = \App\Models\Conversation::where('conversation_type', \App\Enums\ConversationType::DIRECT)
+                                        ->where('direct_user_low_id', min(Auth::id(), $item['user']->id))
+                                        ->where('direct_user_high_id', max(Auth::id(), $item['user']->id))
+                                        ->first()?->id;
+                                @endphp
                                 <a
-                                    href="{{ route('messages.index', ['conversation' => \App\Models\Conversation::where('conversation_type', \App\Enums\ConversationType::DIRECT)->whereHas('participants', function($q) use ($item) { $q->where('user_id', $item['user']->id); })->first()?->id]) }}"
+                                    href="{{ route('messages.index', ['conversation' => $connectedConversationId]) }}"
                                     class="bg-ue-brand hover:bg-ue-brand-dark text-white text-xxs font-bold px-3 py-1.5 rounded-lg shadow-2xs hover:shadow-3xs transition-all flex items-center gap-1"
                                 >
                                     <x-ui.icon name="message-square" size="xs" /> Nhắn tin

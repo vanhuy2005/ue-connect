@@ -9,6 +9,7 @@ use App\Enums\AccountStatus;
 use App\Enums\ConnectionStatus;
 use App\Enums\MessageType;
 use App\Enums\PostStatus;
+use App\Enums\PostType;
 use App\Enums\PostVisibility;
 use App\Models\Community;
 use App\Models\CommunityMember;
@@ -20,6 +21,7 @@ use App\Models\UserFollow;
 use Database\Seeders\Reference\AccessControlReferenceSeeder;
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Validation\ValidationException;
 use Livewire\Volt\Volt;
 use Tests\TestCase;
 
@@ -724,6 +726,167 @@ class PostInteractionTest extends TestCase
             ->assertSee('Other Student đã đăng lại')
             ->assertSee('Visible repost on profile.')
             ->assertDontSee('Hidden repost on profile.');
+    }
+
+    public function test_student_cannot_create_non_standard_posts_via_action(): void
+    {
+        $action = resolve(CreatePost::class);
+
+        $this->expectException(ValidationException::class);
+
+        $action->execute($this->user, [
+            'body' => 'Checking student restriction',
+            'visibility' => 'verified_users',
+            'post_type' => PostType::EXPERIENCE->value,
+        ]);
+    }
+
+    public function test_alumni_and_teacher_can_create_non_standard_posts_via_action(): void
+    {
+        // 1. Alumni
+        $alumni = User::factory()->create([
+            'account_status' => AccountStatus::ACTIVE,
+        ]);
+        $alumni->assignRole('alumni');
+        $alumni->profile()->create([
+            'display_name' => 'Alumni User',
+            'role_type' => 'alumni',
+            'profile_status' => 'complete',
+        ]);
+
+        $action = resolve(CreatePost::class);
+        $post = $action->execute($alumni, [
+            'body' => 'Alumni sharing experience',
+            'visibility' => 'verified_users',
+            'post_type' => PostType::EXPERIENCE->value,
+        ]);
+
+        $this->assertInstanceOf(Post::class, $post);
+        $this->assertEquals(PostType::EXPERIENCE, $post->post_type);
+
+        // 2. Teacher
+        $teacher = User::factory()->create([
+            'account_status' => AccountStatus::ACTIVE,
+        ]);
+        $teacher->assignRole('teacher');
+        $teacher->profile()->create([
+            'display_name' => 'Teacher User',
+            'role_type' => 'teacher',
+            'profile_status' => 'complete',
+        ]);
+
+        $post2 = $action->execute($teacher, [
+            'body' => 'Teacher sharing career insight',
+            'visibility' => 'verified_users',
+            'post_type' => PostType::CAREER_INSIGHT->value,
+        ]);
+
+        $this->assertInstanceOf(Post::class, $post2);
+        $this->assertEquals(PostType::CAREER_INSIGHT, $post2->post_type);
+    }
+
+    public function test_student_cannot_create_non_standard_posts_via_component(): void
+    {
+        $this->actingAs($this->user);
+
+        Volt::test('pages.app.home-feed')
+            ->set('body', 'Student attempting to post experience')
+            ->set('postType', PostType::EXPERIENCE->value)
+            ->call('submitPost')
+            ->assertHasErrors(['post_type']);
+    }
+
+    public function test_alumni_can_create_non_standard_posts_via_component(): void
+    {
+        $alumni = User::factory()->create([
+            'account_status' => AccountStatus::ACTIVE,
+        ]);
+        $alumni->assignRole('alumni');
+        $alumni->profile()->create([
+            'display_name' => 'Alumni User',
+            'role_type' => 'alumni',
+            'profile_status' => 'complete',
+        ]);
+
+        $this->actingAs($alumni);
+
+        Volt::test('pages.app.home-feed')
+            ->set('body', 'Alumni sharing experience via component')
+            ->set('postType', PostType::EXPERIENCE->value)
+            ->call('submitPost')
+            ->assertHasNoErrors();
+
+        $this->assertDatabaseHas('posts', [
+            'user_id' => $alumni->id,
+            'body' => 'Alumni sharing experience via component',
+            'post_type' => PostType::EXPERIENCE->value,
+        ]);
+    }
+
+    public function test_home_feed_can_filter_posts_by_type(): void
+    {
+        $alumni = User::factory()->create([
+            'account_status' => AccountStatus::ACTIVE,
+        ]);
+        $alumni->assignRole('alumni');
+        $alumni->profile()->create([
+            'display_name' => 'Alumni User',
+            'role_type' => 'alumni',
+            'profile_status' => 'complete',
+        ]);
+
+        Post::factory()->create([
+            'user_id' => $alumni->id,
+            'body' => 'Experience post to filter.',
+            'post_type' => PostType::EXPERIENCE->value,
+            'status' => PostStatus::PUBLISHED,
+            'published_at' => now(),
+        ]);
+
+        Post::factory()->create([
+            'user_id' => $alumni->id,
+            'body' => 'Career Insight post to filter.',
+            'post_type' => PostType::CAREER_INSIGHT->value,
+            'status' => PostStatus::PUBLISHED,
+            'published_at' => now()->subMinute(),
+        ]);
+
+        $this->actingAs($this->user);
+
+        Volt::test('pages.app.home-feed')
+            ->assertSee('Experience post to filter.')
+            ->assertSee('Career Insight post to filter.')
+            ->call('setTypeFilter', 'experience')
+            ->assertSet('activeTypeFilter', 'experience')
+            ->assertSee('Experience post to filter.')
+            ->assertDontSee('Career Insight post to filter.')
+            ->call('setTypeFilter', 'career_insight')
+            ->assertSet('activeTypeFilter', 'career_insight')
+            ->assertSee('Career Insight post to filter.')
+            ->assertDontSee('Experience post to filter.')
+            ->call('setTypeFilter', 'career_insight')
+            ->assertSet('activeTypeFilter', 'all')
+            ->assertSee('Experience post to filter.')
+            ->assertSee('Career Insight post to filter.');
+    }
+
+    public function test_home_feed_tabs_and_filters_are_mutually_exclusive(): void
+    {
+        $this->actingAs($this->user);
+
+        Volt::test('pages.app.home-feed')
+            ->assertSet('activeFeedTab', 'for_you')
+            ->assertSet('activeTypeFilter', 'all')
+            ->call('setTypeFilter', 'experience')
+            ->assertSet('activeTypeFilter', 'experience')
+            ->call('setFeedTab', 'following')
+            ->assertSet('activeFeedTab', 'following')
+            ->assertSet('activeTypeFilter', 'all')
+            ->call('setTypeFilter', 'career_insight')
+            ->assertSet('activeTypeFilter', 'career_insight')
+            ->call('setFeedTab', 'for_you')
+            ->assertSet('activeFeedTab', 'for_you')
+            ->assertSet('activeTypeFilter', 'all');
     }
 
     private function activeUser(string $name): User

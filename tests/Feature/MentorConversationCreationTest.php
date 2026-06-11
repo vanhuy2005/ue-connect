@@ -2,10 +2,14 @@
 
 namespace Tests\Feature;
 
+use App\Actions\Mentor\CompleteMentorRequestAction;
 use App\Actions\Mentor\CreateMentorConversationAction;
+use App\Enums\ConnectionStatus;
 use App\Enums\ConversationStatus;
 use App\Enums\ConversationType;
+use App\Enums\MentorAvailabilityStatus;
 use App\Enums\MentorRequestStatus;
+use App\Models\Connection;
 use App\Models\Conversation;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\Feature\Concerns\BuildsMentorFixtures;
@@ -68,5 +72,106 @@ class MentorConversationCreationTest extends TestCase
             'conversation_id' => $conversation->id,
             'message_type' => 'system',
         ]);
+    }
+
+    public function test_conversation_is_locked_on_completion_and_reopened_on_new_accepted_request(): void
+    {
+        $student = $this->activeUser('student');
+        $profile = $this->mentorProfile();
+        $mentor = $profile->user;
+
+        // 1. First request is accepted
+        $request1 = $this->mentorRequest($student, $profile, ['status' => MentorRequestStatus::Accepted]);
+        $conversation = app(CreateMentorConversationAction::class)->execute($request1);
+        $request1->update(['conversation_id' => $conversation->id]);
+
+        $this->assertEquals(ConversationStatus::ACTIVE, $conversation->status);
+        $this->assertTrue($student->can('sendMessage', $conversation));
+        $this->assertTrue($mentor->can('sendMessage', $conversation));
+
+        // 2. First request is completed
+        app(CompleteMentorRequestAction::class)->execute($mentor, $request1);
+
+        $this->assertEquals(ConversationStatus::ARCHIVED, $conversation->fresh()->status);
+        $this->assertFalse($student->can('sendMessage', $conversation->fresh()));
+        $this->assertFalse($mentor->can('sendMessage', $conversation->fresh()));
+
+        // 3. A new request is created and accepted
+        $request2 = $this->mentorRequest($student, $profile, ['status' => MentorRequestStatus::Accepted]);
+        $conversation2 = app(CreateMentorConversationAction::class)->execute($request2);
+        $request2->update(['conversation_id' => $conversation2->id]);
+
+        // Verify conversation is reused, opened back up, and messages can be sent again
+        $this->assertSame($conversation->id, $conversation2->id);
+        $this->assertEquals(ConversationStatus::ACTIVE, $conversation2->status);
+        $this->assertTrue($student->can('sendMessage', $conversation2));
+        $this->assertTrue($mentor->can('sendMessage', $conversation2));
+    }
+
+    public function test_friends_can_still_send_messages_when_mentor_session_is_completed(): void
+    {
+        $student = $this->activeUser('student');
+        $profile = $this->mentorProfile();
+        $mentor = $profile->user;
+
+        // Create and complete a mentor request
+        $request = $this->mentorRequest($student, $profile, ['status' => MentorRequestStatus::Accepted]);
+        $conversation = app(CreateMentorConversationAction::class)->execute($request);
+        $request->update(['conversation_id' => $conversation->id]);
+
+        // Establish a connection (friendship) between student and mentor
+        $userOneId = min($student->id, $mentor->id);
+        $userTwoId = max($student->id, $mentor->id);
+        Connection::create([
+            'user_one_id' => $userOneId,
+            'user_two_id' => $userTwoId,
+            'status' => ConnectionStatus::ACTIVE,
+        ]);
+
+        // Complete the session (archives the conversation)
+        app(CompleteMentorRequestAction::class)->execute($mentor, $request);
+
+        $archivedConversation = $conversation->fresh();
+        $this->assertEquals(ConversationStatus::ARCHIVED, $archivedConversation->status);
+
+        // Friends can still send messages even in an archived mentor conversation
+        $this->assertTrue($student->can('sendMessage', $archivedConversation));
+        $this->assertTrue($mentor->can('sendMessage', $archivedConversation));
+    }
+
+    public function test_availability_auto_switches_to_full_when_slot_limit_reached(): void
+    {
+        $student1 = $this->activeUser('student');
+        $student2 = $this->activeUser('student');
+        $profile = $this->mentorProfile(attributes: ['max_pending_requests' => 1]);
+        $mentor = $profile->user;
+
+        // Accept first request — fills up the only slot
+        $request1 = $this->mentorRequest($student1, $profile, ['status' => MentorRequestStatus::Accepted]);
+        app(CreateMentorConversationAction::class)->execute($request1);
+
+        // Trigger sync via accept action (simulate what AcceptMentorRequestAction does)
+        $profile->syncAvailabilityFromPendingCount();
+
+        $this->assertEquals(MentorAvailabilityStatus::Full, $profile->fresh()->availability_status);
+    }
+
+    public function test_availability_reverts_to_available_when_slot_freed_after_completion(): void
+    {
+        $student = $this->activeUser('student');
+        $profile = $this->mentorProfile(attributes: ['max_pending_requests' => 1]);
+        $mentor = $profile->user;
+
+        // Accept a request — fills up the slot and sets Full
+        $request = $this->mentorRequest($student, $profile, ['status' => MentorRequestStatus::Accepted]);
+        $conversation = app(CreateMentorConversationAction::class)->execute($request);
+        $request->update(['conversation_id' => $conversation->id]);
+        $profile->syncAvailabilityFromPendingCount();
+        $this->assertEquals(MentorAvailabilityStatus::Full, $profile->fresh()->availability_status);
+
+        // Complete the session — slot freed, should revert to Available
+        app(CompleteMentorRequestAction::class)->execute($mentor, $request);
+
+        $this->assertEquals(MentorAvailabilityStatus::Available, $profile->fresh()->availability_status);
     }
 }

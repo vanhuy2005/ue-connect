@@ -8,11 +8,15 @@ use App\Actions\Posts\TogglePostSave;
 use App\Actions\Posts\DeletePost;
 use App\Actions\Posts\UpdatePost;
 use App\Actions\Posts\TogglePostRepost;
+use App\Actions\Posts\ModerateOpportunity;
 use App\Actions\Reports\CreateReport;
 use App\Actions\Messaging\SendSharedPostMessage;
 use App\Actions\Messaging\FindOrCreateDirectConversation;
 use App\Enums\CommentStatus;
 use App\Enums\PostStatus;
+use App\Enums\PostType;
+use App\Enums\ModerationStatus;
+use App\Models\Opportunity;
 use App\Enums\ReportReason;
 use App\Enums\ConnectionStatus;
 use App\Models\Comment;
@@ -40,6 +44,7 @@ new #[Layout('layouts.app')] class extends Component
     // Post edit fields
     public bool $isEditingPost = false;
     public string $editingPostBody = '';
+    public bool $editingOppIsPedagogy = false;
 
     // Report properties
     public ?Comment $reportingComment = null;
@@ -197,6 +202,12 @@ new #[Layout('layouts.app')] class extends Component
 
         $this->isEditingPost = true;
         $this->editingPostBody = $this->post->body;
+
+        $opp = $this->post->opportunity;
+        if ($opp) {
+            $this->editingOppIsPedagogy = ($opp->category === 'pedagogy');
+        }
+
         $this->feedbackMessage = null;
     }
 
@@ -214,9 +225,18 @@ new #[Layout('layouts.app')] class extends Component
                 'body' => $this->editingPostBody,
             ]);
 
+            $opp = $this->post->opportunity;
+            if ($opp && $opp->exists) {
+                $opp->update([
+                    'category' => $this->editingOppIsPedagogy ? 'pedagogy' : 'non_pedagogy',
+                ]);
+            }
+
             $this->isEditingPost = false;
             $this->editingPostBody = '';
+            $this->editingOppIsPedagogy = false;
             $this->feedbackMessage = 'Đã cập nhật bài viết thành công.';
+            $this->post->refresh();
         } catch (\Illuminate\Validation\ValidationException $e) {
             $this->addError('editingPostBody', $e->getMessage());
         } catch (\Illuminate\Auth\Access\AuthorizationException $e) {
@@ -253,6 +273,23 @@ new #[Layout('layouts.app')] class extends Component
 
         $this->deletingPostId = null;
         $this->showDeleteModal = false;
+    }
+
+    /**
+     * Mark the opportunity post as expired.
+     */
+    public function markAsExpired(ModerateOpportunity $moderateOpportunity, ?int $postId = null): void
+    {
+        try {
+            $post = $postId ? Post::findOrFail($postId) : $this->post;
+            $moderateOpportunity->expire(Auth::user(), $post);
+            $this->feedbackMessage = 'Đã đánh dấu cơ hội đã hết hạn.';
+            if ($post->id === $this->post->id) {
+                $this->post->refresh();
+            }
+        } catch (\Illuminate\Auth\Access\AuthorizationException $e) {
+            $this->feedbackMessage = $e->getMessage();
+        }
     }
 
     /**
@@ -748,6 +785,40 @@ new #[Layout('layouts.app')] class extends Component
                                             @endif
                                         </div>
                                     @endif
+
+                                    {{-- Post Type Badge --}}
+                                    @if ($post->post_type && $post->post_type !== PostType::STANDARD)
+                                        <div class="mt-1.5 flex items-center gap-2 flex-wrap">
+                                            @if ($post->post_type === PostType::OPPORTUNITY)
+                                                <x-ui.badge
+                                                    variant="warning"
+                                                    size="sm"
+                                                    no-icon
+                                                >
+                                                    Cơ hội
+                                                </x-ui.badge>
+                                                @if ($post->opportunity?->category === 'pedagogy')
+                                                    <x-ui.badge variant="warning" size="sm" no-icon>Sư phạm</x-ui.badge>
+                                                @endif
+                                                @if ($post->opportunity?->is_expired)
+                                                    <x-ui.badge variant="danger" size="sm" no-icon>Đã hết hạn</x-ui.badge>
+                                                @endif
+                                                @if ($post->moderation_status === ModerationStatus::PENDING)
+                                                    <x-ui.badge variant="pending" size="sm" no-icon>
+                                                        Chờ duyệt
+                                                    </x-ui.badge>
+                                                @elseif ($post->moderation_status === ModerationStatus::REJECTED)
+                                                    <x-ui.badge variant="danger" size="sm" no-icon>
+                                                        Đã từ chối
+                                                    </x-ui.badge>
+                                                @endif
+                                            @elseif ($post->post_type === PostType::EXPERIENCE)
+                                                <x-ui.badge variant="experience" size="sm" no-icon>Chia sẻ kinh nghiệm</x-ui.badge>
+                                            @elseif ($post->post_type === PostType::CAREER_INSIGHT)
+                                                <x-ui.badge variant="career-insight" size="sm" no-icon>Kinh nghiệm nghề nghiệp</x-ui.badge>
+                                            @endif
+                                        </div>
+                                    @endif
                                 </div>
 
                                 {{-- Options dropdown --}}
@@ -779,6 +850,19 @@ new #[Layout('layouts.app')] class extends Component
                                             <span>Xem trang cá nhân</span>
                                         </a>
                                         @if ($isOwner)
+                                            {{-- Expire Opportunity --}}
+                                            @if ($post->post_type === PostType::OPPORTUNITY && $post->opportunity && !$post->opportunity->is_expired)
+                                                <button
+                                                    type="button"
+                                                    wire:click="markAsExpired({{ $post->id }})"
+                                                    @click="open = false"
+                                                    class="w-full text-left px-3 py-1.5 text-xxs font-semibold text-slate-700 hover:bg-slate-50 hover:text-ue-brand flex items-center gap-2"
+                                                >
+                                                    <x-ui.icon name="clock" size="xs" class="text-slate-400" />
+                                                    <span>Đánh dấu hết hạn</span>
+                                                </button>
+                                            @endif
+
                                             @if (! $isEditingPost)
                                                 <button
                                                     type="button"
@@ -829,6 +913,22 @@ new #[Layout('layouts.app')] class extends Component
                                         <p class="text-xs text-red-600 font-semibold mt-1">{{ $message }}</p>
                                     @enderror
 
+                                    @if ($post->post_type === PostType::OPPORTUNITY)
+                                        <div class="border border-amber-200 rounded-lg p-3 space-y-2.5 bg-white">
+                                            <div class="flex items-center gap-2 text-slate-705">
+                                                <input
+                                                    type="checkbox"
+                                                    id="edit-opp-is-pedagogy"
+                                                    wire:model="editingOppIsPedagogy"
+                                                    class="rounded border-slate-300 text-amber-600 focus:ring-amber-200 focus:ring-2"
+                                                />
+                                                <label for="edit-opp-is-pedagogy" class="text-xs font-bold text-slate-700 cursor-pointer select-none">
+                                                    Đây là cơ hội thuộc khối ngành Sư phạm
+                                                </label>
+                                            </div>
+                                        </div>
+                                    @endif
+
                                     <div class="flex items-center justify-between pt-2 border-t border-slate-200">
                                         <span class="text-[10px] text-slate-400 font-semibold">
                                             {{ mb_strlen($editingPostBody) }}/3000
@@ -854,8 +954,7 @@ new #[Layout('layouts.app')] class extends Component
                                     </div>
                                 </div>
                             @else
-                                <div class="ue-post-card__content mt-3 text-slate-800 text-base sm:text-lg whitespace-pre-wrap leading-relaxed">{{ $post->body }}</div>
-                                
+                                <div class="ue-post-card__content mt-2 text-slate-800 text-sm sm:text-base whitespace-pre-wrap leading-relaxed">{{ $post->body }}</div>
                                 {{-- Polymorphic Media Grid --}}
                                 @if ($mediaCount > 0)
                                     <div class="mt-3 w-full max-w-lg select-none mr-auto">

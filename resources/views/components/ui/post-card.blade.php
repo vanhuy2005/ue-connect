@@ -120,6 +120,29 @@
                             @endif
                         </div>
                     @endif
+
+                    @if ($post->post_type && $post->post_type !== \App\Enums\PostType::STANDARD)
+                        <div class="mt-1 flex items-center gap-1.5 flex-wrap">
+                            @if ($post->post_type === \App\Enums\PostType::EXPERIENCE)
+                                <x-ui.badge variant="experience" size="sm" no-icon>Chia sẻ kinh nghiệm</x-ui.badge>
+                            @elseif ($post->post_type === \App\Enums\PostType::CAREER_INSIGHT)
+                                <x-ui.badge variant="career-insight" size="sm" no-icon>Kinh nghiệm nghề nghiệp</x-ui.badge>
+                            @elseif ($post->post_type === \App\Enums\PostType::OPPORTUNITY)
+                                <x-ui.badge variant="warning" size="sm" no-icon>Cơ hội</x-ui.badge>
+                                @if ($post->opportunity?->category === 'pedagogy')
+                                    <x-ui.badge variant="warning" size="sm" no-icon>Sư phạm</x-ui.badge>
+                                @endif
+                                @if ($post->opportunity?->is_expired)
+                                    <x-ui.badge variant="danger" size="sm" no-icon>Đã hết hạn</x-ui.badge>
+                                @endif
+                                @if ($post->moderation_status === \App\Enums\ModerationStatus::PENDING)
+                                    <x-ui.badge variant="pending" size="sm" no-icon>Chờ duyệt</x-ui.badge>
+                                @elseif ($post->moderation_status === \App\Enums\ModerationStatus::REJECTED)
+                                    <x-ui.badge variant="rejected" size="sm" no-icon>Đã từ chối</x-ui.badge>
+                                @endif
+                            @endif
+                        </div>
+                    @endif
                 </div>
 
                 {{-- Header Actions Side-by-Side --}}

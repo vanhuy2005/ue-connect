@@ -32,11 +32,6 @@ class ConversationPolicy
             return false;
         }
 
-        // Must be an active conversation
-        if ($conversation->status !== ConversationStatus::ACTIVE) {
-            return false;
-        }
-
         // 1. Must be a participant
         $isParticipant = $conversation->participants()->where('user_id', $user->id)->exists();
         if (! $isParticipant) {
@@ -60,17 +55,19 @@ class ConversationPolicy
             return false;
         }
 
-        if ($conversation->mentor_request_id) {
-            return true;
-        }
-
-        // 3. Connection check (must be currently connected unless this is a mentor conversation)
+        // 3. Connection status check
         $hasConnection = Connection::where(function ($q) use ($user, $recipient) {
             $q->where('user_one_id', min($user->id, $recipient->id))
                 ->where('user_two_id', max($user->id, $recipient->id));
         })->where('status', 'active')->exists();
 
-        if (! $hasConnection) {
+        // Must be an active conversation OR a direct conversation where they are connected friends
+        if ($conversation->status !== ConversationStatus::ACTIVE && ! $hasConnection) {
+            return false;
+        }
+
+        // 4. Connection check for active conversations (must be currently connected unless this is a mentor conversation)
+        if ($conversation->status === ConversationStatus::ACTIVE && ! $conversation->mentor_request_id && ! $hasConnection) {
             return false;
         }
 

@@ -4,13 +4,16 @@ namespace App\Models;
 
 use App\Enums\CommunityMemberStatus;
 use App\Enums\ConnectionStatus;
+use App\Enums\ModerationStatus;
 use App\Enums\PostStatus;
+use App\Enums\PostType;
 use App\Enums\PostVisibility;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Database\Eloquent\Relations\MorphMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
@@ -34,6 +37,8 @@ class Post extends Model
         'media_url',
         'visibility',
         'status',
+        'post_type',
+        'moderation_status',
         'edited_at',
         'published_at',
     ];
@@ -50,6 +55,8 @@ class Post extends Model
             'scope_id' => 'integer',
             'visibility' => PostVisibility::class,
             'status' => PostStatus::class,
+            'post_type' => PostType::class,
+            'moderation_status' => ModerationStatus::class,
             'edited_at' => 'datetime',
             'published_at' => 'datetime',
             'pinned_at' => 'datetime',
@@ -202,5 +209,13 @@ class Post extends Model
     public function community(): BelongsTo
     {
         return $this->belongsTo(Community::class, 'scope_id');
+    }
+
+    /**
+     * Get the job/internship opportunity details associated with this post.
+     */
+    public function opportunity(): HasOne
+    {
+        return $this->hasOne(Opportunity::class, 'post_id');
     }
 }
