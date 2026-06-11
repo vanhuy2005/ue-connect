@@ -2,7 +2,7 @@
 
 This `docs` folder contains the complete project documentation. The list below is a full, explicit index of every folder and file under `docs/` (no shortcuts). It was generated from the repository contents and includes every file present at the time of generation.
 
-Generated: 2026-05-27
+Generated: 2026-06-11
 
 ## Index (complete)
 
@@ -276,10 +276,11 @@ Generated: 2026-05-27
   - [docs/12-agent/1. source-truth-map.md](12-agent/1.%20source-truth-map.md)
   - [docs/12-agent/2. agent-change-protocol.md](12-agent/2.%20agent-change-protocol.md)
   - [docs/12-agent/3. agent-task-checklist.md](12-agent/3.%20agent-task-checklist.md)
-  - [docs/12-agent/agent-overview.md](12-agent/agent-overview.md)
-  - [docs/12-agent/agent-workflows.md](12-agent/agent-workflows.md)
   - [docs/12-agent/4. rag-knowledge-base.md](12-agent/4.%20rag-knowledge-base.md)
   - [docs/12-agent/5. prompt-design.md](12-agent/5.%20prompt-design.md)
+  - [docs/12-agent/6. hcmue-chatbot-system.md](12-agent/6.%20hcmue-chatbot-system.md) ← **AI Chatbot system architecture** (RAG pipeline, services, ingestion, Qdrant schema, LLM providers, DB tables)
+  - [docs/12-agent/agent-overview.md](12-agent/agent-overview.md)
+  - [docs/12-agent/agent-workflows.md](12-agent/agent-workflows.md)
   - [docs/12-agent/ai-safety.md](12-agent/ai-safety.md)
 
 - docs/13-analytics/ (folder)
