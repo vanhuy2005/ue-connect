@@ -3,9 +3,12 @@
 namespace App\AI\HcmueChatbot\Ingestion;
 
 use App\AI\HcmueChatbot\Retrieval\QdrantVectorStore;
+use App\Models\DocumentChunk;
+use App\Models\KnowledgeBatch;
 use App\Models\SourceDocument;
 use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Str;
 
 class AcademicKnowledgeImportService
 {
@@ -46,7 +49,7 @@ class AcademicKnowledgeImportService
         $sync = $options['sync'] ?? false;
         $progressCallback = $options['progress_callback'] ?? null;
 
-        $batchKey = $options['batch_key'] ?? 'batch_' . time() . '_' . \Illuminate\Support\Str::random(4);
+        $batchKey = $options['batch_key'] ?? 'batch_'.time().'_'.Str::random(4);
         $onlyCohort = $options['only_cohort'] ?? null;
         $onlyMajor = $options['only_major'] ?? null;
 
@@ -79,10 +82,10 @@ class AcademicKnowledgeImportService
 
         $batch = null;
         if (! $dryRun) {
-            $batch = \App\Models\KnowledgeBatch::firstOrCreate(
+            $batch = KnowledgeBatch::firstOrCreate(
                 ['batch_key' => $batchKey],
                 [
-                    'name' => 'Import batch ' . $batchKey,
+                    'name' => 'Import batch '.$batchKey,
                     'root_path' => $path,
                     'status' => 'processing',
                     'total_files' => count($pdfFiles),
@@ -101,18 +104,21 @@ class AcademicKnowledgeImportService
             // 3. Filter by cohort
             if ($onlyCohort && (! isset($meta['cohort']) || strtolower($meta['cohort']) !== strtolower($onlyCohort))) {
                 $skippedCount++;
+
                 continue;
             }
 
             // 4. Filter by major
             if ($onlyMajor && (! isset($meta['major']) || stripos($meta['major'], $onlyMajor) === false)) {
                 $skippedCount++;
+
                 continue;
             }
 
             // 5. Filter by document type
             if ($targetDocType && strtolower($meta['document_type']) !== strtolower($targetDocType)) {
                 $skippedCount++;
+
                 continue;
             }
 
@@ -129,6 +135,7 @@ class AcademicKnowledgeImportService
                     'status' => 'skipped',
                     'reason' => 'Hash match with existing SourceDocument ID: '.$existing->id,
                 ];
+
                 continue;
             }
 
@@ -148,6 +155,7 @@ class AcademicKnowledgeImportService
                     'status' => 'dry-run',
                     'metadata' => $meta,
                 ];
+
                 continue;
             }
 
@@ -218,8 +226,8 @@ class AcademicKnowledgeImportService
 
         // Update batch statistics when completed
         if ($batch) {
-            $totalChunks = \App\Models\DocumentChunk::where('knowledge_batch_id', $batch->id)->count();
-            $totalVectors = \App\Models\DocumentChunk::where('knowledge_batch_id', $batch->id)
+            $totalChunks = DocumentChunk::where('knowledge_batch_id', $batch->id)->count();
+            $totalVectors = DocumentChunk::where('knowledge_batch_id', $batch->id)
                 ->where('embedding_status', 'success')
                 ->count();
 

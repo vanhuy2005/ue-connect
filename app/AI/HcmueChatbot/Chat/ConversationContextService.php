@@ -123,7 +123,7 @@ class ConversationContextService
                         $prevYear = 1974 + $prevNum;
 
                         // Check exact spelling in Qdrant catalog if available
-                        $cohortsCatalogList = app(CohortCatalogService::class)->allCohorts();
+                        $cohortsCatalogList = app(CohortMajorCatalogService::class)->getCatalog()['cohorts'] ?? [];
                         $matchedFromCatalog = null;
                         foreach ($cohortsCatalogList as $cItem) {
                             if (preg_match('/\b'.$prevNum.'\b/u', $cItem)) {

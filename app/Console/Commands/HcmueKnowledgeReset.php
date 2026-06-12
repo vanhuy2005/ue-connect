@@ -46,6 +46,7 @@ class HcmueKnowledgeReset extends Command
         if (! $force && ! $dryRun) {
             if (! $this->confirm('WARNING: This will clear chatbot training data and programs. Are you sure you want to proceed?')) {
                 $this->warn('Reset cancelled.');
+
                 return self::SUCCESS;
             }
         }
@@ -60,18 +61,18 @@ class HcmueKnowledgeReset extends Command
             'curriculum_courses',
             'curriculum_course_groups',
             'training_programs',
-            'knowledge_batches'
+            'knowledge_batches',
         ];
 
         $logTables = [
             'ai_answers',
             'ai_questions',
             'chat_messages',
-            'chat_sessions'
+            'chat_sessions',
         ];
 
         $feedbackTables = [
-            'ai_feedback'
+            'ai_feedback',
         ];
 
         $tablesToProcess = $knowledgeTables;
@@ -111,13 +112,14 @@ class HcmueKnowledgeReset extends Command
         if ($dryRun) {
             $this->info('Dry run completed. No data was modified.');
             $this->printReminders();
+
             return self::SUCCESS;
         }
 
         // Execute deletions in order of foreign key dependency hierarchy
         $this->warn('Executing database reset...');
-        
-        DB::transaction(function () use ($tablesToProcess, $keepLogs) {
+
+        DB::transaction(function () use ($tablesToProcess) {
             // Disable foreign key constraints during purge
             $this->disableForeignKeys();
 

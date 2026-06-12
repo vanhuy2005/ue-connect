@@ -81,12 +81,21 @@ class MajorCatalogService
         'sp mam non' => 'Giáo dục Mầm non',
         'gd mam non' => 'Giáo dục Mầm non',
         'mam non' => 'Giáo dục Mầm non',
+        'gdmn' => 'Giáo dục Mầm non',
         // Giáo dục Tiểu học
         'sp tieu hoc' => 'Giáo dục Tiểu học',
         'gd tieu hoc' => 'Giáo dục Tiểu học',
         'tieu hoc' => 'Giáo dục Tiểu học',
+        'gdth' => 'Giáo dục Tiểu học',
         // Giáo dục đặc biệt
         'gd dac biet' => 'Giáo dục đặc biệt',
+        'gddb' => 'Giáo dục đặc biệt',
+        // Other Education abbreviations
+        'gdqp' => 'Giáo dục Quốc phòng - An ninh',
+        'gdtc' => 'Giáo dục Thể chất',
+        'gdktpl' => 'Giáo dục kinh tế - pháp luật',
+        'gdct' => 'Giáo dục chính trị',
+        'gdcd' => 'Giáo dục công dân',
         // Ngôn ngữ Hàn Quốc
         'han quoc' => 'Ngôn ngữ Hàn Quốc',
         'tieng han' => 'Ngôn ngữ Hàn Quốc',
@@ -145,104 +154,17 @@ class MajorCatalogService
 
     /**
      * Detect major dynamically from the query.
-     *
-     * Priority:
-     *  1. Exact match: checks if query contains canonical name (case-insensitive)
-     *  2. Alias match: checks if query contains alias or its unaccented form
-     *  3. Contains match: checks if query contains alias/major or vice versa without boundaries
-     *  4. Fuzzy similarity: checks for fuzzy match using similar_text/levenshtein >= 90%
-     *
-     * @return array{canonical: string, matched_alias: string, detected_major: string}|null
      */
     public function detectMajor(string $query): ?array
     {
-        $queryLower = mb_strtolower($query, 'UTF-8');
-        $queryNoAccent = $this->removeAccents($queryLower);
-
-        $majors = $this->allMajors();
-        $aliases = $this->aliases(); // alias => canonical, sorted by length desc
-
-        // Priority 1: Exact canonical match (case-insensitive)
-        foreach ($majors as $canonical) {
-            $canonicalLower = mb_strtolower($canonical, 'UTF-8');
-            if ($this->containsPhrase($queryLower, $canonicalLower)) {
-                return [
-                    'canonical' => $canonical,
-                    'matched_alias' => $canonicalLower,
-                    'detected_major' => $canonicalLower,
-                ];
-            }
-        }
-
-        // Priority 2: Alias match (accented and unaccented)
-        foreach ($aliases as $alias => $canonical) {
-            if ($this->containsPhrase($queryLower, $alias)) {
-                return [
-                    'canonical' => $canonical,
-                    'matched_alias' => $alias,
-                    'detected_major' => $alias,
-                ];
-            }
-
-            $aliasNoAccent = $this->removeAccents($alias);
-            if ($this->containsPhrase($queryNoAccent, $aliasNoAccent)) {
-                return [
-                    'canonical' => $canonical,
-                    'matched_alias' => $alias,
-                    'detected_major' => $alias,
-                ];
-            }
-        }
-
-        // Priority 3: Contains match (with word boundaries)
-        foreach ($aliases as $alias => $canonical) {
-            if ($this->containsPhrase($queryLower, $alias)) {
-                return [
-                    'canonical' => $canonical,
-                    'matched_alias' => $alias,
-                    'detected_major' => $alias,
-                ];
-            }
-            $aliasNoAccent = $this->removeAccents($alias);
-            if ($this->containsPhrase($queryNoAccent, $aliasNoAccent)) {
-                return [
-                    'canonical' => $canonical,
-                    'matched_alias' => $alias,
-                    'detected_major' => $alias,
-                ];
-            }
-        }
-
-        // Priority 4: Fuzzy similarity (>= 90%)
-        $queryWords = explode(' ', preg_replace('/\s+/', ' ', $queryLower));
-        foreach ($aliases as $alias => $canonical) {
-            $aliasWords = explode(' ', $alias);
-            $n = count($aliasWords);
-            $m = count($queryWords);
-            if ($m < $n) {
-                continue;
-            }
-            for ($i = 0; $i <= $m - $n; $i++) {
-                $subQuery = implode(' ', array_slice($queryWords, $i, $n));
-
-                similar_text($alias, $subQuery, $percent);
-                if ($percent >= 90.0) {
-                    return [
-                        'canonical' => $canonical,
-                        'matched_alias' => $alias,
-                        'detected_major' => $subQuery,
-                    ];
-                }
-
-                similar_text($this->removeAccents($alias), $this->removeAccents($subQuery), $percentNoAccent);
-                if ($percentNoAccent >= 90.0) {
-                    return [
-                        'canonical' => $canonical,
-                        'matched_alias' => $alias,
-                        'detected_major' => $subQuery,
-                    ];
-                }
-            }
+        $catalogService = app(CohortMajorCatalogService::class);
+        $res = $catalogService->detectMajor($query);
+        if ($res) {
+            return [
+                'canonical' => $res['canonical_major'],
+                'matched_alias' => $res['matched_alias'],
+                'detected_major' => $res['matched_alias'],
+            ];
         }
 
         return null;
@@ -273,9 +195,10 @@ class MajorCatalogService
      */
     public function allMajors(): array
     {
-        return Cache::remember(self::CACHE_KEY, self::CACHE_TTL, function () {
-            return $this->fetchFromQdrant();
-        });
+        $catalogService = app(CohortMajorCatalogService::class);
+        $catalog = $catalogService->getCatalog();
+
+        return $catalog['majors'] ?? $this->configFallback();
     }
 
     /**
@@ -286,6 +209,7 @@ class MajorCatalogService
     public function refresh(): array
     {
         Cache::forget(self::CACHE_KEY);
+        Cache::forget('hcmue_catalog_data');
 
         return $this->allMajors();
     }
@@ -327,16 +251,6 @@ class MajorCatalogService
 
     /**
      * Generate auto aliases for a single canonical major name.
-     *
-     * Rules (no `\b` — uses accent-removed token matching instead):
-     *   - Full lower-cased accented form
-     *   - Accent-stripped form
-     *   - Stripped of the leading word "ngành"
-     *   - SP prefix shortening (Sư phạm → sp)
-     *   - GD prefix shortening (Giáo dục → gd)
-     *   - NN prefix shortening (Ngôn ngữ → nn)
-     *
-     * @return array<string>
      */
     public function generateAliases(string $major): array
     {
@@ -351,7 +265,6 @@ class MajorCatalogService
         }
 
         // Strip ending " học" if present (e.g. Sư phạm Toán học -> Sư phạm Toán, Hóa học -> Hóa)
-        // This automatically generates highly common short forms like "sư phạm toán", "sư phạm hoá"
         $forms = [$lower, $noAccent];
         foreach ($forms as $form) {
             if (preg_match('/(.+?)\s+học$/u', $form, $m)) {
@@ -371,7 +284,6 @@ class MajorCatalogService
         }
 
         // "Sư phạm X" → "sp x"
-        // Also support "sư phạm X" where X has had " học" stripped (already in $aliases)
         $spForms = [];
         foreach ($aliases as $alias) {
             if (mb_strpos($alias, 'sư phạm ') === 0) {
@@ -447,8 +359,6 @@ class MajorCatalogService
     /**
      * Fetch unique `nganh` values from Qdrant, deduplicating case variants,
      * with fallback to `config/hcmue_majors.php`.
-     *
-     * @return array<string>
      */
     private function fetchFromQdrant(): array
     {
@@ -461,7 +371,6 @@ class MajorCatalogService
                 return $this->configFallback();
             }
 
-            // Deduplicate case variants: prefer the first seen capitalisation for each lowercased form
             $seen = [];
             $deduped = [];
             foreach ($raw as $major) {
@@ -485,12 +394,10 @@ class MajorCatalogService
     }
 
     /**
-     * Return the hardcoded fallback list from config/hcmue_majors.php.
-     *
-     * @return array<string>
+     * Return the hardcoded fallback list from config/hcmue_major_dictionary.php.
      */
     private function configFallback(): array
     {
-        return config('hcmue_majors', []);
+        return config('hcmue_major_dictionary.majors', []);
     }
 }

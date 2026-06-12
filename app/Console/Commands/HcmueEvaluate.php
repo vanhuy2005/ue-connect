@@ -6,6 +6,7 @@ use App\AI\HcmueChatbot\Chat\HcmueChatService;
 use App\Models\ChatSession;
 use App\Models\User;
 use Illuminate\Console\Command;
+use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Storage;
 
 class HcmueEvaluate extends Command
@@ -40,8 +41,8 @@ class HcmueEvaluate extends Command
         $datasetPath = base_path("database/AI/{$dataset}.json");
         $categories = [];
 
-        if (\Illuminate\Support\Facades\File::exists($datasetPath)) {
-            $categories = json_decode(\Illuminate\Support\Facades\File::get($datasetPath), true);
+        if (File::exists($datasetPath)) {
+            $categories = json_decode(File::get($datasetPath), true);
             $this->info("Successfully loaded custom evaluation dataset from: database/AI/{$dataset}.json");
         } else {
             $this->warn("Dataset file not found at [database/AI/{$dataset}.json]. Falling back to default categories.");

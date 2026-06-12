@@ -3,6 +3,7 @@
 namespace App\AI\HcmueChatbot\Retrieval;
 
 use App\AI\HcmueChatbot\Chat\CohortCatalogService;
+use App\AI\HcmueChatbot\Chat\CohortMajorCatalogService;
 use App\AI\HcmueChatbot\LLM\EmbeddingService;
 use Illuminate\Support\Facades\Log;
 
@@ -16,8 +17,12 @@ class RagRetrievalService
         protected EmbeddingService $embeddingService,
         protected QdrantVectorStore $vectorStore,
         protected AcademicQueryAnalyzer $queryAnalyzer,
-        protected CohortCatalogService $cohortCatalog
-    ) {}
+        protected ?CohortCatalogService $cohortCatalog = null,
+        protected ?CohortMajorCatalogService $cohortMajorCatalog = null
+    ) {
+        $this->cohortCatalog = $cohortCatalog ?? app(CohortCatalogService::class);
+        $this->cohortMajorCatalog = $cohortMajorCatalog ?? app(CohortMajorCatalogService::class);
+    }
 
     /**
      * Retrieve matching document chunks for a given search query.
@@ -709,9 +714,9 @@ class RagRetrievalService
      */
     private function normalizeCohortSpelling(string $cohort): string
     {
-        $matched = $this->cohortCatalog->detectCohort($cohort);
+        $matched = $this->cohortMajorCatalog->detectCohort($cohort);
         if ($matched) {
-            return $matched['canonical'];
+            return $matched['canonical_cohort'];
         }
 
         return $cohort;

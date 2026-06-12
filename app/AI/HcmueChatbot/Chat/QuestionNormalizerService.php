@@ -29,8 +29,11 @@ class QuestionNormalizerService
 
     public function __construct(
         protected MajorCatalogService $majorCatalog,
-        protected CohortCatalogService $cohortCatalog
-    ) {}
+        protected CohortCatalogService $cohortCatalog,
+        protected ?CohortMajorCatalogService $cohortMajorCatalog = null
+    ) {
+        $this->cohortMajorCatalog = $cohortMajorCatalog ?? app(CohortMajorCatalogService::class);
+    }
 
     /**
      * Normalize a raw question and extract detected entities.
@@ -64,12 +67,12 @@ class QuestionNormalizerService
         }, $normalized);
 
         // Normalize cohort references dynamically using the catalog
-        $cohortInfo = $this->cohortCatalog->detectCohort($normalized);
+        $cohortInfo = $this->cohortMajorCatalog->detectCohort($normalized);
         if ($cohortInfo) {
             $boundary = '(?<![a-zA-Z0-9\x{00C0}-\x{017F}\x{1E00}-\x{1EFF}])';
             $boundaryEnd = '(?![a-zA-Z0-9\x{00C0}-\x{017F}\x{1E00}-\x{1EFF}])';
-            $pattern = '/'.$boundary.preg_quote($cohortInfo['matched_alias'], '/').$boundaryEnd.'/iu';
-            $normalized = preg_replace($pattern, $cohortInfo['canonical'], $normalized);
+            $pattern = '/'.$boundary.preg_quote($cohortInfo['cohort_alias'] ?? $cohortInfo['detected_cohort'] ?? '', '/').$boundaryEnd.'/iu';
+            $normalized = preg_replace($pattern, $cohortInfo['canonical_cohort'], $normalized);
         } else {
             // Fallback math mapping
             $normalized = preg_replace_callback($this->cohortPattern, function ($matches) {
@@ -111,15 +114,15 @@ class QuestionNormalizerService
         $course = null;
         $policyTopic = null;
 
-        // Detect cohort using CohortCatalogService
-        $detectedCohort = $this->cohortCatalog->detectCohort($normalized);
+        // Detect cohort using CohortMajorCatalogService
+        $detectedCohort = $this->cohortMajorCatalog->detectCohort($normalized);
         if (! $detectedCohort) {
-            $detectedCohort = $this->cohortCatalog->detectCohort($original);
+            $detectedCohort = $this->cohortMajorCatalog->detectCohort($original);
         }
 
         if ($detectedCohort) {
-            $cohort = $detectedCohort['canonical'];
-            $cohortAlias = $detectedCohort['matched_alias'];
+            $cohort = $detectedCohort['canonical_cohort'];
+            $cohortAlias = $detectedCohort['cohort_alias'] ?? $detectedCohort['detected_cohort'] ?? null;
         }
 
         // Detect major using MajorCatalogService
@@ -186,13 +189,13 @@ class QuestionNormalizerService
      */
     private function detectMajor(string $normalized, string $original): array
     {
-        $detected = $this->majorCatalog->detectMajor($normalized);
+        $detected = $this->cohortMajorCatalog->detectMajor($normalized);
         if (! $detected) {
-            $detected = $this->majorCatalog->detectMajor($original);
+            $detected = $this->cohortMajorCatalog->detectMajor($original);
         }
 
         if ($detected) {
-            return [$detected['canonical'], $detected['matched_alias'], $detected['detected_major']];
+            return [$detected['canonical_major'], $detected['matched_alias'], $detected['matched_alias']];
         }
 
         return [null, null, null];

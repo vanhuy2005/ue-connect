@@ -3,6 +3,7 @@
 namespace App\Console\Commands;
 
 use App\AI\HcmueChatbot\Chat\AnswerComposerService;
+use App\AI\HcmueChatbot\Chat\CohortMajorCatalogService;
 use App\AI\HcmueChatbot\Chat\ConversationContextService;
 use App\AI\HcmueChatbot\Chat\QueryRouterService;
 use App\AI\HcmueChatbot\Chat\QuestionNormalizerService;
@@ -42,7 +43,8 @@ class HcmueChatDebug extends Command
         RagRetrievalService $ragRetrieval,
         AnswerComposerService $composer,
         AcademicQueryAnalyzer $queryAnalyzer,
-        ConversationContextService $contextService
+        ConversationContextService $contextService,
+        CohortMajorCatalogService $catalogService
     ): int {
         $question = $this->argument('question');
         $conversationId = $this->option('conversation-id') ?: 'default_debug_session';
@@ -93,6 +95,16 @@ class HcmueChatDebug extends Command
             }
         }
 
+        $cohort = $detected['canonical_cohort'] ?? $detected['cohort'] ?? null;
+        $major = $detected['canonical_major'] ?? $detected['major'] ?? null;
+        $cohortAlias = $detected['cohort_alias'] ?? $detected['detected_cohort'] ?? null;
+        $matchedAlias = $detected['matched_alias'] ?? null;
+
+        $majorExistsInCohort = ($cohort && $major) ? $catalogService->hasMajorInCohort($cohort, $major) : null;
+        $catalogSource = $catalogService->getCatalogSource();
+        $availableMajorsCount = $cohort ? count($catalogService->getMajorsForCohort($cohort)) : 0;
+        $availableCohortsCount = $major ? count($catalogService->getCohortsForMajor($major)) : 0;
+
         $this->line("Normalized Question: \"{$normalizedQuestion}\"");
         $this->newLine();
 
@@ -109,6 +121,51 @@ class HcmueChatDebug extends Command
         $this->line(' - course:           '.($detected['course'] ?: 'N/A'));
         $this->line(' - policy_topic:     '.($detected['policy_topic'] ?: 'N/A'));
         $this->newLine();
+
+        $this->info('Catalog Debug Output:');
+        $this->line('detected_cohort: '.($detected['detected_cohort'] ?? 'N/A'));
+        $this->line('canonical_cohort: '.($detected['canonical_cohort'] ?? 'N/A'));
+        $this->line('cohort_alias: '.($detected['cohort_alias'] ?? 'N/A'));
+        $this->newLine();
+        $this->line('detected_major: '.($detected['detected_major'] ?? 'N/A'));
+        $this->line('canonical_major: '.($detected['canonical_major'] ?? 'N/A'));
+        $this->line('matched_alias: '.($detected['matched_alias'] ?? 'N/A'));
+        $this->newLine();
+        $this->line('major_exists_in_cohort: '.($majorExistsInCohort === null ? 'N/A' : ($majorExistsInCohort ? 'true' : 'false')));
+        $this->line('catalog_source: '.$catalogSource);
+        $this->line('available_majors_count: '.$availableMajorsCount);
+        $this->line('available_cohorts_count: '.$availableCohortsCount);
+        $this->newLine();
+
+        // Special Query: Majors of a Cohort
+        if ($cohort && ! $major && (preg_match('/(ngành\s+nào|ngành\s+gì|mở\s+ngành|tuyển\s+sinh\s+ngành|có\s+những\s+ngành|có\s+các\s+ngành|danh\s+sách\s+ngành|gồm\s+những\s+ngành|gồm\s+các\s+ngành)/ui', $normalizedQuestion))) {
+            $this->info('=== SPECIAL QUERY: MAJORS OF COHORT ===');
+            $majors = $catalogService->getMajorsForCohort($cohort);
+            $majorsStr = implode("\n", array_map(fn ($m) => "- {$m}", $majors));
+            $this->comment("{$cohort} có những ngành học sau:\n\n{$majorsStr}");
+
+            return self::SUCCESS;
+        }
+
+        // Special Query: Cohorts of a Major
+        if ($major && ! $cohort && (preg_match('/(khóa\s+nào|khoá\s+nào|năm\s+nào|mở\s+khóa|mở\s+khoá|có\s+ở\s+khóa|có\s+ở\s+khoá|tuyển\s+ở\s+khóa|tuyển\s+ở\s+khoá|những\s+khóa\s+nào|những\s+khoá\s+nào|các\s+khóa\s+nào|các\s+khoá\s+nào)/ui', $normalizedQuestion))) {
+            $this->info('=== SPECIAL QUERY: COHORTS OF MAJOR ===');
+            $cohorts = $catalogService->getCohortsForMajor($major);
+            $cohortsStr = implode("\n", array_map(fn ($c) => "- {$c}", $cohorts));
+            $this->comment("Ngành {$major} có ở những khóa học sau:\n\n{$cohortsStr}");
+
+            return self::SUCCESS;
+        }
+
+        // Validation Cohort <-> Major Mismatch
+        if ($cohort && $major && ! $majorExistsInCohort) {
+            $this->warn('=== VALIDATION FAILED: MAJOR DOES NOT EXIST IN COHORT ===');
+            $majors = $catalogService->getMajorsForCohort($cohort);
+            $majorsStr = implode("\n", array_map(fn ($m) => "* {$m}", $majors));
+            $this->comment("Mình không tìm thấy ngành {$major} trong dữ liệu của {$cohort}.\n\nCác ngành hiện có:\n\n{$majorsStr}");
+
+            return self::SUCCESS;
+        }
 
         // Analyze query to calculate knowledge_type and rewritten_query for debug trace
         $analysis = $queryAnalyzer->analyze($normalizedQuestion);

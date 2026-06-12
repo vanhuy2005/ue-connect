@@ -2,6 +2,8 @@
 
 namespace Tests\Feature\AI\HcmueChatbot;
 
+use App\AI\HcmueChatbot\Chat\CohortCatalogService;
+use App\AI\HcmueChatbot\Chat\CohortMajorCatalogService;
 use App\AI\HcmueChatbot\Chat\MajorCatalogService;
 use App\AI\HcmueChatbot\Chat\QuestionNormalizerService;
 use Tests\TestCase;
@@ -13,45 +15,52 @@ class QuestionNormalizerTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
+        $mockCohortCatalog = $this->createMock(CohortCatalogService::class);
+        $mockMajorCatalog = $this->createMock(MajorCatalogService::class);
+        $mockCohortMajorCatalog = $this->createMock(CohortMajorCatalogService::class);
 
-        $mockCatalog = $this->createMock(MajorCatalogService::class);
-        $mockCatalog->method('aliases')->willReturn([
-            'công nghệ thông tin' => 'Công nghệ thông tin',
-            'cong nghe thong tin' => 'Công nghệ thông tin',
-            'cntt' => 'Công nghệ thông tin',
-            'sư phạm toán học' => 'Sư phạm Toán học',
-            'su pham toan hoc' => 'Sư phạm Toán học',
-            'sp toan' => 'Sư phạm Toán học',
-            'sptoan' => 'Sư phạm Toán học',
-            'ngôn ngữ hàn quốc' => 'Ngôn ngữ Hàn Quốc',
-            'ngon ngu han quoc' => 'Ngôn ngữ Hàn Quốc',
-            'ngôn ngữ hàn' => 'Ngôn ngữ Hàn Quốc',
-            'ngon ngu han' => 'Ngôn ngữ Hàn Quốc',
-            'tieng han' => 'Ngôn ngữ Hàn Quốc',
-            'nn han' => 'Ngôn ngữ Hàn Quốc',
-            'sư phạm tin học' => 'Sư phạm Tin học',
-            'su pham tin hoc' => 'Sư phạm Tin học',
-            'sp tin' => 'Sư phạm Tin học',
-        ]);
-
-        $mockCatalog->method('removeAccents')->willReturnCallback(function (string $str) {
-            $map = [
-                'a' => 'á|à|ả|ã|ạ|ă|ắ|ằ|ẳ|ẵ|ặ|â|ấ|ầ|ẩ|ẫ|ậ',
-                'd' => 'đ',
-                'e' => 'é|è|ẻ|ẽ|ẹ|ê|ế|ề|ể|ễ|ệ',
-                'i' => 'í|ì|ỉ|ĩ|ị',
-                'o' => 'ó|ò|ỏ|õ|ọ|ô|ố|ồ|ổ|ỗ|ộ|ơ|ớ|ờ|ở|ỡ|ợ',
-                'u' => 'ú|ù|ủ|ũ|ụ|ư|ứ|ừ|ử|ữ|ự',
-                'y' => 'ý|ỳ|ỷ|ỹ|ỵ',
-            ];
-            foreach ($map as $ascii => $pattern) {
-                $str = preg_replace("/({$pattern})/iu", $ascii, $str);
+        $mockCohortMajorCatalog->method('detectCohort')->willReturnCallback(function (string $query) {
+            if (preg_match('/k51/i', $query)) {
+                return [
+                    'canonical_cohort' => '2025 - Khóa 51',
+                    'cohort_alias' => 'k51',
+                ];
+            }
+            if (preg_match('/khóa 50/i', $query)) {
+                return [
+                    'canonical_cohort' => '2024 - Khóa 50',
+                    'cohort_alias' => 'khóa 50',
+                ];
             }
 
-            return $str;
+            return null;
         });
 
-        $this->service = new QuestionNormalizerService($mockCatalog);
+        $mockCohortMajorCatalog->method('detectMajor')->willReturnCallback(function (string $query) {
+            $queryLower = mb_strtolower($query, 'UTF-8');
+            if (str_contains($queryLower, 'cntt')) {
+                return [
+                    'canonical_major' => 'Công nghệ thông tin',
+                    'matched_alias' => 'cntt',
+                ];
+            }
+            if (str_contains($queryLower, 'sư phạm tin học') || str_contains($queryLower, 'sp tin')) {
+                return [
+                    'canonical_major' => 'Sư phạm Tin học',
+                    'matched_alias' => 'sư phạm tin học',
+                ];
+            }
+            if (str_contains($queryLower, 'công nghệ thông tin')) {
+                return [
+                    'canonical_major' => 'Công nghệ thông tin',
+                    'matched_alias' => 'công nghệ thông tin',
+                ];
+            }
+
+            return null;
+        });
+
+        $this->service = new QuestionNormalizerService($mockMajorCatalog, $mockCohortCatalog, $mockCohortMajorCatalog);
     }
 
     public function test_expands_cntt_abbreviation(): void
