@@ -3,6 +3,8 @@
 namespace App\Console\Commands;
 
 use App\Models\AdmissionCohort;
+use App\Models\AiQuestion;
+use App\Models\AiRetrievedChunk;
 use App\Models\Major;
 use App\Models\SourceDocument;
 use App\Models\TrainingProgram;
@@ -39,7 +41,7 @@ class GapReport extends Command
         if ($majorsWithoutCdt->isEmpty()) {
             $this->components->twoColumnDetail('Ngành chưa có CTĐT', '<fg=green>Không có</>');
         } else {
-            $this->warn("Tìm thấy " . $majorsWithoutCdt->count() . " ngành chưa có Chương trình đào tạo:");
+            $this->warn('Tìm thấy '.$majorsWithoutCdt->count().' ngành chưa có Chương trình đào tạo:');
             $rows = [];
             foreach ($majorsWithoutCdt as $m) {
                 $rows[] = [$m->code, $m->name, $m->faculty->name ?? 'N/A'];
@@ -50,12 +52,12 @@ class GapReport extends Command
         // 2. Curricula without Learning Outcomes
         $this->info("\nChecking Training Programs without Learning Outcomes...");
         $programs = TrainingProgram::withCount('learningOutcomes')->get();
-        $programsWithoutLo = $programs->filter(fn($p) => $p->learning_outcomes_count === 0);
+        $programsWithoutLo = $programs->filter(fn ($p) => $p->learning_outcomes_count === 0);
 
         if ($programsWithoutLo->isEmpty()) {
             $this->components->twoColumnDetail('CTĐT thiếu Chuẩn đầu ra', '<fg=green>Không có</>');
         } else {
-            $this->warn("Tìm thấy " . $programsWithoutLo->count() . " CTĐT chưa cấu hình Chuẩn đầu ra (PLO):");
+            $this->warn('Tìm thấy '.$programsWithoutLo->count().' CTĐT chưa cấu hình Chuẩn đầu ra (PLO):');
             $rows = [];
             foreach ($programsWithoutLo as $p) {
                 $rows[] = [$p->id, $p->title, $p->major->name ?? 'N/A'];
@@ -76,7 +78,7 @@ class GapReport extends Command
         if (empty($cohortGaps)) {
             $this->components->twoColumnDetail('Khóa có Sổ tay nhưng thiếu CTĐT', '<fg=green>Không có</>');
         } else {
-            $this->warn("Tìm thấy các khóa có Sổ tay sinh viên nhưng chưa có dữ liệu Chương trình đào tạo:");
+            $this->warn('Tìm thấy các khóa có Sổ tay sinh viên nhưng chưa có dữ liệu Chương trình đào tạo:');
             foreach ($cohortGaps as $cohort) {
                 $this->line(" - Khóa: $cohort");
             }
@@ -90,7 +92,7 @@ class GapReport extends Command
         if ($unknownDocs->isEmpty()) {
             $this->components->twoColumnDetail('Tài liệu có loại Unknown', '<fg=green>Không có</>');
         } else {
-            $this->warn("Tìm thấy " . $unknownDocs->count() . " tài liệu chưa phân loại (unknown):");
+            $this->warn('Tìm thấy '.$unknownDocs->count().' tài liệu chưa phân loại (unknown):');
             $rows = [];
             foreach ($unknownDocs as $doc) {
                 $rows[] = [$doc->id, $doc->title, $doc->file_path];
@@ -106,7 +108,7 @@ class GapReport extends Command
         if ($missingMetaDocs->isEmpty()) {
             $this->components->twoColumnDetail('Tài liệu thiếu khóa/năm hiệu lực', '<fg=green>Không có</>');
         } else {
-            $this->warn("Tìm thấy " . $missingMetaDocs->count() . " tài liệu thiếu khóa hoặc năm hiệu lực:");
+            $this->warn('Tìm thấy '.$missingMetaDocs->count().' tài liệu thiếu khóa hoặc năm hiệu lực:');
             $rows = [];
             foreach ($missingMetaDocs as $doc) {
                 $rows[] = [$doc->id, $doc->title, $doc->cohort ?: 'Thiếu Khóa', $doc->effective_year ?: 'Thiếu Năm'];
@@ -116,11 +118,11 @@ class GapReport extends Command
 
         // 6. Top Fallback Queries
         $this->info("\nChecking top fallback questions from users...");
-        $fallbackQueries = \App\Models\AiQuestion::join('ai_answers', 'ai_questions.id', '=', 'ai_answers.question_id')
+        $fallbackQueries = AiQuestion::join('ai_answers', 'ai_questions.id', '=', 'ai_answers.question_id')
             ->where(function ($q) {
                 $q->where('ai_answers.answer_text', 'like', '%dữ liệu hiện tại không đề cập đến%')
-                  ->orWhere('ai_answers.answer_text', 'like', '%chưa tìm thấy thông tin%')
-                  ->orWhere('ai_answers.answer_text', 'like', '%ngoài phạm vi hỗ trợ%');
+                    ->orWhere('ai_answers.answer_text', 'like', '%chưa tìm thấy thông tin%')
+                    ->orWhere('ai_answers.answer_text', 'like', '%ngoài phạm vi hỗ trợ%');
             })
             ->selectRaw('ai_questions.original_question, count(*) as count')
             ->groupBy('ai_questions.original_question')
@@ -131,7 +133,7 @@ class GapReport extends Command
         if ($fallbackQueries->isEmpty()) {
             $this->components->twoColumnDetail('Câu hỏi bị Fallback nhiều nhất', '<fg=green>Chưa có dữ liệu log</>');
         } else {
-            $this->warn("Top 5 câu hỏi của người dùng bị rơi vào câu trả lời mặc định (fallback):");
+            $this->warn('Top 5 câu hỏi của người dùng bị rơi vào câu trả lời mặc định (fallback):');
             $rows = [];
             foreach ($fallbackQueries as $fq) {
                 $rows[] = [$fq->original_question, $fq->count];
@@ -142,7 +144,7 @@ class GapReport extends Command
         // 7. Weakest Retrieval Document Types
         $this->info("\nChecking document types with weakest semantic retrieval scores...");
         try {
-            $retrievalStats = \App\Models\AiRetrievedChunk::join('document_chunks', 'ai_retrieved_chunks.document_chunk_id', '=', 'document_chunks.id')
+            $retrievalStats = AiRetrievedChunk::join('document_chunks', 'ai_retrieved_chunks.document_chunk_id', '=', 'document_chunks.id')
                 ->join('source_documents', 'document_chunks.source_document_id', '=', 'source_documents.id')
                 ->selectRaw('source_documents.document_type, avg(ai_retrieved_chunks.score) as avg_score, count(*) as count')
                 ->groupBy('source_documents.document_type')
@@ -159,7 +161,7 @@ class GapReport extends Command
                 $this->table(['Loại tài liệu', 'Điểm Cosine trung bình', 'Số lần retrieved'], $rows);
             }
         } catch (\Exception $e) {
-            $this->warn("Không thể chạy thống kê độ yếu retrieval: " . $e->getMessage());
+            $this->warn('Không thể chạy thống kê độ yếu retrieval: '.$e->getMessage());
         }
 
         // 8. Documents with processing status needs_ocr or failed
@@ -168,7 +170,7 @@ class GapReport extends Command
         if ($troubledDocs->isEmpty()) {
             $this->components->twoColumnDetail('Tài liệu lỗi/Cần OCR', '<fg=green>Không có</>');
         } else {
-            $this->warn("Tìm thấy " . $troubledDocs->count() . " tài liệu gặp sự cố hoặc cần quét OCR:");
+            $this->warn('Tìm thấy '.$troubledDocs->count().' tài liệu gặp sự cố hoặc cần quét OCR:');
             $rows = [];
             foreach ($troubledDocs as $doc) {
                 $rows[] = [$doc->id, $doc->title, $doc->status, $doc->document_type];

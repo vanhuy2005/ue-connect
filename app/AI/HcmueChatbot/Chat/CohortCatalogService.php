@@ -35,9 +35,10 @@ class CohortCatalogService
      */
     public function allCohorts(): array
     {
-        return Cache::remember(self::CACHE_KEY, self::CACHE_TTL, function () {
-            return $this->fetchFromQdrant();
-        });
+        $catalogService = app(CohortMajorCatalogService::class);
+        $catalog = $catalogService->getCatalog();
+
+        return $catalog['cohorts'] ?? $this->fallbackCohorts;
     }
 
     /**
@@ -46,6 +47,7 @@ class CohortCatalogService
     public function refresh(): array
     {
         Cache::forget(self::CACHE_KEY);
+        Cache::forget('hcmue_catalog_data');
 
         return $this->allCohorts();
     }
@@ -57,50 +59,18 @@ class CohortCatalogService
      */
     public function detectCohort(string $query): ?array
     {
-        $queryLower = mb_strtolower($query, 'UTF-8');
-        $cohorts = $this->allCohorts();
-
-        $cohortNum = null;
-        $matchedAlias = null;
-
-        // Pattern 1: match Kxx, khóa xx, khoá xx
-        if (preg_match('/(?:khóa|khoá|k|khoa)\s*(\d{2})/iu', $queryLower, $matches)) {
-            $cohortNum = (int) $matches[1];
-            $matchedAlias = $matches[0];
-        }
-        // Pattern 2: match tuyển sinh xxxx, năm tuyển sinh xxxx, khóa tuyển sinh xxxx
-        elseif (preg_match('/(?:tuyển\s+sinh|năm\s+tuyển\s+sinh|khóa\s+tuyển\s+sinh)\s*(20\d{2})/iu', $queryLower, $matches)) {
-            $year = (int) $matches[1];
-            $cohortNum = $year - 1974;
-            $matchedAlias = $matches[0];
-        }
-        // Pattern 3: standalone year 20xx
-        elseif (preg_match('/(20\d{2})/i', $queryLower, $matches)) {
-            $year = (int) $matches[1];
-            $cohortNum = $year - 1974;
-            $matchedAlias = $matches[0];
-        }
-
-        if ($cohortNum !== null) {
-            // Check mapped cohort in catalog
-            foreach ($cohorts as $cohort) {
-                // Check if cohort matches the cohort number (ends with it or contains it as a separate number)
-                if (preg_match('/\b'.$cohortNum.'\b/u', $cohort)) {
-                    return [
-                        'canonical' => $cohort,
-                        'matched_alias' => $matchedAlias,
-                        'cohort_num' => $cohortNum,
-                    ];
-                }
+        $catalogService = app(CohortMajorCatalogService::class);
+        $res = $catalogService->detectCohort($query);
+        if ($res) {
+            $canonical = $res['canonical_cohort'];
+            $cohortNum = null;
+            if (preg_match('/\b\d+\b/u', $canonical, $matches)) {
+                $cohortNum = (int) $matches[0];
             }
 
-            // Fallback to calculated if not found in catalog
-            $year = 1974 + $cohortNum;
-            $fallbackCanonical = "{$year} - Khóa {$cohortNum}";
-
             return [
-                'canonical' => $fallbackCanonical,
-                'matched_alias' => $matchedAlias,
+                'canonical' => $canonical,
+                'matched_alias' => $res['cohort_alias'] ?? $res['detected_cohort'] ?? '',
                 'cohort_num' => $cohortNum,
             ];
         }

@@ -44,6 +44,7 @@ class HcmueKnowledgeRebuild extends Command
             $confirm = $this->confirm("WARNING: This will wipe your chatbot DB and Qdrant collection '{$path}' and rebuild it. Continue?");
             if (! $confirm) {
                 $this->warn('Rebuild aborted.');
+
                 return self::SUCCESS;
             }
         }
@@ -100,7 +101,7 @@ class HcmueKnowledgeRebuild extends Command
             'K49 CNTT cần bao nhiêu tín chỉ để tốt nghiệp?',
             'K49 Công nghệ thông tin cần bao nhiêu tín chỉ?',
             'Chuẩn đầu ra ngành Công nghệ thông tin K49 là gì?',
-            'Điều kiện tốt nghiệp là gì?'
+            'Điều kiện tốt nghiệp là gì?',
         ];
 
         $allPassed = true;
@@ -108,7 +109,7 @@ class HcmueKnowledgeRebuild extends Command
         foreach ($testQueries as $query) {
             $this->newLine();
             $this->comment("Testing query: \"{$query}\"");
-            
+
             try {
                 // Call chat debug programmatically to capture and print results
                 $exitCode = $this->callSilent('hcmue:chat:debug', [
@@ -123,7 +124,7 @@ class HcmueKnowledgeRebuild extends Command
                 }
             } catch (\Exception $e) {
                 $allPassed = false;
-                $this->error("  -> Smoke test CRASHED with error: " . $e->getMessage());
+                $this->error('  -> Smoke test CRASHED with error: '.$e->getMessage());
             }
         }
 

@@ -63,7 +63,7 @@ class HcmueQdrantDiagnose extends Command
                 $this->line('     - None');
             } else {
                 foreach ($report['payload_indexes'] as $field => $schema) {
-                    $this->line("     - {$field} (" . ($schema['data_type'] ?? 'unknown') . ")");
+                    $this->line("     - {$field} (".($schema['data_type'] ?? 'unknown').')');
                 }
             }
         }

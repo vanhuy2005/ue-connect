@@ -3,7 +3,6 @@
 namespace App\AI\HcmueChatbot\Ingestion;
 
 use Illuminate\Support\Facades\File;
-use Illuminate\Support\Facades\Log;
 
 class AcademicMetadataExtractor
 {
@@ -79,16 +78,16 @@ class AcademicMetadataExtractor
         // 3. Document Type Identification (First Page Text > Filename > Path)
         if (str_contains($firstPageTextLower, 'sổ tay sinh viên') || str_contains($filenameLower, 'sổ tay sinh viên') || str_contains($filenameLower, 'sotaysinhvien') || str_contains($normalizedPath, 'Sotaysinhvien')) {
             $documentType = 'student_handbook';
-            $evidence[] = "Matched student_handbook";
+            $evidence[] = 'Matched student_handbook';
         } elseif (str_contains($firstPageTextLower, 'chương trình khung') || str_contains($firstPageTextLower, 'chương trình đào tạo') || str_contains($filenameLower, 'ctk') || str_contains($filenameLower, 'khung') || str_contains($filenameLower, 'chương trình khung') || str_contains($filenameLower, 'chuongtrinhkhung') || str_contains($normalizedPath, '/Chuongtrinhkhung/')) {
             $documentType = 'training_program';
-            $evidence[] = "Matched training_program";
+            $evidence[] = 'Matched training_program';
         } elseif (str_contains($firstPageTextLower, 'chuẩn đầu ra') || str_contains($filenameLower, 'cdr') || str_contains($filenameLower, 'cđr') || str_contains($filenameLower, 'chuẩn đầu ra') || str_contains($filenameLower, 'chuandaura') || str_contains($normalizedPath, '/Chuandaura/')) {
             $documentType = 'learning_outcome';
-            $evidence[] = "Matched learning_outcome";
+            $evidence[] = 'Matched learning_outcome';
         } elseif (str_contains($firstPageTextLower, 'quy chế') || str_contains($firstPageTextLower, 'quy định') || str_contains($firstPageTextLower, 'học vụ') || str_contains($filenameLower, 'quy chế') || str_contains($filenameLower, 'quy định') || str_contains($filenameLower, 'quyche') || str_contains($filenameLower, 'quydinh') || str_contains($filenameLower, 'học vụ')) {
             $documentType = 'academic_regulation';
-            $evidence[] = "Matched academic_regulation";
+            $evidence[] = 'Matched academic_regulation';
         }
 
         // 4. Cohort Identification (First Page Text > Path > Filename)
@@ -278,4 +277,3 @@ class AcademicMetadataExtractor
         return trim(preg_replace('/\s+/', ' ', $text));
     }
 }
-

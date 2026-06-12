@@ -12,6 +12,8 @@ use App\Jobs\IngestAcademicDocumentJob;
 use App\Models\DocumentChunk;
 use App\Models\SourceDocument;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Storage;
 
@@ -29,8 +31,8 @@ class AdminSourceDocumentController extends Controller
 
         // Calculate Data Coverage Statistics in a DB-agnostic manner
         $directoryPath = base_path('database/AI');
-        $filesInAI = \Illuminate\Support\Facades\File::exists($directoryPath)
-            ? count(\Illuminate\Support\Facades\File::allFiles($directoryPath))
+        $filesInAI = File::exists($directoryPath)
+            ? count(File::allFiles($directoryPath))
             : 0;
 
         $totalFiles = SourceDocument::count();
@@ -223,7 +225,7 @@ class AdminSourceDocumentController extends Controller
             }
 
             // Clear answer cache
-            \Illuminate\Support\Facades\Cache::flush();
+            Cache::flush();
 
             return redirect()
                 ->route('admin.source-documents.index')

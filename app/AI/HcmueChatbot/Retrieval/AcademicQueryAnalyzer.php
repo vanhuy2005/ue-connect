@@ -3,17 +3,19 @@
 namespace App\AI\HcmueChatbot\Retrieval;
 
 use App\AI\HcmueChatbot\Chat\CohortCatalogService;
+use App\AI\HcmueChatbot\Chat\CohortMajorCatalogService;
 use App\AI\HcmueChatbot\Chat\MajorCatalogService;
 
 class AcademicQueryAnalyzer
 {
     protected ?MajorCatalogService $majorCatalog = null;
 
-    protected ?CohortCatalogService $cohortCatalog = null;
+    protected ?CohortMajorCatalogService $cohortMajorCatalog = null;
 
     public function __construct(
         ?MajorCatalogService $majorCatalog = null,
-        ?CohortCatalogService $cohortCatalog = null
+        ?CohortCatalogService $cohortCatalog = null,
+        ?CohortMajorCatalogService $cohortMajorCatalog = null
     ) {
         $this->majorCatalog = $majorCatalog;
         if (! $this->majorCatalog && function_exists('app')) {
@@ -28,6 +30,15 @@ class AcademicQueryAnalyzer
         if (! $this->cohortCatalog && function_exists('app')) {
             try {
                 $this->cohortCatalog = app(CohortCatalogService::class);
+            } catch (\Exception $e) {
+                // Ignore resolution error if not in container context
+            }
+        }
+
+        $this->cohortMajorCatalog = $cohortMajorCatalog;
+        if (! $this->cohortMajorCatalog && function_exists('app')) {
+            try {
+                $this->cohortMajorCatalog = app(CohortMajorCatalogService::class);
             } catch (\Exception $e) {
                 // Ignore resolution error if not in container context
             }
@@ -56,12 +67,14 @@ class AcademicQueryAnalyzer
         $cohort = null;
         $academicYear = null;
 
-        if ($this->cohortCatalog) {
-            $cohortInfo = $this->cohortCatalog->detectCohort($query);
+        if ($this->cohortMajorCatalog) {
+            $cohortInfo = $this->cohortMajorCatalog->detectCohort($query);
             if ($cohortInfo) {
-                $cohort = $cohortInfo['canonical'];
-                $cohortNum = $cohortInfo['cohort_num'];
-                $academicYear = 1974 + $cohortNum;
+                $cohort = $cohortInfo['canonical_cohort'];
+                if (preg_match('/\b\d+\b/u', $cohort, $matches)) {
+                    $cohortNum = (int) $matches[0];
+                    $academicYear = 1974 + $cohortNum;
+                }
             }
         }
 
@@ -142,10 +155,10 @@ class AcademicQueryAnalyzer
             }
         }
 
-        if ($this->majorCatalog) {
-            $detected = $this->majorCatalog->detectMajor($query);
+        if ($this->cohortMajorCatalog) {
+            $detected = $this->cohortMajorCatalog->detectMajor($query);
             if ($detected) {
-                $major = $detected['canonical'];
+                $major = $detected['canonical_major'];
             }
         } else {
             $majors = [

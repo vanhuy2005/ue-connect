@@ -31,8 +31,11 @@ class HcmueChatService
         protected AnswerComposerService $composer,
         protected CitationVerifierService $citationVerifier,
         protected HallucinationGuardService $guard,
-        protected ConversationContextService $contextService
-    ) {}
+        protected ConversationContextService $contextService,
+        protected ?CohortMajorCatalogService $cohortMajorCatalog = null
+    ) {
+        $this->cohortMajorCatalog = $cohortMajorCatalog ?? app(CohortMajorCatalogService::class);
+    }
 
     /**
      * Process a chat message and return a structured response.
@@ -134,6 +137,45 @@ class HcmueChatService
             'confidence' => $routerResult['confidence'],
             'created_at' => now(),
         ]);
+
+        // === Step 3.5: Handle special queries and validation ===
+        $cohort = $detectedTerms['canonical_cohort'] ?? $detectedTerms['cohort'] ?? null;
+        $major = $detectedTerms['canonical_major'] ?? $detectedTerms['major'] ?? null;
+
+        // Special Query: Majors for a Cohort
+        if ($cohort && ! $major && $this->isQueryAskingForMajors($normalizedQuestion)) {
+            $majors = $this->cohortMajorCatalog->getMajorsForCohort($cohort);
+            $majorsStr = implode("\n", array_map(fn ($m) => "* {$m}", $majors));
+            $answerText = "{$cohort} có những ngành học sau:\n\n{$majorsStr}";
+
+            $this->logAnswer($aiQuestion->id, $answerText, 0);
+
+            return $this->buildResponse($answerText, [], 'none', 'general', false, $aiQuestion->id, null, $extraDebug);
+        }
+
+        // Special Query: Cohorts for a Major
+        if ($major && ! $cohort && $this->isQueryAskingForCohorts($normalizedQuestion)) {
+            $cohorts = $this->cohortMajorCatalog->getCohortsForMajor($major);
+            $cohortsStr = implode("\n", array_map(fn ($c) => "* {$c}", $cohorts));
+            $answerText = "Ngành {$major} có ở những khóa học sau:\n\n{$cohortsStr}";
+
+            $this->logAnswer($aiQuestion->id, $answerText, 0);
+
+            return $this->buildResponse($answerText, [], 'none', 'general', false, $aiQuestion->id, null, $extraDebug);
+        }
+
+        // Cohort <-> Major Validation
+        if ($cohort && $major) {
+            if (! $this->cohortMajorCatalog->hasMajorInCohort($cohort, $major)) {
+                $majors = $this->cohortMajorCatalog->getMajorsForCohort($cohort);
+                $majorsStr = implode("\n", array_map(fn ($m) => "* {$m}", $majors));
+                $answerText = "Mình không tìm thấy ngành {$major} trong dữ liệu của {$cohort}.\n\nCác ngành hiện có:\n\n{$majorsStr}";
+
+                $this->logAnswer($aiQuestion->id, $answerText, 0);
+
+                return $this->buildResponse($answerText, [], 'none', 'unsupported', false, $aiQuestion->id, null, $extraDebug);
+            }
+        }
 
         // === Step 4: Handle special routes immediately ===
         if ($source === 'none' && $intent === 'clarification') {
@@ -422,5 +464,21 @@ class HcmueChatService
             'question_id' => $questionId,
             'answer_id' => $answerId,
         ], $extraDebug);
+    }
+
+    /**
+     * Helper to detect if a query is asking for majors of a cohort.
+     */
+    protected function isQueryAskingForMajors(string $query): bool
+    {
+        return (bool) preg_match('/(ngành\s+nào|ngành\s+gì|mở\s+ngành|tuyển\s+sinh\s+ngành|có\s+những\s+ngành|có\s+các\s+ngành|danh\s+sách\s+ngành|gồm\s+những\s+ngành|gồm\s+các\s+ngành)/ui', $query);
+    }
+
+    /**
+     * Helper to detect if a query is asking for cohorts of a major.
+     */
+    protected function isQueryAskingForCohorts(string $query): bool
+    {
+        return (bool) preg_match('/(khóa\s+nào|khoá\s+nào|năm\s+nào|mở\s+khóa|mở\s+khoá|có\s+ở\s+khóa|có\s+ở\s+khoá|tuyển\s+ở\s+khóa|tuyển\s+ở\s+khoá|những\s+khóa\s+nào|những\s+khoá\s+nào|các\s+khóa\s+nào|các\s+khoá\s+nào)/ui', $query);
     }
 }

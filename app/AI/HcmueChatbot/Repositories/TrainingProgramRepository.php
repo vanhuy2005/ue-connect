@@ -16,9 +16,35 @@ class TrainingProgramRepository
     public function findProgramByCohortAndMajor(string $cohortName, string $majorSearch): ?TrainingProgram
     {
         // 1. Find the cohort
-        $cohort = AdmissionCohort::where('cohort_name', 'like', "%{$cohortName}%")
-            ->orWhere('normalized_name', 'like', "%{$cohortName}%")
-            ->first();
+        $cohort = null;
+
+        $year = null;
+        if (preg_match('/\b(20\d{2})\b/u', $cohortName, $yrMatches)) {
+            $year = (int) $yrMatches[1];
+        }
+
+        $cleanCohortName = $year ? str_replace((string) $year, '', $cohortName) : $cohortName;
+
+        $cohortNum = null;
+        if (preg_match('/(\d{2})/u', $cleanCohortName, $numMatches)) {
+            $cohortNum = $numMatches[1];
+        }
+
+        if ($cohortNum) {
+            $cohort = AdmissionCohort::where('cohort_name', 'like', "%{$cohortNum}%")
+                ->orWhere('normalized_name', 'like', "%{$cohortNum}%")
+                ->first();
+        }
+
+        if (! $cohort && $year) {
+            $cohort = AdmissionCohort::where('year', $year)->first();
+        }
+
+        if (! $cohort) {
+            $cohort = AdmissionCohort::where('cohort_name', 'like', "%{$cohortName}%")
+                ->orWhere('normalized_name', 'like', "%{$cohortName}%")
+                ->first();
+        }
 
         if (! $cohort) {
             return null;
