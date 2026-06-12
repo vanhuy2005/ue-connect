@@ -18,6 +18,7 @@
     <div x-data="{
         platform: 'unknown',
         isStandalone: window.matchMedia('(display-mode: standalone)').matches,
+        canInstallDirectly: false,
         init() {
             const ua = navigator.userAgent || navigator.vendor || window.opera;
             if (/android/i.test(ua)) {
@@ -27,6 +28,15 @@
             } else {
                 this.platform = 'desktop';
             }
+            
+            // Reactively watch store PWA deferredPrompt
+            this.$watch('$store.pwa.deferredPrompt', (value) => {
+                this.canInstallDirectly = !!value;
+            });
+            if (this.$store && this.$store.pwa && this.$store.pwa.deferredPrompt) {
+                this.canInstallDirectly = true;
+            }
+
             if(window.trackPwaEvent) {
                 window.trackPwaEvent('pwa_install_page_viewed', { source: new URLSearchParams(window.location.search).get('source') || 'direct' });
             }
@@ -51,7 +61,7 @@
         </template>
 
         {{-- If Android or browser supporting beforeinstallprompt --}}
-        <template x-if="!isStandalone && $store.pwa && $store.pwa.deferredPrompt">
+        <template x-if="!isStandalone && canInstallDirectly">
             <div class="w-full">
                 <button 
                     @click="$store.pwa.install()" 
@@ -64,7 +74,7 @@
         </template>
 
         {{-- If iOS (Safari) and not standalone --}}
-        <template x-if="!isStandalone && (!$store.pwa || !$store.pwa.deferredPrompt) && platform === 'ios'">
+        <template x-if="!isStandalone && !canInstallDirectly && platform === 'ios'">
             <div class="w-full bg-slate-50 border border-slate-200 p-5 rounded-2xl text-left shadow-sm">
                 <h3 class="font-bold text-slate-900 mb-3 flex items-center gap-2">
                     <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" viewBox="0 0 384 512" fill="currentColor"><path d="M318.7 268.7c-.2-36.7 16.4-64.4 50-84.8-18.8-26.9-47.2-41.7-84.7-44.6-35.5-2.8-74.3 20.7-88.5 20.7-15 0-49.4-19.7-76.4-19.7C63.3 141.2 24 184.5 15.6 235.9c-8.1 48.8 33.6 130.6 60.1 169.6 26.4 38.6 49.6 107.4 87.2 107.4 39.5 0 54.4-23.7 96-23.7 41.5 0 56.4 23.7 96.1 23.7 37.4 0 63.8-69.7 89.2-109.1 23.6-39.6 33-82.6 33.3-88.2-1.3-.5-64.7-25-64.4-96.2zM213.7 87.4c20.2-24.5 32.7-56.1 29-87.4-24.7 1.5-54 16.6-73.4 39.2-20.1 23.5-31.5 56-27.4 86.8 25.8 2 52.8-13.6 71.8-38.6z"/></svg>
@@ -92,7 +102,7 @@
         </template>
 
         {{-- Fallback instruction for other devices without direct install prompt --}}
-        <template x-if="!isStandalone && (!$store.pwa || !$store.pwa.deferredPrompt) && platform !== 'ios'">
+        <template x-if="!isStandalone && !canInstallDirectly && platform !== 'ios'">
             <div class="w-full bg-slate-50 border border-slate-200 p-5 rounded-2xl text-left shadow-sm">
                 <h3 class="font-bold text-slate-900 mb-2">Cách cài đặt</h3>
                 <p class="text-sm text-slate-600 leading-relaxed mb-3">Trình duyệt của bạn có thể không hỗ trợ nút cài đặt nhanh. Bạn có thể cài đặt thủ công bằng cách:</p>
