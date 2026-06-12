@@ -25,13 +25,27 @@ class QueryRouterService
         // Fast-path rule-based routing for clear-cut cases (avoids LLM latency)
         $fastRoute = $this->fastPathRoute($normalizedQuestion, $detectedTerms);
         if ($fastRoute !== null) {
-            Log::debug('QueryRouter: fast-path route applied.', ['source' => $fastRoute['source']]);
-
-            return $fastRoute;
+            $route = $fastRoute;
+        } else {
+            // LLM-based routing for ambiguous cases
+            $route = $this->llmRoute($normalizedQuestion);
         }
 
-        // LLM-based routing for ambiguous cases
-        return $this->llmRoute($normalizedQuestion);
+        // Apply clarification rule post-check: only clarify if major == null AND semester == null AND course_name == null
+        if ($route['intent'] === 'clarification') {
+            $hasMajor = ! empty($detectedTerms['major']);
+            $hasSemester = ! empty($detectedTerms['semester']);
+            $hasCourseName = ! empty($detectedTerms['course_name']);
+
+            if ($hasMajor || $hasSemester || $hasCourseName) {
+                $route['intent'] = 'curriculum_course_lookup';
+                $route['source'] = 'structured_db';
+                $route['missing_required_fields'] = [];
+                $route['reason'] = 'Bỏ qua yêu cầu làm rõ theo luật: Đã phát hiện thông tin ngành, học kỳ hoặc tên môn học.';
+            }
+        }
+
+        return $route;
     }
 
     /**
@@ -125,16 +139,22 @@ class QueryRouterService
         }
 
         if ($isCreditQuery) {
-            if (empty($detectedTerms['cohort']) || empty($detectedTerms['major'])) {
-                $missing = [];
-                if (empty($detectedTerms['cohort'])) {
-                    $missing[] = 'cohort';
-                }
-                if (empty($detectedTerms['major'])) {
-                    $missing[] = 'major';
-                }
+            $hasMajor = ! empty($detectedTerms['major']);
+            $hasSemester = ! empty($detectedTerms['semester']);
+            $hasCourseName = ! empty($detectedTerms['course_name']);
 
-                return $this->buildRoute('clarification', 'none', 0.90, $detectedTerms, $missing, 'Thiếu thông tin khóa hoặc ngành để tra cứu tín chỉ CTĐT.');
+            if (empty($detectedTerms['cohort']) || empty($detectedTerms['major'])) {
+                if (! $hasMajor && ! $hasSemester && ! $hasCourseName) {
+                    $missing = [];
+                    if (empty($detectedTerms['cohort'])) {
+                        $missing[] = 'cohort';
+                    }
+                    if (empty($detectedTerms['major'])) {
+                        $missing[] = 'major';
+                    }
+
+                    return $this->buildRoute('clarification', 'none', 0.90, $detectedTerms, $missing, 'Thiếu thông tin khóa hoặc ngành để tra cứu tín chỉ CTĐT.');
+                }
             }
 
             return $this->buildRoute('curriculum_course_lookup', 'structured_db', 0.95, $detectedTerms, [], 'Câu hỏi về tổng tín chỉ CTĐT, định tuyến trực tiếp đến structured DB.');
@@ -160,6 +180,19 @@ class QueryRouterService
         }
 
         // Missing cohort/major for structured queries
+        $curriculumSignals = [
+            'môn', 'học phần', 'subject', 'course', 'mã học phần', 'tiên quyết',
+            'song hành', 'nâng cao', 'cơ sở ngành', 'chuyên ngành', 'chương trình khung',
+            'ctdt', 'ctkh', 'học kỳ', 'học kì', 'semester', 'kì', 'hk',
+        ];
+        $hasCurriculumSignal = false;
+        foreach ($curriculumSignals as $sig) {
+            if (str_contains($lower, $sig)) {
+                $hasCurriculumSignal = true;
+                break;
+            }
+        }
+
         $structuredKeywords = [
             'tín chỉ', 'học phần', 'môn học', 'chương trình đào tạo',
             'ngành', 'học kỳ', 'mã môn', 'danh sách môn', 'môn bắt buộc', 'môn tự chọn',
@@ -172,17 +205,23 @@ class QueryRouterService
             }
         }
 
-        if ($isStructuredQuestion) {
-            if (empty($detectedTerms['cohort']) || empty($detectedTerms['major'])) {
-                $missing = [];
-                if (empty($detectedTerms['cohort'])) {
-                    $missing[] = 'cohort';
-                }
-                if (empty($detectedTerms['major'])) {
-                    $missing[] = 'major';
-                }
+        if ($isStructuredQuestion || $hasCurriculumSignal) {
+            $hasMajor = ! empty($detectedTerms['major']);
+            $hasSemester = ! empty($detectedTerms['semester']);
+            $hasCourseName = ! empty($detectedTerms['course_name']);
 
-                return $this->buildRoute('clarification', 'none', 0.90, $detectedTerms, $missing, 'Thiếu thông tin khóa hoặc ngành để tra cứu CTĐT.');
+            if (empty($detectedTerms['cohort']) || empty($detectedTerms['major'])) {
+                if (! $hasMajor && ! $hasSemester && ! $hasCourseName) {
+                    $missing = [];
+                    if (empty($detectedTerms['cohort'])) {
+                        $missing[] = 'cohort';
+                    }
+                    if (empty($detectedTerms['major'])) {
+                        $missing[] = 'major';
+                    }
+
+                    return $this->buildRoute('clarification', 'none', 0.90, $detectedTerms, $missing, 'Thiếu thông tin khóa hoặc ngành để tra cứu CTĐT.');
+                }
             }
 
             return $this->buildRoute('curriculum_course_lookup', 'structured_db', 0.88, $detectedTerms, [], 'Câu hỏi về CTĐT, dùng structured DB.');

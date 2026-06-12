@@ -128,6 +128,26 @@ class QuestionNormalizerService
         // Detect major using MajorCatalogService
         [$major, $matchedAlias, $detectedMajorName] = $this->detectMajor($normalized, $original);
 
+        // Detect semester
+        $semester = null;
+        if (preg_match_all('/(?:học\s+kỳ|học\s+kì|kì|hk)\s*(\d+)/ui', $normalized, $matches)) {
+            $semVal = (int) end($matches[1]);
+            if ($semVal >= 1 && $semVal <= 10) {
+                $semester = $semVal;
+            }
+        } elseif (preg_match_all('/(?:học\s+kỳ|học\s+kì|kì|hk)\s*(\d+)/ui', $original, $matches)) {
+            $semVal = (int) end($matches[1]);
+            if ($semVal >= 1 && $semVal <= 10) {
+                $semester = $semVal;
+            }
+        }
+
+        // Detect course name
+        $courseName = $this->detectCourseName($normalized, $major, $cohort, $semester);
+        if (! $courseName) {
+            $courseName = $this->detectCourseName($original, $major, $cohort, $semester);
+        }
+
         // Extract faculty keywords
         $facultyKeywords = [
             'Công nghệ thông tin', 'Toán học', 'Vật lý', 'Hóa học',
@@ -179,7 +199,70 @@ class QuestionNormalizerService
             'faculty' => $faculty,
             'course' => $course,
             'policy_topic' => $policyTopic,
+            'semester' => $semester,
+            'course_name' => $courseName,
         ];
+    }
+
+    /**
+     * Detect course name from raw query by removing cohort, major, semester and common prefix/suffix words.
+     */
+    private function detectCourseName(string $query, ?string $major, ?string $cohort, ?int $semester): ?string
+    {
+        $candidate = null;
+
+        // 1. Suffix-based matching (e.g., "là gì")
+        if (preg_match('/^(.+?)\s+(?:là gì|là môn gì|là học phần gì|là học phần nào|là môn nào|như thế nào|nhu the nao|la gi)/ui', $query, $matches)) {
+            $candidate = trim($matches[1]);
+        }
+        // 2. Prefix-based matching (excluding suffix-like qualifiers like "môn gì", "môn nào")
+        elseif (preg_match('/(?:môn học|học phần|môn|subject|course|mã học phần)\s+(?!gì\b|nào\b)([^,\.\?]+)/ui', $query, $matches)) {
+            $candidate = trim($matches[1]);
+        }
+
+        if (! $candidate) {
+            return null;
+        }
+
+        // Clean up candidate: remove major, cohort, semester terms
+        $cleaned = $candidate;
+
+        if ($major) {
+            $majorPattern = '/(?:ngành|nganh)?\s*'.preg_quote($major, '/').'/ui';
+            $cleaned = preg_replace($majorPattern, '', $cleaned);
+
+            // Remove common major aliases
+            $cleaned = preg_replace('/(?:ngành|nganh)?\s*(cntt|it|gdth|gdmn|sp toán|sp lý|sp hóa|sp anh|sp văn)/ui', '', $cleaned);
+        }
+
+        if ($cohort) {
+            $cohortPattern = '/(?:khóa|khoá|k)?\s*'.preg_quote($cohort, '/').'/ui';
+            $cleaned = preg_replace($cohortPattern, '', $cleaned);
+            $cleaned = preg_replace('/\bk\d{2}\b/ui', '', $cleaned);
+        }
+
+        // Remove semester terms
+        $cleaned = preg_replace('/(?:học\s+kỳ|học\s+kì|kì|hk)\s*\d+/ui', '', $cleaned);
+
+        // Remove conjunctions and action verbs at boundaries (trim first to align boundary anchors)
+        $cleaned = trim($cleaned);
+        $cleaned = preg_replace('/^(?:môn học|học phần|môn|subject|course|mã học phần|của|ở|học|cho|xem|về|trong|tại|với|như|các|những|để)\s+/ui', '', $cleaned);
+        $cleaned = preg_replace('/\s+(?:môn học|học phần|môn|subject|course|mã học phần|của|ở|học|cho|xem|về|trong|tại|với|như|các|những|để)$/ui', '', $cleaned);
+
+        $cleaned = trim($cleaned, " \t\n\r\0\x0B,.-?_");
+
+        if (empty($cleaned)) {
+            return null;
+        }
+
+        // Skip if too short or matches common stop words
+        $lowerClean = mb_strtolower($cleaned, 'UTF-8');
+        $ignored = ['học', 'thi', 'xem', 'các', 'những', 'danh sách', 'thông tin', 'môn', 'học phần', 'nào', 'gì'];
+        if (mb_strlen($cleaned, 'UTF-8') <= 2 || in_array($lowerClean, $ignored, true)) {
+            return null;
+        }
+
+        return $cleaned;
     }
 
     /**
