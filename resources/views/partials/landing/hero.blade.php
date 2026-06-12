@@ -3,26 +3,14 @@
 {{-- ============================================================ --}}
 <section id="hero" aria-labelledby="hero-heading" class="relative overflow-hidden bg-gradient-to-br from-ue-brand to-[#0A2B49]">
 
-    {{-- Background texture --}}
-    <div class="absolute inset-0 opacity-[0.06] pointer-events-none"
-         style="background-image: radial-gradient(circle at 1px 1px, #fff 1px, transparent 0); background-size: 28px 28px;"
-         aria-hidden="true">
-    </div>
+
 
     <div class="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 lg:py-20">
         <div class="lg:grid lg:grid-cols-2 lg:gap-16 lg:items-center">
 
             {{-- Left: Copy --}}
             <div class="mb-12 lg:mb-0">
-                {{-- Trust chips --}}
-                <div class="flex flex-wrap gap-2 mb-6" aria-label="Điểm nổi bật">
-                    @foreach(['Chỉ dành cho HCMUE', 'Xác thực sinh viên', 'An toàn & đáng tin cậy'] as $chip)
-                        <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-white/10 text-white/90 text-xs font-medium border border-white/15">
-                            <x-ui.icon name="check-circle" size="xs" class="text-white/70" />
-                            {{ $chip }}
-                        </span>
-                    @endforeach
-                </div>
+
 
                 {{-- Headline --}}
                 <h1 id="hero-heading" class="text-3xl sm:text-4xl lg:text-5xl font-bold text-white leading-tight mb-6">
