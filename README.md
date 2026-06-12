@@ -83,6 +83,8 @@ UEConnect **không phải dating app**, **không phải Facebook clone**, và **
 | Cloudinary + R2 media pipeline | ✅ Configured |
 | Dev scripts | ✅ `dev` and `dev:laragon` configured |
 | Product / Design / Architecture / DB / API docs | ✅ Available |
+| PWA Installation & App Shell | ✅ Implemented |
+| Mobile Viewport Optimization | ✅ Implemented |
 | Production feature implementation | 🔄 In progress |
 
 > Local environment must still be verified on each developer machine because PHP PATH, SQL Server drivers, ODBC, `.env`, queue and Reverb are local-machine dependent.
