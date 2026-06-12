@@ -57,6 +57,7 @@ use Illuminate\Validation\ValidationException;
 
 // 1. Public & Guest Routes
 Route::view('/', 'welcome')->name('landing');
+Route::view('/install', 'pwa.install')->name('pwa.install');
 
 Route::get('/render-logs', function () {
     $logPath = storage_path('logs/laravel.log');

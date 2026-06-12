@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <title>Bạn đang ngoại tuyến — UEConnect</title>
+    <meta name="theme-color" content="#124874">
+    <link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Be Vietnam Pro', sans-serif;
+            margin: 0;
+            padding: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            background-color: #f8fafc;
+            color: #0f172a;
+            text-align: center;
+        }
+        .container {
+            padding: 2rem;
+            max-width: 400px;
+        }
+        svg {
+            width: 80px;
+            height: 80px;
+            color: #64748b;
+            margin-bottom: 1.5rem;
+        }
+        h1 {
+            font-size: 1.5rem;
+            font-weight: 700;
+            margin-bottom: 0.5rem;
+            color: #0f172a;
+        }
+        p {
+            color: #475569;
+            margin-bottom: 2rem;
+            line-height: 1.5;
+        }
+        button {
+            background-color: #124874;
+            color: white;
+            border: none;
+            padding: 0.75rem 1.5rem;
+            border-radius: 0.5rem;
+            font-weight: 600;
+            font-family: inherit;
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+        button:hover {
+            background-color: #0d3656;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M8.288 15.038a5.25 5.25 0 0 1 7.424 0M5.106 11.856c3.807-3.808 9.98-3.808 13.788 0M1.924 8.674c5.565-5.565 14.587-5.565 20.152 0M12.53 18.22l-.53.53-.53-.53a.75.75 0 0 1 1.06 0Z" />
+            <path stroke-linecap="round" stroke-linejoin="round" d="m3 3 18 18" />
+        </svg>
+        
+        <h1>Bạn đang ngoại tuyến</h1>
+        <p>Có vẻ như thiết bị của bạn đã mất kết nối Internet. Một số tính năng của UEConnect yêu cầu kết nối mạng để hoạt động.</p>
+        <button onclick="window.location.reload()">Thử lại</button>
+    </div>
+</body>
+</html>
