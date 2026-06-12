@@ -56,6 +56,7 @@ Trang Bảng Tin Chính là trang chủ cốt lõi của UEConnect, nơi sinh vi
 
 ### 6.3 Mobile / PWA Layout
 - Bố cục 1 cột cuộn dọc tràn viền nhẹ.
+- Ẩn hoàn toàn tiêu đề "Bảng tin" (Feed Header) ở góc trên để tiết kiệm tối đa diện tích hiển thị dọc cho trải nghiệm cuộn mượt mà.
 - Khoảng cách lề trái phải của bài đăng tối ưu hóa còn 12px để nhường diện tích hiển thị tối đa cho nội dung văn bản và hình ảnh đính kèm.
 - Các nút tương tác (Thích, Bình luận, Chia sẻ, Lưu) được thiết kế phình to nhẹ (`touch-target 44px`) và xếp hàng ngang mượt mà dưới bài viết.
 
