@@ -639,9 +639,9 @@ new class extends Component {
         </div>
 
         {{-- Right Column (1/3): Audit / History & Review Form Drawer --}}
-        <div class="space-y-6">
+        <div class="space-y-6 lg:sticky lg:top-6 self-start lg:max-h-[calc(100vh-3rem)] overflow-y-auto custom-scrollbar pr-1">
             {{-- Review Form Drawer --}}
-            <x-ui.card variant="elevated" class="sticky top-6">
+            <x-ui.card variant="elevated">
                 <h2 class="text-base font-bold text-ue-text border-b border-ue-border pb-3 mb-4">Xử lý hồ sơ xác thực</h2>
 
                 <form wire:submit.prevent="processReview" class="space-y-4">
