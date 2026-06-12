@@ -13,6 +13,7 @@
     <link rel="apple-touch-icon" href="{{ asset('icons/apple-touch-icon.png') }}">
 
     @vite(['resources/css/app.css', 'resources/js/app.js'])
+    @livewireStyles
 </head>
 <body class="min-h-[100dvh] font-sans antialiased text-slate-900 bg-white flex flex-col items-center justify-center p-6 sm:p-12">
     <div x-data="{
@@ -174,5 +175,6 @@
             </a>
         </div>
     </div>
+    @livewireScripts
 </body>
 </html>
