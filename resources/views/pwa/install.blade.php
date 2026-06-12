@@ -19,6 +19,7 @@
         platform: 'unknown',
         isStandalone: window.matchMedia('(display-mode: standalone)').matches,
         canInstallDirectly: false,
+        deferredPrompt: null,
         init() {
             const ua = navigator.userAgent || navigator.vendor || window.opera;
             if (/android/i.test(ua)) {
@@ -29,16 +30,37 @@
                 this.platform = 'desktop';
             }
             
-            // Reactively watch store PWA deferredPrompt
-            this.$watch('$store.pwa.deferredPrompt', (value) => {
-                this.canInstallDirectly = !!value;
-            });
-            if (this.$store && this.$store.pwa && this.$store.pwa.deferredPrompt) {
+            // Listen to beforeinstallprompt directly
+            window.addEventListener('beforeinstallprompt', (e) => {
+                e.preventDefault();
+                this.deferredPrompt = e;
                 this.canInstallDirectly = true;
-            }
+            });
+
+            // Fallback: check if Alpine store has it (safely using optional chaining in window context)
+            setTimeout(() => {
+                if (window.Alpine && Alpine.store('pwa') && Alpine.store('pwa').deferredPrompt) {
+                    this.deferredPrompt = Alpine.store('pwa').deferredPrompt;
+                    this.canInstallDirectly = true;
+                }
+            }, 100);
 
             if(window.trackPwaEvent) {
                 window.trackPwaEvent('pwa_install_page_viewed', { source: new URLSearchParams(window.location.search).get('source') || 'direct' });
+            }
+        },
+        install() {
+            if (this.deferredPrompt) {
+                this.deferredPrompt.prompt();
+                this.deferredPrompt.userChoice.then((choice) => {
+                    if (choice.outcome === 'accepted') {
+                        if (window.trackPwaEvent) window.trackPwaEvent('pwa_install_accepted');
+                    } else {
+                        if (window.trackPwaEvent) window.trackPwaEvent('pwa_install_dismissed');
+                    }
+                    this.deferredPrompt = null;
+                    this.canInstallDirectly = false;
+                });
             }
         }
     }" class="w-full max-w-md flex flex-col items-center text-center">
@@ -64,7 +86,7 @@
         <template x-if="!isStandalone && canInstallDirectly">
             <div class="w-full">
                 <button 
-                    @click="$store.pwa.install()" 
+                    @click="install()" 
                     class="w-full flex items-center justify-center gap-2 bg-ue-brand hover:bg-ue-brand-dark text-white font-bold py-3.5 px-6 rounded-xl shadow-lg shadow-ue-brand/30 transition-all transform hover:scale-[1.02] active:scale-[0.98]"
                 >
                     <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" /></svg>
