@@ -500,8 +500,9 @@ Route::middleware(['auth', 'active.account', 'verified.identity'])->group(functi
         return back()->with('status', 'Trạng thái mentor đã được cập nhật.');
     })->name('mentor.availability');
 
-    Route::view('app/connections', 'app.connections')
-        ->name('connections.index');
+    Route::get('app/connections', function () {
+        return redirect()->route('discovery.index', request()->query());
+    })->name('connections.index');
 
     Route::view('app/notifications', 'app.notifications')
         ->name('notifications.index');

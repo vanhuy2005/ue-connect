@@ -1319,7 +1319,7 @@ new #[Layout('layouts.app')] class extends Component
             <div data-feed-stream class="feed-stream flex flex-col lg:border-0 lg:bg-transparent lg:shadow-none">
             {{-- Inline Composer --}}
             @if ($currentUser->isActive())
-                <div class="px-4 lg:px-6 py-3 lg:py-5 shrink-0">
+                <div class="px-3 lg:px-4 py-3 lg:py-5 shrink-0">
                     <div class="ue-composer">
                         {{-- Left Column: Avatar --}}
                         <div class="flex justify-start">
