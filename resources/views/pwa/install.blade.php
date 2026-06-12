@@ -19,7 +19,14 @@
         platform: 'unknown',
         isStandalone: window.matchMedia('(display-mode: standalone)').matches,
         init() {
-            this.platform = window.trackPwaEvent ? getPlatform() : 'unknown';
+            const ua = navigator.userAgent || navigator.vendor || window.opera;
+            if (/android/i.test(ua)) {
+                this.platform = 'android';
+            } else if (/iPad|iPhone|iPod/.test(ua) && !window.MSStream) {
+                this.platform = 'ios';
+            } else {
+                this.platform = 'desktop';
+            }
             if(window.trackPwaEvent) {
                 window.trackPwaEvent('pwa_install_page_viewed', { source: new URLSearchParams(window.location.search).get('source') || 'direct' });
             }
