@@ -75,8 +75,19 @@ class RagRetrievalService
 
             $this->lastRewrittenQuery = $semanticQuery;
 
+            $isCurriculumLookupWithoutCohort = ($analysis['intent'] ?? '') === 'curriculum_course_lookup' && empty($cohortVal);
+            $strippedQuery = $semanticQuery;
+            if ($isCurriculumLookupWithoutCohort) {
+                $strippedQuery = preg_replace('/(?:học\s+kỳ|học\s+kì|kì|hk)\s*\d+/ui', '', $strippedQuery);
+                $strippedQuery = trim($strippedQuery);
+            }
+
             // 2. Generate 3-5 query variations for multi-query search
             $variations = $this->generateQueryVariations($semanticQuery);
+            if ($isCurriculumLookupWithoutCohort && $strippedQuery !== $semanticQuery) {
+                $strippedVariations = $this->generateQueryVariations($strippedQuery);
+                $variations = array_values(array_unique(array_merge($variations, $strippedVariations)));
+            }
 
             // For total_credits or student_policy, prepend the canonical/rewritten phrase as the primary search variation
             if (($isTotalCreditsIntent || ($isStudentPolicyIntent && $semanticQuery !== $query)) && ! in_array($semanticQuery, $variations, true)) {
@@ -260,45 +271,80 @@ class RagRetrievalService
                 }
 
                 // Build the 4 fallback attempts (Stop at Attempt 4)
-                $attempts = [
-                    [
-                        'name' => 'cohort_and_major',
-                        'filters' => [
-                            'knowledge_type' => $knowledgeType,
-                            'khoa_hoc' => $cohortVal ? $this->normalizeCohortSpelling($cohortVal) : null,
-                            'nganh' => $isStudentPolicyIntent ? null : $majorVal,
-                            'loai_tai_lieu' => $loaiTaiLieu,
+                if ($isCurriculumLookupWithoutCohort) {
+                    $attempts = [
+                        [
+                            'name' => 'major_and_semester',
+                            'filters' => [
+                                'knowledge_type' => $knowledgeType,
+                                'nganh' => $majorVal,
+                                'loai_tai_lieu' => $loaiTaiLieu,
+                            ],
                         ],
-                    ],
-                    [
-                        'name' => 'cohort_only',
-                        'filters' => [
-                            'knowledge_type' => $knowledgeType,
-                            'khoa_hoc' => $cohortVal ? $this->normalizeCohortSpelling($cohortVal) : null,
-                            'loai_tai_lieu' => $loaiTaiLieu,
+                        [
+                            'name' => 'major_only',
+                            'filters' => [
+                                'knowledge_type' => $knowledgeType,
+                                'nganh' => $majorVal,
+                                'loai_tai_lieu' => $loaiTaiLieu,
+                            ],
                         ],
-                    ],
-                    [
-                        'name' => 'major_only',
-                        'filters' => [
-                            'knowledge_type' => $knowledgeType,
-                            'nganh' => $isStudentPolicyIntent ? null : $majorVal,
-                            'loai_tai_lieu' => $loaiTaiLieu,
+                        [
+                            'name' => 'curriculum_documents',
+                            'filters' => [
+                                'knowledge_type' => $knowledgeType,
+                                'loai_tai_lieu' => $loaiTaiLieu,
+                            ],
                         ],
-                    ],
-                    [
-                        'name' => 'knowledge_type_only',
-                        'filters' => [
-                            'knowledge_type' => $knowledgeType,
+                    ];
+                } else {
+                    $attempts = [
+                        [
+                            'name' => 'cohort_and_major',
+                            'filters' => [
+                                'knowledge_type' => $knowledgeType,
+                                'khoa_hoc' => $cohortVal ? $this->normalizeCohortSpelling($cohortVal) : null,
+                                'nganh' => $isStudentPolicyIntent ? null : $majorVal,
+                                'loai_tai_lieu' => $loaiTaiLieu,
+                            ],
                         ],
-                    ],
-                ];
+                        [
+                            'name' => 'cohort_only',
+                            'filters' => [
+                                'knowledge_type' => $knowledgeType,
+                                'khoa_hoc' => $cohortVal ? $this->normalizeCohortSpelling($cohortVal) : null,
+                                'loai_tai_lieu' => $loaiTaiLieu,
+                            ],
+                        ],
+                        [
+                            'name' => 'major_only',
+                            'filters' => [
+                                'knowledge_type' => $knowledgeType,
+                                'nganh' => $isStudentPolicyIntent ? null : $majorVal,
+                                'loai_tai_lieu' => $loaiTaiLieu,
+                            ],
+                        ],
+                        [
+                            'name' => 'knowledge_type_only',
+                            'filters' => [
+                                'knowledge_type' => $knowledgeType,
+                            ],
+                        ],
+                    ];
+                }
 
                 foreach ($attempts as $attempt) {
                     $currentFilters = array_filter($attempt['filters'], fn ($v) => $v !== null && $v !== '');
 
                     $attemptResults = [];
                     foreach ($variations as $idx => $variation) {
+                        // Skip variations containing semester terms for major_only / curriculum_documents fallback attempts
+                        if ($isCurriculumLookupWithoutCohort && in_array($attempt['name'], ['major_only', 'curriculum_documents'], true)) {
+                            if (preg_match('/(?:học\s+kỳ|học\s+kì|kì|hk)\s*\d+/ui', $variation)) {
+                                continue;
+                            }
+                        }
+
                         $vector = $vectors[$idx] ?? [];
                         if (empty($vector)) {
                             continue;

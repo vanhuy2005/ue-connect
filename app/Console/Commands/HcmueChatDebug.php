@@ -120,6 +120,8 @@ class HcmueChatDebug extends Command
         $this->line(' - faculty:          '.($detected['faculty'] ?: 'N/A'));
         $this->line(' - course:           '.($detected['course'] ?: 'N/A'));
         $this->line(' - policy_topic:     '.($detected['policy_topic'] ?: 'N/A'));
+        $this->line(' - semester:         '.($detected['semester'] ?: 'N/A'));
+        $this->line(' - course_name:      '.($detected['course_name'] ?: 'N/A'));
         $this->newLine();
 
         $this->info('Catalog Debug Output:');
@@ -234,6 +236,23 @@ class HcmueChatDebug extends Command
         $this->line(' - rewritten_query:  '.($rewrittenQuery !== $normalizedQuestion ? "\"$rewrittenQuery\"" : 'N/A'));
         $this->line(' - confidence score: '.number_format($route['confidence'], 2));
         $this->line(' - reason:           '.$route['reason']);
+        $this->line(' - detected_course_name: '.($detected['course_name'] ?: 'N/A'));
+        $this->line(' - detected_semester:    '.($detected['semester'] ?: 'N/A'));
+
+        $curriculumSignals = [
+            'môn', 'học phần', 'subject', 'course', 'mã học phần', 'tiên quyết',
+            'song hành', 'nâng cao', 'cơ sở ngành', 'chuyên ngành', 'chương trình khung',
+            'ctdt', 'ctkh', 'học kỳ', 'học kì', 'semester', 'kì', 'hk',
+        ];
+        $curriculumSignalFound = 'FALSE';
+        foreach ($curriculumSignals as $sig) {
+            if (str_contains(mb_strtolower($question), $sig)) {
+                $curriculumSignalFound = "TRUE (matched '{$sig}')";
+                break;
+            }
+        }
+        $this->line(' - curriculum_signal_found: '.$curriculumSignalFound);
+        $this->line(' - router_reason:           '.$route['reason']);
         $this->newLine();
 
         $structuredDbResult = null;

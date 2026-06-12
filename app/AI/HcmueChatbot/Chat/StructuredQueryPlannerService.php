@@ -56,10 +56,14 @@ class StructuredQueryPlannerService
             'faculty' => $entities['faculty'] ?? null,
             'major' => $entities['major'] ?? null,
             'semester' => isset($entities['semester']) && $entities['semester'] ? (int) $entities['semester'] : null,
-            'course_code' => $entities['course_code'] ?? null,
+            'course_code' => $entities['course'] ?? $entities['course_code'] ?? null,
             'course_name' => $entities['course_name'] ?? null,
             'course_type' => null,
         ];
+
+        if (! empty($filters['course_code']) || ! empty($filters['course_name'])) {
+            return $this->buildPlan('find_course_detail', $filters);
+        }
 
         // Determine specific query type from question content
         if (str_contains($lower, 'tổng tín chỉ') || str_contains($lower, 'bao nhiêu tín chỉ') || str_contains($lower, 'tổng số tín chỉ')) {
