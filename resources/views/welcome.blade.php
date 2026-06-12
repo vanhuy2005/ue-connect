@@ -12,6 +12,14 @@
     <title>UEConnect — Kết nối cộng đồng HCMUE</title>
     <meta name="description" content="UEConnect là mạng xã hội học tập và kết nối dành riêng cho sinh viên, giảng viên và cựu sinh viên HCMUE.">
 
+    {{-- PWA Meta Tags --}}
+    <link rel="manifest" href="{{ asset('manifest.json') }}">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <meta name="apple-mobile-web-app-title" content="UEConnect">
+    <link rel="apple-touch-icon" href="{{ asset('icons/apple-touch-icon.png') }}">
+
     {{-- Open Graph --}}
     <meta property="og:title" content="UEConnect — Kết nối cộng đồng HCMUE">
     <meta property="og:description" content="Kết nối sinh viên, cựu sinh viên và giảng viên HCMUE trong môi trường an toàn, xác thực.">
@@ -78,6 +86,10 @@
 
             {{-- Actions --}}
             <div class="flex items-center gap-2 flex-shrink-0">
+                <a href="{{ route('pwa.install') }}" class="inline-flex items-center gap-1.5 text-xs font-bold text-slate-600 hover:text-slate-950 px-2.5 py-1.5 rounded-lg hover:bg-slate-100 transition-colors">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4 text-ue-brand" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" /></svg>
+                    Cài đặt App
+                </a>
                 @if($isAuthenticated)
                     <x-ui.button
                         href="{{ $dashboardRoute }}"
@@ -334,6 +346,7 @@
                 <span>© {{ date('Y') }} UEConnect. Bảo lưu mọi quyền.</span>
             </div>
             <div class="flex gap-x-6 gap-y-1 flex-wrap">
+                <a href="{{ route('pwa.install') }}" class="hover:text-ue-brand transition-colors font-bold">Cài đặt App (PWA)</a>
                 <a href="#" class="hover:text-ue-brand transition-colors">Điều khoản</a>
                 <a href="#" class="hover:text-ue-brand transition-colors">Bảo mật</a>
                 <a href="#" class="hover:text-ue-brand transition-colors">Tiêu chuẩn cộng đồng</a>

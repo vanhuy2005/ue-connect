@@ -10,6 +10,14 @@
 
         <meta name="description" content="{{ $description ?? 'UEConnect — Kết nối cộng đồng sinh viên HCMUE.' }}">
 
+        {{-- PWA Meta Tags --}}
+        <link rel="manifest" href="{{ asset('manifest.json') }}">
+        <meta name="mobile-web-app-capable" content="yes">
+        <meta name="apple-mobile-web-app-capable" content="yes">
+        <meta name="apple-mobile-web-app-status-bar-style" content="default">
+        <meta name="apple-mobile-web-app-title" content="UEConnect">
+        <link rel="apple-touch-icon" href="{{ asset('icons/apple-touch-icon.png') }}">
+
         {{-- Realtime Meta Config --}}
         <meta name="reverb-app-key" content="{{ config('reverb.apps.apps.0.key', env('REVERB_APP_KEY')) }}">
         <meta name="reverb-host" content="{{ env('REVERB_HOST', '127.0.0.1') }}">
@@ -54,7 +62,10 @@
             @endif
 
             {{-- Main column --}}
-            <div class="ue-shell__main flex flex-col h-full min-h-0 overflow-hidden">
+            <div class="ue-shell__main flex flex-col h-full min-h-0 overflow-hidden relative">
+                
+                {{-- PWA Install Banner --}}
+                <x-pwa.install-banner />
 
                 {{-- Topbar (Only for custom shells, NOT social, admin, conversation, guest, or auth) --}}
                 @if(!in_array($shell, ['social', 'admin', 'conversation', 'guest', 'auth']))
