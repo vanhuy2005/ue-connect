@@ -85,10 +85,11 @@
             </div>
 
             {{-- Actions --}}
-            <div class="flex items-center gap-2 flex-shrink-0">
-                <a href="{{ route('pwa.install') }}" class="inline-flex items-center gap-1.5 text-xs font-bold text-slate-600 hover:text-slate-950 px-2.5 py-1.5 rounded-lg hover:bg-slate-100 transition-colors">
+            <div class="flex items-center gap-1 sm:gap-2 flex-shrink-0">
+                <a href="{{ route('pwa.install') }}" class="inline-flex items-center gap-1 text-xs font-bold text-slate-600 hover:text-slate-950 px-2 py-1.5 rounded-lg hover:bg-slate-100 transition-colors">
                     <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4 text-ue-brand" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" /></svg>
-                    Cài đặt App
+                    <span class="hidden sm:inline">Cài đặt App</span>
+                    <span class="sm:hidden">Cài đặt</span>
                 </a>
                 @if($isAuthenticated)
                     <x-ui.button
@@ -104,7 +105,7 @@
                         href="{{ route('login') }}"
                         variant="ghost"
                         size="sm"
-                        class="text-slate-700 hover:bg-slate-100 border-0 hidden sm:inline-flex font-bold text-xs"
+                        class="text-slate-700 hover:bg-slate-100 border-0 inline-flex font-bold text-xs px-2"
                     >
                         Đăng nhập
                     </x-ui.button>
@@ -135,13 +136,16 @@
                     <div class="lg:col-span-6 flex flex-col justify-center text-left">
                         <h1 class="flex flex-col md:flex-row gap-2 md:gap-4 lg:gap-5 mb-8 md:items-stretch w-full md:w-auto">
                             <!-- Left Column (Labels) -->
-                            <div class="flex flex-col justify-start md:justify-between gap-1 md:gap-0 md:pr-3 lg:pr-5 text-left md:text-right py-1 md:py-2 lg:py-4 xl:py-5 border-b-2 border-slate-200 md:border-b-0 pb-3 md:pb-0 mb-1 md:mb-0">
-                                <span class="block text-[clamp(1rem,1.5vw,1.5rem)] xl:text-[1.75rem] font-black uppercase text-slate-600 tracking-tight leading-[1.1] whitespace-nowrap">
+                            <div class="flex flex-col justify-start md:justify-between md:pr-3 lg:pr-5 text-left md:text-right md:py-2 lg:py-4 xl:py-5 mb-1 md:mb-0">
+                                <span class="hidden md:block text-[clamp(1rem,1.5vw,1.5rem)] xl:text-[1.75rem] font-black uppercase text-slate-600 tracking-tight leading-[1.1] whitespace-nowrap">
                                     THIẾT KẾ CHO
                                 </span>
-                                <span class="block text-[clamp(1rem,1.5vw,1.5rem)] xl:text-[1.75rem] font-black uppercase text-slate-600 tracking-tight leading-[1.1] whitespace-nowrap">
+                                <span class="hidden md:block text-[clamp(1rem,1.5vw,1.5rem)] xl:text-[1.75rem] font-black uppercase text-slate-600 tracking-tight leading-[1.1] whitespace-nowrap">
                                     XÂY DỰNG BỞI
                                 </span>
+                                <div class="md:hidden inline-flex items-center px-3 py-1.5 rounded-md bg-slate-100 text-slate-600 text-[11px] font-bold uppercase tracking-widest self-start">
+                                    Thiết kế cho & Xây dựng bởi
+                                </div>
                             </div>
 
                             <!-- Right Column (Headline) -->

@@ -7,7 +7,7 @@
     x-transition:leave="transition ease-in duration-200 transform"
     x-transition:leave-start="opacity-100 translate-y-0 sm:scale-100"
     x-transition:leave-end="opacity-0 translate-y-4 sm:translate-y-0 sm:scale-95"
-    class="fixed bottom-0 inset-x-0 pb-4 px-4 sm:px-6 sm:pb-6 z-[100] sm:flex sm:justify-center sm:items-center pointer-events-none"
+    class="fixed bottom-0 inset-x-0 pb-20 lg:pb-6 px-4 sm:px-6 z-[9999] sm:flex sm:justify-center sm:items-center pointer-events-none"
     style="display: none;"
 >
     <div class="bg-white shadow-2xl rounded-2xl ring-1 ring-black/5 p-4 sm:p-5 pointer-events-auto max-w-sm w-full mx-auto flex flex-col gap-3">
