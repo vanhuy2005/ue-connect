@@ -12,7 +12,6 @@
                 </p>
                 <div class="text-xs text-ue-neutral-500">
                     <p class="mb-1">© {{ date('Y') }} UEConnect. Bảo lưu mọi quyền.</p>
-                    <p>Phát triển bởi đội ngũ kỹ thuật HCMUE.</p>
                 </div>
             </div>
 
@@ -53,9 +52,7 @@
                 <a href="#" class="hover:text-white transition-colors">Chính sách bảo mật</a>
                 <a href="#" class="hover:text-white transition-colors">Tiêu chuẩn cộng đồng</a>
             </div>
-            <div class="text-ue-neutral-600">
-                Phiên bản 1.0.0 (Phase 1 Foundation)
-            </div>
+
         </div>
     </div>
 </footer>
