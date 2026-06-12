@@ -712,7 +712,7 @@ new #[Layout('layouts.app')] class extends Component
     <div class="ue-feed-column">
 
         {{-- Back button row --}}
-        <a href="{{ route('dashboard') }}" class="inline-flex items-center gap-2 text-sm text-slate-500 hover:text-ue-brand mb-2 transition-colors font-semibold">
+        <a href="{{ route('dashboard') }}" class="inline-flex items-center gap-2 text-sm text-slate-500 hover:text-ue-brand mb-2 transition-colors font-semibold px-4 lg:px-0">
             <x-ui.icon name="arrow-left" size="xs" />
             Quay lại bảng tin
         </a>

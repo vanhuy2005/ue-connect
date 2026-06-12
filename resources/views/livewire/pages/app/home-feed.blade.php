@@ -656,6 +656,7 @@ new #[Layout('layouts.app')] class extends Component
     public function loadMore(): void
     {
         $this->perPage += self::FEED_PAGE_SIZE;
+        $this->dispatch('feed-updated');
     }
 
     /**
@@ -773,6 +774,7 @@ new #[Layout('layouts.app')] class extends Component
         $this->activeTypeFilter = 'all';
         $this->perPage = self::FEED_PAGE_SIZE;
         $this->resetPage();
+        $this->dispatch('feed-scroll-top');
     }
 
     /**
@@ -792,6 +794,7 @@ new #[Layout('layouts.app')] class extends Component
 
         $this->perPage = self::FEED_PAGE_SIZE;
         $this->resetPage();
+        $this->dispatch('feed-scroll-top');
     }
 
     /**
@@ -1189,144 +1192,134 @@ new #[Layout('layouts.app')] class extends Component
     }
 };
 ?>
- <div class="ue-feed-layout" wire:init="loadInitialFeed">
-    <div class="ue-feed-column">
-        {{-- Page-local Header --}}
-        <header class="ue-feed-header">
-            {{-- Desktop Layout --}}
-            <div class="hidden sm:block">
-                {{-- Title & Description --}}
-                <div class="mb-3">
-                    <h1 class="text-xl font-bold text-slate-800">Bảng tin</h1>
-                    <p class="text-xs text-slate-400 font-medium mt-0.5">HCMUE Student-verified community updates</p>
-                </div>
-                
-                {{-- Tabs & Filters inline --}}
-                <div class="flex items-start gap-1 py-1 select-none">
-                    <div class="ue-feed-tabs">
-                        <button
-                            type="button"
-                            wire:click="setFeedTab('for_you')"
-                            wire:loading.attr="disabled"
-                            wire:target="setFeedTab"
-                            class="px-3 py-1.5 rounded-full text-xxs font-bold transition-colors {{ ($activeFeedTab === 'for_you' && $activeTypeFilter === 'all') ? 'bg-ue-brand-soft text-ue-brand' : 'bg-slate-50 text-slate-600 hover:bg-slate-100' }}"
-                        >
-                            Dành cho bạn
-                        </button>
-                        <button
-                            type="button"
-                            wire:click="setFeedTab('following')"
-                            wire:loading.attr="disabled"
-                            wire:target="setFeedTab"
-                            class="px-3 py-1.5 rounded-full text-xxs font-bold transition-colors {{ ($activeFeedTab === 'following' && $activeTypeFilter === 'all') ? 'bg-ue-brand-soft text-ue-brand' : 'bg-slate-50 text-slate-600 hover:bg-slate-100' }}"
-                        >
-                            Theo dõi
-                        </button>
-                    </div>
+<section data-home-feed-shell class="mx-auto grid h-full min-h-0 w-full max-w-[760px] grid-rows-[auto_auto_minmax(0,1fr)] overflow-hidden" wire:init="loadInitialFeed">
+    {{-- Page-local Header --}}
+    <header data-feed-header class="min-h-0 pb-3 pt-6 bg-white lg:bg-transparent px-4 lg:px-0">
+        <h1 class="text-2xl font-bold text-ue-text">Bảng tin</h1>
+        <p class="mt-1 text-sm font-medium text-ue-text-muted">
+            HCMUE Student-verified community updates
+        </p>
+    </header>
 
-                    <span class="h-4 w-px bg-slate-200 mx-1"></span>
-
-                    <div class="flex items-center gap-1">
-                        <button
-                            type="button"
-                            wire:click="setTypeFilter('experience')"
-                            wire:loading.attr="disabled"
-                            wire:target="setTypeFilter"
-                            class="px-3 py-1.5 rounded-full text-xxs font-bold transition-colors whitespace-nowrap {{ $activeTypeFilter === 'experience' ? 'bg-ue-brand-soft text-ue-brand' : 'bg-slate-50 text-slate-600 hover:bg-slate-100' }}"
-                        >
-                            Kinh nghiệm
-                        </button>
-                        <button
-                            type="button"
-                            wire:click="setTypeFilter('opportunity')"
-                            wire:loading.attr="disabled"
-                            wire:target="setTypeFilter"
-                            class="px-3 py-1.5 rounded-full text-xxs font-bold transition-colors whitespace-nowrap {{ $activeTypeFilter === 'opportunity' ? 'bg-ue-brand-soft text-ue-brand' : 'bg-slate-50 text-slate-600 hover:bg-slate-100' }}"
-                        >
-                            Cơ hội
-                        </button>
-                        <button
-                            type="button"
-                            wire:click="setTypeFilter('pedagogy')"
-                            wire:loading.attr="disabled"
-                            wire:target="setTypeFilter"
-                            class="px-3 py-1.5 rounded-full text-xxs font-bold transition-colors whitespace-nowrap {{ $activeTypeFilter === 'pedagogy' ? 'bg-ue-brand-soft text-ue-brand' : 'bg-slate-50 text-slate-600 hover:bg-slate-100' }}"
-                        >
-                            Sư phạm
-                        </button>
-                    </div>
-                </div>
-
-            </div>
-
-            {{-- Mobile Layout (Scrollable inline list, hidden scrollbar via custom CSS inline to be safe) --}}
-            <div class="flex sm:hidden items-center gap-1 overflow-x-auto pb-2 border-b border-slate-100 px-4 select-none" style="-ms-overflow-style: none; scrollbar-width: none;">
-                <style>
-                    /* Inline safety to ensure scrollbar is completely hidden on mobile webkit browsers */
-                    .ue-feed-header::-webkit-scrollbar,
-                    div.overflow-x-auto::-webkit-scrollbar {
-                        display: none !important;
-                    }
-                </style>
+    {{-- Feed tabs, separated from feed stream --}}
+    <nav data-feed-tabs class="mb-0 lg:mb-4 overflow-hidden border-b border-slate-200 bg-white lg:rounded-[24px] lg:border lg:shadow-sm shadow-none rounded-none">
+        <div class="flex h-14 items-center overflow-x-auto ue-scrollbar-none px-4">
+                {{-- Feed Tabs --}}
                 <button
                     type="button"
                     wire:click="setFeedTab('for_you')"
-                    wire:loading.attr="disabled"
-                    wire:target="setFeedTab"
-                    class="px-3 py-1.5 rounded-full text-xxs font-bold transition-colors whitespace-nowrap {{ ($activeFeedTab === 'for_you' && $activeTypeFilter === 'all') ? 'bg-ue-brand-soft text-ue-brand' : 'bg-slate-50 text-slate-600 hover:bg-slate-100' }}"
+                    class="relative flex h-full items-center px-4 sm:px-5 text-[15px] font-semibold transition-colors whitespace-nowrap {{ ($activeFeedTab === 'for_you' && $activeTypeFilter === 'all') ? 'text-ue-brand hover:text-ue-brand-active' : 'text-slate-500 hover:text-slate-800 hover:bg-slate-50/50' }}"
                 >
                     Dành cho bạn
+                    @if($activeFeedTab === 'for_you' && $activeTypeFilter === 'all')
+                        <span class="absolute bottom-0 left-4 right-4 sm:left-5 sm:right-5 h-[2px] rounded-full bg-ue-brand"></span>
+                    @endif
                 </button>
                 <button
                     type="button"
                     wire:click="setFeedTab('following')"
-                    wire:loading.attr="disabled"
-                    wire:target="setFeedTab"
-                    class="px-3 py-1.5 rounded-full text-xxs font-bold transition-colors whitespace-nowrap {{ ($activeFeedTab === 'following' && $activeTypeFilter === 'all') ? 'bg-ue-brand-soft text-ue-brand' : 'bg-slate-50 text-slate-600 hover:bg-slate-100' }}"
+                    class="relative flex h-full items-center px-4 sm:px-5 text-[15px] font-semibold transition-colors whitespace-nowrap {{ ($activeFeedTab === 'following' && $activeTypeFilter === 'all') ? 'text-ue-brand hover:text-ue-brand-active' : 'text-slate-500 hover:text-slate-800 hover:bg-slate-50/50' }}"
                 >
                     Theo dõi
+                    @if($activeFeedTab === 'following' && $activeTypeFilter === 'all')
+                        <span class="absolute bottom-0 left-4 right-4 sm:left-5 sm:right-5 h-[2px] rounded-full bg-ue-brand"></span>
+                    @endif
                 </button>
 
-                <span class="h-4 w-px bg-slate-200 mx-1 flex-shrink-0"></span>
+                <div class="h-4 w-px bg-slate-200 mx-2 flex-shrink-0"></div>
 
+                {{-- Type Filters --}}
                 <button
                     type="button"
                     wire:click="setTypeFilter('experience')"
-                    wire:loading.attr="disabled"
-                    wire:target="setTypeFilter"
-                    class="px-3 py-1.5 rounded-full text-xxs font-bold transition-colors whitespace-nowrap {{ $activeTypeFilter === 'experience' ? 'bg-ue-brand-soft text-ue-brand' : 'bg-slate-50 text-slate-600 hover:bg-slate-100' }}"
+                    class="relative flex h-full items-center px-4 text-[15px] font-semibold transition-colors whitespace-nowrap {{ $activeTypeFilter === 'experience' ? 'text-ue-brand hover:text-ue-brand-active' : 'text-slate-500 hover:text-slate-800 hover:bg-slate-50/50' }}"
                 >
                     Kinh nghiệm
+                    @if($activeTypeFilter === 'experience')
+                        <span class="absolute bottom-0 left-4 right-4 h-[2px] rounded-full bg-ue-brand"></span>
+                    @endif
                 </button>
                 <button
                     type="button"
                     wire:click="setTypeFilter('opportunity')"
-                    wire:loading.attr="disabled"
-                    wire:target="setTypeFilter"
-                    class="px-3 py-1.5 rounded-full text-xxs font-bold transition-colors whitespace-nowrap {{ $activeTypeFilter === 'opportunity' ? 'bg-ue-brand-soft text-ue-brand' : 'bg-slate-50 text-slate-600 hover:bg-slate-100' }}"
+                    class="relative flex h-full items-center px-4 text-[15px] font-semibold transition-colors whitespace-nowrap {{ $activeTypeFilter === 'opportunity' ? 'text-ue-brand hover:text-ue-brand-active' : 'text-slate-500 hover:text-slate-800 hover:bg-slate-50/50' }}"
                 >
                     Cơ hội
+                    @if($activeTypeFilter === 'opportunity')
+                        <span class="absolute bottom-0 left-4 right-4 h-[2px] rounded-full bg-ue-brand"></span>
+                    @endif
                 </button>
                 <button
                     type="button"
                     wire:click="setTypeFilter('pedagogy')"
-                    wire:loading.attr="disabled"
-                    wire:target="setTypeFilter"
-                    class="px-3 py-1.5 rounded-full text-xxs font-bold transition-colors whitespace-nowrap {{ $activeTypeFilter === 'pedagogy' ? 'bg-ue-brand-soft text-ue-brand' : 'bg-slate-50 text-slate-600 hover:bg-slate-100' }}"
+                    class="relative flex h-full items-center px-4 text-[15px] font-semibold transition-colors whitespace-nowrap {{ $activeTypeFilter === 'pedagogy' ? 'text-ue-brand hover:text-ue-brand-active' : 'text-slate-500 hover:text-slate-800 hover:bg-slate-50/50' }}"
                 >
                     Sư phạm
+                    @if($activeTypeFilter === 'pedagogy')
+                        <span class="absolute bottom-0 left-4 right-4 h-[2px] rounded-full bg-ue-brand"></span>
+                    @endif
                 </button>
-            </div>
-        </header>
+        </div>
+    </nav>
 
-        {{-- Toast system component --}}
-        <x-ui.toast />
+    {{-- Toast system component --}}
+    <x-ui.toast />
 
-        {{-- Feed Surface Area --}}
-        <section class="ue-feed-surface">
+    {{-- Feed Card Container (Fixed borders & background) --}}
+    <div data-feed-card class="min-h-0 flex-1 flex flex-col border-0 bg-transparent shadow-none rounded-none overflow-visible lg:overflow-hidden lg:rounded-[28px] lg:border lg:border-slate-200 lg:bg-white lg:shadow-sm lg:mb-6">
+        {{-- Scroll viewport --}}
+        <div
+            x-data="{
+                loading: false,
+                attempts: 0,
+                checkScroll() {
+                    const el = this.$refs.feedScroll;
+                    if (!el) return;
+                    
+                    // If user scrolled near bottom and not loading
+                    if (el.scrollTop + el.clientHeight >= el.scrollHeight - 500 && !this.loading) {
+                        this.loading = true;
+                        $wire.loadMore().then(() => {
+                            this.loading = false;
+                            this.ensureOverflow();
+                        });
+                    }
+                },
+                ensureOverflow() {
+                    this.$nextTick(() => {
+                        const el = this.$refs.feedScroll;
+                        if (!el) return;
+
+                        const tryLoad = () => {
+                            if (this.attempts >= 3) return;
+
+                            if (el.scrollHeight <= el.clientHeight) {
+                                this.attempts++;
+                                this.loading = true;
+                                $wire.loadMore().then(() => {
+                                    this.loading = false;
+                                    setTimeout(tryLoad, 400);
+                                });
+                            }
+                        };
+
+                        tryLoad();
+                    });
+                }
+            }"
+            x-init="ensureOverflow()"
+            x-on:feed-updated.window="ensureOverflow()"
+            x-on:feed-scroll-top.window="$refs.feedScroll?.scrollTo({ top: 0, behavior: 'instant' })"
+            x-ref="feedScroll"
+            x-on:scroll.passive="checkScroll"
+            data-feed-scroll
+            class="feed-scroll min-h-0 overflow-y-auto overscroll-contain ue-scrollbar-none flex-1"
+        >
+            {{-- Feed stream lives here --}}
+            <div data-feed-stream class="feed-stream flex flex-col lg:border-0 lg:bg-transparent lg:shadow-none">
             {{-- Inline Composer --}}
             @if ($currentUser->isActive())
-                <div class="ue-feed-composer border-b border-ue-border/40">
+                <div class="px-4 lg:px-6 py-3 lg:py-5 shrink-0">
                     <div class="ue-composer">
                         {{-- Left Column: Avatar --}}
                         <div class="flex justify-start">
@@ -1401,9 +1394,6 @@ new #[Layout('layouts.app')] class extends Component
                                                 {{-- Header --}}
                                                 <div class="px-5 py-4 border-b border-slate-100 flex items-center justify-between">
                                                     <div class="flex items-center gap-2">
-                                                        <button type="button" @click="$wire.set('showVisModal', false); $wire.set('visibility', selectedVis)" class="text-slate-400 hover:text-slate-600 transition-colors cursor-pointer mr-1">
-                                                            <x-ui.icon name="arrow-left" size="sm" />
-                                                        </button>
                                                         <h3 class="text-sm font-bold text-slate-900">Ai có thể xem bài viết của bạn?</h3>
                                                     </div>
                                                     <button
@@ -1519,9 +1509,6 @@ new #[Layout('layouts.app')] class extends Component
                                                     {{-- Header --}}
                                                     <div class="px-5 py-4 border-b border-slate-100 flex items-center justify-between">
                                                         <div class="flex items-center gap-2">
-                                                            <button type="button" @click="$wire.set('showTagModal', false); $wire.set('selectedTags', localTags)" class="text-slate-400 hover:text-slate-600 transition-colors cursor-pointer mr-1">
-                                                                <x-ui.icon name="arrow-left" size="sm" />
-                                                            </button>
                                                             <h3 class="text-sm font-bold text-slate-900">Chọn nhãn bài viết</h3>
                                                         </div>
                                                         <button
@@ -1616,28 +1603,6 @@ new #[Layout('layouts.app')] class extends Component
                                                 class="ue-composer__textarea focus:outline-none ue-text-body"
                                                 maxlength="3000"
                                             ></textarea>
-                                        </div>
-                                        @if ($currentUser->canPostType(\App\Enums\PostType::EXPERIENCE))
-                                            <button
-                                                type="button"
-                                                wire:click="$set('showTagModal', true)"
-                                                class="flex items-center gap-1 px-2 py-1.5 bg-slate-100 text-slate-500 border border-slate-200 rounded-lg text-xxs font-semibold hover:bg-slate-200 transition-colors cursor-pointer flex-shrink-0 mt-0.5"
-                                                title="Gắn nhãn bài viết"
-                                            >
-                                                <x-ui.icon name="tag" size="xs" class="text-slate-400" />
-                                                @if (!empty($selectedTags))
-                                                    @php
-                                                        $tagLabels = [];
-                                                        if (in_array('experience', $selectedTags, true)) { $tagLabels[] = 'KN'; }
-                                                        if (in_array('opportunity', $selectedTags, true)) { $tagLabels[] = 'CH'; }
-                                                        if (in_array('pedagogy', $selectedTags, true)) { $tagLabels[] = 'SP'; }
-                                                    @endphp
-                                                    <span class="text-ue-brand font-bold">{{ implode(',', $tagLabels) }}</span>
-                                                @else
-                                                    <span>Gắn nhãn</span>
-                                                @endif
-                                            </button>
-                                        @endif
                                     </div>
                                     @error('body')
                                         <p class="text-xs text-red-650 font-semibold mt-1">{{ $message }}</p>
@@ -1681,6 +1646,23 @@ new #[Layout('layouts.app')] class extends Component
                                             <input type="file" wire:model="imageFiles" multiple class="hidden" accept="image/*" />
                                         </label>
 
+                                        {{-- Tag Modal Trigger Button --}}
+                                        @if ($currentUser->canPostType(\App\Enums\PostType::EXPERIENCE))
+                                            <button
+                                                type="button"
+                                                wire:click="$set('showTagModal', true)"
+                                                class="relative p-1.5 text-slate-400 hover:text-slate-600 hover:bg-slate-50 border border-slate-200 rounded-lg cursor-pointer transition-colors shadow-2xs flex items-center justify-center flex-shrink-0 {{ !empty($selectedTags) ? 'text-ue-brand border-ue-brand/30 bg-ue-brand-soft/30' : '' }}"
+                                                title="Gắn nhãn bài viết"
+                                            >
+                                                <x-ui.icon name="tag" size="md" />
+                                                @if (!empty($selectedTags))
+                                                    <span class="absolute -top-1.5 -right-1.5 w-4 h-4 bg-ue-brand text-white text-[9px] font-bold rounded-full flex items-center justify-center border-2 border-white">
+                                                        {{ count($selectedTags) }}
+                                                    </span>
+                                                @endif
+                                            </button>
+                                        @endif
+
                                         <span class="ue-composer__counter text-slate-400 text-xxs font-semibold whitespace-nowrap flex-shrink-0">
                                             {{ mb_strlen($body) }}/3000
                                         </span>
@@ -1722,6 +1704,7 @@ new #[Layout('layouts.app')] class extends Component
                         </div>
                     </div>
                 </div>
+                <div class="h-px bg-slate-200 w-full mt-4 mb-2"></div>
             @endif
 
             {{-- Real-time New Posts Banner --}}
@@ -1841,29 +1824,33 @@ new #[Layout('layouts.app')] class extends Component
             @endif
 
             {{-- End state / Infinite scroll sentinel inside feed surface --}}
-            <div class="ue-feed-end-state">
-                <div class="w-full flex flex-col items-center justify-center gap-2">
-                    @if ($posts->hasMorePages())
-                        <div
-                            wire:intersect="loadMore"
-                            class="flex flex-col items-center gap-2 py-2 text-center w-full"
-                        >
-                            <div wire:loading.remove wire:target="loadMore">
-                                <span class="text-xxs text-slate-400 font-semibold">
-                                    Đang tải thêm bài viết...
-                                </span>
-                            </div>
-                            <div wire:loading wire:target="loadMore" class="w-full mt-2">
+            <div class="flex min-h-[96px] items-center justify-center px-6 py-8 text-sm text-slate-500 {{ !$posts->hasMorePages() ? 'border-b border-slate-200 sm:border-b-0' : '' }}">
+                @if ($posts->hasMorePages())
+                    <div
+                        class="flex w-full flex-col items-center gap-2"
+                    >
+                        <div wire:loading.remove wire:target="loadMore" class="h-5 w-5 animate-spin rounded-full border-2 border-slate-200 border-t-ue-brand"></div>
+                        <div wire:loading wire:target="loadMore" class="flex flex-col items-center gap-3 w-full">
+                            <span class="h-5 w-5 animate-spin rounded-full border-2 border-slate-200 border-t-ue-brand"></span>
+                            <span class="text-xs font-medium">Đang tải thêm bài viết...</span>
+                            <div class="w-full mt-2">
                                 <x-ui.feed-skeleton :count="2" />
                             </div>
                         </div>
-                    @else
-                        <span class="text-xxs text-slate-400 font-semibold mb-1">Bạn đã xem hết bài viết hiện có.</span>
-                    @endif
-                </div>
+                    </div>
+                @else
+                    <div class="text-center">
+                        <div class="mx-auto mb-3 flex h-10 w-10 items-center justify-center rounded-full bg-ue-brand-soft/50 text-ue-brand">
+                            <x-ui.icon name="check-circle" size="md" />
+                        </div>
+                        <p class="font-medium text-slate-700">Bạn đã xem hết bài viết hiện có.</p>
+                        <p class="mt-1 text-xs text-slate-500">Quay lại sau để xem thêm cập nhật mới từ cộng đồng HCMUE.</p>
+                    </div>
+                @endif
             </div>
-        </section>
+        </div>
     </div>
+</div>
 
     {{-- Mobile bottom nav padding buffer --}}
     <div class="ue-mobile-bottom-spacer"></div>
@@ -2200,4 +2187,5 @@ new #[Layout('layouts.app')] class extends Component
             </div>
         @endif
     @endif
-</div>
+</section>
+

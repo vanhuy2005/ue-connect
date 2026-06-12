@@ -35,16 +35,20 @@ class SettingsNotificationsTest extends TestCase
     {
         $this->actingAs($this->user);
 
-        Volt::test('pages.app.settings', ['section' => 'notifications'])
-            ->set('message_notifications', false)
-            ->set('greeting_notifications', false)
+        Volt::test('pages.app.settings.notifications')
+            ->set('email_messages', true)
+            ->set('email_connections', false)
+            ->set('push_messages', false)
+            ->set('push_connections', false)
             ->call('saveNotifications')
             ->assertHasNoErrors();
 
         $this->assertDatabaseHas('notification_preferences', [
             'user_id' => $this->user->id,
-            'message_notifications' => false,
-            'greeting_notifications' => false,
+            'email_messages' => true,
+            'email_connections' => false,
+            'push_messages' => false,
+            'push_connections' => false,
         ]);
     }
 
@@ -52,18 +56,16 @@ class SettingsNotificationsTest extends TestCase
     {
         $this->actingAs($this->user);
 
-        Volt::test('pages.app.settings', ['section' => 'notifications'])
-            ->set('safety_notifications', false)
-            ->set('moderation_notifications', false)
-            ->set('system_notifications', false)
+        Volt::test('pages.app.settings.notifications')
+            ->set('push_system', false)
+            ->set('email_system', false)
             ->call('saveNotifications');
 
         // Assert that critical settings are strictly forced true on the backend
         $this->assertDatabaseHas('notification_preferences', [
             'user_id' => $this->user->id,
-            'safety_notifications' => true,
-            'moderation_notifications' => true,
-            'system_notifications' => true,
+            'push_system' => true,
+            'email_system' => true,
         ]);
     }
 }

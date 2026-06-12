@@ -1,6 +1,6 @@
 <?php
 
-use function Livewire\Volt\{state, action, layout};
+use function Livewire\Volt\{state, action, on};
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Auth;
@@ -20,7 +20,7 @@ $toggleChat = action(function () {
     $this->isOpen = !$this->isOpen;
 });
 
-$sendMessage = action(function (HcmueChatService $chatService) {
+$sendMessage = action(function () {
     if (trim($this->input) === '') {
         return;
     }
@@ -30,49 +30,55 @@ $sendMessage = action(function (HcmueChatService $chatService) {
     $this->input = '';
     $this->isTyping = true;
 
-    $user = Auth::user();
-    if (!$user) {
-        $this->messages[] = ['role' => 'model', 'content' => 'Vui lòng đăng nhập để sử dụng trợ lý AI.'];
-        $this->isTyping = false;
-        return;
-    }
+    $this->dispatch('message-sent', userMessage: $userMessage);
+});
 
-    try {
-        // Resolve session for the user
-        $session = $chatService->resolveSession($user, $this->sessionId);
-        $this->sessionId = $session->id;
-
-        // Process message through HcmueChatService RAG pipeline (only Qdrant is queried)
-        $result = $chatService->chat($userMessage, $session, $user);
-
-        $this->messages[] = ['role' => 'model', 'content' => $result['answer']];
-
-    } catch (\Illuminate\Http\Client\RequestException $e) {
-        $response = $e->response;
-        $errorData = $response->json();
-        $errorMessage = $errorData['error']['message'] ?? $response->body();
-        $errorCode = $response->status();
-        $errorStatus = $errorData['error']['status'] ?? 'UNKNOWN';
-
-        Log::error("Gemini API Error [{$errorCode} - {$errorStatus}]: " . $response->body());
-
-        $details = "Lỗi kết nối với AI (HTTP {$errorCode}): ";
-        if ($errorCode == 429 || $errorStatus === 'RESOURCE_EXHAUSTED') {
-            $details .= "Bạn đã vượt quá giới hạn tài nguyên (Quota Exceeded) của API Key hiện tại. Vui lòng kiểm tra lại hạn mức tài khoản Google AI Studio hoặc đổi sang Key khác.";
-        } elseif ($errorCode == 400) {
-            $details .= "API Key không hợp lệ hoặc thiếu. Vui lòng điền đúng GEMINI_API_KEY trong file .env và clear cache config.";
-        } else {
-            $details .= $errorMessage;
+on([
+    'message-sent' => function (string $userMessage, HcmueChatService $chatService) {
+        $user = Auth::user();
+        if (!$user) {
+            $this->messages[] = ['role' => 'model', 'content' => 'Vui lòng đăng nhập để sử dụng trợ lý AI.'];
+            $this->isTyping = false;
+            return;
         }
 
-        $this->messages[] = ['role' => 'model', 'content' => $details];
-    } catch (\Exception $e) {
-        Log::error('Chatbot Exception: ' . $e->getMessage());
-        $this->messages[] = ['role' => 'model', 'content' => 'Hệ thống đang bận. Chi tiết: ' . $e->getMessage()];
-    }
+        try {
+            // Resolve session for the user
+            $session = $chatService->resolveSession($user, $this->sessionId);
+            $this->sessionId = $session->id;
 
-    $this->isTyping = false;
-});
+            // Process message through HcmueChatService RAG pipeline (only Qdrant is queried)
+            $result = $chatService->chat($userMessage, $session, $user);
+
+            $this->messages[] = ['role' => 'model', 'content' => $result['answer']];
+
+        } catch (\Illuminate\Http\Client\RequestException $e) {
+            $response = $e->response;
+            $errorData = $response->json();
+            $errorMessage = $errorData['error']['message'] ?? $response->body();
+            $errorCode = $response->status();
+            $errorStatus = $errorData['error']['status'] ?? 'UNKNOWN';
+
+            Log::error("Gemini API Error [{$errorCode} - {$errorStatus}]: " . $response->body());
+
+            $details = "Lỗi kết nối với AI (HTTP {$errorCode}): ";
+            if ($errorCode == 429 || $errorStatus === 'RESOURCE_EXHAUSTED') {
+                $details .= "Bạn đã vượt quá giới hạn tài nguyên (Quota Exceeded) của API Key hiện tại. Vui lòng kiểm tra lại hạn mức tài khoản Google AI Studio hoặc đổi sang Key khác.";
+            } elseif ($errorCode == 400) {
+                $details .= "API Key không hợp lệ hoặc thiếu. Vui lòng điền đúng GEMINI_API_KEY trong file .env và clear cache config.";
+            } else {
+                $details .= $errorMessage;
+            }
+
+            $this->messages[] = ['role' => 'model', 'content' => $details];
+        } catch (\Exception $e) {
+            Log::error('Chatbot Exception: ' . $e->getMessage());
+            $this->messages[] = ['role' => 'model', 'content' => 'Hệ thống đang bận. Chi tiết: ' . $e->getMessage()];
+        }
+
+        $this->isTyping = false;
+    }
+]);
 
 ?>
 

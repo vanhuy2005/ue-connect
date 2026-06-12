@@ -740,7 +740,8 @@
        ------------------------------------------------------------------------- */
     .ue-shell {
         display: flex;
-        min-height: 100dvh;
+        height: 100dvh;
+        overflow: hidden;
         background-color: #fff;
     }
 
@@ -767,6 +768,10 @@
     .ue-shell__main {
         flex: 1;
         min-width: 0;
+        display: flex;
+        flex-direction: column;
+        height: 100dvh;
+        overflow: hidden;
     }
 
     .ue-shell__topbar {
@@ -1107,9 +1112,7 @@
         width: 100%;
         max-width: var(--layout-feed-max-w);
         margin: 0 auto;
-        padding: 1.5rem 1rem;
-        padding-top: calc(env(safe-area-inset-top) + 1.5rem);
-        gap: 1.5rem;
+        padding: 0;
     }
 
     .ue-feed-column {
@@ -1194,8 +1197,7 @@
     }
 
     .ue-mobile-bottom-spacer {
-        height: var(--layout-mobile-safe-bottom);
-        pointer-events: none;
+        display: none;
     }
 
     /* -------------------------------------------------------------------------
@@ -1279,7 +1281,7 @@
         pointer-events: auto;
     }
 
-    @media (max-width: 767px) {
+    @media (max-width: 1023px) {
         /* ── Mobile: Threads-like full-bleed feed surface ─────────────────────── */
         .ue-feed-layout {
             display: block;
@@ -1680,7 +1682,7 @@
         padding: 0 1rem;
     }
 
-    @media (max-width: 768px) {
+    @media (max-width: 1023px) {
         .ue-toast-region {
             bottom: calc(var(--layout-bottom-nav-h) + env(safe-area-inset-bottom) + 0.5rem);
         }
@@ -1862,27 +1864,35 @@
 
 .ue-shell__sidebar--collapsed {
     width: var(--layout-sidebar-w-collapsed) !important;
+    padding-left: 0 !important;
+    padding-right: 0 !important;
 }
 
 .ue-shell__sidebar--collapsed .ue-sidebar-logo-wrapper {
-    /* Keep logo aligned with no jumps */
+    padding-left: 0 !important;
+    display: flex;
+    justify-content: center;
+    width: 100%;
 }
 
 /* Keep icons aligned and fixed in position inside collapsed sidebar */
-.ue-shell__sidebar--collapsed .ue-nav-link {
-    border-radius: 50%;
-    gap: 0;
+.ue-shell__sidebar--collapsed .ue-nav-link,
+.ue-shell__sidebar--collapsed .ue-admin-nav-link {
+    width: 44px !important;
+    height: 44px !important;
+    padding: 0 !important;
+    margin: 0 auto !important;
+    border-radius: 50% !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    gap: 0 !important;
 }
 
 .ue-shell__sidebar--collapsed .ue-nav-link [x-show="!collapsed"],
 .ue-shell__sidebar--collapsed .ue-nav-link > span,
 .ue-shell__sidebar--collapsed .ue-nav-link svg:not(.flex-shrink-0) {
     display: none !important;
-}
-
-.ue-shell__sidebar--collapsed .ue-admin-nav-link {
-    border-radius: 50%;
-    gap: 0;
 }
 
 .ue-shell__sidebar--collapsed .ue-admin-nav-link [x-show="!collapsed"],
@@ -2189,4 +2199,14 @@
     }
 }
 
+
+
+.ue-scrollbar-none {
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+}
+
+.ue-scrollbar-none::-webkit-scrollbar {
+    display: none;
+}
 
