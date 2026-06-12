@@ -118,7 +118,7 @@ class BlockedUsersTest extends TestCase
             'blocked_id' => $this->target->id,
         ]);
 
-        Volt::test('pages.app.settings', ['section' => 'privacy', 'subSection' => 'blocked'])
+        Volt::test('pages.app.settings.privacy', ['subSection' => 'blocked'])
             ->call('confirmUnblock', $this->target->id, $this->target->name)
             ->call('executeUnblock')
             ->assertHasNoErrors();

@@ -173,6 +173,22 @@ class User extends Authenticatable implements MustVerifyEmail
     }
 
     /**
+     * Get the user's content preferences.
+     */
+    public function contentPreference(): HasOne
+    {
+        return $this->hasOne(UserContentPreference::class);
+    }
+
+    /**
+     * Get the user's support tickets.
+     */
+    public function supportTickets(): HasMany
+    {
+        return $this->hasMany(SupportTicket::class);
+    }
+
+    /**
      * Get the user's push subscriptions.
      *
      * @return HasMany<PushSubscription, $this>

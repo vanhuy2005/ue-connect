@@ -111,24 +111,6 @@
                         maxlength="3000"
                     ></textarea>
                 </div>
-                @if ($canPostExperience)
-                    <button
-                        type="button"
-                        @click.stop="tagOpen = true; localTags = [...$wire.selectedTags]"
-                        class="flex items-center gap-1 px-2 py-1.5 bg-slate-100 text-slate-500 border border-slate-200 rounded-lg text-xxs font-semibold hover:bg-slate-200 transition-colors cursor-pointer flex-shrink-0 mt-0.5"
-                        title="Gắn nhãn bài viết"
-                    >
-                        <x-ui.icon name="tag" size="xs" class="text-slate-400" />
-                        <template x-if="localTags.length > 0">
-                            <span class="text-ue-brand font-bold"
-                                x-text="localTags.map(t => ({'experience':'KN','opportunity':'CH','pedagogy':'SP'}[t] || t)).join(', ')"
-                            ></span>
-                        </template>
-                        <template x-if="localTags.length === 0">
-                            <span>Gắn nhãn</span>
-                        </template>
-                    </button>
-                @endif
             </div>
             @error('body')
                 <p class="text-xs text-red-600 mt-1 font-semibold">{{ $message }}</p>
@@ -159,6 +141,22 @@
                         <x-ui.icon name="image" size="md" />
                         <input type="file" wire:model="imageFiles" multiple class="hidden" accept="image/*" />
                     </label>
+
+                    @if ($canPostExperience)
+                        <button
+                            type="button"
+                            @click.stop="tagOpen = true; localTags = [...$wire.selectedTags]"
+                            class="relative flex items-center justify-center p-1.5 text-slate-400 hover:text-slate-600 hover:bg-slate-50 border border-slate-200 rounded-lg cursor-pointer transition-colors shadow-2xs flex-shrink-0"
+                            :class="localTags.length > 0 ? 'text-ue-brand border-ue-brand/30 bg-ue-brand-soft/30' : ''"
+                            title="Gắn nhãn bài viết"
+                        >
+                            <x-ui.icon name="tag" size="md" />
+                            <template x-if="localTags.length > 0">
+                                <span class="absolute -top-1.5 -right-1.5 w-4 h-4 bg-ue-brand text-white text-[9px] font-bold rounded-full flex items-center justify-center border-2 border-white" x-text="localTags.length"></span>
+                            </template>
+                        </button>
+                    @endif
+
                     <span class="text-xxs text-slate-400 font-semibold">
                         {{ mb_strlen($body) }}/3000
                     </span>
@@ -249,10 +247,6 @@
         >
             <div class="px-5 py-4 border-b border-slate-100 flex items-center justify-between">
                 <div class="flex items-center gap-2">
-                    <button type="button" @click.stop="closeVis()"
-                        class="text-slate-400 hover:text-slate-600 transition-colors cursor-pointer mr-1">
-                        <x-ui.icon name="arrow-left" size="sm" />
-                    </button>
                     <h3 class="text-sm font-bold text-slate-900">Ai có thể xem bài viết của bạn?</h3>
                 </div>
                 <button type="button" @click.stop="closeVis()"
@@ -346,10 +340,6 @@
             >
                 <div class="px-5 py-4 border-b border-slate-100 flex items-center justify-between">
                     <div class="flex items-center gap-2">
-                        <button type="button" @click.stop="closeTag()"
-                            class="text-slate-400 hover:text-slate-600 transition-colors cursor-pointer mr-1">
-                            <x-ui.icon name="arrow-left" size="sm" />
-                        </button>
                         <h3 class="text-sm font-bold text-slate-900">Chọn nhãn bài viết</h3>
                     </div>
                     <button type="button" @click.stop="closeTag()"

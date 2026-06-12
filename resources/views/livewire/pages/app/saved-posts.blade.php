@@ -456,7 +456,7 @@ new #[Layout('layouts.app')] class extends Component
     <div class="ue-feed-column">
 
         {{-- Header title --}}
-        <div class="flex items-start gap-3 border-b border-slate-150 pb-4 mb-2">
+        <div class="flex items-start gap-3 border-b border-slate-150 pb-4 mb-2 px-4 lg:px-0">
             <x-ui.icon name="bookmark" size="lg" class="text-ue-brand" />
             <div>
                 <h1 class="text-xl font-bold text-slate-800">Bài viết đã lưu</h1>

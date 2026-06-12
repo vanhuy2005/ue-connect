@@ -62,7 +62,7 @@ class SettingsPrivacyTest extends TestCase
     {
         $this->actingAs($this->user);
 
-        Volt::test('pages.app.settings', ['section' => 'privacy'])
+        Volt::test('pages.app.settings.privacy')
             ->set('show_faculty', false)
             ->set('show_major', false)
             ->call('savePrivacy')
@@ -79,7 +79,7 @@ class SettingsPrivacyTest extends TestCase
     {
         $this->actingAs($this->user);
 
-        Volt::test('pages.app.settings', ['section' => 'privacy'])
+        Volt::test('pages.app.settings.privacy')
             ->set('profile_visibility', 'hidden_by_moderation')
             ->set('discovery_visibility', 'forced_hidden')
             ->call('savePrivacy');
@@ -196,7 +196,7 @@ class SettingsPrivacyTest extends TestCase
     {
         $this->actingAs($this->user);
 
-        Volt::test('pages.app.settings', ['section' => 'privacy'])
+        Volt::test('pages.app.settings.privacy')
             ->set('mentions_preference', 'connections')
             ->set('tags_preference', 'nobody')
             ->set('online_status_visibility', 'nobody')

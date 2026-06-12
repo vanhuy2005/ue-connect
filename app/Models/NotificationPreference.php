@@ -29,6 +29,17 @@ class NotificationPreference extends Model
         'push_community_enabled',
         'push_verification_enabled',
         'push_admin_announcements_enabled',
+        'push_mentions',
+        'push_comments',
+        'push_connections',
+        'push_messages',
+        'push_system',
+        'email_mentions',
+        'email_comments',
+        'email_connections',
+        'email_messages',
+        'email_system',
+        'email_marketing',
     ];
 
     protected $casts = [
@@ -49,6 +60,17 @@ class NotificationPreference extends Model
         'push_community_enabled' => 'boolean',
         'push_verification_enabled' => 'boolean',
         'push_admin_announcements_enabled' => 'boolean',
+        'push_mentions' => 'boolean',
+        'push_comments' => 'boolean',
+        'push_connections' => 'boolean',
+        'push_messages' => 'boolean',
+        'push_system' => 'boolean',
+        'email_mentions' => 'boolean',
+        'email_comments' => 'boolean',
+        'email_connections' => 'boolean',
+        'email_messages' => 'boolean',
+        'email_system' => 'boolean',
+        'email_marketing' => 'boolean',
     ];
 
     /**

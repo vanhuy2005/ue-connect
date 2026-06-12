@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="{{ str_replace('_', '-', app()->getLocale()) }}" class="h-full">
+<html lang="{{ str_replace('_', '-', app()->getLocale()) }}" class="h-full overflow-hidden">
     <head>
         <meta charset="utf-8">
         <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
@@ -37,7 +37,7 @@
         @stack('head')
     </head>
 
-    <body class="font-sans antialiased h-full">
+    <body class="font-sans antialiased h-full overflow-hidden bg-white dark:bg-zinc-950">
         <x-ui.page-transition />
 
         {{-- Default shell when not provided by caller --}}
@@ -54,7 +54,7 @@
             @endif
 
             {{-- Main column --}}
-            <div class="ue-shell__main flex flex-col min-h-full">
+            <div class="ue-shell__main flex flex-col h-full min-h-0 overflow-hidden">
 
                 {{-- Topbar (Only for custom shells, NOT social, admin, conversation, guest, or auth) --}}
                 @if(!in_array($shell, ['social', 'admin', 'conversation', 'guest', 'auth']))
@@ -74,7 +74,7 @@
                 {{-- Page content --}}
                 <main
                     id="main-content"
-                    class="flex-1 {{ in_array($shell, ['social', 'conversation']) ? 'pb-16 lg:pb-0' : '' }}"
+                    class="flex-1 flex flex-col h-full min-h-0 {{ in_array($shell, ['social', 'conversation']) ? 'pb-16 lg:pb-0 overflow-hidden' : 'overflow-y-auto overflow-x-hidden' }}"
                     tabindex="-1"
                 >
                     @if($shell === 'admin')
