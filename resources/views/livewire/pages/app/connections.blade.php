@@ -19,11 +19,19 @@ use Illuminate\Support\Facades\Auth;
 use Livewire\Attributes\Layout;
 use Livewire\Volt\Component;
 
+use Livewire\WithPagination;
+
 new #[Layout('layouts.app')] class extends Component
 {
-    public string $activeTab = 'home'; // home, connections, received, sent, blocked, birthday
+    use WithPagination;
+
+    public string $activeTab = 'home'; // home, connections, received, sent, blocked, birthday, discovery
 
     public string $connectionSearch = '';
+
+    // Discovery search & role filter properties
+    public string $search = '';
+    public string $roleFilter = 'all';
 
     // Greeting modal state (for quick suggestions connecting flow)
     public bool $showGreetingModal = false;
@@ -208,116 +216,292 @@ new #[Layout('layouts.app')] class extends Component
         }
     }
 
+    public function updatedSearch(): void
+    {
+        $this->resetPage();
+    }
+
+    public function updatedRoleFilter(): void
+    {
+        $this->resetPage();
+    }
+
+    /**
+     * Resolve the shared context between current user and target user.
+     *
+     * @return array<string>
+     */
+    public function resolveSharedContext(Profile $targetProfile): array
+    {
+        $currentUser = Auth::user();
+        if (! $currentUser || ! $currentUser->profile) {
+            return [];
+        }
+
+        $myProfile = $currentUser->profile;
+        $shared = [];
+
+        // 1. Same Faculty
+        $myFacultyId = null;
+        $targetFacultyId = null;
+
+        if ($myProfile->role_type === 'student' && $myProfile->studentProfile) {
+            $myFacultyId = $myProfile->studentProfile->faculty_id;
+        } elseif ($myProfile->role_type === 'alumni' && $myProfile->alumniProfile) {
+            $myFacultyId = $myProfile->alumniProfile->faculty_id;
+        } elseif (in_array($myProfile->role_type, ['teacher', 'advisor'], true) && $myProfile->advisorProfile) {
+            $myFacultyId = $myProfile->advisorProfile->faculty_id;
+        }
+
+        if ($targetProfile->role_type === 'student' && $targetProfile->studentProfile) {
+            $targetFacultyId = $targetProfile->studentProfile->faculty_id;
+        } elseif ($targetProfile->role_type === 'alumni' && $targetProfile->alumniProfile) {
+            $targetFacultyId = $targetProfile->alumniProfile->faculty_id;
+        } elseif (in_array($targetProfile->role_type, ['teacher', 'advisor'], true) && $targetProfile->advisorProfile) {
+            $targetFacultyId = $targetProfile->advisorProfile->faculty_id;
+        }
+
+        if ($myFacultyId && $targetFacultyId && $myFacultyId === $targetFacultyId) {
+            if (in_array($targetProfile->role_type, ['teacher', 'advisor'], true)) {
+                $shared[] = 'Giảng viên cùng khoa';
+            } elseif ($targetProfile->role_type === 'alumni') {
+                $shared[] = 'Cựu sinh viên cùng khoa';
+            } else {
+                $shared[] = 'Cùng khoa '.($targetProfile->faculty ?: '');
+            }
+        }
+
+        // 2. Same Major/Program
+        $myProgramId = null;
+        $targetProgramId = null;
+
+        if ($myProfile->role_type === 'student' && $myProfile->studentProfile) {
+            $myProgramId = $myProfile->studentProfile->academic_program_id;
+        } elseif ($myProfile->role_type === 'alumni' && $myProfile->alumniProfile) {
+            $myProgramId = $myProfile->alumniProfile->academic_program_id;
+        }
+
+        if ($targetProfile->role_type === 'student' && $targetProfile->studentProfile) {
+            $targetProgramId = $targetProfile->studentProfile->academic_program_id;
+        } elseif ($targetProfile->role_type === 'alumni' && $targetProfile->alumniProfile) {
+            $targetProgramId = $targetProfile->alumniProfile->academic_program_id;
+        }
+
+        if ($myProgramId && $targetProgramId && $myProgramId === $targetProgramId) {
+            $programName = null;
+            if ($targetProfile->studentProfile && $targetProfile->studentProfile->academicProgram) {
+                $programName = $targetProfile->studentProfile->academicProgram->name;
+            } elseif ($targetProfile->alumniProfile && $targetProfile->alumniProfile->academicProgram) {
+                $programName = $targetProfile->alumniProfile->academicProgram->name;
+            }
+            if ($programName) {
+                $shared[] = 'Cùng ngành '.$programName;
+            }
+        }
+
+        // 3. Same Cohort
+        $myCohort = null;
+        $targetCohort = null;
+
+        if ($myProfile->role_type === 'student' && $myProfile->studentProfile) {
+            $myCohort = $myProfile->studentProfile->cohort;
+        } elseif ($myProfile->role_type === 'alumni' && $myProfile->alumniProfile) {
+            $myCohort = $myProfile->alumniProfile->cohort;
+        }
+
+        if ($targetProfile->role_type === 'student' && $targetProfile->studentProfile) {
+            $targetCohort = $targetProfile->studentProfile->cohort;
+        } elseif ($targetProfile->role_type === 'alumni' && $targetProfile->alumniProfile) {
+            $targetCohort = $targetProfile->alumniProfile->cohort;
+        }
+
+        if ($myCohort && $targetCohort && $myCohort === $targetCohort) {
+            $shared[] = 'Cùng khóa '.$targetCohort;
+        }
+
+        return $shared;
+    }
+
     public function with(): array
     {
         $userId = Auth::id();
 
-        // 1. Blocked users lookup (reusable for exclusion)
+        // 1. We always need the counts for the sidebar badges
+        $receivedCount = Greeting::where('receiver_id', $userId)->where('status', GreetingStatus::PENDING)->count();
+        $connectionsCount = Connection::where(function ($q) use ($userId) {
+            $q->where('user_one_id', $userId)->orWhere('user_two_id', $userId);
+        })->where('status', ConnectionStatus::ACTIVE)->count();
+        $sentCount = Greeting::where('sender_id', $userId)->where('status', GreetingStatus::PENDING)->count();
+        $blockedCount = BlockedUser::where('blocker_id', $userId)->count();
+
+        // Blocked users lookup (reusable for exclusion)
         $blockedUserIds = BlockedUser::where('blocker_id', $userId)->pluck('blocked_id')
             ->concat(BlockedUser::where('blocked_id', $userId)->pluck('blocker_id'))
             ->unique()
             ->toArray();
 
-        // 2. Fetch active connections
-        $connectionsQuery = Connection::where(function ($q) use ($userId) {
-            $q->where('user_one_id', $userId)->orWhere('user_two_id', $userId);
-        })
-            ->where('status', ConnectionStatus::ACTIVE)
-            ->with([
-            'userOne.profile.studentProfile.faculty',
-            'userOne.profile.alumniProfile.faculty',
-            'userOne.profile.advisorProfile.faculty',
-            'userOne.profile.studentProfile.academicProgram',
-            'userOne.profile.alumniProfile.academicProgram',
-            'userTwo.profile.studentProfile.faculty',
-            'userTwo.profile.alumniProfile.faculty',
-            'userTwo.profile.advisorProfile.faculty',
-            'userTwo.profile.studentProfile.academicProgram',
-            'userTwo.profile.alumniProfile.academicProgram',
-        ]);
+        // Initialize lists (run query conditionally based on activeTab to optimize)
+        $connections = collect();
+        $received = collect();
+        $sent = collect();
+        $blocked = collect();
+        $suggestions = collect();
+        $profiles = null;
 
-        $connections = $connectionsQuery->get()
-            ->map(function ($connection) use ($userId) {
-                $otherUser = $connection->user_one_id === $userId ? $connection->userTwo : $connection->userOne;
+        if ($this->activeTab === 'home' || $this->activeTab === 'connections') {
+            $connectionsQuery = Connection::where(function ($q) use ($userId) {
+                $q->where('user_one_id', $userId)->orWhere('user_two_id', $userId);
+            })
+                ->where('status', ConnectionStatus::ACTIVE)
+                ->with([
+                    'userOne.profile.studentProfile.faculty',
+                    'userOne.profile.alumniProfile.faculty',
+                    'userOne.profile.advisorProfile.faculty',
+                    'userOne.profile.studentProfile.academicProgram',
+                    'userOne.profile.alumniProfile.academicProgram',
+                    'userTwo.profile.studentProfile.faculty',
+                    'userTwo.profile.alumniProfile.faculty',
+                    'userTwo.profile.advisorProfile.faculty',
+                    'userTwo.profile.studentProfile.academicProgram',
+                    'userTwo.profile.alumniProfile.academicProgram',
+                ]);
 
-                return [
-                    'id' => $connection->id,
-                    'user' => $otherUser,
-                    'connected_at' => $connection->connected_at,
-                ];
-            });
+            $connections = $connectionsQuery->get()
+                ->map(function ($connection) use ($userId) {
+                    $otherUser = $connection->user_one_id === $userId ? $connection->userTwo : $connection->userOne;
 
-        if (! empty($this->connectionSearch)) {
-            $search = mb_strtolower($this->connectionSearch);
-            $connections = $connections->filter(function ($item) use ($search) {
-                $user = $item['user'];
-                $profile = $user->profile;
-                if (! $profile) {
-                    return false;
-                }
+                    return [
+                        'id' => $connection->id,
+                        'user' => $otherUser,
+                        'connected_at' => $connection->connected_at,
+                    ];
+                });
 
-                $nameMatch = str_contains(mb_strtolower($user->name), $search) || str_contains(mb_strtolower($profile->display_name), $search);
-                $facultyMatch = $profile->faculty ? str_contains(mb_strtolower($profile->faculty), $search) : false;
+            if (! empty($this->connectionSearch)) {
+                $search = mb_strtolower($this->connectionSearch);
+                $connections = $connections->filter(function ($item) use ($search) {
+                    $user = $item['user'];
+                    $profile = $user->profile;
+                    if (! $profile) {
+                        return false;
+                    }
 
-                $program = null;
-                if ($profile->studentProfile && $profile->studentProfile->academicProgram) {
-                    $program = $profile->studentProfile->academicProgram->name;
-                } elseif ($profile->alumniProfile && $profile->alumniProfile->academicProgram) {
-                    $program = $profile->alumniProfile->academicProgram->name;
-                }
-                $programMatch = $program ? str_contains(mb_strtolower($program), $search) : false;
+                    $nameMatch = str_contains(mb_strtolower($user->name), $search) || str_contains(mb_strtolower($profile->display_name), $search);
+                    $facultyMatch = $profile->faculty ? str_contains(mb_strtolower($profile->faculty), $search) : false;
 
-                return $nameMatch || $facultyMatch || $programMatch;
-            })->values();
+                    $program = null;
+                    if ($profile->studentProfile && $profile->studentProfile->academicProgram) {
+                        $program = $profile->studentProfile->academicProgram->name;
+                    } elseif ($profile->alumniProfile && $profile->alumniProfile->academicProgram) {
+                        $program = $profile->alumniProfile->academicProgram->name;
+                    }
+                    $programMatch = $program ? str_contains(mb_strtolower($program), $search) : false;
+
+                    return $nameMatch || $facultyMatch || $programMatch;
+                })->values();
+            }
         }
 
-        // 3. Fetch received pending greetings
-        $received = Greeting::where('receiver_id', $userId)
-            ->where('status', GreetingStatus::PENDING)
-            ->with(['sender.profile.studentProfile.faculty'])
-            ->orderBy('created_at', 'desc')
-            ->get();
+        if ($this->activeTab === 'home' || $this->activeTab === 'received') {
+            $received = Greeting::where('receiver_id', $userId)
+                ->where('status', GreetingStatus::PENDING)
+                ->with(['sender.profile.studentProfile.faculty'])
+                ->orderBy('created_at', 'desc')
+                ->get();
+        }
 
-        // 4. Fetch sent pending greetings
-        $sent = Greeting::where('sender_id', $userId)
-            ->where('status', GreetingStatus::PENDING)
-            ->with(['receiver.profile.studentProfile.faculty'])
-            ->orderBy('created_at', 'desc')
-            ->get();
+        if ($this->activeTab === 'home' || $this->activeTab === 'sent') {
+            $sent = Greeting::where('sender_id', $userId)
+                ->where('status', GreetingStatus::PENDING)
+                ->with(['receiver.profile.studentProfile.faculty'])
+                ->orderBy('created_at', 'desc')
+                ->get();
+        }
 
-        // 5. Fetch blocked users
-        $blocked = BlockedUser::where('blocker_id', $userId)
-            ->with(['blocked.profile.studentProfile.faculty'])
-            ->orderBy('created_at', 'desc')
-            ->get();
+        if ($this->activeTab === 'home' || $this->activeTab === 'blocked') {
+            $blocked = BlockedUser::where('blocker_id', $userId)
+                ->with(['blocked.profile.studentProfile.faculty'])
+                ->orderBy('created_at', 'desc')
+                ->get();
+        }
 
-        // 6. Suggestions query (excluding self, blocked, connected, pending)
-        $excludeUserIds = Connection::where(function ($q) use ($userId) {
-            $q->where('user_one_id', $userId)->orWhere('user_two_id', $userId);
-        })
-            ->get()
-            ->flatMap(fn ($c) => [$c->user_one_id, $c->user_two_id])
-            ->concat(Greeting::where('sender_id', $userId)->pluck('receiver_id'))
-            ->concat(Greeting::where('receiver_id', $userId)->pluck('sender_id'))
-            ->concat([$userId])
-            ->concat($blockedUserIds)
-            ->unique()
-            ->toArray();
-
-        $suggestions = Profile::whereNotIn('user_id', $excludeUserIds)
-            ->where('discoverable', true)
-            ->whereHas('user', function ($q) {
-                $q->where('account_status', AccountStatus::ACTIVE)
-                    ->where(function ($sub) {
-                        $sub->whereDoesntHave('profilePrivacySetting')
-                            ->orWhereHas('profilePrivacySetting', function ($pq) {
-                                $pq->where('discovery_visibility', 'enabled');
-                            });
-                    });
+        if ($this->activeTab === 'home') {
+            $excludeUserIds = Connection::where(function ($q) use ($userId) {
+                $q->where('user_one_id', $userId)->orWhere('user_two_id', $userId);
             })
-            ->with(['user', 'studentProfile.faculty', 'advisorProfile.faculty', 'alumniProfile.faculty'])
-            ->limit(4)
-            ->get();
+                ->get()
+                ->flatMap(fn ($c) => [$c->user_one_id, $c->user_two_id])
+                ->concat(Greeting::where('sender_id', $userId)->pluck('receiver_id'))
+                ->concat(Greeting::where('receiver_id', $userId)->pluck('sender_id'))
+                ->concat([$userId])
+                ->concat($blockedUserIds)
+                ->unique()
+                ->toArray();
+
+            $suggestions = Profile::whereNotIn('user_id', $excludeUserIds)
+                ->where('discoverable', true)
+                ->whereHas('user', function ($q) {
+                    $q->where('account_status', AccountStatus::ACTIVE)
+                        ->where(function ($sub) {
+                            $sub->whereDoesntHave('profilePrivacySetting')
+                                ->orWhereHas('profilePrivacySetting', function ($pq) {
+                                    $pq->where('discovery_visibility', 'enabled');
+                                });
+                        });
+                })
+                ->with(['user', 'studentProfile.faculty', 'advisorProfile.faculty', 'alumniProfile.faculty'])
+                ->limit(4)
+                ->get();
+        }
+
+        if ($this->activeTab === 'discovery') {
+            $query = Profile::where('user_id', '!=', $userId)
+                ->where('discoverable', true)
+                ->whereNotIn('user_id', $blockedUserIds)
+                ->whereHas('user', function ($q) {
+                    $q->where('account_status', AccountStatus::ACTIVE)
+                        ->where(function ($sub) {
+                            $sub->whereDoesntHave('profilePrivacySetting')
+                                ->orWhereHas('profilePrivacySetting', function ($pq) {
+                                    $pq->where('discovery_visibility', 'enabled');
+                                });
+                        });
+                })
+                ->with(['user', 'studentProfile.faculty', 'advisorProfile.faculty', 'alumniProfile.faculty', 'studentProfile.academicProgram', 'alumniProfile.academicProgram']);
+
+            if ($this->roleFilter !== 'all') {
+                $query->where('role_type', $this->roleFilter);
+            }
+
+            if (! empty($this->search)) {
+                $searchTerm = '%'.$this->search.'%';
+                $query->where(function ($q) use ($searchTerm) {
+                    $q->where('display_name', 'like', $searchTerm)
+                        ->orWhere('bio', 'like', $searchTerm)
+                        ->orWhereHas('user', function ($uq) use ($searchTerm) {
+                            $uq->where('name', 'like', $searchTerm)
+                                ->orWhere('email', 'like', $searchTerm);
+                        })
+                        ->orWhereHas('studentProfile.faculty', function ($fq) use ($searchTerm) {
+                            $fq->where('name', 'like', $searchTerm);
+                        })
+                        ->orWhereHas('studentProfile.academicProgram', function ($apq) use ($searchTerm) {
+                            $apq->where('name', 'like', $searchTerm);
+                        })
+                        ->orWhereHas('alumniProfile.faculty', function ($fq) use ($searchTerm) {
+                            $fq->where('name', 'like', $searchTerm);
+                        })
+                        ->orWhereHas('alumniProfile.academicProgram', function ($apq) use ($searchTerm) {
+                            $apq->where('name', 'like', $searchTerm);
+                        })
+                        ->orWhereHas('advisorProfile.faculty', function ($fq) use ($searchTerm) {
+                            $fq->where('name', 'like', $searchTerm);
+                        });
+                });
+            }
+
+            $profiles = $query->paginate(12);
+        }
 
         return [
             'connections' => $connections,
@@ -325,6 +509,11 @@ new #[Layout('layouts.app')] class extends Component
             'sent' => $sent,
             'blocked' => $blocked,
             'suggestions' => $suggestions,
+            'profiles' => $profiles,
+            'receivedCount' => $receivedCount,
+            'connectionsCount' => $connectionsCount,
+            'sentCount' => $sentCount,
+            'blockedCount' => $blockedCount,
         ];
     }
 }; ?>
@@ -354,30 +543,30 @@ new #[Layout('layouts.app')] class extends Component
                 class="ue-sidebar-subnav-link {{ $activeTab === 'received' ? 'active' : '' }}">
                 <div class="relative">
                     <x-ui.icon name="user-check" size="xs" />
-                    @if(count($received) > 0)
+                    @if($receivedCount > 0)
                         <span class="absolute -top-1 -right-1 flex h-2 w-2 items-center justify-center rounded-full bg-red-500 ring-2 ring-white"></span>
                     @endif
                 </div>
                 <span class="flex-1 text-left">Lời mời đã nhận</span>
-                @if(count($received) > 0)
-                    <span class="text-xs font-semibold text-slate-400 mr-1">{{ count($received) }} mới</span>
+                @if($receivedCount > 0)
+                    <span class="text-xs font-semibold text-slate-400 mr-1">{{ $receivedCount }} mới</span>
                 @endif
             </button>
 
-            {{-- Gợi ý (Links to Discovery page) --}}
-            <a href="{{ route('discovery.index') }}" wire:navigate
-                class="ue-sidebar-subnav-link">
+            {{-- Gợi ý --}}
+            <button wire:click="$set('activeTab', 'discovery')"
+                class="ue-sidebar-subnav-link {{ $activeTab === 'discovery' ? 'active' : '' }}">
                 <x-ui.icon name="user-plus" size="xs" />
                 <span class="flex-1 text-left">Gợi ý</span>
                 <x-ui.icon name="chevron-right" size="xs" />
-            </a>
+            </button>
 
             {{-- Tất cả bạn bè --}}
             <button wire:click="$set('activeTab', 'connections')"
                 class="ue-sidebar-subnav-link {{ $activeTab === 'connections' ? 'active' : '' }}">
                 <x-ui.icon name="users" size="xs" />
                 <span class="flex-1 text-left">Bạn bè/kết nối</span>
-                <span class="text-xs text-slate-400 mr-1">{{ count($connections) }}</span>
+                <span class="text-xs text-slate-400 mr-1">{{ $connectionsCount }}</span>
             </button>
 
             {{-- Lời mời đã gửi --}}
@@ -385,7 +574,7 @@ new #[Layout('layouts.app')] class extends Component
                 class="ue-sidebar-subnav-link {{ $activeTab === 'sent' ? 'active' : '' }}">
                 <x-ui.icon name="send" size="xs" />
                 <span class="flex-1 text-left">Lời mời đã gửi</span>
-                <span class="text-xs text-slate-400 mr-1">{{ count($sent) }}</span>
+                <span class="text-xs text-slate-400 mr-1">{{ $sentCount }}</span>
             </button>
 
             {{-- Sinh nhật --}}
@@ -400,7 +589,7 @@ new #[Layout('layouts.app')] class extends Component
                 class="ue-sidebar-subnav-link {{ $activeTab === 'blocked' ? 'active' : '' }}">
                 <x-ui.icon name="slash" size="xs" />
                 <span class="flex-1 text-left">Đã chặn</span>
-                <span class="text-xs text-slate-400 mr-1">{{ count($blocked) }}</span>
+                <span class="text-xs text-slate-400 mr-1">{{ $blockedCount }}</span>
             </button>
         </nav>
     </aside>
@@ -412,10 +601,10 @@ new #[Layout('layouts.app')] class extends Component
         <div class="lg:hidden bg-white p-3 rounded-2xl border border-slate-200 mb-4 shadow-sm">
             <div class="flex items-center justify-between mb-3">
                 <h1 class="text-lg font-extrabold text-slate-800">Bạn bè</h1>
-                <a href="{{ route('discovery.index') }}" wire:navigate
+                <button wire:click="$set('activeTab', 'discovery')"
                     class="p-2 bg-ue-brand text-white rounded-full transition shadow-sm" title="Khám phá UEers">
                     <x-ui.icon name="user-plus" size="xs" />
-                </a>
+                </button>
             </div>
 
             {{-- Mobile Nav Chips --}}
@@ -427,23 +616,23 @@ new #[Layout('layouts.app')] class extends Component
                 <button wire:click="$set('activeTab', 'received')"
                     class="px-3.5 py-1.5 rounded-full text-xs font-bold transition whitespace-nowrap relative {{ $activeTab === 'received' ? 'bg-ue-brand text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200' }}">
                     Lời mời
-                    @if(count($received) > 0)
+                    @if($receivedCount > 0)
                         <span class="ml-1 inline-flex items-center justify-center px-1.5 py-0.5 rounded-full bg-red-500 text-[9px] text-white font-bold leading-none">
-                            {{ count($received) }}
+                            {{ $receivedCount }}
                         </span>
                     @endif
                 </button>
-                <a href="{{ route('discovery.index') }}" wire:navigate
-                    class="px-3.5 py-1.5 rounded-full text-xs font-bold transition whitespace-nowrap bg-slate-100 text-slate-600 hover:bg-slate-200">
+                <button wire:click="$set('activeTab', 'discovery')"
+                    class="px-3.5 py-1.5 rounded-full text-xs font-bold transition whitespace-nowrap {{ $activeTab === 'discovery' ? 'bg-ue-brand text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200' }}">
                     Gợi ý
-                </a>
+                </button>
                 <button wire:click="$set('activeTab', 'connections')"
                     class="px-3.5 py-1.5 rounded-full text-xs font-bold transition whitespace-nowrap {{ $activeTab === 'connections' ? 'bg-ue-brand text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200' }}">
-                    Bạn bè ({{ count($connections) }})
+                    Bạn bè ({{ $connectionsCount }})
                 </button>
                 <button wire:click="$set('activeTab', 'sent')"
                     class="px-3.5 py-1.5 rounded-full text-xs font-bold transition whitespace-nowrap {{ $activeTab === 'sent' ? 'bg-ue-brand text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200' }}">
-                    Đã gửi ({{ count($sent) }})
+                    Đã gửi ({{ $sentCount }})
                 </button>
                 <button wire:click="$set('activeTab', 'birthday')"
                     class="px-3.5 py-1.5 rounded-full text-xs font-bold transition whitespace-nowrap {{ $activeTab === 'birthday' ? 'bg-ue-brand text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200' }}">
@@ -451,7 +640,7 @@ new #[Layout('layouts.app')] class extends Component
                 </button>
                 <button wire:click="$set('activeTab', 'blocked')"
                     class="px-3.5 py-1.5 rounded-full text-xs font-bold transition whitespace-nowrap {{ $activeTab === 'blocked' ? 'bg-ue-brand text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200' }}">
-                    Đã chặn ({{ count($blocked) }})
+                    Đã chặn ({{ $blockedCount }})
                 </button>
             </div>
         </div>
@@ -992,6 +1181,261 @@ new #[Layout('layouts.app')] class extends Component
                         </div>
                     @endforelse
                 </div>
+            </div>
+        @endif
+
+        {{-- TAB: Discovery / Gợi ý --}}
+        @if ($activeTab === 'discovery' && $profiles)
+            <div class="space-y-6">
+                {{-- Title Header and Controls --}}
+                <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-xs space-y-4">
+                    <div>
+                        <h2 class="text-sm font-extrabold text-slate-800">Những người bạn có thể biết</h2>
+                        <p class="text-xxs text-slate-400 font-medium mt-0.5">Tìm kiếm bạn bè, mentor, cựu sinh viên cùng trường Đại học Sư phạm TP.HCM để cùng nhau học tập và chia sẻ.</p>
+                    </div>
+
+                    <div class="flex flex-col md:flex-row gap-3 items-stretch md:items-center justify-between">
+                        {{-- Search Input --}}
+                        <div class="relative flex-1 max-w-md">
+                            <span class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                <x-ui.icon name="search" size="xs" class="text-slate-400" />
+                            </span>
+                            <input
+                                type="text"
+                                wire:model.live.debounce.300ms="search"
+                                placeholder="Tìm tên, khoa, ngành học, tiểu sử..."
+                                class="w-full pl-9 pr-4 py-2 text-xs rounded-xl border border-slate-200 focus:outline-none focus:ring-1 focus:ring-ue-brand/40 focus:border-ue-brand/40 bg-slate-50 placeholder-slate-400 text-slate-700"
+                            />
+                        </div>
+
+                        {{-- Filters --}}
+                        <div class="flex items-center gap-1.5 overflow-x-auto pb-1 md:pb-0 select-none scrollbar-none">
+                            <button
+                                type="button"
+                                wire:click="$set('roleFilter', 'all')"
+                                class="px-3 py-1.5 rounded-lg text-xxs font-bold transition-all shrink-0 whitespace-nowrap {{ $roleFilter === 'all' ? 'bg-ue-brand-soft text-ue-brand border border-ue-brand-border shadow-3xs' : 'bg-slate-50 text-slate-500 hover:bg-slate-100 border border-transparent' }}"
+                            >
+                                Tất cả
+                            </button>
+                            <button
+                                type="button"
+                                wire:click="$set('roleFilter', 'student')"
+                                class="px-3 py-1.5 rounded-lg text-xxs font-bold transition-all shrink-0 whitespace-nowrap {{ $roleFilter === 'student' ? 'bg-ue-brand-soft text-ue-brand border border-ue-brand-border shadow-3xs' : 'bg-slate-50 text-slate-500 hover:bg-slate-100 border border-transparent' }}"
+                            >
+                                Sinh viên
+                            </button>
+                            <button
+                                type="button"
+                                wire:click="$set('roleFilter', 'teacher')"
+                                class="px-3 py-1.5 rounded-lg text-xxs font-bold transition-all shrink-0 whitespace-nowrap {{ $roleFilter === 'teacher' ? 'bg-ue-brand-soft text-ue-brand border border-ue-brand-border shadow-3xs' : 'bg-slate-50 text-slate-500 hover:bg-slate-100 border border-transparent' }}"
+                            >
+                                Giảng viên
+                            </button>
+                            <button
+                                type="button"
+                                wire:click="$set('roleFilter', 'alumni')"
+                                class="px-3 py-1.5 rounded-lg text-xxs font-bold transition-all shrink-0 whitespace-nowrap {{ $roleFilter === 'alumni' ? 'bg-ue-brand-soft text-ue-brand border border-ue-brand-border shadow-3xs' : 'bg-slate-50 text-slate-500 hover:bg-slate-100 border border-transparent' }}"
+                            >
+                                Cựu sinh viên
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                {{-- Grid List --}}
+                <div
+                    class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3"
+                    wire:loading.delay.class="ue-content-loading"
+                    wire:target="search,roleFilter,nextPage,previousPage,gotoPage"
+                    aria-busy="false"
+                >
+                    @forelse ($profiles as $profile)
+                        @php
+                            $currentUserId = Auth::id();
+                            
+                            // Check block state
+                            $isBlocked = \App\Models\BlockedUser::where(function ($q) use ($profile, $currentUserId) {
+                                $q->where('blocker_id', $currentUserId)->where('blocked_id', $profile->user_id);
+                            })->orWhere(function ($q) use ($profile, $currentUserId) {
+                                $q->where('blocker_id', $profile->user_id)->where('blocked_id', $currentUserId);
+                            })->exists();
+
+                            if ($profile->user_id === $currentUserId) {
+                                $status = 'self';
+                            } elseif ($isBlocked) {
+                                $status = 'blocked';
+                            } else {
+                                $userOneId = min($currentUserId, $profile->user_id);
+                                $userTwoId = max($currentUserId, $profile->user_id);
+                                $isConnected = \App\Models\Connection::where('user_one_id', $userOneId)
+                                    ->where('user_two_id', $userTwoId)
+                                    ->where('status', \App\Enums\ConnectionStatus::ACTIVE)
+                                    ->exists();
+
+                                if ($isConnected) {
+                                    $status = 'connected';
+                                } else {
+                                    $hasSent = \App\Models\Greeting::where('sender_id', $currentUserId)
+                                        ->where('receiver_id', $profile->user_id)
+                                        ->where('status', \App\Enums\GreetingStatus::PENDING)
+                                        ->exists();
+
+                                    if ($hasSent) {
+                                        $status = 'pending_sent';
+                                    } else {
+                                        $hasReceived = \App\Models\Greeting::where('sender_id', $profile->user_id)
+                                            ->where('receiver_id', $currentUserId)
+                                            ->where('status', \App\Enums\GreetingStatus::PENDING)
+                                            ->exists();
+
+                                        $status = $hasReceived ? 'pending_received' : 'none';
+                                    }
+                                }
+                            }
+                            $profileUrl = route('profile.show', $profile->user);
+                        @endphp
+                        <div class="ue-loadable-card bg-white border border-slate-200 rounded-2xl p-4 flex flex-col justify-between hover:shadow-sm hover:border-slate-350 transition-all duration-200 group">
+                            <div>
+                                {{-- Profile identity info --}}
+                                <div class="flex items-start justify-between gap-3">
+                                    <div class="flex items-center gap-3">
+                                        <a href="{{ $profileUrl }}" wire:navigate class="block rounded-full focus:outline-none focus:ring-2 focus:ring-ue-brand/30" aria-label="Xem trang cá nhân của {{ $profile->display_name }}">
+                                            <x-ui.avatar :user="$profile->user" size="md" class="border border-slate-100 group-hover:scale-105 transition-transform duration-200" />
+                                        </a>
+                                        <div>
+                                            <a href="{{ $profileUrl }}" wire:navigate class="text-xs font-bold text-slate-800 flex items-center gap-1 leading-snug hover:text-ue-brand hover:underline">
+                                                {{ $profile->display_name }}
+                                                <x-ui.icon name="shield-check" size="xs" class="text-ue-brand fill-ue-brand" />
+                                            </a>
+                                            <p class="text-[10px] text-slate-400 font-bold tracking-wide uppercase mt-0.5">
+                                                @if ($profile->role_type === 'student') Sinh viên
+                                                @elseif (in_array($profile->role_type, ['teacher', 'advisor'], true)) Giảng viên
+                                                @elseif ($profile->role_type === 'alumni') Cựu sinh viên
+                                                @else Thành viên
+                                                @endif
+                                            </p>
+                                        </div>
+                                    </div>
+
+                                    {{-- Faculty tag --}}
+                                    @if ($profile->faculty)
+                                        <span class="bg-slate-50 text-[9px] font-bold text-slate-500 px-2 py-0.5 rounded-md border border-slate-150 leading-none flex-shrink-0">
+                                            {{ \Illuminate\Support\Str::limit($profile->faculty, 15) }}
+                                        </span>
+                                    @endif
+                                </div>
+
+                                {{-- Bio --}}
+                                @if ($profile->bio)
+                                    <p class="text-xxs text-slate-550 font-semibold leading-relaxed mt-3.5 line-clamp-2">
+                                        {{ $profile->bio }}
+                                    </p>
+                                @else
+                                    <p class="text-xxs text-slate-350 italic font-semibold leading-relaxed mt-3.5">
+                                        Chưa cập nhật giới thiệu bản thân.
+                                    </p>
+                                @endif
+
+                                {{-- Shared Context Commonalities --}}
+                                @php
+                                    $sharedContext = $this->resolveSharedContext($profile);
+                                @endphp
+                                @if (!empty($sharedContext))
+                                    <div class="mt-3.5 flex flex-wrap gap-1.5">
+                                        @foreach ($sharedContext as $contextText)
+                                            <span class="inline-flex items-center gap-1 bg-ue-brand-soft text-[9px] font-extrabold text-ue-brand px-2 py-0.5 rounded-md border border-ue-brand-border leading-none">
+                                                <x-ui.icon name="sparkles" size="xxs" />
+                                                {{ $contextText }}
+                                            </span>
+                                        @endforeach
+                                    </div>
+                                @endif
+                            </div>
+
+                            {{-- Action row --}}
+                            <div class="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between gap-2">
+                                <span class="text-[10px] text-slate-400 font-bold">
+                                    @if ($status === 'connected')
+                                        <span class="flex items-center gap-1 text-emerald-650">
+                                            <x-ui.icon name="check" size="xs" /> Đã kết nối
+                                        </span>
+                                    @elseif ($status === 'pending_sent')
+                                        <span class="text-amber-655">Đã gửi lời chào</span>
+                                    @elseif ($status === 'pending_received')
+                                        <span class="text-indigo-655">Chờ bạn đồng ý</span>
+                                    @elseif ($status === 'blocked')
+                                        <span class="text-red-500">Đã chặn</span>
+                                    @else
+                                        <span class="text-slate-400">Chưa kết nối</span>
+                                    @endif
+                                </span>
+
+                                {{-- Action buttons --}}
+                                @if ($status === 'none')
+                                    <button
+                                        type="button"
+                                        wire:click="startGreeting({{ $profile->user_id }})"
+                                        wire:loading.attr="disabled"
+                                        wire:target="startGreeting({{ $profile->user_id }})"
+                                        class="bg-ue-brand hover:bg-ue-brand-dark text-white text-xxs font-bold px-3 py-1.5 rounded-lg shadow-3xs hover:shadow-2xs transition-all flex items-center gap-1.5 disabled:opacity-60 disabled:cursor-not-allowed"
+                                    >
+                                        <span wire:loading.remove wire:target="startGreeting({{ $profile->user_id }})" class="flex items-center gap-1.5">
+                                            <x-ui.icon name="user-plus" size="xs" /> Gửi lời chào
+                                        </span>
+                                        <span wire:loading wire:target="startGreeting({{ $profile->user_id }})" class="flex items-center gap-1.5">
+                                            <span class="ue-spinner"></span>
+                                            Đang mở...
+                                        </span>
+                                    </button>
+                                @elseif ($status === 'connected')
+                                    @php
+                                        $connectedConversationId = \App\Models\Conversation::where('conversation_type', \App\Enums\ConversationType::DIRECT)
+                                            ->where('direct_user_low_id', min(Auth::id(), $profile->user_id))
+                                            ->where('direct_user_high_id', max(Auth::id(), $profile->user_id))
+                                            ->first()?->id;
+                                    @endphp
+                                    <a
+                                        href="{{ route('messages.index', ['conversation' => $connectedConversationId]) }}"
+                                        class="bg-slate-50 hover:bg-slate-100 text-slate-700 text-xxs font-bold px-3 py-1.5 rounded-lg border border-slate-250 transition-colors flex items-center gap-1.5"
+                                    >
+                                        <x-ui.icon name="message-square" size="xs" /> Nhắn tin
+                                    </a>
+                                @elseif ($status === 'pending_received')
+                                    <button
+                                        type="button"
+                                        wire:click="$set('activeTab', 'received')"
+                                        class="bg-indigo-50 hover:bg-indigo-100 text-indigo-755 text-xxs font-bold px-3 py-1.5 rounded-lg transition-colors border border-indigo-150"
+                                    >
+                                        Xem lời mời
+                                    </button>
+                                @else
+                                    <button
+                                        type="button"
+                                        disabled
+                                        class="bg-slate-100 text-slate-350 text-xxs font-bold px-3 py-1.5 rounded-lg cursor-not-allowed border border-slate-200"
+                                    >
+                                        @if ($status === 'pending_sent') Chờ phản hồi
+                                        @else Không khả dụng
+                                        @endif
+                                    </button>
+                                @endif
+                            </div>
+                        </div>
+                    @empty
+                        <div class="col-span-full py-12 flex flex-col items-center justify-center text-center space-y-3 bg-white rounded-2xl border border-slate-200">
+                            <x-ui.icon name="users" size="lg" class="text-slate-300" />
+                            <h3 class="text-sm font-bold text-slate-700">Chưa tìm thấy thành viên phù hợp</h3>
+                            <p class="text-xxs text-slate-450 max-w-sm">Hãy thử thay đổi từ khóa tìm kiếm hoặc lọc theo các đối tượng khác để kết nối nhé.</p>
+                        </div>
+                    @endforelse
+                </div>
+
+                {{-- Pagination --}}
+                @if ($profiles->hasPages())
+                    <div class="bg-white p-4 rounded-2xl border border-slate-200 shadow-xs">
+                        {{ $profiles->links() }}
+                    </div>
+                @endif
             </div>
         @endif
     </main>
