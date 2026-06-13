@@ -307,7 +307,9 @@
             </script>
         @endauth
         @auth
-            <livewire:partials.app.ai-chatbot />
+            @if($shell !== 'conversation')
+                <livewire:partials.app.ai-chatbot />
+            @endif
         @endauth
 
         <!-- Global Lightbox Modal -->
