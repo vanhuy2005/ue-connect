@@ -82,7 +82,10 @@ on([
 
 ?>
 
-<div class="fixed bottom-[calc(var(--layout-bottom-nav-h)+80px)] right-4 lg:bottom-[calc(2rem+64px)] lg:right-8 z-[999] flex flex-col items-end pointer-events-none">
+@php
+    $isHiddenOnChat = request()->routeIs('chat.*') || request()->is('chat');
+@endphp
+<div class="fixed bottom-[calc(var(--layout-bottom-nav-h)+80px)] right-4 lg:bottom-[calc(2rem+64px)] lg:right-8 z-[999] flex flex-col items-end pointer-events-none {{ $isHiddenOnChat ? 'hidden' : '' }}">
     <!-- Chat Window -->
     @if($isOpen)
         <div class="bg-white dark:bg-zinc-900 w-80 sm:w-96 rounded-2xl shadow-2xl border border-zinc-200 dark:border-zinc-800 mb-4 overflow-hidden flex flex-col pointer-events-auto transition-all duration-300 transform origin-bottom-right" style="height: 500px; max-height: calc(100vh - 120px); width: 380px; max-width: 90vw; border-radius: 16px; box-shadow: 0 25px 50px -12px rgba(0,0,0,0.25); display: flex; flex-direction: column; overflow: hidden; margin-bottom: 16px;">
@@ -97,57 +100,61 @@ on([
                         <p class="text-xs text-zinc-400" style="font-size: 12px; margin: 0; color: #a1a1aa;">Luôn sẵn sàng hỗ trợ</p>
                     </div>
                 </div>
-                <button wire:click="toggleChat" class="text-zinc-400 hover:text-white transition-colors" style="background: none; border: none; cursor: pointer; color: #a1a1aa;">
-                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor" style="width: 20px; height: 20px;">
-                        <path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clip-rule="evenodd" />
-                    </svg>
-                </button>
+                <div class="flex items-center gap-2" style="display: flex; align-items: center; gap: 8px;">
+                    <a href="/chat" wire:navigate class="text-zinc-400 hover:text-white transition-colors" title="Mở toàn màn hình" style="color: #a1a1aa; text-decoration: none;">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor" style="width: 20px; height: 20px;">
+                            <path d="M11 3a1 1 0 100 2h2.586l-6.293 6.293a1 1 0 101.414 1.414L15 6.414V9a1 1 0 102 0V4a1 1 0 00-1-1h-5z" />
+                            <path d="M5 5a2 2 0 00-2 2v8a2 2 0 002 2h8a2 2 0 002-2v-3a1 1 0 10-2 0v3H5V7h3a1 1 0 000-2H5z" />
+                        </svg>
+                    </a>
+                    <button wire:click="toggleChat" class="text-zinc-400 hover:text-white transition-colors" style="background: none; border: none; cursor: pointer; color: #a1a1aa;">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor" style="width: 20px; height: 20px;">
+                            <path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clip-rule="evenodd" />
+                        </svg>
+                    </button>
+                </div>
             </div>
 
             <!-- Messages Area -->
-            <div class="flex-1 overflow-y-auto p-4 space-y-4 bg-zinc-50 dark:bg-zinc-900" id="chatbot-messages-container" style="flex: 1; overflow-y: auto; padding: 16px; display: flex; flex-direction: column; gap: 16px;">
-                @foreach($messages as $message)
-                    @if($message['role'] === 'model')
-                        <div class="flex gap-3 max-w-[85%]" style="display: flex; gap: 12px; max-width: 85%;">
-                            <div class="w-6 h-6 rounded-full bg-indigo-100 dark:bg-indigo-900/50 flex-shrink-0 flex items-center justify-center text-indigo-600 dark:text-indigo-400 text-xs font-bold mt-1" style="width: 24px; height: 24px; border-radius: 9999px; background-color: #e0e7ff; color: #4f46e5; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: bold; flex-shrink: 0;">
+            <div class="flex-1 overflow-y-auto p-4 space-y-4 bg-zinc-50 dark:bg-zinc-900 scroll-smooth" id="chatbot-messages" style="padding: 16px; background-color: #f9fafb; flex: 1; overflow-y: auto;">
+                @foreach($messages as $msg)
+                    <div class="flex {{ $msg['role'] === 'model' ? 'justify-start' : 'justify-end' }}" style="display: flex; {{ $msg['role'] === 'model' ? 'justify-content: flex-start;' : 'justify-content: flex-end;' }} margin-bottom: 16px;">
+                        @if($msg['role'] === 'model')
+                            <div class="w-6 h-6 rounded-full bg-indigo-100 flex items-center justify-center text-indigo-600 font-bold text-[10px] mr-2 shrink-0 mt-1" style="width: 24px; height: 24px; border-radius: 9999px; background-color: #e0e7ff; color: #4f46e5; display: flex; align-items: center; justify-content: center; font-size: 10px; font-weight: bold; margin-right: 8px; flex-shrink: 0; margin-top: 4px;">
                                 AI
                             </div>
-                            <div class="bg-white dark:bg-zinc-800 border border-zinc-100 dark:border-zinc-700 p-3 rounded-2xl rounded-tl-sm shadow-sm text-sm text-zinc-700 dark:text-zinc-300 prose prose-sm dark:prose-invert" style="padding: 12px; border-radius: 16px 16px 16px 4px; box-shadow: 0 1px 2px 0 rgba(0,0,0,0.05); font-size: 14px; line-height: 1.5;">
-                                {!! Str::markdown($message['content']) !!}
-                            </div>
+                        @endif
+                        <div class="max-w-[85%] rounded-2xl px-4 py-2 text-sm shadow-sm
+                            {{ $msg['role'] === 'model' ? 'bg-white dark:bg-zinc-800 text-zinc-800 dark:text-zinc-200 border border-zinc-100 dark:border-zinc-700' : 'bg-indigo-600 text-white' }}"
+                            style="max-width: 85%; border-radius: 16px; padding: 8px 16px; font-size: 14px; {{ $msg['role'] === 'model' ? 'background-color: #ffffff; color: #27272a; border: 1px solid #f4f4f5;' : 'background-color: #4f46e5; color: #ffffff;' }}">
+                            {!! nl2br(e($msg['content'])) !!}
                         </div>
-                    @else
-                        <div class="flex justify-end gap-3" style="display: flex; justify-content: flex-end; gap: 12px;">
-                            <div class="bg-indigo-600 p-3 rounded-2xl rounded-tr-sm shadow-sm text-sm text-white max-w-[85%]" style="background-color: #4f46e5; color: #ffffff; padding: 12px; border-radius: 16px 16px 4px 16px; box-shadow: 0 1px 2px 0 rgba(0,0,0,0.05); font-size: 14px; max-width: 85%; line-height: 1.5;">
-                                {{ $message['content'] }}
-                            </div>
-                        </div>
-                    @endif
+                    </div>
                 @endforeach
-
+                
                 @if($isTyping)
-                    <div class="flex gap-3 max-w-[85%]" style="display: flex; gap: 12px; max-width: 85%;">
-                        <div class="w-6 h-6 rounded-full bg-indigo-100 dark:bg-indigo-900/50 flex-shrink-0 flex items-center justify-center text-indigo-600 dark:text-indigo-400 text-xs font-bold mt-1" style="width: 24px; height: 24px; border-radius: 9999px; background-color: #e0e7ff; color: #4f46e5; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: bold; flex-shrink: 0;">
+                    <div class="flex justify-start" style="display: flex; justify-content: flex-start; margin-bottom: 16px;">
+                        <div class="w-6 h-6 rounded-full bg-indigo-100 flex items-center justify-center text-indigo-600 font-bold text-[10px] mr-2 shrink-0 mt-1" style="width: 24px; height: 24px; border-radius: 9999px; background-color: #e0e7ff; color: #4f46e5; display: flex; align-items: center; justify-content: center; font-size: 10px; font-weight: bold; margin-right: 8px; flex-shrink: 0; margin-top: 4px;">
                             AI
                         </div>
-                        <div class="bg-white dark:bg-zinc-800 border border-zinc-100 dark:border-zinc-700 p-4 rounded-2xl rounded-tl-sm shadow-sm flex items-center gap-1" style="padding: 16px; border-radius: 16px 16px 16px 4px; display: flex; align-items: center; gap: 4px;">
-                            <div class="w-1.5 h-1.5 bg-zinc-400 rounded-full animate-bounce" style="width: 6px; height: 6px; background-color: #a1a1aa; border-radius: 9999px; animation: bounce 1s infinite; animation-delay: 0ms"></div>
-                            <div class="w-1.5 h-1.5 bg-zinc-400 rounded-full animate-bounce" style="width: 6px; height: 6px; background-color: #a1a1aa; border-radius: 9999px; animation: bounce 1s infinite; animation-delay: 150ms"></div>
-                            <div class="w-1.5 h-1.5 bg-zinc-400 rounded-full animate-bounce" style="width: 6px; height: 6px; background-color: #a1a1aa; border-radius: 9999px; animation: bounce 1s infinite; animation-delay: 300ms"></div>
+                        <div class="bg-white dark:bg-zinc-800 border border-zinc-100 dark:border-zinc-700 rounded-2xl px-4 py-3 shadow-sm flex items-center gap-1" style="background-color: #ffffff; border: 1px solid #f4f4f5; border-radius: 16px; padding: 12px 16px; display: flex; align-items: center; gap: 4px;">
+                            <div class="w-1.5 h-1.5 bg-zinc-400 rounded-full animate-bounce" style="width: 6px; height: 6px; background-color: #a1a1aa; border-radius: 9999px; animation: bounce 1s infinite;"></div>
+                            <div class="w-1.5 h-1.5 bg-zinc-400 rounded-full animate-bounce" style="width: 6px; height: 6px; background-color: #a1a1aa; border-radius: 9999px; animation: bounce 1s infinite; animation-delay: 0.2s;"></div>
+                            <div class="w-1.5 h-1.5 bg-zinc-400 rounded-full animate-bounce" style="width: 6px; height: 6px; background-color: #a1a1aa; border-radius: 9999px; animation: bounce 1s infinite; animation-delay: 0.4s;"></div>
                         </div>
                     </div>
                 @endif
             </div>
 
             <!-- Input Area -->
-            <div class="p-3 bg-white dark:bg-zinc-950 border-t border-zinc-100 dark:border-zinc-800 z-10" style="padding: 12px;">
+            <div class="p-3 bg-white dark:bg-zinc-950 border-t border-zinc-100 dark:border-zinc-800 z-10" style="padding: 12px; background-color: #ffffff; border-top: 1px solid #f4f4f5;">
                 <form wire:submit="sendMessage" class="relative flex items-center" style="position: relative; display: flex; align-items: center;">
                     <input 
                         wire:model="input" 
                         type="text" 
                         placeholder="Nhập câu hỏi của bạn..." 
                         class="w-full bg-zinc-100 dark:bg-zinc-900 border-none rounded-full py-3 pl-4 pr-12 text-sm text-zinc-900 dark:text-zinc-100 focus:ring-2 focus:ring-indigo-500 dark:focus:ring-indigo-400 transition-all placeholder-zinc-400 dark:placeholder-zinc-500"
-                        style="width: 100%; padding: 12px 48px 12px 16px; border: none; border-radius: 9999px; font-size: 14px; outline: none;"
+                        style="width: 100%; padding: 12px 48px 12px 16px; background-color: #f4f4f5; border: none; border-radius: 9999px; font-size: 14px; outline: none;"
                         @if($isTyping) disabled @endif
                     >
                     <button 
@@ -167,7 +174,7 @@ on([
             <script>
                 document.addEventListener('livewire:initialized', () => {
                     Livewire.hook('morph.updated', (el, component) => {
-                        const container = document.getElementById('chatbot-messages-container');
+                        const container = document.getElementById('chatbot-messages');
                         if (container) {
                             container.scrollTop = container.scrollHeight;
                         }
@@ -177,7 +184,7 @@ on([
         </div>
     @endif
 
-    <!-- Toggle Button -->
+    <!-- FAB Trigger -->
     <button 
         wire:click="toggleChat"
         class="pointer-events-auto flex items-center justify-center w-14 h-14 bg-zinc-900 dark:bg-white text-white dark:text-zinc-900 rounded-full shadow-lg hover:shadow-xl hover:scale-105 transition-all duration-300 focus:outline-none focus:ring-4 focus:ring-zinc-900/20 dark:focus:ring-white/20"

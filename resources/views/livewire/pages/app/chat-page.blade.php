@@ -291,8 +291,8 @@ new #[Layout('layouts.app', ['shell' => 'conversation'])] class extends Componen
 
         <!-- New Chat Button -->
         <div class="p-4">
-            <button wire:click="createNewSession" 
-                    class="w-full py-2.5 px-4 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl font-medium shadow-sm transition-all duration-150 flex items-center justify-center gap-2">
+            <button type="button" wire:click="startNewConversation"
+                    class="w-full py-2.5 px-4 bg-ue-brand hover:bg-ue-brand-hover text-white rounded-xl font-medium shadow-sm transition-all duration-150 flex items-center justify-center gap-2">
                 <x-ui.icon name="plus" size="sm" />
                 <span>Hội thoại mới</span>
             </button>
@@ -302,7 +302,7 @@ new #[Layout('layouts.app', ['shell' => 'conversation'])] class extends Componen
         <div class="flex-1 overflow-y-auto px-2 space-y-1 pb-4">
             @forelse($sessions as $s)
                 <div class="group relative flex items-center rounded-xl transition-all duration-150
-                            {{ $selectedSessionId === $s->id ? 'bg-indigo-50 dark:bg-indigo-950/40 text-indigo-600 dark:text-indigo-400' : 'hover:bg-slate-100 dark:hover:bg-zinc-800 text-slate-700 dark:text-zinc-300' }}">
+                            {{ $selectedSessionId === $s->id ? 'bg-ue-brand-soft text-ue-brand' : 'hover:bg-slate-100 dark:hover:bg-zinc-800 text-slate-700 dark:text-zinc-300' }}">
                     <button wire:click="selectSession({{ $s->id }})" 
                             class="flex-1 text-left px-3 py-3 pr-10 text-xs font-semibold truncate focus:outline-none">
                         {{ $s->title }}
@@ -354,8 +354,8 @@ new #[Layout('layouts.app', ['shell' => 'conversation'])] class extends Componen
             @if(empty($chatMessages))
                 <!-- Starter / Welcome state -->
                 <div class="max-w-2xl mx-auto py-12 px-4 text-center space-y-6">
-                    <div class="w-16 h-16 bg-indigo-100 dark:bg-indigo-900/50 rounded-2xl flex items-center justify-center mx-auto text-indigo-600 dark:text-indigo-400">
-                        <x-ui.icon name="message-square" size="lg" />
+                    <div class="w-16 h-16 bg-ue-brand-soft rounded-2xl flex items-center justify-center mx-auto text-ue-brand">
+                        <x-ui.icon name="message-square" class="w-8 h-8" />
                     </div>
                     <div class="space-y-2">
                         <h2 class="text-lg font-bold text-slate-800 dark:text-zinc-100">Chào mừng bạn đến với HCMUE Academic Chatbot</h2>
@@ -389,7 +389,7 @@ new #[Layout('layouts.app', ['shell' => 'conversation'])] class extends Componen
                     @foreach($chatMessages as $msg)
                         <!-- User message -->
                         <div class="flex justify-end">
-                            <div class="bg-indigo-600 dark:bg-indigo-700 text-white rounded-2xl rounded-tr-sm px-4 py-2.5 max-w-[85%] shadow-sm text-xs font-medium leading-relaxed">
+                            <div class="bg-ue-brand text-white rounded-2xl rounded-tr-sm px-4 py-2.5 max-w-[85%] shadow-sm text-xs font-medium leading-relaxed">
                                 {{ $msg['question_text'] }}
                             </div>
                         </div>
@@ -398,7 +398,7 @@ new #[Layout('layouts.app', ['shell' => 'conversation'])] class extends Componen
                         <div class="space-y-2">
                             <div class="flex items-start gap-3">
                                 <!-- Bot avatar -->
-                                <div class="w-8 h-8 rounded-xl bg-indigo-100 dark:bg-indigo-900/50 flex-shrink-0 flex items-center justify-center text-indigo-600 dark:text-indigo-400 font-bold text-xs">
+                                <div class="w-8 h-8 rounded-xl bg-ue-brand-soft flex-shrink-0 flex items-center justify-center text-ue-brand font-bold text-xs">
                                     AI
                                 </div>
 
@@ -441,20 +441,20 @@ new #[Layout('layouts.app', ['shell' => 'conversation'])] class extends Componen
                                             <button @click="open = !open" 
                                                     class="flex items-center justify-between w-full text-[10px] font-bold text-slate-450 hover:text-slate-600 dark:text-zinc-400 transition-colors">
                                                 <span class="flex items-center gap-1">
-                                                    <x-ui.icon name="book" size="2xs" />
+                                                    <x-ui.icon name="book-open" size="2xs" />
                                                     Nguồn tài liệu tham khảo ({{ count($msg['sources']) }})
                                                 </span>
                                                 <x-ui.icon name="chevron-down" size="2xs" class="transition-transform duration-200" ::class="open ? 'rotate-180' : ''" />
                                             </button>
                                             
-                                            <div x-show="open" x-collapse class="mt-2 space-y-1.5 pl-3 border-l-2 border-indigo-500/50">
+                                            <div x-show="open" x-collapse class="mt-2 space-y-1.5 pl-3 border-l-2 border-ue-brand/50">
                                                 @foreach($msg['sources'] as $src)
                                                     <div class="text-[10px] text-slate-500 dark:text-zinc-400">
                                                         <span class="font-bold text-slate-700 dark:text-zinc-350">
                                                             {{ $src['document_name'] ?? $src['title'] ?? 'Tài liệu' }}
                                                         </span>
                                                         @if(!empty($src['article']))
-                                                            - <span class="text-indigo-600 dark:text-indigo-400">{{ $src['article'] }}</span>
+                                                            - <span class="text-ue-brand">{{ $src['article'] }}</span>
                                                         @endif
                                                         @if(!empty($src['page']))
                                                             (Trang {{ $src['page'] }})
@@ -502,7 +502,7 @@ new #[Layout('layouts.app', ['shell' => 'conversation'])] class extends Componen
                                                                class="flex-1 bg-slate-50 dark:bg-zinc-800 border border-slate-200 dark:border-zinc-700 rounded-lg px-2 py-1 text-[10px] text-slate-800 dark:text-zinc-200 focus:outline-none focus:ring-1 focus:ring-indigo-500">
                                                         
                                                         <button wire:click="submitFeedback({{ $msg['answer_id'] }})"
-                                                                class="px-2.5 py-1 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-[10px] font-bold transition-all">
+                                                                class="px-2.5 py-1 bg-ue-brand hover:bg-ue-brand-hover text-white rounded-lg text-[10px] font-bold transition-all">
                                                             Gửi
                                                         </button>
                                                     </div>
@@ -518,13 +518,13 @@ new #[Layout('layouts.app', ['shell' => 'conversation'])] class extends Componen
                     <!-- Typing loader indicator -->
                     @if($isTyping)
                         <div class="flex items-start gap-3">
-                            <div class="w-8 h-8 rounded-xl bg-indigo-100 dark:bg-indigo-900/50 flex-shrink-0 flex items-center justify-center text-indigo-600 dark:text-indigo-400 font-bold text-xs">
+                            <div class="w-8 h-8 rounded-xl bg-ue-brand-soft flex-shrink-0 flex items-center justify-center text-ue-brand font-bold text-xs">
                                 AI
                             </div>
                             <div class="bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 rounded-2xl rounded-tl-sm shadow-xs p-4 flex items-center gap-1.5">
-                                <div class="w-1.5 h-1.5 bg-indigo-600 rounded-full animate-bounce" style="animation-delay: 0ms"></div>
-                                <div class="w-1.5 h-1.5 bg-indigo-650 rounded-full animate-bounce" style="animation-delay: 150ms"></div>
-                                <div class="w-1.5 h-1.5 bg-indigo-650 rounded-full animate-bounce" style="animation-delay: 300ms"></div>
+                                <div class="w-1.5 h-1.5 bg-ue-brand rounded-full animate-bounce" style="animation-delay: 0ms"></div>
+                                <div class="w-1.5 h-1.5 bg-ue-brand rounded-full animate-bounce" style="animation-delay: 150ms"></div>
+                                <div class="w-1.5 h-1.5 bg-ue-brand rounded-full animate-bounce" style="animation-delay: 300ms"></div>
                             </div>
                         </div>
                     @endif
@@ -533,19 +533,32 @@ new #[Layout('layouts.app', ['shell' => 'conversation'])] class extends Componen
         </div>
 
         <!-- Input Area at bottom -->
-        <div class="absolute bottom-0 inset-x-0 p-4 bg-gradient-to-t from-slate-50 via-slate-50/90 to-transparent dark:from-zinc-950 dark:via-zinc-950/90 dark:to-transparent z-10">
-            <form wire:submit.prevent="sendMessage" class="max-w-3xl mx-auto relative flex items-center">
+        <div class="absolute bottom-0 inset-x-0 px-4 pt-4 pb-4 lg:pb-6 bg-gradient-to-t from-slate-50 via-slate-50/90 to-transparent dark:from-zinc-950 dark:via-zinc-950/90 dark:to-transparent z-10">
+            <form wire:submit.prevent="sendMessage" class="max-w-3xl mx-auto relative flex items-center bg-white dark:bg-[#1e1f22] border border-slate-200 dark:border-zinc-800 rounded-full shadow-sm focus-within:ring-2 focus-within:ring-ue-brand focus-within:border-transparent transition-all">
                 <input type="text" 
                        wire:model.defer="input" 
                        placeholder="Nhập thắc mắc học vụ của bạn..."
-                       class="w-full bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 rounded-2xl pl-4 pr-14 py-3 text-xs text-slate-800 dark:text-zinc-200 focus:outline-none focus:ring-2 focus:ring-indigo-500 shadow-sm placeholder-slate-400"
+                       class="w-full bg-transparent border-none rounded-full pl-6 py-3.5 pr-[88px] text-sm text-slate-800 dark:text-zinc-200 focus:outline-none focus:ring-0 placeholder-slate-400"
                        @if($isTyping) disabled @endif>
                 
-                <button type="submit" 
-                        class="absolute right-2 p-2 bg-indigo-650 hover:bg-indigo-700 text-white rounded-xl transition-all shadow-xs disabled:opacity-50"
-                        @if($isTyping) disabled @endif>
-                    <x-ui.icon name="send" size="sm" />
-                </button>
+                <div class="absolute right-2 flex items-center gap-2">
+                    <button type="button" class="p-1.5 text-slate-400 hover:text-slate-600 dark:text-zinc-400 dark:hover:text-zinc-300 transition-colors cursor-not-allowed opacity-70" title="Nhập bằng giọng nói (Sắp ra mắt)" disabled>
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"/>
+                            <path d="M19 10v2a7 7 0 0 1-14 0v-2"/>
+                            <line x1="12" y1="19" x2="12" y2="22"/>
+                        </svg>
+                    </button>
+                    
+                    <button type="submit" 
+                            class="w-10 h-10 flex items-center justify-center bg-ue-brand hover:bg-ue-brand-hover text-white rounded-full transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                            @if($isTyping) disabled @endif>
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <line x1="5" y1="12" x2="19" y2="12"/>
+                            <polyline points="12 5 19 12 12 19"/>
+                        </svg>
+                    </button>
+                </div>
             </form>
         </div>
     </main>
