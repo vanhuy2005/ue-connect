@@ -708,7 +708,7 @@ new #[Layout('layouts.app')] class extends Component
 };
 ?>
 
-<div class="ue-feed-layout">
+<div class="ue-feed-layout pt-4 lg:pt-8">
     <div class="ue-feed-column">
 
         {{-- Back button row --}}
