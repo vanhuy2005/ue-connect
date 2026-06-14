@@ -131,9 +131,12 @@ new #[Layout('layouts.app')] class extends Component
                 $authorName = $targetComment->user->profile?->display_name ?? $targetComment->user->name;
                 $mention = '@' . $authorName . ' ';
                 
-                // Insert the auto-mention only once and preserve already typed content
-                if (! str_contains($this->commentBody, $mention)) {
-                    $this->commentBody = $mention . ltrim($this->commentBody);
+                if (trim($this->commentBody) === '' || trim($this->commentBody) === '@') {
+                    $this->commentBody = $mention;
+                } else {
+                    if (! str_contains($this->commentBody, $mention)) {
+                        $this->commentBody = $mention . ltrim($this->commentBody);
+                    }
                 }
             }
         } else {
@@ -1138,7 +1141,7 @@ new #[Layout('layouts.app')] class extends Component
             </div>
 
             {{-- 2. COMMENT COMPOSER --}}
-            @if ($currentUser->isActive())
+            @if ($currentUser->isActive() && !$replyingToCommentId)
                 <div class="ue-feed-composer border border-ue-border/60 rounded-2xl bg-white shadow-xs mt-6">
                     <div class="ue-composer">
                         {{-- Left Column: Avatar --}}
