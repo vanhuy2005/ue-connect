@@ -19,6 +19,10 @@ use App\Http\Controllers\Admin\AdminSearchController;
 use App\Http\Controllers\Admin\AdminSourceDocumentController;
 use App\Http\Controllers\Admin\AnnouncementController;
 use App\Http\Controllers\Admin\AuditLogController;
+use App\Http\Controllers\Admin\CareerPathwayAdminController;
+use App\Http\Controllers\Admin\CareerPathwayContributionAdminController;
+use App\Http\Controllers\Admin\CareerPathwayPositionAdminController;
+use App\Http\Controllers\Admin\CareerUserPathwayAdminController;
 use App\Http\Controllers\Admin\CommunityController;
 use App\Http\Controllers\Admin\MediaController as AdminMediaController;
 use App\Http\Controllers\Admin\MentorAccessController;
@@ -27,6 +31,17 @@ use App\Http\Controllers\Admin\SystemSettingsController;
 use App\Http\Controllers\Admin\UserManagementController;
 use App\Http\Controllers\Admin\VerificationActionController;
 use App\Http\Controllers\Admin\VerificationEvidenceController;
+use App\Http\Controllers\CareerCourseUpdateProposalController;
+use App\Http\Controllers\CareerPathwayContributionController;
+use App\Http\Controllers\CareerPathwayController;
+use App\Http\Controllers\CareerPathwayPositionController;
+use App\Http\Controllers\CareerPathwayPositionItemController;
+use App\Http\Controllers\CareerPathwayPositionSectionController;
+use App\Http\Controllers\CareerPathwaySearchController;
+use App\Http\Controllers\CareerPathwaySkillController;
+use App\Http\Controllers\CareerUserPathwayCommentController;
+use App\Http\Controllers\CareerUserPathwayController;
+use App\Http\Controllers\CareerUserPathwayItemController;
 use App\Http\Controllers\ChatController;
 use App\Http\Controllers\MediaController;
 use App\Http\Controllers\PushSubscriptionController;
@@ -34,6 +49,9 @@ use App\Http\Controllers\UserFollowController;
 use App\Http\Middleware\EnsureAdminAccess;
 use App\Models\AuditLog;
 use App\Models\BlockedUser;
+use App\Models\CareerCourse;
+use App\Models\CareerPosition;
+use App\Models\CareerUserPathway;
 use App\Models\Community;
 use App\Models\Conversation;
 use App\Models\Media;
@@ -69,6 +87,82 @@ Route::get('/render-logs', function () {
     }
 
     return 'No logs found.';
+});
+
+// Public Career Pathway Routes
+Route::prefix('career-pathway')->name('career-pathway.')->group(function () {
+    Route::get('cohorts', [CareerPathwayController::class, 'cohorts'])->name('cohorts');
+    Route::get('faculties', [CareerPathwayController::class, 'faculties'])->name('faculties');
+    Route::get('majors', [CareerPathwayController::class, 'majors'])->name('majors');
+    Route::get('programs', [CareerPathwayController::class, 'programs'])->name('programs');
+    Route::get('programs/{program}/worktree', [CareerPathwayController::class, 'worktree'])->name('programs.worktree');
+    Route::get('courses/{course}', [CareerPathwayController::class, 'course'])->name('courses.show');
+
+    // Community Knowledge Layer (Public read)
+    Route::get('courses/{course}/contributions', [CareerPathwayContributionController::class, 'index'])->name('courses.contributions.index');
+    Route::get('contributions/{contribution}', [CareerPathwayContributionController::class, 'show'])->name('contributions.show');
+    Route::get('skills', [CareerPathwaySkillController::class, 'index'])->name('skills.index');
+    Route::get('courses/{course}/skills', [CareerPathwaySkillController::class, 'courseSkills'])->name('courses.skills');
+
+    // Phase 6: Career Positions (Public read)
+    Route::get('positions', [CareerPathwayPositionController::class, 'index'])->name('positions.index');
+    Route::get('positions/{position:slug}', [CareerPathwayPositionController::class, 'show'])->name('positions.show');
+
+    // Community Knowledge Layer (Protected write)
+    Route::middleware(['auth', 'verified', 'active.account'])->group(function () {
+        Route::post('courses/{course}/contributions', [CareerPathwayContributionController::class, 'store'])->name('courses.contributions.store');
+        Route::post('courses/{course}/update-proposals', [CareerCourseUpdateProposalController::class, 'store'])->name('courses.update-proposals.store');
+        Route::patch('contributions/{contribution}', [CareerPathwayContributionController::class, 'update'])->name('contributions.update');
+        Route::delete('contributions/{contribution}', [CareerPathwayContributionController::class, 'destroy'])->name('contributions.destroy');
+        Route::post('contributions/{contribution}/vote', [CareerPathwayContributionController::class, 'vote'])->name('contributions.vote');
+        Route::delete('contributions/{contribution}/vote', [CareerPathwayContributionController::class, 'unvote'])->name('contributions.unvote');
+        Route::post('contributions/{contribution}/report', [CareerPathwayContributionController::class, 'report'])->name('contributions.report');
+
+        // Phase 6: Career Positions (Protected write)
+        Route::post('positions', [CareerPathwayPositionController::class, 'store'])->name('positions.store');
+        Route::patch('positions/{position}', [CareerPathwayPositionController::class, 'update'])->name('positions.update');
+        Route::delete('positions/{position}', [CareerPathwayPositionController::class, 'destroy'])->name('positions.destroy');
+        Route::post('positions/{position}/publish', [CareerPathwayPositionController::class, 'publish'])->name('positions.publish');
+        Route::post('positions/{position}/save', [CareerPathwayPositionController::class, 'save'])->name('positions.save');
+        Route::delete('positions/{position}/save', [CareerPathwayPositionController::class, 'unsave'])->name('positions.unsave');
+        Route::post('positions/{position}/report', [CareerPathwayPositionController::class, 'report'])->name('positions.report');
+
+        Route::post('positions/{position}/sections', [CareerPathwayPositionSectionController::class, 'store'])->name('positions.sections.store');
+        Route::patch('positions/{position}/sections/{section}', [CareerPathwayPositionSectionController::class, 'update'])->name('positions.sections.update');
+        Route::delete('positions/{position}/sections/{section}', [CareerPathwayPositionSectionController::class, 'destroy'])->name('positions.sections.destroy');
+
+        Route::post('positions/{position}/items', [CareerPathwayPositionItemController::class, 'store'])->name('positions.items.store');
+        Route::patch('positions/{position}/items/{item}', [CareerPathwayPositionItemController::class, 'update'])->name('positions.items.update');
+        Route::delete('positions/{position}/items/{item}', [CareerPathwayPositionItemController::class, 'destroy'])->name('positions.items.destroy');
+
+        // Phase 7: Senior Pathways (Protected write)
+        Route::post('senior-pathways', [CareerUserPathwayController::class, 'store'])->name('senior-pathways.store');
+        Route::patch('senior-pathways/{pathway}', [CareerUserPathwayController::class, 'update'])->name('senior-pathways.update');
+        Route::delete('senior-pathways/{pathway}', [CareerUserPathwayController::class, 'destroy'])->name('senior-pathways.destroy');
+        Route::post('senior-pathways/{pathway}/publish', [CareerUserPathwayController::class, 'publish'])->name('senior-pathways.publish');
+        Route::post('senior-pathways/{pathway}/save', [CareerUserPathwayController::class, 'save'])->name('senior-pathways.save');
+        Route::delete('senior-pathways/{pathway}/save', [CareerUserPathwayController::class, 'unsave'])->name('senior-pathways.unsave');
+        Route::post('senior-pathways/{pathway}/report', [CareerUserPathwayController::class, 'report'])->name('senior-pathways.report');
+
+        Route::post('senior-pathways/{pathway}/items', [CareerUserPathwayItemController::class, 'store'])->name('senior-pathways.items.store');
+        Route::patch('senior-pathways/{pathway}/items/{item}', [CareerUserPathwayItemController::class, 'update'])->name('senior-pathways.items.update');
+        Route::delete('senior-pathways/{pathway}/items/{item}', [CareerUserPathwayItemController::class, 'destroy'])->name('senior-pathways.items.destroy');
+
+        Route::post('senior-pathways/{pathway}/comments', [CareerUserPathwayCommentController::class, 'store'])->name('senior-pathways.comments.store');
+    });
+
+    // Phase 7: Senior Pathways (Public read)
+    Route::get('senior-pathways', [CareerUserPathwayController::class, 'index'])->name('senior-pathways.index');
+    Route::get('senior-pathways/{pathway:slug}', [CareerUserPathwayController::class, 'show'])->name('senior-pathways.show');
+    Route::get('senior-pathways/{pathway}/comments', [CareerUserPathwayCommentController::class, 'index'])->name('senior-pathways.comments.index');
+
+    // Phase 8: Search & Discovery APIs
+    Route::get('search', [CareerPathwaySearchController::class, 'index'])->name('career-pathways.search');
+    Route::get('courses/search', [CareerPathwaySearchController::class, 'courses'])->name('courses.search');
+    Route::get('programs/search', [CareerPathwaySearchController::class, 'programs'])->name('programs.search');
+    Route::get('positions/search', [CareerPathwaySearchController::class, 'positions'])->name('positions.search');
+    Route::get('skills/search', [CareerPathwaySearchController::class, 'skills'])->name('skills.search');
+    Route::get('senior-pathways/search', [CareerPathwaySearchController::class, 'seniorPathways'])->name('senior-pathways.search');
 });
 
 // 2. System pages
@@ -161,6 +255,50 @@ Route::middleware(['auth', 'active.account', 'verified.identity'])->group(functi
 
     Route::view('app/discovery', 'app.discovery')
         ->name('discovery.index');
+
+    Route::redirect('app/career-pathways', '/app/career-pathway')
+        ->name('career-pathways.index');
+    Route::redirect('app/career-positions', '/app/career-pathway/positions')
+        ->name('app.career-positions.index');
+    Route::redirect('app/career-positions/create', '/app/career-pathway/positions/create')
+        ->name('app.career-positions.create');
+    Route::get('app/career-positions/{position:slug}/edit', fn (CareerPosition $position) => redirect()->route('app.career-pathway.positions.edit', ['position' => $position->slug]))
+        ->name('app.career-positions.edit');
+    Route::get('app/career-positions/{position:slug}', fn (CareerPosition $position) => redirect()->route('app.career-pathway.positions.show', ['position' => $position->slug]))
+        ->name('app.career-positions.show');
+    Route::redirect('app/senior-pathways', '/app/career-pathway/senior-pathways')
+        ->name('app.senior-pathways.index');
+    Route::redirect('app/senior-pathways/create', '/app/career-pathway/senior-pathways/create')
+        ->name('app.senior-pathways.create');
+    Route::get('app/senior-pathways/{pathway:slug}/edit', fn (CareerUserPathway $pathway) => redirect()->route('app.career-pathway.senior-pathways.edit', ['pathway' => $pathway->slug]))
+        ->name('app.senior-pathways.edit');
+    Route::get('app/senior-pathways/{pathway:slug}', fn (CareerUserPathway $pathway) => redirect()->route('app.career-pathway.senior-pathways.show', ['pathway' => $pathway->slug]))
+        ->name('app.senior-pathways.show');
+    Route::redirect('app/search', '/app/career-pathway/courses')
+        ->name('app.career-pathways.search');
+
+    Route::prefix('app/career-pathway')->name('app.career-pathway.')->group(function () {
+        Route::view('/', 'app.career-pathway-overview')->name('index');
+        Route::view('programs', 'app.career-pathway-programs')->name('programs');
+        Route::view('courses', 'app.career-pathway-courses')->name('courses');
+        Route::get('courses/{course}', fn (CareerCourse $course) => view('app.career-pathway-courses', ['course' => $course]))->name('courses.show');
+        Route::view('positions', 'app.career-positions-list')->name('positions.index');
+        Route::get('positions/create', fn () => view('app.career-positions-builder', ['position' => null]))->name('positions.create');
+        Route::get('positions/{position:slug}/edit', fn (CareerPosition $position) => view('app.career-positions-builder', ['position' => $position]))->name('positions.edit');
+        Route::get('positions/{position:slug}', fn (CareerPosition $position) => view('app.career-positions-show', ['position' => $position]))->name('positions.show');
+        Route::view('senior-pathways', 'app.senior-pathways-list')->name('senior-pathways.index');
+        Route::get('senior-pathways/create', fn () => view('app.senior-pathways-builder', ['pathway' => null]))->name('senior-pathways.create');
+        Route::get('senior-pathways/{pathway:slug}/edit', fn (CareerUserPathway $pathway) => view('app.senior-pathways-builder', ['pathway' => $pathway]))->name('senior-pathways.edit');
+        Route::get('senior-pathways/{pathway:slug}', fn (CareerUserPathway $pathway) => view('app.senior-pathways-show', ['pathway' => $pathway]))->name('senior-pathways.show');
+        Route::redirect('search', '/app/career-pathway/courses')->name('search');
+        Route::view('saved', 'app.career-pathway-saved')->name('saved');
+
+        Route::middleware(EnsureAdminAccess::class)->prefix('admin')->name('admin.')->group(function () {
+            Route::get('data-quality', fn () => redirect()->route('admin.career-pathway.data-quality-issues.index'))->name('data-quality');
+            Route::get('import-runs', fn () => redirect()->route('admin.career-pathway.import-runs.index'))->name('import-runs');
+            Route::get('issues', fn () => redirect()->route('admin.career-pathway.data-quality-issues.index'))->name('issues');
+        });
+    });
 
     // Community app routes
     Route::get('app/communities', fn () => view('app.communities'))
@@ -585,6 +723,29 @@ Route::prefix('admin')
         Route::get('dashboard', function () {
             return view('admin.dashboard');
         })->name('dashboard');
+
+        // Career Pathway Admin APIs
+        Route::get('career-pathway/import-runs', [CareerPathwayAdminController::class, 'importRuns'])->name('career-pathway.import-runs.index');
+        Route::post('career-pathway/import-runs', [CareerPathwayAdminController::class, 'startImportRun'])->name('career-pathway.import-runs.store');
+        Route::get('career-pathway/source-documents', [CareerPathwayAdminController::class, 'sourceDocuments'])->name('career-pathway.source-documents.index');
+        Route::get('career-pathway/data-quality-issues', [CareerPathwayAdminController::class, 'dataQualityIssues'])->name('career-pathway.data-quality-issues.index');
+        Route::patch('career-pathway/programs/{program}/status', [CareerPathwayAdminController::class, 'updateProgramStatus'])->name('career-pathway.programs.update-status');
+
+        // Career Pathway Community Knowledge Admin APIs
+        Route::get('career-pathway/contributions', [CareerPathwayContributionAdminController::class, 'index'])->name('career-pathway.contributions.index');
+        Route::patch('career-pathway/contributions/{contribution}/moderate', [CareerPathwayContributionAdminController::class, 'moderate'])->name('career-pathway.contributions.moderate');
+        Route::patch('career-pathway/contributions/{contribution}/verify', [CareerPathwayContributionAdminController::class, 'verify'])->name('career-pathway.contributions.verify');
+        Route::get('career-pathway/contribution-reports', [CareerPathwayContributionAdminController::class, 'reports'])->name('career-pathway.contribution-reports.index');
+        Route::patch('career-pathway/contribution-reports/{report}/resolve', [CareerPathwayContributionAdminController::class, 'resolveReport'])->name('career-pathway.contribution-reports.resolve');
+
+        // Phase 6: Career Positions Admin APIs
+        Route::get('career-pathway/positions', [CareerPathwayPositionAdminController::class, 'index'])->name('career-pathway.positions.index');
+        Route::patch('career-pathway/positions/{position}/moderate', [CareerPathwayPositionAdminController::class, 'moderate'])->name('career-pathway.positions.moderate');
+        Route::patch('career-pathway/positions/{position}/feature', [CareerPathwayPositionAdminController::class, 'feature'])->name('career-pathway.positions.feature');
+
+        // Phase 7: Senior Pathways Admin APIs
+        Route::get('career-pathway/senior-pathways', [CareerUserPathwayAdminController::class, 'index'])->name('career-pathway.senior-pathways.index');
+        Route::patch('career-pathway/senior-pathways/{pathway}/moderate', [CareerUserPathwayAdminController::class, 'moderate'])->name('career-pathway.senior-pathways.moderate');
 
         // Verification workflow
         Route::get('verification/evidence/{evidence}', [VerificationEvidenceController::class, 'show'])
