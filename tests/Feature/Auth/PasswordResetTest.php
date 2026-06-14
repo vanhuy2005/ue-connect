@@ -2,10 +2,11 @@
 
 namespace Tests\Feature\Auth;
 
+use App\Mail\Auth\ResetPasswordOtpMail;
 use App\Models\User;
-use Illuminate\Auth\Notifications\ResetPassword;
 use Illuminate\Foundation\Testing\RefreshDatabase;
-use Illuminate\Support\Facades\Notification;
+use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\Mail;
 use Livewire\Volt\Volt;
 use Tests\TestCase;
 
@@ -22,63 +23,54 @@ class PasswordResetTest extends TestCase
             ->assertStatus(200);
     }
 
-    public function test_reset_password_link_can_be_requested(): void
+    public function test_reset_password_otp_can_be_requested(): void
     {
-        Notification::fake();
+        Mail::fake();
 
         $user = User::factory()->create();
 
-        Volt::test('pages.auth.forgot-password')
+        $component = Volt::test('pages.auth.forgot-password')
             ->set('email', $user->email)
             ->call('sendPasswordResetLink');
 
-        Notification::assertSentTo($user, ResetPassword::class);
+        $component->assertRedirect(route('password.reset', ['email' => $user->email]));
+
+        Mail::assertSent(ResetPasswordOtpMail::class, function ($mail) use ($user) {
+            return $mail->hasTo($user->email);
+        });
+
+        $this->assertTrue(Cache::has('password_reset_otp_' . $user->email));
     }
 
     public function test_reset_password_screen_can_be_rendered(): void
     {
-        Notification::fake();
+        $response = $this->get('/reset-password?email=test@example.com');
 
-        $user = User::factory()->create();
-
-        Volt::test('pages.auth.forgot-password')
-            ->set('email', $user->email)
-            ->call('sendPasswordResetLink');
-
-        Notification::assertSentTo($user, ResetPassword::class, function ($notification) {
-            $response = $this->get('/reset-password/'.$notification->token);
-
-            $response
-                ->assertSeeVolt('pages.auth.reset-password')
-                ->assertStatus(200);
-
-            return true;
-        });
+        $response
+            ->assertSeeVolt('pages.auth.reset-password')
+            ->assertStatus(200);
     }
 
-    public function test_password_can_be_reset_with_valid_token(): void
+    public function test_password_can_be_reset_with_valid_otp(): void
     {
-        Notification::fake();
-
         $user = User::factory()->create();
+        $otp = '123456';
+        Cache::put('password_reset_otp_' . $user->email, $otp, 15);
 
-        Volt::test('pages.auth.forgot-password')
+        $component = Volt::test('pages.auth.reset-password')
             ->set('email', $user->email)
-            ->call('sendPasswordResetLink');
+            ->set('otp', $otp)
+            ->call('verifyOtp')
+            ->assertSet('otpVerified', true)
+            ->set('password', 'password')
+            ->set('password_confirmation', 'password');
 
-        Notification::assertSentTo($user, ResetPassword::class, function ($notification) use ($user) {
-            $component = Volt::test('pages.auth.reset-password', ['token' => $notification->token])
-                ->set('email', $user->email)
-                ->set('password', 'password')
-                ->set('password_confirmation', 'password');
+        $component->call('resetPassword');
 
-            $component->call('resetPassword');
-
-            $component
-                ->assertRedirect('/login')
-                ->assertHasNoErrors();
-
-            return true;
-        });
+        $component
+            ->assertRedirect('/login')
+            ->assertHasNoErrors();
+            
+        $this->assertFalse(Cache::has('password_reset_otp_' . $user->email));
     }
 }

@@ -2,30 +2,48 @@
 
 use Illuminate\Auth\Events\PasswordReset;
 use Illuminate\Support\Facades\Hash;
-use Illuminate\Support\Facades\Password;
 use Illuminate\Support\Facades\Session;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rules;
 use Livewire\Attributes\Layout;
-use Livewire\Attributes\Locked;
 use Livewire\Volt\Component;
+use App\Models\User;
+use Illuminate\Support\Facades\Cache;
 
 new #[Layout('layouts.guest')] class extends Component
 {
-    #[Locked]
-    public string $token = '';
     public string $email = '';
+    public string $otp = '';
     public string $password = '';
     public string $password_confirmation = '';
+    public bool $otpVerified = false;
 
     /**
      * Mount the component.
      */
-    public function mount(string $token): void
+    public function mount(): void
     {
-        $this->token = $token;
-
         $this->email = request()->string('email');
+    }
+
+    /**
+     * Verify the OTP before allowing password reset.
+     */
+    public function verifyOtp(): void
+    {
+        $this->validate([
+            'email' => ['required', 'string', 'email'],
+            'otp' => ['required', 'string', 'size:6'],
+        ]);
+
+        $cachedOtp = Cache::get('password_reset_otp_' . $this->email);
+
+        if (!$cachedOtp || $cachedOtp !== $this->otp) {
+            $this->addError('otp', 'Mã xác nhận không hợp lệ hoặc đã hết hạn.');
+            return;
+        }
+
+        $this->otpVerified = true;
     }
 
     /**
@@ -33,37 +51,30 @@ new #[Layout('layouts.guest')] class extends Component
      */
     public function resetPassword(): void
     {
+        if (!$this->otpVerified) {
+            return;
+        }
+
         $this->validate([
-            'token' => ['required'],
             'email' => ['required', 'string', 'email'],
             'password' => ['required', 'string', 'confirmed', Rules\Password::defaults()],
         ]);
 
-        // Here we will attempt to reset the user's password. If it is successful we
-        // will update the password on an actual user model and persist it to the
-        // database. Otherwise we will parse the error and return the response.
-        $status = Password::reset(
-            $this->only('email', 'password', 'password_confirmation', 'token'),
-            function ($user) {
-                $user->forceFill([
-                    'password' => Hash::make($this->password),
-                    'remember_token' => Str::random(60),
-                ])->save();
+        $user = User::where('email', $this->email)->first();
 
-                event(new PasswordReset($user));
-            }
-        );
+        if ($user) {
+            $user->forceFill([
+                'password' => Hash::make($this->password),
+                'remember_token' => Str::random(60),
+            ])->save();
 
-        // If the password was successfully reset, we will redirect the user back to
-        // the application's home authenticated view. If there is an error we can
-        // redirect them back to where they came from with their error message.
-        if ($status != Password::PASSWORD_RESET) {
-            $this->addError('email', __($status));
-
-            return;
+            event(new PasswordReset($user));
+            
+            Cache::forget('password_reset_otp_' . $this->email);
         }
 
-        Session::flash('status', __($status));
+        Session::flash('status', __('passwords.reset'));
+        Session::flash('reset_email', $this->email);
 
         $this->redirectRoute('login', navigate: true);
     }
@@ -73,27 +84,98 @@ new #[Layout('layouts.guest')] class extends Component
     <div class="text-center">
         <h1 class="text-xl font-extrabold text-ue-text tracking-snug">Đặt lại mật khẩu</h1>
         <p class="text-xs text-ue-text-muted mt-2 leading-relaxed">
-            Tạo mật khẩu mới cho tài khoản UEConnect của bạn.
+            @if(!$otpVerified)
+                Vui lòng nhập mã xác nhận (OTP) 6 số được gửi đến email của bạn.
+            @else
+                Tạo mật khẩu mới cho tài khoản UEConnect của bạn.
+            @endif
         </p>
     </div>
 
-    <form wire:submit="resetPassword" class="space-y-4">
-        <div class="space-y-1">
-            <x-ui.label for="email" :required="true">Email đăng ký</x-ui.label>
+    @if(!$otpVerified)
+    <form wire:submit="verifyOtp" class="space-y-4">
+        <div class="space-y-1 hidden">
             <x-ui.input
                 wire:model="email"
                 id="email"
                 type="email"
                 name="email"
                 required
-                autofocus
-                autocomplete="username"
-                :hasError="$errors->has('email')"
-                size="sm"
+                readonly
             />
-            <x-ui.field-error name="email" />
         </div>
 
+        <div class="space-y-1">
+            <div x-data="{
+                digits: ['', '', '', '', '', ''],
+                updateOtp() {
+                    $wire.set('otp', this.digits.join(''));
+                },
+                handleInput(e, index) {
+                    if (e.target.value.length > 1) {
+                        e.target.value = e.target.value.slice(0, 1);
+                    }
+                    this.digits[index] = e.target.value;
+                    this.updateOtp();
+                    if (e.target.value !== '' && index < 5) {
+                        this.$refs['digit' + (index + 1)].focus();
+                    }
+                },
+                handleBackspace(e, index) {
+                    if (e.target.value === '' && index > 0) {
+                        this.digits[index - 1] = '';
+                        this.updateOtp();
+                        this.$refs['digit' + (index - 1)].focus();
+                    } else {
+                        this.digits[index] = '';
+                        this.updateOtp();
+                    }
+                },
+                handlePaste(e) {
+                    e.preventDefault();
+                    const pastedData = e.clipboardData.getData('text').replace(/\D/g, '').slice(0, 6).split('');
+                    for (let i = 0; i < pastedData.length; i++) {
+                        if (i < 6) {
+                            this.digits[i] = pastedData[i];
+                        }
+                    }
+                    this.updateOtp();
+                    const focusIndex = Math.min(pastedData.length, 5);
+                    this.$refs['digit' + focusIndex]?.focus();
+                }
+            }" class="flex gap-2 justify-center mt-2">
+                <template x-for="(digit, index) in digits" :key="index">
+                    <input 
+                        type="text" 
+                        maxlength="1"
+                        inputmode="numeric"
+                        x-model="digits[index]"
+                        x-bind:ref="'digit' + index"
+                        @input="handleInput($event, index)"
+                        @keydown.backspace="handleBackspace($event, index)"
+                        @paste="handlePaste($event)"
+                        class="w-12 h-14 text-center text-2xl font-bold rounded-lg border border-ue-border shadow-sm focus:ring-ue-primary focus:border-ue-primary text-ue-text transition-colors"
+                        :class="{ 'border-ue-primary ring-1 ring-ue-primary': digits[index] !== '' }"
+                    />
+                </template>
+            </div>
+            <div class="text-center mt-2">
+                <x-ui.field-error name="otp" />
+            </div>
+        </div>
+
+        <div class="pt-2">
+            <x-ui.button type="submit" variant="primary" class="w-full justify-center font-bold" wire:loading.attr="disabled" wire:target="verifyOtp">
+                <span wire:loading.remove wire:target="verifyOtp">Xác nhận OTP</span>
+                <span wire:loading wire:target="verifyOtp" class="flex items-center gap-2">
+                    <span class="ue-spinner" aria-hidden="true"></span>
+                    Đang xử lý...
+                </span>
+            </x-ui.button>
+        </div>
+    </form>
+    @else
+    <form wire:submit="resetPassword" class="space-y-4">
         <div class="space-y-1">
             <x-ui.label for="password" :required="true">Mật khẩu mới</x-ui.label>
             <x-ui.input
@@ -102,6 +184,7 @@ new #[Layout('layouts.guest')] class extends Component
                 type="password"
                 name="password"
                 required
+                autofocus
                 autocomplete="new-password"
                 placeholder="Tối thiểu 8 ký tự"
                 :hasError="$errors->has('password')"
@@ -126,12 +209,15 @@ new #[Layout('layouts.guest')] class extends Component
             <x-ui.field-error name="password_confirmation" />
         </div>
 
-        <x-ui.button type="submit" variant="primary" class="w-full justify-center font-bold" wire:loading.attr="disabled" wire:target="resetPassword">
-            <span wire:loading.remove wire:target="resetPassword">Đặt lại mật khẩu</span>
-            <span wire:loading wire:target="resetPassword" class="flex items-center gap-2">
-                <span class="ue-spinner" aria-hidden="true"></span>
-                Đang xử lý...
-            </span>
-        </x-ui.button>
+        <div class="pt-2">
+            <x-ui.button type="submit" variant="primary" class="w-full justify-center font-bold" wire:loading.attr="disabled" wire:target="resetPassword">
+                <span wire:loading.remove wire:target="resetPassword">Đổi mật khẩu</span>
+                <span wire:loading wire:target="resetPassword" class="flex items-center gap-2">
+                    <span class="ue-spinner" aria-hidden="true"></span>
+                    Đang xử lý...
+                </span>
+            </x-ui.button>
+        </div>
     </form>
+    @endif
 </div>

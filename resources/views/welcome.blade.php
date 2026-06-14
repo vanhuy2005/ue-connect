@@ -57,7 +57,7 @@
             'features' => [
                 ['icon' => 'message-circle', 'text' => '<strong>Giải đáp 24/7:</strong> Hỗ trợ sinh viên lập kế hoạch học tập, điều kiện ra trường và quy định đào tạo.'],
                 ['icon' => 'database', 'text' => '<strong>Tri thức độc quyền:</strong> Liên tục trích xuất dữ liệu từ Qdrant Vector DB & CSDL SQL Server của trường.'],
-                ['icon' => 'sparkles', 'text' => '<strong>Đa mô hình AI:</strong> Ứng dụng Gemini 2.0 Flash kết hợp Local LLM với cơ chế ngăn chặn ảo giác.']
+                ['icon' => 'sparkles', 'text' => '<strong>Đa mô hình AI:</strong> Ứng dụng Gemini 2.5 Flash kết hợp Local LLM với cơ chế ngăn chặn ảo giác.']
             ]
         ]
     ];
@@ -359,9 +359,9 @@ x-data="{
             </div>
             <div class="flex gap-x-6 gap-y-3 flex-wrap justify-center">
                 <a href="{{ route('pwa.install') }}" class="hover:text-ue-brand transition-colors font-semibold sm:hidden">Cài đặt App</a>
-                <a href="#" class="hover:text-slate-900 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-ue-brand rounded">Điều khoản</a>
-                <a href="#" class="hover:text-slate-900 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-ue-brand rounded">Bảo mật</a>
-                <a href="#" class="hover:text-slate-900 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-ue-brand rounded">Tiêu chuẩn cộng đồng</a>
+                <a href="{{ route('terms') }}" wire:navigate class="hover:text-slate-900 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-ue-brand rounded">Điều khoản</a>
+                <a href="{{ route('privacy') }}" wire:navigate class="hover:text-slate-900 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-ue-brand rounded">Bảo mật</a>
+                <a href="{{ route('community-standards') }}" wire:navigate class="hover:text-slate-900 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-ue-brand rounded">Tiêu chuẩn cộng đồng</a>
             </div>
         </div>
     </footer>

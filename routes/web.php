@@ -75,6 +75,9 @@ use Illuminate\Validation\ValidationException;
 
 // 1. Public & Guest Routes
 Route::view('/', 'welcome')->name('landing');
+Route::view('/terms', 'legal.terms')->name('terms');
+Route::view('/privacy', 'legal.privacy')->name('privacy');
+Route::view('/community-standards', 'legal.community-standards')->name('community-standards');
 Route::view('/install', 'pwa.install')->name('pwa.install');
 
 Route::get('/render-logs', function () {
