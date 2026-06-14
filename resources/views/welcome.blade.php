@@ -66,7 +66,7 @@
 <html lang="vi" class="scroll-smooth">
 <head>
     <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
     <meta name="theme-color" content="#ffffff">
 
     <title>UEConnect — Kết nối cộng đồng HCMUE</title>
@@ -123,6 +123,11 @@
         .delay-200 { transition-delay: 200ms; }
         .delay-300 { transition-delay: 300ms; }
     </style>
+    <script>
+        if (window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone) {
+            document.documentElement.classList.add('is-standalone');
+        }
+    </script>
 </head>
 <body class="font-sans antialiased text-slate-900 selection:bg-ue-brand/20 selection:text-ue-brand bg-white" 
 x-data="{

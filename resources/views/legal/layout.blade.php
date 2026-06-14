@@ -2,9 +2,14 @@
 <html lang="{{ str_replace('_', '-', app()->getLocale()) }}">
 <head>
     <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
     <title>@yield('title') - {{ config('app.name', 'UEConnect') }}</title>
     @vite(['resources/css/app.css', 'resources/js/app.js'])
+    <script>
+        if (window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone) {
+            document.documentElement.classList.add('is-standalone');
+        }
+    </script>
 </head>
 <body class="font-sans antialiased text-slate-800 bg-white min-h-screen flex flex-col selection:bg-ue-brand/20 selection:text-ue-brand">
     {{-- Header --}}

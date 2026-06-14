@@ -39,7 +39,7 @@ class PasswordResetTest extends TestCase
             return $mail->hasTo($user->email);
         });
 
-        $this->assertTrue(Cache::has('password_reset_otp_' . $user->email));
+        $this->assertTrue(Cache::has('password_reset_otp_'.$user->email));
     }
 
     public function test_reset_password_screen_can_be_rendered(): void
@@ -55,7 +55,7 @@ class PasswordResetTest extends TestCase
     {
         $user = User::factory()->create();
         $otp = '123456';
-        Cache::put('password_reset_otp_' . $user->email, $otp, 15);
+        Cache::put('password_reset_otp_'.$user->email, $otp, 15);
 
         $component = Volt::test('pages.auth.reset-password')
             ->set('email', $user->email)
@@ -70,7 +70,7 @@ class PasswordResetTest extends TestCase
         $component
             ->assertRedirect('/login')
             ->assertHasNoErrors();
-            
-        $this->assertFalse(Cache::has('password_reset_otp_' . $user->email));
+
+        $this->assertFalse(Cache::has('password_reset_otp_'.$user->email));
     }
 }
