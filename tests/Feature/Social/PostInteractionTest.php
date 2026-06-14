@@ -5,6 +5,7 @@ namespace Tests\Feature\Social;
 use App\Actions\Posts\CreatePost;
 use App\Actions\Posts\DeletePost;
 use App\Actions\Posts\UpdatePost;
+use App\Actions\Settings\EnsureUserSettingsExistAction;
 use App\Enums\AccountStatus;
 use App\Enums\ConnectionStatus;
 use App\Enums\MessageType;
@@ -947,5 +948,45 @@ class PostInteractionTest extends TestCase
             'status' => ConnectionStatus::ACTIVE,
             'connected_at' => now(),
         ]);
+    }
+
+    public function test_post_composer_search_mention_users_returns_matching_results(): void
+    {
+        $this->actingAs($this->user);
+
+        // Make sure settings exist
+        app(EnsureUserSettingsExistAction::class)->execute($this->otherUser);
+
+        $component = Volt::test('pages.app.home-feed');
+
+        // Without connection -> should be empty
+        $resultsEmpty = $component->instance()->searchMentionUsers('Other');
+        $this->assertEmpty($resultsEmpty);
+
+        // Connect them
+        $this->connectUsers($this->user, $this->otherUser);
+
+        // With connection -> should find user
+        $results = $component->instance()->searchMentionUsers('Other');
+        $this->assertCount(1, $results);
+        $this->assertEquals($this->otherUser->name, $results[0]['name']);
+        $this->assertArrayHasKey('role', $results[0]);
+        $this->assertArrayHasKey('avatar_url', $results[0]);
+    }
+
+    public function test_post_mentions_are_rendered_as_clickable_tags(): void
+    {
+        $this->actingAs($this->user);
+
+        $post = Post::factory()->create([
+            'user_id' => $this->user->id,
+            'body' => 'Look at this @Other Student!',
+            'status' => PostStatus::PUBLISHED,
+            'published_at' => now(),
+        ]);
+
+        Volt::test('pages.app.home-feed')
+            ->assertSeeHtml(route('profile.show', $this->otherUser))
+            ->assertSeeHtml('@Other Student');
     }
 }

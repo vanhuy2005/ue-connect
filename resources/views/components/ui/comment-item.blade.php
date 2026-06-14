@@ -4,6 +4,7 @@
     'replyingToCommentId' => null,
     'editingCommentId' => null,
     'editingCommentBody' => '',
+    'commentBody' => '',
     'isReply' => false,
 ])
 
@@ -19,7 +20,7 @@
 @endphp
 
 <div
-    class="ue-comment {{ $isReply ? 'ue-comment--reply' : '' }}"
+    class="ue-comment {{ $isReply ? 'pt-2' : '' }}"
     wire:key="comment-item-{{ $comment->id }}"
 >
     @if(!$isReply && !$isDeleted && $comment->replies->count() > 0)
@@ -52,13 +53,13 @@
                     <label for="edit-comment-{{ $comment->id }}" class="sr-only">Nội dung bình luận chỉnh sửa</label>
                     <textarea
                         id="edit-comment-{{ $comment->id }}"
-                        wire:model="editingCommentBody"
+                        wire:model.live.debounce.150ms="editingCommentBody"
                         rows="2"
                         class="w-full border-0 focus:ring-0 p-0 text-slate-700 text-sm resize-none bg-transparent"
                         maxlength="1000"
                     ></textarea>
                     @error('editingCommentBody')
-                        <p class="text-xs text-red-600 font-semibold">{{ $message }}</p>
+                        <p class="text-xs text-red-655 font-semibold">{{ $message }}</p>
                     @enderror
 
                     <div class="flex items-center justify-between pt-2 border-t border-slate-200">
@@ -79,6 +80,7 @@
                                 variant="primary"
                                 size="xs"
                                 icon="check"
+                                :disabled="trim($editingCommentBody) === ''"
                             >
                                 Lưu
                             </x-ui.button>
@@ -174,7 +176,7 @@
 
                 {{-- Content Body --}}
                 <div class="text-slate-700 text-sm mt-1.5 leading-relaxed">
-                    {{ $comment->body }}
+                    {!! \App\Models\Comment::parseMentions($comment->body) !!}
                 </div>
 
                 {{-- Action triggers --}}
@@ -188,7 +190,7 @@
                         <span>{{ $commentLikes }}</span>
                     </button>
 
-                    @if ($currentUser->isActive() && !$isReply)
+                    @if ($currentUser->isActive())
                         <button
                             type="button"
                             wire:click="setReplyingTo({{ $comment->id }})"
@@ -199,12 +201,108 @@
                         </button>
                     @endif
                 </div>
+
+                {{-- Inline Reply form --}}
+                @if ($replyingToCommentId === $comment->id && $currentUser->isActive())
+                    <div class="mt-3 ue-animate-fade-in {{ $isReply ? '' : 'ue-comment--reply' }}">
+                        <div class="ue-feed-composer border border-ue-border/60 rounded-2xl bg-white shadow-xs">
+                            <div class="ue-composer">
+                                <div class="flex justify-start">
+                                    <x-ui.avatar :user="$currentUser" size="sm" />
+                                </div>
+                                <div class="min-w-0 relative flex-1" x-data="mentionComposer({ textareaId: 'reply-text-{{ $comment->id }}', wireModel: 'commentBody', initialMention: '{{ $commentAuthor->profile?->display_name ?? $commentAuthor->name }}' })" @focusout="setTimeout(() => { if (! $el.contains(document.activeElement)) closeDropdown() }, 150)" wire:key="reply-composer-{{ $comment->id }}">
+                                    <div class="mb-3 px-3 py-1.5 rounded-lg bg-blue-50 border border-blue-100 text-xxs text-ue-brand font-bold flex items-center justify-between">
+                                        <span>Đang phản hồi bình luận của {{ $commentAuthor->name }}</span>
+                                        <button type="button" wire:click="setReplyingTo(null)" class="text-slate-400 hover:text-slate-655 transition-colors">
+                                            Hủy bỏ
+                                        </button>
+                                    </div>
+
+                                    <form wire:submit.prevent="submitComment">
+                                        <div>
+                                            <div class="relative w-full">
+                                                <label for="reply-text-{{ $comment->id }}" class="sr-only">Nội dung phản hồi</label>
+                                                <textarea
+                                                    id="reply-text-{{ $comment->id }}"
+                                                    x-ref="textarea"
+                                                    wire:model.live.debounce.150ms="commentBody"
+                                                    @input="handleInput($event)"
+                                                    @keydown.arrow-down.prevent="selectNext()"
+                                                    @keydown.arrow-up.prevent="selectPrev()"
+                                                    @keydown.enter="showDropdown ? ($event.preventDefault() || confirmSelection()) : true"
+                                                    @keydown.escape="showDropdown ? ($event.preventDefault() || closeDropdown()) : true"
+                                                    placeholder="Nhập phản hồi của bạn..."
+                                                    rows="2"
+                                                    class="ue-composer__textarea focus:outline-none"
+                                                    maxlength="1000"
+                                                ></textarea>
+
+                                                {{-- Suggestion Dropdown --}}
+                                                <div 
+                                                    x-show="showDropdown" 
+                                                    x-transition
+                                                    @click.outside="closeDropdown()"
+                                                    class="absolute left-0 right-0 bg-white border border-slate-200 rounded-xl shadow-lg z-50 max-h-48 overflow-y-auto divide-y divide-slate-50"
+                                                    :style="openUpward ? 'top: auto; bottom: 100%; margin-bottom: 6px;' : 'bottom: auto; top: ' + dropdownTop"
+                                                    style="display: none;"
+                                                >
+                                                    <template x-for="(user, index) in suggestions" :key="user.id">
+                                                        <button
+                                                            type="button"
+                                                            @click="insertMention(user)"
+                                                            @mouseenter="selectedIndex = index"
+                                                            class="w-full text-left px-4 py-2 flex items-center gap-3 transition-colors"
+                                                            x-bind:class="selectedIndex === index ? 'bg-slate-50 text-ue-brand' : 'text-slate-700'"
+                                                        >
+                                                            <img :src="user.avatar_url || 'https://www.gravatar.com/avatar/' + user.id + '?d=mp&s=100'" class="w-6 h-6 rounded-full object-cover border border-slate-100" />
+                                                            <div class="flex-1 min-w-0">
+                                                                <span class="text-xxs font-bold block truncate" x-text="user.display_name"></span>
+                                                                <span class="text-[9px] text-slate-400 block truncate" x-text="'@' + user.name + (user.role ? ' · ' + user.role : '')"></span>
+                                                            </div>
+                                                        </button>
+                                                    </template>
+                                                </template>
+                                            </div>
+                                        </div>
+                                        @error('commentBody')
+                                            <p class="text-xs text-red-655 font-semibold mt-1">{{ $message }}</p>
+                                        @enderror
+                                    </div>
+
+                                        <div class="ue-composer__toolbar">
+                                            <div class="ue-composer__actions">
+                                                <span class="ue-composer__counter text-slate-400 text-xxs font-semibold whitespace-nowrap">
+                                                    {{ mb_strlen($commentBody) }}/1000
+                                                </span>
+                                            </div>
+
+                                            <div class="flex items-center gap-2">
+                                                <button type="button" wire:click="setReplyingTo(null)" class="px-2.5 py-1.5 text-xxs font-bold text-slate-500 hover:text-slate-700 transition-colors">
+                                                    Hủy
+                                                </button>
+                                                <x-ui.button
+                                                    type="submit"
+                                                    variant="primary"
+                                                    size="sm"
+                                                    icon="send"
+                                                    :disabled="trim($commentBody) === ''"
+                                                >
+                                                    Gửi phản hồi
+                                                </x-ui.button>
+                                            </div>
+                                        </div>
+                                    </form>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                @endif
             @endif
         @endif
 
         {{-- Nested Replies Recursion --}}
         @if (!$isReply && $comment->replies->count() > 0)
-            <div class="mt-3 space-y-4">
+            <div class="mt-3 space-y-4 ml-3 md:ml-4">
                 @foreach ($comment->replies as $reply)
                     <x-ui.comment-item
                         :comment="$reply"
@@ -212,6 +310,7 @@
                         :replyingToCommentId="$replyingToCommentId"
                         :editingCommentId="$editingCommentId"
                         :editingCommentBody="$editingCommentBody"
+                        :commentBody="$commentBody"
                         :isReply="true"
                     />
                 @endforeach

@@ -192,7 +192,7 @@
                     <label for="edit-body-{{ $post->id }}" class="sr-only">Nội dung chỉnh sửa</label>
                     <textarea
                         id="edit-body-{{ $post->id }}"
-                        wire:model="editingBody"
+                        wire:model.live.debounce.150ms="editingBody"
                         rows="3"
                         class="w-full border-0 focus:ring-0 p-0 text-slate-700 text-sm resize-none bg-transparent"
                         maxlength="3000"
@@ -219,6 +219,7 @@
                                 variant="primary"
                                 size="xs"
                                 icon="check"
+                                :disabled="trim($editingBody) === ''"
                             >
                                 Lưu thay đổi
                             </x-ui.button>
@@ -226,7 +227,7 @@
                     </div>
                 </div>
             @else
-                <div class="ue-post-card__content mt-2.5">{{ $post->body }}</div>
+                <div class="ue-post-card__content mt-2.5">{!! \App\Models\Comment::parseMentions($post->body) !!}</div>
                 
                 {{-- Polymorphic Media Grid --}}
                 @if ($mediaCount > 0)

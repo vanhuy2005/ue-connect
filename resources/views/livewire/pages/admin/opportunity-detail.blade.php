@@ -93,7 +93,7 @@ new #[Layout('layouts.app', ['shell' => 'admin'])] class extends Component {
 
                 {{-- Post body --}}
                 <div class="text-slate-700 text-sm whitespace-pre-wrap leading-relaxed border-t border-slate-200/60 pt-3 mb-4">
-                    {{ $post->body }}
+                    {!! \App\Models\Comment::parseMentions($post->body) !!}
                 </div>
 
                 {{-- Opportunity metadata --}}

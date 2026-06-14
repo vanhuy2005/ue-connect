@@ -371,6 +371,12 @@ class CommentInteractionTest extends TestCase
         $resultsOtherConnectedDefault = $component->instance()->searchMentionUsers('Other');
         $this->assertCount(1, $resultsOtherConnectedDefault);
         $this->assertEquals($this->otherUser->name, $resultsOtherConnectedDefault[0]['name']);
+        $this->assertArrayHasKey('role', $resultsOtherConnectedDefault[0]);
+
+        // 3.5. Target user with empty search query -> should return all connections/self
+        $resultsEmpty = $component->instance()->searchMentionUsers('');
+        $this->assertNotEmpty($resultsEmpty);
+        $this->assertArrayHasKey('role', $resultsEmpty[0]);
 
         // 4. Target user has 'nobody' preference -> should NOT show up
         $this->otherUser->profilePrivacySetting()->update(['mentions_preference' => 'nobody']);
@@ -444,5 +450,80 @@ class CommentInteractionTest extends TestCase
         ]);
 
         $this->assertCount(0, $this->user->notifications);
+    }
+
+    public function test_user_can_reply_to_nested_reply_resolves_to_top_level_parent(): void
+    {
+        $parentComment = Comment::factory()->create([
+            'post_id' => $this->post->id,
+            'user_id' => $this->otherUser->id,
+            'body' => 'Root parent comment.',
+            'status' => CommentStatus::PUBLISHED,
+        ]);
+
+        $nestedReply = Comment::factory()->create([
+            'post_id' => $this->post->id,
+            'user_id' => $this->user->id,
+            'parent_id' => $parentComment->id,
+            'body' => 'First level reply.',
+            'status' => CommentStatus::PUBLISHED,
+        ]);
+
+        $this->actingAs($this->otherUser);
+
+        Volt::test('pages.app.post-detail', ['post' => $this->post])
+            ->call('setReplyingTo', $nestedReply->id)
+            // It should prepopulate commentBody with the mention of the author of nestedReply (Active Student)
+            ->assertSet('commentBody', '@Active Student ')
+            ->set('commentBody', '@Active Student Solid reply!')
+            ->call('submitComment')
+            ->assertHasNoErrors()
+            ->assertSet('commentBody', '')
+            ->assertSet('replyingToCommentId', null);
+
+        // Verify it was saved with parent_id as the top-level $parentComment->id
+        $this->assertDatabaseHas('comments', [
+            'post_id' => $this->post->id,
+            'user_id' => $this->otherUser->id,
+            'body' => '@Active Student Solid reply!',
+            'parent_id' => $parentComment->id,
+        ]);
+    }
+
+    public function test_reply_auto_mention_does_not_duplicate(): void
+    {
+        $parentComment = Comment::factory()->create([
+            'post_id' => $this->post->id,
+            'user_id' => $this->otherUser->id,
+            'body' => 'Root parent comment.',
+            'status' => CommentStatus::PUBLISHED,
+        ]);
+
+        $this->actingAs($this->user);
+
+        Volt::test('pages.app.post-detail', ['post' => $this->post])
+            ->set('commentBody', 'Pre-existing typed text')
+            ->call('setReplyingTo', $parentComment->id)
+            ->assertSet('commentBody', '@Other Student Pre-existing typed text')
+            // Calling it again should not duplicate the mention
+            ->call('setReplyingTo', $parentComment->id)
+            ->assertSet('commentBody', '@Other Student Pre-existing typed text');
+    }
+
+    public function test_comment_mentions_are_rendered_as_clickable_tags(): void
+    {
+        $this->actingAs($this->user);
+
+        // Create a comment containing a mention to $this->otherUser (display name: Other Student)
+        $comment = Comment::factory()->create([
+            'post_id' => $this->post->id,
+            'user_id' => $this->user->id,
+            'body' => 'Hey @Other Student look at this!',
+            'status' => CommentStatus::PUBLISHED,
+        ]);
+
+        Volt::test('pages.app.post-detail', ['post' => $this->post])
+            ->assertSeeHtml(route('profile.show', $this->otherUser))
+            ->assertSeeHtml('@Other Student');
     }
 }

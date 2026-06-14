@@ -94,9 +94,17 @@ new #[Layout('layouts.app')] class extends Component
         $this->validate();
 
         try {
+            $parentId = $this->replyingToCommentId;
+            if ($parentId) {
+                $targetComment = Comment::find($parentId);
+                if ($targetComment && $targetComment->parent_id !== null) {
+                    $parentId = $targetComment->parent_id;
+                }
+            }
+
             $createComment->execute(Auth::user(), $this->post, [
                 'body' => $this->commentBody,
-                'parent_id' => $this->replyingToCommentId,
+                'parent_id' => $parentId,
             ]);
 
             $this->commentBody = '';
@@ -116,7 +124,24 @@ new #[Layout('layouts.app')] class extends Component
     public function setReplyingTo(?int $commentId): void
     {
         $this->replyingToCommentId = $commentId;
-        $this->commentBody = '';
+        
+        if ($commentId) {
+            $targetComment = Comment::find($commentId);
+            if ($targetComment) {
+                $authorName = $targetComment->user->profile?->display_name ?? $targetComment->user->name;
+                $mention = '@' . $authorName . ' ';
+                
+                if (trim($this->commentBody) === '' || trim($this->commentBody) === '@') {
+                    $this->commentBody = $mention;
+                } else {
+                    if (! str_contains($this->commentBody, $mention)) {
+                        $this->commentBody = $mention . ltrim($this->commentBody);
+                    }
+                }
+            }
+        } else {
+            $this->commentBody = '';
+        }
     }
 
     /**
@@ -637,10 +662,6 @@ new #[Layout('layouts.app')] class extends Component
     public function searchMentionUsers(string $search): array
     {
         $search = trim($search);
-        if ($search === '') {
-            return [];
-        }
-
         $currentUserId = Auth::id();
 
         // Get active connection user IDs
@@ -659,8 +680,10 @@ new #[Layout('layouts.app')] class extends Component
         $driver = \Illuminate\Support\Facades\DB::connection()->getDriverName();
 
         // Get matching users from connections/self
-        $users = User::whereIn('id', $friendIds)
-            ->where(function ($query) use ($search, $driver) {
+        $query = User::whereIn('id', $friendIds);
+
+        if ($search !== '') {
+            $query->where(function ($query) use ($search, $driver) {
                 if ($driver === 'sqlsrv') {
                     $query->whereRaw("name COLLATE Latin1_General_CI_AI LIKE ?", ["%{$search}%"])
                         ->orWhereHas('profile', function ($q) use ($search) {
@@ -672,9 +695,10 @@ new #[Layout('layouts.app')] class extends Component
                             $q->where('display_name', 'like', "%{$search}%");
                         });
                 }
-            })
-            ->with(['profile', 'profilePrivacySetting'])
-            ->get();
+            });
+        }
+
+        $users = $query->with(['profile', 'profilePrivacySetting'])->get();
 
         // Filter based on their privacy preferences
         $filteredUsers = $users->filter(function ($targetUser) use ($currentUserId) {
@@ -698,7 +722,8 @@ new #[Layout('layouts.app')] class extends Component
                 'id' => $u->id,
                 'name' => $u->name,
                 'display_name' => $u->profile?->display_name ?? $u->name,
-                'avatar_url' => $u->profile?->avatar_url ?? null,
+                'avatar_url' => \App\Support\Media\MediaUrlResolver::avatarUrl($u, 'thumb'),
+                'role' => $u->profile?->role_type ? \Illuminate\Support\Str::ucfirst($u->profile->role_type) : 'Thành viên',
             ])
             ->values()
             ->toArray();
@@ -1116,7 +1141,7 @@ new #[Layout('layouts.app')] class extends Component
             </div>
 
             {{-- 2. COMMENT COMPOSER --}}
-            @if ($currentUser->isActive())
+            @if ($currentUser->isActive() && !$replyingToCommentId)
                 <div class="ue-feed-composer border border-ue-border/60 rounded-2xl bg-white shadow-xs mt-6">
                     <div class="ue-composer">
                         {{-- Left Column: Avatar --}}
@@ -1125,83 +1150,11 @@ new #[Layout('layouts.app')] class extends Component
                         </div>
                         
                         {{-- Right Column: Form --}}
-                        <div class="min-w-0 relative" x-data="{
-                            showDropdown: false,
-                            suggestions: [],
-                            searchQuery: '',
-                            cursorPosition: 0,
-                            selectedIndex: 0,
-                            handleInput(event) {
-                                const textarea = event.target;
-                                const value = textarea.value;
-                                const pos = textarea.selectionStart;
-                                this.cursorPosition = pos;
-
-                                const textBeforeCursor = value.slice(0, pos);
-                                const lastAt = textBeforeCursor.lastIndexOf('@');
-
-                                if (lastAt !== -1 && (lastAt === 0 || /\s/.test(textBeforeCursor[lastAt - 1]))) {
-                                    const query = textBeforeCursor.slice(lastAt + 1);
-                                    if (query.length > 0 && query.length <= 50 && !/\s{2,}/.test(query) && !/^\s/.test(query)) {
-                                        this.searchQuery = query;
-                                        this.$wire.searchMentionUsers(query).then(results => {
-                                            this.suggestions = results;
-                                            this.showDropdown = results.length > 0;
-                                            this.selectedIndex = 0;
-                                        });
-                                        return;
-                                    }
-                                }
-                                this.closeDropdown();
-                            },
-                            selectNext() {
-                                if (!this.showDropdown) return;
-                                this.selectedIndex = (this.selectedIndex + 1) % this.suggestions.length;
-                            },
-                            selectPrev() {
-                                if (!this.showDropdown) return;
-                                this.selectedIndex = (this.selectedIndex - 1 + this.suggestions.length) % this.suggestions.length;
-                            },
-                            confirmSelection() {
-                                if (!this.showDropdown || this.suggestions.length === 0) return;
-                                this.insertMention(this.suggestions[this.selectedIndex]);
-                            },
-                            insertMention(user) {
-                                const textarea = document.getElementById('comment-text');
-                                const value = textarea.value;
-                                const pos = this.cursorPosition;
-                                
-                                const textBeforeCursor = value.slice(0, pos);
-                                const lastAt = textBeforeCursor.lastIndexOf('@');
-                                
-                                const before = value.slice(0, lastAt);
-                                const after = value.slice(pos);
-                                
-                                const mentionText = '@' + user.display_name + ' ';
-                                const newValue = before + mentionText + after;
-                                
-                                textarea.value = newValue;
-                                this.$wire.set('commentBody', newValue);
-                                
-                                textarea.focus();
-                                const newPos = lastAt + mentionText.length;
-                                this.$nextTick(() => {
-                                    textarea.setSelectionRange(newPos, newPos);
-                                });
-                                
-                                this.closeDropdown();
-                            },
-                            closeDropdown() {
-                                this.showDropdown = false;
-                                this.suggestions = [];
-                                this.searchQuery = '';
-                                this.selectedIndex = 0;
-                            }
-                        }">
+                        <div class="min-w-0 relative flex-1" x-data="mentionComposer({ textareaId: 'comment-text', wireModel: 'commentBody' })" @focusout="setTimeout(() => { if (! $el.contains(document.activeElement)) closeDropdown() }, 150)" wire:key="comment-composer-container">
                             @if ($replyingToCommentId)
                                 <div class="mb-3 px-3 py-1.5 rounded-lg bg-blue-50 border border-blue-100 text-xxs text-ue-brand font-bold flex items-center justify-between ue-animate-fade-in">
                                     <span>Đang phản hồi một bình luận</span>
-                                    <button type="button" wire:click="setReplyingTo(null)" class="text-slate-400 hover:text-slate-650 transition-colors">
+                                    <button type="button" wire:click="setReplyingTo(null)" class="text-slate-400 hover:text-slate-655 transition-colors">
                                         Hủy bỏ
                                     </button>
                                 </div>
@@ -1209,47 +1162,52 @@ new #[Layout('layouts.app')] class extends Component
 
                             <form wire:submit.prevent="submitComment">
                                 <div>
-                                    <label for="comment-text" class="sr-only">Nội dung bình luận</label>
-                                    <textarea
-                                        id="comment-text"
-                                        wire:model="commentBody"
-                                        @input="handleInput($event)"
-                                        @keydown.arrow-down.prevent="showDropdown ? selectNext() : true"
-                                        @keydown.arrow-up.prevent="showDropdown ? selectPrev() : true"
-                                        @keydown.enter="showDropdown ? ($event.preventDefault() || confirmSelection()) : true"
-                                        @keydown.escape="showDropdown ? ($event.preventDefault() || closeDropdown()) : true"
-                                        placeholder="{{ $replyingToCommentId ? 'Nhập phản hồi của bạn...' : 'Viết bình luận công khai...' }}"
-                                        rows="2"
-                                        class="ue-composer__textarea focus:outline-none"
-                                        maxlength="1000"
-                                    ></textarea>
+                                    <div class="relative w-full">
+                                        <label for="comment-text" class="sr-only">Nội dung bình luận</label>
+                                        <textarea
+                                            id="comment-text"
+                                            x-ref="textarea"
+                                            wire:model.live.debounce.150ms="commentBody"
+                                            @input="handleInput($event)"
+                                            @keydown.arrow-down.prevent="selectNext()"
+                                            @keydown.arrow-up.prevent="selectPrev()"
+                                            @keydown.enter="showDropdown ? ($event.preventDefault() || confirmSelection()) : true"
+                                            @keydown.escape="showDropdown ? ($event.preventDefault() || closeDropdown()) : true"
+                                            placeholder="{{ $replyingToCommentId ? 'Nhập phản hồi của bạn...' : 'Viết bình luận công khai...' }}"
+                                            rows="2"
+                                            class="ue-composer__textarea focus:outline-none"
+                                            maxlength="1000"
+                                        ></textarea>
+
+                                        {{-- Suggestion Dropdown --}}
+                                        <div 
+                                            x-show="showDropdown" 
+                                            x-transition
+                                            @click.outside="closeDropdown()"
+                                            class="absolute left-0 right-0 bg-white border border-slate-200 rounded-xl shadow-lg z-50 max-h-48 overflow-y-auto divide-y divide-slate-50"
+                                            :style="openUpward ? 'top: auto; bottom: 100%; margin-bottom: 6px;' : 'bottom: auto; top: ' + dropdownTop"
+                                            style="display: none;"
+                                        >
+                                            <template x-for="(user, index) in suggestions" :key="user.id">
+                                                <button
+                                                    type="button"
+                                                    @click="insertMention(user)"
+                                                    @mouseenter="selectedIndex = index"
+                                                    class="w-full text-left px-4 py-2 flex items-center gap-3 transition-colors"
+                                                    x-bind:class="selectedIndex === index ? 'bg-slate-50 text-ue-brand' : 'text-slate-700'"
+                                                >
+                                                    <img :src="user.avatar_url || 'https://www.gravatar.com/avatar/' + user.id + '?d=mp&s=100'" class="w-6 h-6 rounded-full object-cover border border-slate-100" />
+                                                    <div class="flex-1 min-w-0">
+                                                        <span class="text-xxs font-bold block truncate" x-text="user.display_name"></span>
+                                                        <span class="text-[9px] text-slate-400 block truncate" x-text="'@' + user.name + (user.role ? ' · ' + user.role : '')"></span>
+                                                    </div>
+                                                </button>
+                                            </template>
+                                        </div>
+                                    </div>
                                     @error('commentBody')
                                         <p class="text-xs text-red-650 font-semibold mt-1">{{ $message }}</p>
                                     @enderror
-
-                                    {{-- Suggestion Dropdown --}}
-                                    <div 
-                                        x-show="showDropdown" 
-                                        x-transition
-                                        class="absolute left-0 right-0 mt-1 bg-white border border-slate-200 rounded-xl shadow-lg z-50 max-h-48 overflow-y-auto divide-y divide-slate-50"
-                                        style="display: none;"
-                                    >
-                                        <template x-for="(user, index) in suggestions" :key="user.id">
-                                            <button
-                                                type="button"
-                                                @click="insertMention(user)"
-                                                @mouseenter="selectedIndex = index"
-                                                class="w-full text-left px-4 py-2 flex items-center gap-3 transition-colors"
-                                                x-bind:class="selectedIndex === index ? 'bg-slate-50 text-ue-brand' : 'text-slate-700'"
-                                            >
-                                                <img :src="user.avatar_url || 'https://www.gravatar.com/avatar/' + user.id + '?d=mp&s=100'" class="w-6 h-6 rounded-full object-cover border border-slate-100" />
-                                                <div class="flex-1 min-w-0">
-                                                    <span class="text-xxs font-bold block truncate" x-text="user.display_name"></span>
-                                                    <span class="text-[9px] text-slate-400 block truncate" x-text="'@' + user.name"></span>
-                                                </div>
-                                            </button>
-                                        </template>
-                                    </div>
                                 </div>
 
                                 <div class="ue-composer__toolbar">
@@ -1264,6 +1222,7 @@ new #[Layout('layouts.app')] class extends Component
                                         variant="primary"
                                         size="sm"
                                         icon="send"
+                                        :disabled="trim($commentBody) === ''"
                                     >
                                         {{ $replyingToCommentId ? 'Gửi phản hồi' : 'Bình luận' }}
                                     </x-ui.button>
@@ -1289,6 +1248,7 @@ new #[Layout('layouts.app')] class extends Component
                             :replyingToCommentId="$replyingToCommentId"
                             :editingCommentId="$editingCommentId"
                             :editingCommentBody="$editingCommentBody"
+                            :commentBody="$commentBody"
                             :isReply="false"
                         />
                     @empty

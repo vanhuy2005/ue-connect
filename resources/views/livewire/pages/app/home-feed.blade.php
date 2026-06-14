@@ -356,6 +356,81 @@ new #[Layout('layouts.app')] class extends Component
     }
 
     /**
+     * Search users for mentions dropdown.
+     */
+    public function searchMentionUsers(string $search): array
+    {
+        $search = trim($search);
+        $currentUserId = Auth::id();
+
+        // Get active connection user IDs
+        $friendIds = Connection::where(function ($query) use ($currentUserId) {
+                $query->where('user_one_id', $currentUserId)
+                    ->orWhere('user_two_id', $currentUserId);
+            })
+            ->where('status', ConnectionStatus::ACTIVE)
+            ->get()
+            ->map(function ($conn) use ($currentUserId) {
+                return $conn->user_one_id === $currentUserId ? $conn->user_two_id : $conn->user_one_id;
+            })
+            ->push($currentUserId) // Allow self tagging
+            ->toArray();
+
+        $driver = \Illuminate\Support\Facades\DB::connection()->getDriverName();
+
+        // Get matching users from connections/self
+        $query = User::whereIn('id', $friendIds);
+
+        if ($search !== '') {
+            $query->where(function ($query) use ($search, $driver) {
+                if ($driver === 'sqlsrv') {
+                    $query->whereRaw("name COLLATE Latin1_General_CI_AI LIKE ?", ["%{$search}%"])
+                        ->orWhereHas('profile', function ($q) use ($search) {
+                            $q->whereRaw("display_name COLLATE Latin1_General_CI_AI LIKE ?", ["%{$search}%"]);
+                        });
+                } else {
+                    $query->where('name', 'like', "%{$search}%")
+                        ->orWhereHas('profile', function ($q) use ($search) {
+                            $q->where('display_name', 'like', "%{$search}%");
+                        });
+                }
+            });
+        }
+
+        $users = $query->with(['profile', 'profilePrivacySetting'])->get();
+
+        // Filter based on their privacy preferences
+        $filteredUsers = $users->filter(function ($targetUser) use ($currentUserId) {
+            if ($targetUser->id === $currentUserId) {
+                return true;
+            }
+
+            // Respect the target user's privacy preference
+            $privacy = $targetUser->profilePrivacySetting;
+            $preference = $privacy ? $privacy->mentions_preference : 'everyone';
+
+            if ($preference === 'nobody') {
+                return false;
+            }
+
+            return true;
+        });
+
+        $results = $filteredUsers->take(5)
+            ->map(fn($u) => [
+                'id' => $u->id,
+                'name' => $u->name,
+                'display_name' => $u->profile?->display_name ?? $u->name,
+                'avatar_url' => \App\Support\Media\MediaUrlResolver::avatarUrl($u, 'thumb'),
+                'role' => $u->profile?->role_type ? \Illuminate\Support\Str::ucfirst($u->profile->role_type) : 'Thành viên',
+            ])
+            ->values()
+            ->toArray();
+
+        return $results;
+    }
+
+    /**
      * Trigger customized delete modal.
      */
     public function openDeleteModal(int $postId): void
@@ -1593,17 +1668,49 @@ new #[Layout('layouts.app')] class extends Component
 
                                 <div>
                                     <div class="flex items-start gap-2">
-                                        <div class="flex-1 min-w-0">
+                                        <div class="flex-1 min-w-0 relative" x-data="mentionComposer({ textareaId: 'post-body', wireModel: 'body' })" @focusout="setTimeout(() => { if (! $el.contains(document.activeElement)) closeDropdown() }, 150)">
                                             <label for="post-body" class="sr-only">Nội dung bài viết</label>
                                             <textarea
                                                 id="post-body"
-                                                wire:model="body"
+                                                x-ref="textarea"
+                                                wire:model.live.debounce.150ms="body"
+                                                @input="handleInput($event)"
+                                                @keydown.arrow-down.prevent="showDropdown ? selectNext() : true"
+                                                @keydown.arrow-up.prevent="showDropdown ? selectPrev() : true"
+                                                @keydown.enter="showDropdown ? ($event.preventDefault() || confirmSelection()) : true"
+                                                @keydown.escape="showDropdown ? ($event.preventDefault() || closeDropdown()) : true"
                                                 placeholder="Có gì mới trong cộng đồng HCMUE hôm nay?"
                                                 rows="2"
                                                 class="ue-composer__textarea focus:outline-none ue-text-body"
                                                 maxlength="3000"
                                             ></textarea>
-                                    </div>
+
+                                            {{-- Suggestion Dropdown --}}
+                                            <div 
+                                                x-show="showDropdown" 
+                                                x-transition
+                                                @click.outside="closeDropdown()"
+                                                class="absolute left-0 right-0 bg-white border border-slate-200 rounded-xl shadow-lg z-50 max-h-48 overflow-y-auto divide-y divide-slate-50"
+                                                :style="openUpward ? 'top: auto; bottom: 100%; margin-bottom: 6px;' : 'bottom: auto; top: ' + dropdownTop"
+                                                style="display: none;"
+                                            >
+                                                <template x-for="(user, index) in suggestions" :key="user.id">
+                                                    <button
+                                                        type="button"
+                                                        @click="insertMention(user)"
+                                                        @mouseenter="selectedIndex = index"
+                                                        class="w-full text-left px-4 py-2 flex items-center gap-3 transition-colors"
+                                                        x-bind:class="selectedIndex === index ? 'bg-slate-50 text-ue-brand' : 'text-slate-700'"
+                                                    >
+                                                        <img :src="user.avatar_url || 'https://www.gravatar.com/avatar/' + user.id + '?d=mp&s=100'" class="w-6 h-6 rounded-full object-cover border border-slate-100" />
+                                                        <div class="flex-1 min-w-0">
+                                                            <span class="text-xxs font-bold block truncate" x-text="user.display_name"></span>
+                                                            <span class="text-[9px] text-slate-400 block truncate" x-text="'@' + user.name + (user.role ? ' · ' + user.role : '')"></span>
+                                                        </div>
+                                                    </button>
+                                                </template>
+                                            </div>
+                                        </div>
                                     @error('body')
                                         <p class="text-xs text-red-650 font-semibold mt-1">{{ $message }}</p>
                                     @enderror
@@ -1695,6 +1802,7 @@ new #[Layout('layouts.app')] class extends Component
                                         wire:loading.attr="disabled"
                                         wire:target="submitPost,imageFiles"
                                         class="ue-composer__submit-btn flex-shrink-0"
+                                        :disabled="trim($body) === ''"
                                     >
                                         <span wire:loading.remove wire:target="submitPost">Đăng bài</span>
                                         <span wire:loading wire:target="submitPost">Đang đăng...</span>
