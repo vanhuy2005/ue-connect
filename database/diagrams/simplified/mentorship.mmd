@@ -1,0 +1,109 @@
+erDiagram
+
+    MENTOR_ACCESSES {
+        bigint id PK
+        foreignId user_id FK
+        string status
+        text note "nullable"
+        timestamp reviewed_at "nullable"
+        timestamp created_at "nullable"
+        timestamp updated_at "nullable"
+    }
+
+    MENTOR_ACCESS_REQUESTS {
+        bigint id PK
+        foreignId user_id FK
+        string requested_role_context
+        text experience_summary "nullable"
+        json expertise_topics "nullable"
+        json career_paths "nullable"
+        text availability_note "nullable"
+        boolean policy_agreed
+        string headline "nullable"
+        text bio "nullable"
+        json help_topics "nullable"
+        json preferred_request_types "nullable"
+        json skills "nullable"
+        string response_expectation_text "nullable"
+        string office_hours_text "nullable"
+        unsignedBigInteger evidence_media_id FK "nullable"
+        unsignedBigInteger reviewed_by FK "nullable"
+        timestamp reviewed_at "nullable"
+        text review_reason "nullable"
+        text admin_notes "nullable"
+        timestamp deleted_at
+        timestamp created_at "nullable"
+        timestamp updated_at "nullable"
+    }
+
+    MENTOR_PROFILES {
+        bigint id PK
+        foreignId user_id FK
+        string headline "nullable"
+        text bio "nullable"
+        json expertise_topics "nullable"
+        json career_paths "nullable"
+        json skills "nullable"
+        json help_topics "nullable"
+        json preferred_request_types "nullable"
+        string availability_status
+        boolean is_public_ready
+        unsignedSmallInteger max_monthly_accepts "nullable"
+        string response_expectation_text "nullable"
+        string office_hours_text "nullable"
+        boolean is_active
+        timestamp approved_at "nullable"
+        unsignedBigInteger approved_by FK "nullable"
+        timestamp deleted_at
+        timestamp created_at "nullable"
+        timestamp updated_at "nullable"
+    }
+
+    MENTOR_REQUESTS {
+        bigint id PK
+        foreignId student_id FK
+        foreignId mentor_id FK
+        foreignId mentor_profile_id FK
+        string topic
+        text goal
+        text question
+        string urgency
+        text expected_outcome "nullable"
+        string status
+        text decline_reason "nullable"
+        text more_info_question "nullable"
+        unsignedBigInteger conversation_id FK "nullable"
+        timestamp accepted_at "nullable"
+        timestamp declined_at "nullable"
+        timestamp completed_at "nullable"
+        timestamp deleted_at
+        timestamp created_at "nullable"
+        timestamp updated_at "nullable"
+    }
+
+    MENTOR_FEEDBACK {
+        bigint id PK
+        foreignId mentor_request_id FK
+        foreignId student_id FK
+        foreignId mentor_id FK
+        string helpfulness_level
+        boolean is_private
+        timestamp deleted_at
+        timestamp created_at "nullable"
+        timestamp updated_at "nullable"
+    }
+
+    %% External References
+    USERS {}
+    MEDIA {}
+    CONVERSATIONS {}
+
+    USERS ||--o{ MENTOR_ACCESSES : "user_id"
+    USERS ||--o{ MENTOR_ACCESS_REQUESTS : "user_id"
+    MEDIA ||--o{ MENTOR_ACCESS_REQUESTS : "evidence_media_id"
+    USERS ||--o{ MENTOR_PROFILES : "user_id"
+    USERS ||--o{ MENTOR_REQUESTS : "student_id"
+    MENTOR_PROFILES ||--o{ MENTOR_REQUESTS : "mentor_profile_id"
+    CONVERSATIONS ||--o{ MENTOR_REQUESTS : "conversation_id"
+    MENTOR_REQUESTS ||--o{ MENTOR_FEEDBACK : "mentor_request_id"
+    USERS ||--o{ MENTOR_FEEDBACK : "student_id"

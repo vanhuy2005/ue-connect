@@ -1,0 +1,179 @@
+erDiagram
+
+    POSTS {
+        bigint id PK
+        foreignId user_id FK
+        text body
+        string visibility
+        string status
+        timestamp edited_at "nullable"
+        timestamp published_at "nullable"
+        timestamp deleted_at
+        timestamp created_at "nullable"
+        timestamp updated_at "nullable"
+        string media_url "nullable"
+        unsignedBigInteger scope_id "nullable"
+        unsignedBigInteger pinned_by FK "nullable"
+    }
+
+    COMMENTS {
+        bigint id PK
+        foreignId post_id FK
+        foreignId user_id FK
+        foreignId parent_id FK "nullable"
+        text body
+        string status
+        timestamp edited_at "nullable"
+        timestamp deleted_at
+        timestamp created_at "nullable"
+        timestamp updated_at "nullable"
+    }
+
+    POST_LIKES {
+        bigint id PK
+        foreignId post_id FK
+        foreignId user_id FK
+        timestamp created_at
+    }
+
+    POST_SAVES {
+        bigint id PK
+        foreignId post_id FK
+        foreignId user_id FK
+        timestamp created_at
+    }
+
+    COMMENT_LIKES {
+        bigint id PK
+        foreignId comment_id FK
+        foreignId user_id FK
+        timestamp created_at
+    }
+
+    REPORTS {
+        bigint id PK
+        foreignId reporter_id FK
+        string target_type
+        unsignedBigInteger target_id
+        string reason
+        text description "nullable"
+        string status
+        timestamp created_at "nullable"
+        timestamp updated_at "nullable"
+    }
+
+    POST_HIDES {
+        bigint id PK
+        foreignId post_id FK
+        foreignId user_id FK
+        timestamp created_at
+    }
+
+    POST_REPOSTS {
+        bigint id PK
+        foreignId post_id FK
+        foreignId user_id FK
+        timestamp created_at "nullable"
+        timestamp updated_at "nullable"
+    }
+
+    OPPORTUNITIES {
+        foreignId post_id PK,FK
+        boolean is_expired
+        string category
+        timestamp created_at "nullable"
+        timestamp updated_at "nullable"
+    }
+
+    MEDIA {
+        bigint id PK
+        uuid uuid
+        foreignId user_id FK
+        nullableMorphs mediable
+        string primary_provider
+        string primary_disk
+        string primary_path
+        string delivery_provider "nullable"
+        string delivery_url "nullable"
+        string storage_strategy
+        string visibility
+        string original_filename
+        string mime_type
+        string extension
+        unsignedBigInteger size_bytes
+        unsignedInteger width "nullable"
+        unsignedInteger height "nullable"
+        string checksum_sha256
+        string status
+        json metadata_json "nullable"
+        timestamp created_at "nullable"
+        timestamp updated_at "nullable"
+        timestamp deleted_at
+    }
+
+    MEDIA_VARIANTS {
+        bigint id PK
+        foreignId media_id FK
+        string variant_name
+        string provider
+        string disk
+        string path
+        string url "nullable"
+        string mime_type
+        unsignedBigInteger size_bytes
+        unsignedInteger width
+        unsignedInteger height
+        timestamp created_at "nullable"
+        timestamp updated_at "nullable"
+        string cloudinary_public_id "nullable"
+        unsignedBigInteger cloudinary_version "nullable"
+        string cloudinary_secure_url "nullable"
+        string cloudinary_format "nullable"
+        unsignedBigInteger cloudinary_bytes "nullable"
+        string cloudinary_resource_type "nullable"
+        timestamp cloudinary_synced_at "nullable"
+        string cloudinary_sync_status
+        string cloudinary_error_code "nullable"
+        string cloudinary_error_message "nullable"
+    }
+
+    MEDIA_FILES {
+        bigint id PK
+        foreignId owner_id FK
+        string disk
+        string path
+        string original_name
+        string mime_type
+        string extension
+        unsignedBigInteger size_bytes
+        string visibility
+        string file_category
+        string checksum "nullable"
+        json metadata_json "nullable"
+        timestamp created_at "nullable"
+        timestamp updated_at "nullable"
+        timestamp deleted_at
+    }
+
+    %% External References
+    USERS {}
+
+    USERS ||--o{ MEDIA_FILES : "owner_id"
+    USERS ||--o{ POSTS : "user_id"
+    POSTS ||--o{ COMMENTS : "post_id"
+    USERS ||--o{ COMMENTS : "user_id"
+    COMMENTS ||--o{ COMMENTS : "parent_id"
+    POSTS ||--o{ POST_LIKES : "post_id"
+    USERS ||--o{ POST_LIKES : "user_id"
+    POSTS ||--o{ POST_SAVES : "post_id"
+    USERS ||--o{ POST_SAVES : "user_id"
+    COMMENTS ||--o{ COMMENT_LIKES : "comment_id"
+    USERS ||--o{ COMMENT_LIKES : "user_id"
+    USERS ||--o{ REPORTS : "reporter_id"
+    POSTS ||--o{ POST_HIDES : "post_id"
+    USERS ||--o{ POST_HIDES : "user_id"
+    USERS ||--o{ MEDIA : "user_id"
+    MEDIA ||--o{ MEDIA_VARIANTS : "media_id"
+    POSTS ||--o{ POST_REPOSTS : "post_id"
+    USERS ||--o{ POST_REPOSTS : "user_id"
+    POSTS ||--o{ OPPORTUNITIES : "post_id"

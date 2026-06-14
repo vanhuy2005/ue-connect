@@ -14,13 +14,13 @@ Tài liệu này giải thích chi tiết cấu trúc cơ sở dữ liệu của
 * [AI Chatbot & Document Search (AI Chatbot & Tra cứu thông tin)](#ai-chatbot)
 * [Career Development & Pathways (Lộ trình Hướng nghiệp & Kỹ năng)](#career)
 * [System & Job Queues (Hệ thống & Hàng đợi công việc)](#system)
-* [Sơ đồ toàn thể cơ sở dữ liệu (Master Schema)](schema.mmd)
+* [Sơ đồ toàn thể cơ sở dữ liệu (Master Schema)](original/schema.mmd)
 
 ---
 
 ## <a id="auth_user"></a>Authentication & User Profiles (Xác thực & Hồ sơ cá nhân)
 
-Xem sơ đồ trực quan: [auth_user.mmd](auth_user.mmd)
+Xem sơ đồ trực quan: [Bản thu gọn (Dễ đọc)](simplified/auth_user.mmd) | [Bản gốc (Đầy đủ)](original/auth_user.mmd)
 
 ### Bảng `USERS`
 **Mô tả**: Lưu trữ thông tin tài khoản người dùng cốt lõi trong hệ thống.
@@ -284,7 +284,7 @@ Xem sơ đồ trực quan: [auth_user.mmd](auth_user.mmd)
 
 ## <a id="social_feed"></a>Social Feed & Content Interactions (Bảng tin & Tương tác bài đăng)
 
-Xem sơ đồ trực quan: [social_feed.mmd](social_feed.mmd)
+Xem sơ đồ trực quan: [Bản thu gọn (Dễ đọc)](simplified/social_feed.mmd) | [Bản gốc (Đầy đủ)](original/social_feed.mmd)
 
 ### Bảng `POSTS`
 **Mô tả**: Lưu trữ các bài đăng chia sẻ của người dùng trên bảng tin.
@@ -481,7 +481,7 @@ Xem sơ đồ trực quan: [social_feed.mmd](social_feed.mmd)
 
 ## <a id="messaging"></a>Realtime Chat & Messaging (Tin nhắn & Trò chuyện trực tuyến)
 
-Xem sơ đồ trực quan: [messaging.mmd](messaging.mmd)
+Xem sơ đồ trực quan: [Bản thu gọn (Dễ đọc)](simplified/messaging.mmd) | [Bản gốc (Đầy đủ)](original/messaging.mmd)
 
 ### Bảng `CONVERSATIONS`
 **Mô tả**: Phiên hội thoại chat giữa các thành viên hoặc nhóm.
@@ -607,7 +607,7 @@ Xem sơ đồ trực quan: [messaging.mmd](messaging.mmd)
 
 ## <a id="verification_admin"></a>Verification & System Governance (Kiểm duyệt & Quản trị hệ thống)
 
-Xem sơ đồ trực quan: [verification_admin.mmd](verification_admin.mmd)
+Xem sơ đồ trực quan: [Bản thu gọn (Dễ đọc)](simplified/verification_admin.mmd) | [Bản gốc (Đầy đủ)](original/verification_admin.mmd)
 
 ### Bảng `VERIFICATION_REQUESTS`
 **Mô tả**: Danh sách các yêu cầu xác thực danh tính từ người dùng gửi lên Admin.
@@ -821,7 +821,7 @@ Xem sơ đồ trực quan: [verification_admin.mmd](verification_admin.mmd)
 
 ## <a id="communities"></a>Communities, Suggestions & Events (Cộng đồng & Sự kiện nhóm)
 
-Xem sơ đồ trực quan: [communities.mmd](communities.mmd)
+Xem sơ đồ trực quan: [Bản thu gọn (Dễ đọc)](simplified/communities.mmd) | [Bản gốc (Đầy đủ)](original/communities.mmd)
 
 ### Bảng `COMMUNITIES`
 **Mô tả**: Lưu trữ thông tin các cộng đồng/nhóm học tập.
@@ -958,7 +958,7 @@ Xem sơ đồ trực quan: [communities.mmd](communities.mmd)
 
 ## <a id="academic"></a>Academic Programs & Faculty Structure (Khung đào tạo & Khoa chuyên môn)
 
-Xem sơ đồ trực quan: [academic.mmd](academic.mmd)
+Xem sơ đồ trực quan: [Bản thu gọn (Dễ đọc)](simplified/academic.mmd) | [Bản gốc (Đầy đủ)](original/academic.mmd)
 
 ### Bảng `FACULTIES`
 **Mô tả**: Lưu trữ thông tin các Khoa đào tạo của trường đại học.
@@ -1092,7 +1092,7 @@ Xem sơ đồ trực quan: [academic.mmd](academic.mmd)
 
 ## <a id="mentorship"></a>Mentorship & Advising (Hệ thống Cố vấn & Mentor)
 
-Xem sơ đồ trực quan: [mentorship.mmd](mentorship.mmd)
+Xem sơ đồ trực quan: [Bản thu gọn (Dễ đọc)](simplified/mentorship.mmd) | [Bản gốc (Đầy đủ)](original/mentorship.mmd)
 
 ### Bảng `MENTOR_ACCESSES`
 **Mô tả**: Quản lý quyền truy cập và kiểm duyệt vai trò Mentor.
@@ -1206,7 +1206,7 @@ Xem sơ đồ trực quan: [mentorship.mmd](mentorship.mmd)
 
 ## <a id="ai_chatbot"></a>AI Chatbot & Document Search (AI Chatbot & Tra cứu thông tin)
 
-Xem sơ đồ trực quan: [ai_chatbot.mmd](ai_chatbot.mmd)
+Xem sơ đồ trực quan: [Bản thu gọn (Dễ đọc)](simplified/ai_chatbot.mmd) | [Bản gốc (Đầy đủ)](original/ai_chatbot.mmd)
 
 ### Bảng `SOURCE_DOCUMENTS`
 **Mô tả**: Tài liệu nguồn chứa thông tin đào tạo để đồng bộ vào Chatbot.
@@ -1418,7 +1418,7 @@ Xem sơ đồ trực quan: [ai_chatbot.mmd](ai_chatbot.mmd)
 
 ## <a id="career"></a>Career Development & Pathways (Lộ trình Hướng nghiệp & Kỹ năng)
 
-Xem sơ đồ trực quan: [career.mmd](career.mmd)
+Xem sơ đồ trực quan: [Bản thu gọn (Dễ đọc)](simplified/career.mmd) | [Bản gốc (Đầy đủ)](original/career.mmd)
 
 ### Bảng `CAREER_IMPORT_RUNS`
 **Mô tả**: Lịch sử các phiên nhập dữ liệu hướng nghiệp.
@@ -1801,7 +1801,7 @@ Xem sơ đồ trực quan: [career.mmd](career.mmd)
 
 ## <a id="system"></a>System & Job Queues (Hệ thống & Hàng đợi công việc)
 
-Xem sơ đồ trực quan: [system.mmd](system.mmd)
+Xem sơ đồ trực quan: [Bản thu gọn (Dễ đọc)](simplified/system.mmd) | [Bản gốc (Đầy đủ)](original/system.mmd)
 
 ### Bảng `CACHE`
 **Mô tả**: Lưu trữ dữ liệu cache tạm thời của ứng dụng.

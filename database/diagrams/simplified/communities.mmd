@@ -1,0 +1,126 @@
+erDiagram
+
+    COMMUNITIES {
+        bigint id PK
+        string name
+        string slug
+        text description "nullable"
+        string status
+        unsignedBigInteger created_by "nullable"
+        json settings "nullable"
+        timestamp deleted_at
+        timestamp created_at "nullable"
+        timestamp updated_at "nullable"
+        unsignedInteger members_count
+        string join_policy
+        unsignedBigInteger related_program_id FK "nullable"
+        unsignedInteger resource_count
+        string suspended_safe_reason "nullable"
+        timestamp suspended_at "nullable"
+        timestamp archived_at "nullable"
+    }
+
+    COMMUNITY_MEMBERS {
+        bigint id PK
+        unsignedBigInteger community_id FK
+        unsignedBigInteger user_id FK
+        string role
+        timestamp joined_at "nullable"
+        string status
+        timestamp deleted_at
+        timestamp created_at "nullable"
+        timestamp updated_at "nullable"
+        timestamp removed_at "nullable"
+        text remove_reason "nullable"
+    }
+
+    COMMUNITY_JOIN_REQUESTS {
+        bigint id PK
+        unsignedBigInteger community_id
+        unsignedBigInteger user_id FK
+        text join_reason "nullable"
+        string status
+        text review_reason "nullable"
+        timestamp reviewed_at "nullable"
+        timestamp deleted_at
+        timestamp created_at "nullable"
+        timestamp updated_at "nullable"
+    }
+
+    COMMUNITY_RESOURCES {
+        bigint id PK
+        unsignedBigInteger community_id
+        string title
+        text description "nullable"
+        string category "nullable"
+        unsignedBigInteger approved_by FK "nullable"
+        timestamp approved_at "nullable"
+        text rejection_reason "nullable"
+        timestamp deleted_at
+        timestamp created_at "nullable"
+        timestamp updated_at "nullable"
+    }
+
+    COMMUNITY_SUGGESTIONS {
+        bigint id PK
+        unsignedBigInteger submitted_by
+        string suggested_name
+        string community_type
+        text purpose
+        text target_members
+        unsignedBigInteger related_program_id FK "nullable"
+        unsignedBigInteger proposed_owner_id FK "nullable"
+        text admin_instruction "nullable"
+        text admin_reason "nullable"
+        unsignedBigInteger reviewed_by FK "nullable"
+        timestamp deleted_at
+        timestamp created_at "nullable"
+        timestamp updated_at "nullable"
+        string join_policy
+        string visibility
+        text rules "nullable"
+    }
+
+    COMMUNITY_EVENTS {
+        bigint id PK
+        unsignedBigInteger community_id
+        unsignedBigInteger created_by FK
+        string title
+        string slug
+        text description "nullable"
+        timestamp ends_at "nullable"
+        string online_link "nullable"
+        timestamp rsvp_deadline "nullable"
+        unsignedInteger capacity "nullable"
+        boolean waitlist_enabled
+        unsignedInteger interested_count
+        unsignedInteger waitlist_count
+        timestamp cancelled_at "nullable"
+        timestamp deleted_at
+        timestamp created_at "nullable"
+        timestamp updated_at "nullable"
+    }
+
+    COMMUNITY_EVENT_RSVPS {
+        bigint id PK
+        unsignedBigInteger event_id FK
+        unsignedBigInteger user_id FK
+        text note "nullable"
+        timestamp created_at "nullable"
+        timestamp updated_at "nullable"
+    }
+
+    %% External References
+    ACADEMIC_PROGRAMS {}
+    USERS {}
+
+    ACADEMIC_PROGRAMS ||--o{ COMMUNITIES : "related_program_id"
+    COMMUNITIES ||--o{ COMMUNITY_MEMBERS : "community_id"
+    USERS ||--o{ COMMUNITY_MEMBERS : "user_id"
+    USERS ||--o{ COMMUNITY_JOIN_REQUESTS : "user_id"
+    USERS ||--o{ COMMUNITY_RESOURCES : "approved_by"
+    ACADEMIC_PROGRAMS ||--o{ COMMUNITY_SUGGESTIONS : "related_program_id"
+    USERS ||--o{ COMMUNITY_SUGGESTIONS : "proposed_owner_id"
+    USERS ||--o{ COMMUNITY_EVENTS : "created_by"
+    COMMUNITY_EVENTS ||--o{ COMMUNITY_EVENT_RSVPS : "event_id"
+    USERS ||--o{ COMMUNITY_EVENT_RSVPS : "user_id"

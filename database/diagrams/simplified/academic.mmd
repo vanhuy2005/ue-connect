@@ -1,0 +1,115 @@
+erDiagram
+
+    FACULTIES {
+        bigint id PK
+        string name
+        string slug
+        text description "nullable"
+        string status
+        timestamp created_at "nullable"
+        timestamp updated_at "nullable"
+        string code "nullable"
+        string normalized_name "nullable"
+        text source_url "nullable"
+    }
+
+    ACADEMIC_PROGRAMS {
+        bigint id PK
+        foreignId faculty_id FK
+        string name
+        string slug
+        string degree_level
+        text description "nullable"
+        string status
+        timestamp created_at "nullable"
+        timestamp updated_at "nullable"
+    }
+
+    MAJORS {
+        bigint id PK
+        foreignId faculty_id FK
+        string code
+        string name
+        string normalized_name "nullable"
+        string degree_level
+        text source_url "nullable"
+        timestamp created_at "nullable"
+        timestamp updated_at "nullable"
+    }
+
+    ADMISSION_COHORTS {
+        bigint id PK
+        integer year
+        string cohort_name
+        string normalized_name "nullable"
+        text note "nullable"
+        timestamp created_at "nullable"
+        timestamp updated_at "nullable"
+    }
+
+    TRAINING_PROGRAMS {
+        bigint id PK
+        foreignId cohort_id FK
+        foreignId faculty_id FK
+        foreignId major_id FK
+        string title
+        integer total_credits
+        year effective_from "nullable"
+        year effective_to "nullable"
+        string status
+        text source_url "nullable"
+        unsignedBigInteger source_file_id "nullable"
+        timestamp published_at "nullable"
+        timestamp created_at "nullable"
+        timestamp updated_at "nullable"
+    }
+
+    CURRICULUM_COURSE_GROUPS {
+        bigint id PK
+        foreignId program_id FK
+        string name
+        string group_type "nullable"
+        text note "nullable"
+        timestamp created_at "nullable"
+        timestamp updated_at "nullable"
+    }
+
+    CURRICULUM_COURSES {
+        bigint id PK
+        foreignId program_id FK
+        foreignId group_id FK "nullable"
+        integer semester "nullable"
+        string course_code
+        string course_name
+        string normalized_course_name "nullable"
+        integer credits
+        integer theory_hours
+        integer practice_hours
+        integer self_study_hours
+        string course_type "nullable"
+        text prerequisite "nullable"
+        string source_location "nullable"
+        timestamp created_at "nullable"
+        timestamp updated_at "nullable"
+    }
+
+    PROGRAM_LEARNING_OUTCOMES {
+        bigint id PK
+        foreignId program_id FK
+        string code
+        text description
+        string category "nullable"
+        string source_location "nullable"
+        timestamp created_at "nullable"
+        timestamp updated_at "nullable"
+    }
+
+    FACULTIES ||--o{ ACADEMIC_PROGRAMS : "faculty_id"
+    FACULTIES ||--o{ MAJORS : "faculty_id"
+    ADMISSION_COHORTS ||--o{ TRAINING_PROGRAMS : "cohort_id"
+    FACULTIES ||--o{ TRAINING_PROGRAMS : "faculty_id"
+    MAJORS ||--o{ TRAINING_PROGRAMS : "major_id"
+    TRAINING_PROGRAMS ||--o{ CURRICULUM_COURSE_GROUPS : "program_id"
+    TRAINING_PROGRAMS ||--o{ CURRICULUM_COURSES : "program_id"
+    CURRICULUM_COURSE_GROUPS ||--o{ CURRICULUM_COURSES : "group_id"
+    TRAINING_PROGRAMS ||--o{ PROGRAM_LEARNING_OUTCOMES : "program_id"
