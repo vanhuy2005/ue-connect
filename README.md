@@ -1,3 +1,5 @@
+> **Last Updated / Cập nhật lần cuối:** 2026-06-14 22:03:00 (GMT+7)
+
 <p align="center">
   <img src="public/images/brand/primary-logo-nobg.png" alt="UEConnect Logo" width="760">
 </p>
@@ -153,7 +155,8 @@ See [`docs/05-system-architecture/`](docs/05-system-architecture/architecture-ov
 | Queue | Laravel Queue (`database` / `redis`) |
 | Scheduler | Laravel Scheduler |
 | Code style | Laravel Pint |
-| AI-assisted dev | Laravel Boost |
+| AI-assisted dev | Laravel Boost, Laravel Pao |
+| Log streaming | Laravel Pail |
 | Testing | PHPUnit `^12` |
 
 ### 4.2 Frontend
@@ -163,8 +166,8 @@ See [`docs/05-system-architecture/`](docs/05-system-architecture/architecture-ov
 | Rendering | Blade |
 | Reactive UI | Livewire `^4` + Volt (single-file components) |
 | Interaction | Alpine.js `^3` |
-| Styling | TailwindCSS `^3` |
-| Build tool | Vite |
+| Styling | TailwindCSS `^3` / `@tailwindcss/vite` `^4` |
+| Build tool | Vite `^8` |
 | Realtime client | Laravel Echo + Pusher-JS |
 | Icon system | Lucide Icons (custom Blade component) |
 | PWA | Vite PWA Plugin |
@@ -231,13 +234,15 @@ See [`docs/05-system-architecture/`](docs/05-system-architecture/architecture-ov
 | Moderation | Moderation queue, content/user actions, evidence review |
 | Admin Operations | Verification queue, user management, roles, audit, policy controls |
 | Discovery Profile | Search and discover UEers safely with faculty/interest filters |
-| Greeting & Connection | Send greeting, accept/decline, manage connection state |
+| Greeting & Connection | Send greeting, accept/decline, follow users, manage connection state |
 | Messaging | Real-time 1:1 conversation with pin, reply, forward, recall |
 | Notification | In-app and browser push notifications with preference control |
 | Mentor Matching | Mentor profiles, request system, feedback loop |
 | Career Pathway | HCMUE-aware career exploration and opportunity discovery |
 | Community & Club | Admin-approved clubs, posts, events, resources, join requests |
 | Search & Filter | Cross-module search and filter behavior |
+| Announcements | System-wide broadcasts and announcements |
+| Support System | User support tickets and issue tracking |
 | Analytics Events | Product metrics and usage event tracking |
 | HCMUE Chatbot | AI RAG chatbot trained on faculty/program/curriculum data |
 
@@ -570,6 +575,9 @@ The `docs/` folder is the project brain. Do not code by vibes when a source-of-t
 | [`docs/12-agent`](docs/12-agent) | AI agent source-truth map, change protocol, RAG knowledge base, AI safety |
 | [`docs/15-governance-and-compliance`](docs/15-governance-and-compliance) | Governance, compliance matrix, data governance |
 | [`docs/16-legal`](docs/16-legal) | Terms of service, privacy policy, data processing agreement |
+| [`docs/17-localization`](docs/17-localization) | Localization guidelines, translation files |
+| [`docs/18. docs-assets`](docs/18.%20docs-assets) | Images, diagrams, and resources for documentation |
+| [`docs/99-appendix`](docs/99-appendix) | Additional references, experimental features, old docs |
 
 Full generated documentation index: [`docs/README.md`](docs/README.md)
 
@@ -599,6 +607,7 @@ Main agent entry points:
 
 - [`AGENTS.md`](AGENTS.md)
 - [`GEMINI.md`](GEMINI.md)
+- [`CLAUDE.md`](CLAUDE.md)
 - [`docs/12-agent/1. source-truth-map.md`](docs/12-agent/1.%20source-truth-map.md)
 - [`docs/12-agent/2. agent-change-protocol.md`](docs/12-agent/2.%20agent-change-protocol.md)
 - [`docs/12-agent/3. agent-task-checklist.md`](docs/12-agent/3.%20agent-task-checklist.md)
