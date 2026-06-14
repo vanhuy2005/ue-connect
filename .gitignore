@@ -20,3 +20,10 @@ yarn-error.log
 /temp-laravel
 /.agents
 /skills-lock.json
+
+# Laravel Storage & Logs
+/storage/framework/cache/data/*
+/storage/framework/sessions/*
+/storage/framework/testing/*
+/storage/framework/views/*
+/storage/logs/*
