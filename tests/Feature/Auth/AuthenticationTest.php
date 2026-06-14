@@ -57,7 +57,7 @@ class AuthenticationTest extends TestCase
             ->assertRedirect(route('dashboard', absolute: false));
 
         $this->assertAuthenticated();
-        
+
         $this->assertNotNull($user->refresh()->remember_token);
     }
 
