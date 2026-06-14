@@ -10,6 +10,16 @@ new #[Layout('layouts.guest')] class extends Component
     public LoginForm $form;
 
     /**
+     * Mount the component.
+     */
+    public function mount(): void
+    {
+        if (session()->has('reset_email')) {
+            $this->form->email = session('reset_email');
+        }
+    }
+
+    /**
      * Handle an incoming authentication request.
      */
     public function login(): void
