@@ -1,0 +1,207 @@
+erDiagram
+
+    VERIFICATION_REQUESTS {
+        bigint id PK
+        foreignId user_id FK
+        string role_requested
+        string status
+        string submitted_name
+        string submitted_student_code "nullable"
+        foreignId submitted_faculty_id FK "nullable"
+        foreignId submitted_academic_program_id FK "nullable"
+        string submitted_cohort "nullable"
+        string submitted_email
+        text submitted_note "nullable"
+        foreignId assigned_admin_id FK "nullable"
+        timestamp submitted_at "nullable"
+        timestamp reviewed_at "nullable"
+        timestamp expires_at "nullable"
+        timestamp created_at "nullable"
+        timestamp updated_at "nullable"
+        timestamp deleted_at
+        string requested_identity_type "nullable"
+        string submitted_graduation_year "nullable"
+        string submitted_old_student_email "nullable"
+        string submitted_position "nullable"
+        string submitted_organization "nullable"
+        text review_reason "nullable"
+        text review_instruction "nullable"
+        boolean submitted_is_academic_advisor
+        text submitted_advised_class_codes "nullable"
+    }
+
+    VERIFICATION_EVIDENCES {
+        bigint id PK
+        foreignId verification_request_id FK
+        foreignId media_file_id FK "nullable"
+        string evidence_type
+        string evidence_link "nullable"
+        text user_note "nullable"
+        string status
+        text review_note "nullable"
+        timestamp created_at "nullable"
+        timestamp updated_at "nullable"
+        timestamp deleted_at
+        string capture_method "nullable"
+        timestamp captured_at "nullable"
+        foreignId capture_session_id FK "nullable"
+        text client_user_agent "nullable"
+        decimal image_quality_score "nullable"
+    }
+
+    VERIFICATION_REVIEW_ACTIONS {
+        bigint id PK
+        foreignId verification_request_id FK
+        foreignId admin_id FK
+        string action_key
+        text reason
+        text instruction "nullable"
+        json before_snapshot_json "nullable"
+        json after_snapshot_json "nullable"
+        timestamp created_at "nullable"
+    }
+
+    EVIDENCE_CAPTURE_SESSIONS {
+        bigint id PK
+        foreignId user_id FK
+        foreignId verification_request_id FK "nullable"
+        string session_token_hash
+        string status
+        string required_evidence_type
+        timestamp started_at
+        timestamp expires_at
+        timestamp completed_at "nullable"
+        timestamp failed_at "nullable"
+        unsignedInteger attempt_count
+        text client_user_agent "nullable"
+        timestamp created_at "nullable"
+        timestamp updated_at "nullable"
+    }
+
+    EVIDENCE_ANALYSIS_JOBS {
+        bigint id PK
+        foreignId verification_request_id FK
+        foreignId verification_evidence_id FK
+        foreignId media_file_id FK "nullable"
+        string provider
+        string model_name "nullable"
+        string status
+        unsignedInteger attempt_count
+        timestamp queued_at "nullable"
+        timestamp started_at "nullable"
+        timestamp finished_at "nullable"
+        timestamp failed_at "nullable"
+        string error_code "nullable"
+        text error_message "nullable"
+        timestamp created_at "nullable"
+        timestamp updated_at "nullable"
+    }
+
+    EVIDENCE_ANALYSIS_RESULTS {
+        bigint id PK
+        foreignId analysis_job_id FK
+        foreignId verification_request_id FK
+        foreignId verification_evidence_id FK
+        string document_type_detected "nullable"
+        decimal document_type_confidence "nullable"
+        longText ocr_text "nullable"
+        json extracted_fields_json "nullable"
+        json match_result_json "nullable"
+        json risk_flags_json "nullable"
+        decimal confidence_score "nullable"
+        string recommendation
+        text review_summary "nullable"
+        timestamp created_at "nullable"
+        timestamp updated_at "nullable"
+    }
+
+    AUDIT_LOGS {
+        bigint id PK
+        foreignId actor_id FK "nullable"
+        string actor_type
+        string action_key
+        string target_type
+        unsignedBigInteger target_id "nullable"
+        string context_type "nullable"
+        unsignedBigInteger context_id "nullable"
+        json before_snapshot_json "nullable"
+        json after_snapshot_json "nullable"
+        text reason "nullable"
+        json metadata_json "nullable"
+        string ip_address "nullable"
+        text user_agent "nullable"
+        timestamp created_at "nullable"
+    }
+
+    SUPPORT_TICKETS {
+        bigint id PK
+        foreignId user_id FK
+        string category
+        text message
+        string status
+        string priority
+        foreignId assigned_to FK "nullable"
+        timestamp resolved_at "nullable"
+        timestamp created_at "nullable"
+        timestamp updated_at "nullable"
+    }
+
+    ANNOUNCEMENTS {
+        bigint id PK
+        string title
+        text body
+        string type
+        json target "nullable"
+        unsignedBigInteger created_by "nullable"
+        timestamp starts_at "nullable"
+        timestamp expires_at "nullable"
+        string status
+        timestamp deleted_at
+        timestamp created_at "nullable"
+        timestamp updated_at "nullable"
+    }
+
+    PERMISSION_GRANTS {
+        bigint id PK
+        foreignId user_id FK
+        string permission_key
+        string scope_type "nullable"
+        unsignedBigInteger scope_id "nullable"
+        unsignedBigInteger revoked_by "nullable"
+        text reason
+        timestamp starts_at "nullable"
+        timestamp expires_at "nullable"
+        string status
+        timestamp revoked_at "nullable"
+        timestamp deleted_at
+        timestamp created_at "nullable"
+        timestamp updated_at "nullable"
+    }
+
+    %% External References
+    USERS {}
+    FACULTIES {}
+    ACADEMIC_PROGRAMS {}
+    MEDIA_FILES {}
+
+    USERS ||--o{ VERIFICATION_REQUESTS : "user_id"
+    FACULTIES ||--o{ VERIFICATION_REQUESTS : "submitted_faculty_id"
+    ACADEMIC_PROGRAMS ||--o{ VERIFICATION_REQUESTS : "submitted_academic_program_id"
+    USERS ||--o{ VERIFICATION_REQUESTS : "assigned_admin_id"
+    VERIFICATION_REQUESTS ||--o{ VERIFICATION_EVIDENCES : "verification_request_id"
+    MEDIA_FILES ||--o{ VERIFICATION_EVIDENCES : "media_file_id"
+    EVIDENCE_CAPTURE_SESSIONS ||--o{ VERIFICATION_EVIDENCES : "capture_session_id"
+    VERIFICATION_REQUESTS ||--o{ VERIFICATION_REVIEW_ACTIONS : "verification_request_id"
+    USERS ||--o{ VERIFICATION_REVIEW_ACTIONS : "admin_id"
+    USERS ||--o{ AUDIT_LOGS : "actor_id"
+    USERS ||--o{ EVIDENCE_CAPTURE_SESSIONS : "user_id"
+    VERIFICATION_REQUESTS ||--o{ EVIDENCE_CAPTURE_SESSIONS : "verification_request_id"
+    VERIFICATION_REQUESTS ||--o{ EVIDENCE_ANALYSIS_JOBS : "verification_request_id"
+    VERIFICATION_EVIDENCES ||--o{ EVIDENCE_ANALYSIS_JOBS : "verification_evidence_id"
+    MEDIA_FILES ||--o{ EVIDENCE_ANALYSIS_JOBS : "media_file_id"
+    EVIDENCE_ANALYSIS_JOBS ||--o{ EVIDENCE_ANALYSIS_RESULTS : "analysis_job_id"
+    VERIFICATION_REQUESTS ||--o{ EVIDENCE_ANALYSIS_RESULTS : "verification_request_id"
+    VERIFICATION_EVIDENCES ||--o{ EVIDENCE_ANALYSIS_RESULTS : "verification_evidence_id"
+    USERS ||--o{ PERMISSION_GRANTS : "user_id"
+    USERS ||--o{ SUPPORT_TICKETS : "user_id"
+    USERS ||--o{ SUPPORT_TICKETS : "assigned_to"

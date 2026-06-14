@@ -1,0 +1,355 @@
+erDiagram
+
+    USERS {
+        bigint id PK
+        string name
+        string email
+        timestamp email_verified_at "nullable"
+        string password
+        string remember_token
+        timestamp created_at "nullable"
+        timestamp updated_at "nullable"
+        string account_status
+        text account_status_reason "nullable"
+        timestamp account_restricted_until "nullable"
+        timestamp last_login_at "nullable"
+        timestamp deleted_at
+        string intended_identity_type "nullable"
+        timestamp last_seen_at "nullable"
+    }
+
+    PASSWORD_RESET_TOKENS {
+        string email PK
+        string token
+        timestamp created_at "nullable"
+    }
+
+    SESSIONS {
+        string id PK
+        foreignId user_id FK "nullable"
+        string ip_address "nullable"
+        text user_agent "nullable"
+        longText payload
+        integer last_activity
+    }
+
+    USER_IDENTITY_PROVIDERS {
+        bigint id PK
+        foreignId user_id FK
+        string provider_name
+        string provider_user_id
+        string provider_tenant_id "nullable"
+        string provider_email "nullable"
+        timestamp linked_at "nullable"
+        timestamp last_login_at "nullable"
+        timestamp created_at "nullable"
+        timestamp updated_at "nullable"
+    }
+
+    PROFILES {
+        bigint id PK
+        foreignId user_id FK
+        string display_name
+        foreignId avatar_media_file_id FK "nullable"
+        text bio "nullable"
+        string role_type
+        string profile_status
+        string visibility
+        boolean discoverable
+        timestamp profile_completed_at "nullable"
+        timestamp created_at "nullable"
+        timestamp updated_at "nullable"
+        timestamp deleted_at
+    }
+
+    STUDENT_PROFILES {
+        bigint id PK
+        foreignId profile_id FK
+        string student_code
+        foreignId faculty_id FK
+        foreignId academic_program_id FK
+        string cohort "nullable"
+        integer current_year "nullable"
+        string class_name "nullable"
+        text learning_goals "nullable"
+        text career_orientation "nullable"
+        timestamp created_at "nullable"
+        timestamp updated_at "nullable"
+    }
+
+    ALUMNI_PROFILES {
+        bigint id PK
+        foreignId profile_id FK
+        foreignId faculty_id FK "nullable"
+        foreignId academic_program_id FK "nullable"
+        string cohort "nullable"
+        integer graduation_year "nullable"
+        string current_position "nullable"
+        string current_organization "nullable"
+        string industry "nullable"
+        text career_summary "nullable"
+        boolean willing_to_mentor
+        timestamp created_at "nullable"
+        timestamp updated_at "nullable"
+    }
+
+    ADVISOR_PROFILES {
+        bigint id PK
+        foreignId profile_id FK
+        foreignId faculty_id FK "nullable"
+        string department "nullable"
+        string title "nullable"
+        string office_location "nullable"
+        text advising_areas "nullable"
+        timestamp created_at "nullable"
+        timestamp updated_at "nullable"
+        boolean is_academic_advisor
+        text advised_class_codes "nullable"
+    }
+
+    BLOCKED_USERS {
+        bigint id PK
+        foreignId blocker_id FK
+        foreignId blocked_id FK
+        text reason "nullable"
+        string source_type "nullable"
+        unsignedBigInteger source_id "nullable"
+        timestamp created_at "nullable"
+        timestamp updated_at "nullable"
+    }
+
+    USER_FOLLOWS {
+        bigint id PK
+        foreignId follower_id FK
+        foreignId following_id FK
+        timestamp created_at "nullable"
+        timestamp updated_at "nullable"
+    }
+
+    TEMPORARY_AVATARS {
+        bigint id PK
+        foreignId user_id FK
+        foreignId previous_media_id FK "nullable"
+        foreignId current_media_id FK
+        timestamp expires_at
+        timestamp created_at "nullable"
+        timestamp updated_at "nullable"
+    }
+
+    PROFILE_PRIVACY_SETTINGS {
+        bigint id PK
+        foreignId user_id FK
+        string profile_visibility
+        boolean show_major
+        boolean show_cohort
+        boolean show_class_code
+        boolean show_bio
+        boolean show_interests
+        boolean show_connection_goals
+        boolean show_communities
+        boolean show_career_info
+        boolean show_mentor_topics
+        timestamp created_at "nullable"
+        timestamp updated_at "nullable"
+        timestamp deleted_at
+        string mentions_preference
+    }
+
+    NOTIFICATION_PREFERENCES {
+        bigint id PK
+        foreignId user_id FK
+        boolean in_app_enabled
+        boolean browser_push_enabled
+        boolean email_enabled
+        boolean greeting_notifications
+        boolean message_notifications
+        boolean mentor_notifications
+        boolean community_notifications
+        boolean safety_notifications
+        timestamp deleted_at
+        boolean push_messages_enabled
+        boolean push_greetings_enabled
+        boolean push_mentor_enabled
+        boolean push_community_enabled
+        boolean push_verification_enabled
+        boolean push_admin_announcements_enabled
+        boolean push_mentions
+        boolean push_comments
+        boolean push_connections
+        boolean push_messages
+        boolean push_system
+        boolean email_mentions
+        boolean email_comments
+        boolean email_connections
+        boolean email_messages
+        boolean email_system
+        boolean email_marketing
+    }
+
+    USER_CONTENT_PREFERENCES {
+        bigint id PK
+        foreignId user_id FK
+        boolean prioritize_academic_content
+        boolean hide_reported_content
+        boolean reduce_sensitive_content
+        timestamp created_at "nullable"
+        timestamp updated_at "nullable"
+    }
+
+    PUSH_SUBSCRIPTIONS {
+        bigint id PK
+        foreignId user_id FK
+        string endpoint
+        text public_key
+        text auth_token
+        string content_encoding
+        text user_agent "nullable"
+        string browser_name "nullable"
+        string device_name "nullable"
+        timestamp last_used_at "nullable"
+        unsignedInteger failed_attempts
+        timestamp revoked_at "nullable"
+        timestamp created_at "nullable"
+        timestamp updated_at "nullable"
+    }
+
+    %% External References
+    MEDIA_FILES {}
+    FACULTIES {}
+    ACADEMIC_PROGRAMS {}
+    VERIFICATION_REQUESTS {}
+    VERIFICATION_REVIEW_ACTIONS {}
+    AUDIT_LOGS {}
+    POSTS {}
+    COMMENTS {}
+    POST_LIKES {}
+    POST_SAVES {}
+    COMMENT_LIKES {}
+    REPORTS {}
+    EVIDENCE_CAPTURE_SESSIONS {}
+    POST_HIDES {}
+    MENTOR_ACCESSES {}
+    PERMISSION_GRANTS {}
+    GREETINGS {}
+    CONNECTIONS {}
+    CONVERSATIONS {}
+    CONVERSATION_PARTICIPANTS {}
+    MESSAGES {}
+    CONVERSATION_USER_SETTINGS {}
+    CONVERSATION_PINNED_MESSAGES {}
+    MEDIA {}
+    COMMUNITY_MEMBERS {}
+    MENTOR_ACCESS_REQUESTS {}
+    MENTOR_PROFILES {}
+    MENTOR_REQUESTS {}
+    MENTOR_FEEDBACK {}
+    COMMUNITY_JOIN_REQUESTS {}
+    COMMUNITY_RESOURCES {}
+    COMMUNITY_SUGGESTIONS {}
+    COMMUNITY_EVENTS {}
+    COMMUNITY_EVENT_RSVPS {}
+    POST_REPOSTS {}
+    SOURCE_DOCUMENTS {}
+    CHAT_SESSIONS {}
+    AI_QUESTIONS {}
+    AI_FEEDBACK {}
+    SUPPORT_TICKETS {}
+    CAREER_CONTRIBUTIONS {}
+    CAREER_CONTRIBUTION_MODERATION_LOGS {}
+    CAREER_CONTRIBUTION_VOTES {}
+    CAREER_SKILLS {}
+    CAREER_COURSE_SKILL_EDGES {}
+    CAREER_POSITIONS {}
+    CAREER_POSITION_SAVES {}
+    CAREER_USER_PATHWAYS {}
+    CAREER_USER_PATHWAY_SAVES {}
+    CAREER_USER_PATHWAY_COMMENTS {}
+    CAREER_USER_PATHWAY_REPORTS {}
+
+    USERS ||--o{ SESSIONS : "user_id"
+    USERS ||--o{ MEDIA_FILES : "owner_id"
+    USERS ||--o{ PROFILES : "user_id"
+    MEDIA_FILES ||--o{ PROFILES : "avatar_media_file_id"
+    PROFILES ||--o{ STUDENT_PROFILES : "profile_id"
+    FACULTIES ||--o{ STUDENT_PROFILES : "faculty_id"
+    ACADEMIC_PROGRAMS ||--o{ STUDENT_PROFILES : "academic_program_id"
+    PROFILES ||--o{ ALUMNI_PROFILES : "profile_id"
+    FACULTIES ||--o{ ALUMNI_PROFILES : "faculty_id"
+    ACADEMIC_PROGRAMS ||--o{ ALUMNI_PROFILES : "academic_program_id"
+    PROFILES ||--o{ ADVISOR_PROFILES : "profile_id"
+    FACULTIES ||--o{ ADVISOR_PROFILES : "faculty_id"
+    USERS ||--o{ VERIFICATION_REQUESTS : "user_id"
+    USERS ||--o{ VERIFICATION_REQUESTS : "assigned_admin_id"
+    USERS ||--o{ VERIFICATION_REVIEW_ACTIONS : "admin_id"
+    USERS ||--o{ AUDIT_LOGS : "actor_id"
+    USERS ||--o{ USER_IDENTITY_PROVIDERS : "user_id"
+    USERS ||--o{ POSTS : "user_id"
+    USERS ||--o{ POSTS : "pinned_by"
+    USERS ||--o{ COMMENTS : "user_id"
+    USERS ||--o{ POST_LIKES : "user_id"
+    USERS ||--o{ POST_SAVES : "user_id"
+    USERS ||--o{ COMMENT_LIKES : "user_id"
+    USERS ||--o{ REPORTS : "reporter_id"
+    USERS ||--o{ EVIDENCE_CAPTURE_SESSIONS : "user_id"
+    USERS ||--o{ POST_HIDES : "user_id"
+    USERS ||--o{ MENTOR_ACCESSES : "user_id"
+    USERS ||--o{ PERMISSION_GRANTS : "user_id"
+    USERS ||--o{ BLOCKED_USERS : "blocker_id"
+    USERS ||--o{ BLOCKED_USERS : "blocked_id"
+    USERS ||--o{ GREETINGS : "sender_id"
+    USERS ||--o{ GREETINGS : "receiver_id"
+    USERS ||--o{ CONNECTIONS : "user_one_id"
+    USERS ||--o{ CONNECTIONS : "user_two_id"
+    USERS ||--o{ CONVERSATIONS : "created_by"
+    USERS ||--o{ CONVERSATIONS : "direct_user_low_id"
+    USERS ||--o{ CONVERSATIONS : "direct_user_high_id"
+    USERS ||--o{ CONVERSATION_PARTICIPANTS : "user_id"
+    USERS ||--o{ MESSAGES : "sender_id"
+    USERS ||--o{ MESSAGES : "recalled_by"
+    USERS ||--o{ CONVERSATION_USER_SETTINGS : "user_id"
+    USERS ||--o{ CONVERSATION_USER_SETTINGS : "target_user_id"
+    USERS ||--o{ CONVERSATION_PINNED_MESSAGES : "pinned_by"
+    USERS ||--o{ PROFILE_PRIVACY_SETTINGS : "user_id"
+    USERS ||--o{ NOTIFICATION_PREFERENCES : "user_id"
+    USERS ||--o{ MEDIA : "user_id"
+    USERS ||--o{ COMMUNITY_MEMBERS : "user_id"
+    USERS ||--o{ MENTOR_ACCESS_REQUESTS : "user_id"
+    USERS ||--o{ MENTOR_ACCESS_REQUESTS : "reviewed_by"
+    USERS ||--o{ MENTOR_PROFILES : "user_id"
+    USERS ||--o{ MENTOR_PROFILES : "approved_by"
+    USERS ||--o{ MENTOR_REQUESTS : "student_id"
+    USERS ||--o{ MENTOR_REQUESTS : "mentor_id"
+    USERS ||--o{ MENTOR_FEEDBACK : "student_id"
+    USERS ||--o{ MENTOR_FEEDBACK : "mentor_id"
+    USERS ||--o{ COMMUNITY_JOIN_REQUESTS : "user_id"
+    USERS ||--o{ COMMUNITY_RESOURCES : "approved_by"
+    USERS ||--o{ COMMUNITY_SUGGESTIONS : "proposed_owner_id"
+    USERS ||--o{ COMMUNITY_SUGGESTIONS : "reviewed_by"
+    USERS ||--o{ COMMUNITY_EVENTS : "created_by"
+    USERS ||--o{ COMMUNITY_EVENT_RSVPS : "user_id"
+    USERS ||--o{ USER_FOLLOWS : "follower_id"
+    USERS ||--o{ USER_FOLLOWS : "following_id"
+    USERS ||--o{ POST_REPOSTS : "user_id"
+    USERS ||--o{ TEMPORARY_AVATARS : "user_id"
+    MEDIA ||--o{ TEMPORARY_AVATARS : "previous_media_id"
+    MEDIA ||--o{ TEMPORARY_AVATARS : "current_media_id"
+    USERS ||--o{ SOURCE_DOCUMENTS : "uploaded_by"
+    USERS ||--o{ CHAT_SESSIONS : "user_id"
+    USERS ||--o{ AI_QUESTIONS : "user_id"
+    USERS ||--o{ AI_FEEDBACK : "user_id"
+    USERS ||--o{ PUSH_SUBSCRIPTIONS : "user_id"
+    USERS ||--o{ USER_CONTENT_PREFERENCES : "user_id"
+    USERS ||--o{ SUPPORT_TICKETS : "user_id"
+    USERS ||--o{ SUPPORT_TICKETS : "assigned_to"
+    USERS ||--o{ CAREER_CONTRIBUTIONS : "user_id"
+    USERS ||--o{ CAREER_CONTRIBUTIONS : "verified_by"
+    USERS ||--o{ CAREER_CONTRIBUTION_MODERATION_LOGS : "admin_id"
+    USERS ||--o{ CAREER_CONTRIBUTION_VOTES : "user_id"
+    USERS ||--o{ CAREER_SKILLS : "created_by"
+    USERS ||--o{ CAREER_COURSE_SKILL_EDGES : "verified_by"
+    USERS ||--o{ CAREER_POSITIONS : "created_by"
+    USERS ||--o{ CAREER_POSITION_SAVES : "user_id"
+    USERS ||--o{ CAREER_USER_PATHWAYS : "user_id"
+    USERS ||--o{ CAREER_USER_PATHWAY_SAVES : "user_id"
+    USERS ||--o{ CAREER_USER_PATHWAY_COMMENTS : "user_id"
+    USERS ||--o{ CAREER_USER_PATHWAY_REPORTS : "reporter_id"
