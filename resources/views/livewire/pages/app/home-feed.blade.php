@@ -1730,11 +1730,11 @@ new #[Layout('layouts.app')] class extends Component
             @if (! $feedReady)
                 <x-ui.feed-skeleton :count="5" />
             @else
-                <div wire:loading wire:target="setFeedTab">
+                <div wire:loading wire:target="setFeedTab, setTypeFilter">
                     <x-ui.feed-skeleton :count="4" />
                 </div>
 
-                <div wire:loading.remove wire:target="setFeedTab">
+                <div wire:loading.remove wire:target="setFeedTab, setTypeFilter">
                     <div class="ue-feed-list">
                         @forelse ($posts as $post)
                             @php
