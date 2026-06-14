@@ -1,40 +1,45 @@
 <?php
 
-use function Livewire\Volt\{state, action, on};
+use Livewire\Volt\Component;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Auth;
 use App\AI\HcmueChatbot\Chat\HcmueChatService;
 
-state([
-    'isOpen' => false,
-    'input' => '',
-    'messages' => [
+new class extends Component {
+    public bool $isOpen = false;
+    public string $input = '';
+    public array $messages = [
         ['role' => 'model', 'content' => 'Xin chào! Tôi là trợ lý AI của UE Connect. Tôi có thể giúp gì cho bạn hôm nay?']
-    ],
-    'isTyping' => false,
-    'sessionId' => null,
-]);
+    ];
+    public bool $isTyping = false;
+    public ?int $sessionId = null;
 
-$toggleChat = action(function () {
-    $this->isOpen = !$this->isOpen;
-});
+    protected $listeners = [
+        'message-sent' => 'handleMessageSent'
+    ];
 
-$sendMessage = action(function () {
-    if (trim($this->input) === '') {
-        return;
+    public function toggleChat(): void
+    {
+        $this->isOpen = !$this->isOpen;
     }
 
-    $userMessage = $this->input;
-    $this->messages[] = ['role' => 'user', 'content' => $userMessage];
-    $this->input = '';
-    $this->isTyping = true;
+    public function sendMessage(): void
+    {
+        if (trim($this->input) === '') {
+            return;
+        }
 
-    $this->dispatch('message-sent', userMessage: $userMessage);
-});
+        $userMessage = $this->input;
+        $this->messages[] = ['role' => 'user', 'content' => $userMessage];
+        $this->input = '';
+        $this->isTyping = true;
 
-on([
-    'message-sent' => function (string $userMessage, HcmueChatService $chatService) {
+        $this->dispatch('message-sent', userMessage: $userMessage);
+    }
+
+    public function handleMessageSent(string $userMessage, HcmueChatService $chatService): void
+    {
         $user = Auth::user();
         if (!$user) {
             $this->messages[] = ['role' => 'model', 'content' => 'Vui lòng đăng nhập để sử dụng trợ lý AI.'];
@@ -78,7 +83,7 @@ on([
 
         $this->isTyping = false;
     }
-]);
+};
 
 ?>
 
@@ -90,7 +95,7 @@ on([
     @if($isOpen)
         <div class="bg-white dark:bg-zinc-900 w-80 sm:w-96 rounded-2xl shadow-2xl border border-zinc-200 dark:border-zinc-800 mb-4 overflow-hidden flex flex-col pointer-events-auto transition-all duration-300 transform origin-bottom-right" style="height: 500px; max-height: calc(100vh - 120px); width: 380px; max-width: 90vw; border-radius: 16px; box-shadow: 0 25px 50px -12px rgba(0,0,0,0.25); display: flex; flex-direction: column; overflow: hidden; margin-bottom: 16px;">
             <!-- Header -->
-            <div class="bg-zinc-900 dark:bg-zinc-950 p-4 flex items-center justify-between shadow-sm z-10" style="background-color: #18181b; padding: 16px; display: flex; align-items: center; justify-content: space-between; color: #ffffff;">
+            <div class="bg-zinc-900 dark:bg-zinc-950 p-4 flex items-center justify-between shadow-sm z-10 rounded-t-2xl" style="background-color: #18181b; padding: 16px; display: flex; align-items: center; justify-content: space-between; color: #ffffff; border-top-left-radius: 16px; border-top-right-radius: 16px;">
                 <div class="flex items-center gap-3" style="display: flex; align-items: center; gap: 12px;">
                     <div class="w-8 h-8 rounded-full bg-indigo-500 flex items-center justify-center text-white font-bold text-sm" style="width: 32px; height: 32px; border-radius: 9999px; background-color: #6366f1; display: flex; align-items: center; justify-content: center; font-weight: bold; color: #ffffff;">
                         AI
@@ -116,7 +121,7 @@ on([
             </div>
 
             <!-- Messages Area -->
-            <div class="flex-1 overflow-y-auto p-4 space-y-4 bg-zinc-50 dark:bg-zinc-900 scroll-smooth" id="chatbot-messages" style="padding: 16px; background-color: #f9fafb; flex: 1; overflow-y: auto;">
+            <div class="flex-1 overflow-y-auto p-4 space-y-4 bg-zinc-50 dark:bg-zinc-900 scroll-smooth" id="chatbot-messages" style="padding: 16px; background-color: #f8fafc; flex: 1; overflow-y: auto;">
                 @foreach($messages as $msg)
                     <div class="flex {{ $msg['role'] === 'model' ? 'justify-start' : 'justify-end' }}" style="display: flex; {{ $msg['role'] === 'model' ? 'justify-content: flex-start;' : 'justify-content: flex-end;' }} margin-bottom: 16px;">
                         @if($msg['role'] === 'model')
@@ -125,8 +130,8 @@ on([
                             </div>
                         @endif
                         <div class="max-w-[85%] rounded-2xl px-4 py-2 text-sm shadow-sm
-                            {{ $msg['role'] === 'model' ? 'bg-white dark:bg-zinc-800 text-zinc-800 dark:text-zinc-200 border border-zinc-100 dark:border-zinc-700' : 'bg-indigo-600 text-white' }}"
-                            style="max-width: 85%; border-radius: 16px; padding: 8px 16px; font-size: 14px; {{ $msg['role'] === 'model' ? 'background-color: #ffffff; color: #27272a; border: 1px solid #f4f4f5;' : 'background-color: #4f46e5; color: #ffffff;' }}">
+                            {{ $msg['role'] === 'model' ? 'bg-white dark:bg-zinc-800 text-zinc-800 dark:text-zinc-200 border border-zinc-150 dark:border-zinc-700' : 'bg-indigo-600 text-white' }}"
+                            style="max-width: 85%; border-radius: 16px; padding: 8px 16px; font-size: 14px; {{ $msg['role'] === 'model' ? 'background-color: #ffffff; color: #27272a; border: 1px solid #e4e4e7;' : 'background-color: #4f46e5; color: #ffffff;' }}">
                             {!! nl2br(e($msg['content'])) !!}
                         </div>
                     </div>
@@ -147,20 +152,28 @@ on([
             </div>
 
             <!-- Input Area -->
-            <div class="p-3 bg-white dark:bg-zinc-950 border-t border-zinc-100 dark:border-zinc-800 z-10" style="padding: 12px; background-color: #ffffff; border-top: 1px solid #f4f4f5;">
-                <form wire:submit="sendMessage" class="relative flex items-center" style="position: relative; display: flex; align-items: center;">
-                    <input 
+            <div class="p-3 bg-white dark:bg-zinc-950 border-t border-zinc-200 dark:border-zinc-800 z-10" style="padding: 12px; background-color: #ffffff; border-top: 1px solid #e4e4e7; border-bottom-left-radius: 16px; border-bottom-right-radius: 16px;">
+                <form wire:submit="sendMessage" class="relative flex items-center" style="position: relative; display: flex; align-items: center; width: 100%;">
+                    <textarea 
                         wire:model="input" 
-                        type="text" 
+                        x-init="$watch('input', value => { if (!value) { $nextTick(() => autoGrowTextarea($el, 140)); } })"
+                        rows="1"
                         placeholder="Nhập câu hỏi của bạn..." 
-                        class="w-full bg-zinc-100 dark:bg-zinc-900 border-none rounded-full py-3 pl-4 pr-12 text-sm text-zinc-900 dark:text-zinc-100 focus:ring-2 focus:ring-indigo-500 dark:focus:ring-indigo-400 transition-all placeholder-zinc-400 dark:placeholder-zinc-500"
-                        style="width: 100%; padding: 12px 48px 12px 16px; background-color: #f4f4f5; border: none; border-radius: 9999px; font-size: 14px; outline: none;"
+                        class="chat-widget-input w-full bg-zinc-100 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-700 rounded-2xl py-3 pl-4 pr-12 text-sm focus:outline-none"
+                        style="height: 46px;"
+                        oninput="autoGrowTextarea(this, 140)"
+                        @keydown.enter="
+                            if (!$event.shiftKey) {
+                                $event.preventDefault();
+                                $el.closest('form')?.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
+                            }
+                        "
                         @if($isTyping) disabled @endif
-                    >
+                    ></textarea>
                     <button 
                         type="submit" 
                         class="absolute right-2 p-1.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-full transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                        style="position: absolute; right: 8px; width: 32px; height: 32px; background-color: #4f46e5; border: none; border-radius: 9999px; color: #ffffff; display: flex; align-items: center; justify-content: center; cursor: pointer;"
+                        style="position: absolute; right: 8px; width: 32px; height: 32px; background-color: #4f46e5; border: none; border-radius: 9999px; color: #ffffff; display: flex; align-items: center; justify-content: center; cursor: pointer; bottom: 7px;"
                         @if($isTyping) disabled @endif
                     >
                         <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor" style="width: 16px; height: 16px;">
@@ -170,8 +183,16 @@ on([
                 </form>
             </div>
             
-            <!-- Auto Scroll Script -->
+            <!-- Auto Scroll & Auto Grow Script -->
             <script>
+                if (typeof window.autoGrowTextarea !== 'function') {
+                    window.autoGrowTextarea = function(el, maxHeight = 180) {
+                        el.style.height = 'auto';
+                        const nextHeight = Math.min(el.scrollHeight, maxHeight);
+                        el.style.height = nextHeight + 'px';
+                        el.style.overflowY = el.scrollHeight > maxHeight ? 'auto' : 'hidden';
+                    };
+                }
                 document.addEventListener('livewire:initialized', () => {
                     Livewire.hook('morph.updated', (el, component) => {
                         const container = document.getElementById('chatbot-messages');
@@ -201,3 +222,51 @@ on([
         @endif
     </button>
 </div>
+
+<style>
+    .chat-widget-input {
+        color: #111827 !important;
+        background-color: #ffffff !important;
+        caret-color: #4f46e5 !important;
+        -webkit-text-fill-color: #111827 !important;
+        border: 1px solid #e4e4e7 !important;
+        font-family: inherit;
+        width: 100%;
+        outline: none;
+        resize: none;
+        overflow-y: hidden;
+        transition: border-color 0.15s ease-in-out, box-shadow 0.15s ease-in-out;
+        padding: 12px 48px 12px 16px !important;
+        border-radius: 24px !important;
+        font-size: 14px !important;
+        min-height: 46px !important;
+        max-height: 140px !important;
+    }
+    .chat-widget-input::placeholder {
+        color: #9ca3af !important;
+        -webkit-text-fill-color: #9ca3af !important;
+        opacity: 1 !important;
+    }
+    .chat-widget-input:focus {
+        border-color: #4f46e5 !important;
+        box-shadow: 0 0 0 2px rgba(79, 70, 229, 0.1) !important;
+        background-color: #ffffff !important;
+    }
+    
+    /* Dark mode overrides */
+    .dark .chat-widget-input {
+        color: #f3f4f6 !important;
+        background-color: #1f2937 !important;
+        -webkit-text-fill-color: #f3f4f6 !important;
+        border-color: #374151 !important;
+    }
+    .dark .chat-widget-input::placeholder {
+        color: #6b7280 !important;
+        -webkit-text-fill-color: #6b7280 !important;
+    }
+    .dark .chat-widget-input:focus {
+        border-color: #6366f1 !important;
+        box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.2) !important;
+        background-color: #1f2937 !important;
+    }
+</style>
