@@ -100,16 +100,46 @@
 
             {{-- Textarea --}}
             <div class="flex items-start gap-2">
-                <div class="flex-1 min-w-0">
+                <div class="flex-1 min-w-0 relative" x-data="mentionComposer({ textareaId: 'modal-post-body', wireModel: 'body' })">
                     <label for="modal-post-body" class="sr-only">Nội dung bài viết</label>
                     <textarea
                         id="modal-post-body"
-                        wire:model="body"
+                        wire:model.live.debounce.150ms="body"
+                        @input="handleInput($event)"
+                        @keydown.arrow-down.prevent="selectNext()"
+                        @keydown.arrow-up.prevent="selectPrev()"
+                        @keydown.enter="showDropdown ? ($event.preventDefault() || confirmSelection()) : true"
+                        @keydown.escape="showDropdown ? ($event.preventDefault() || closeDropdown()) : true"
                         placeholder="Có gì mới trong cộng đồng HCMUE hôm nay?"
                         rows="4"
                         class="w-full border-0 focus:ring-0 p-0 text-slate-700 placeholder-slate-400 text-sm sm:text-base resize-none bg-transparent focus:outline-none"
                         maxlength="3000"
                     ></textarea>
+
+                    {{-- Suggestion Dropdown --}}
+                    <div 
+                        x-show="showDropdown" 
+                        x-transition
+                        @click.outside="closeDropdown()"
+                        class="absolute left-0 right-0 mt-1 bg-white border border-slate-200 rounded-xl shadow-lg z-50 max-h-48 overflow-y-auto divide-y divide-slate-50"
+                        style="display: none;"
+                    >
+                        <template x-for="(user, index) in suggestions" :key="user.id">
+                            <button
+                                type="button"
+                                @click="insertMention(user)"
+                                @mouseenter="selectedIndex = index"
+                                class="w-full text-left px-4 py-2 flex items-center gap-3 transition-colors"
+                                x-bind:class="selectedIndex === index ? 'bg-slate-50 text-ue-brand' : 'text-slate-700'"
+                            >
+                                <img :src="user.avatar_url || 'https://www.gravatar.com/avatar/' + user.id + '?d=mp&s=100'" class="w-6 h-6 rounded-full object-cover border border-slate-100" />
+                                <div class="flex-1 min-w-0">
+                                    <span class="text-xxs font-bold block truncate" x-text="user.display_name"></span>
+                                    <span class="text-[9px] text-slate-400 block truncate" x-text="'@' + user.name + (user.role ? ' · ' + user.role : '')"></span>
+                                </div>
+                            </button>
+                        </template>
+                    </div>
                 </div>
             </div>
             @error('body')
@@ -216,6 +246,7 @@
                         icon="send"
                         wire:loading.attr="disabled"
                         wire:target="submitPost,imageFiles"
+                        :disabled="trim($body) === ''"
                     >
                         <span wire:loading.remove wire:target="submitPost">Đăng bài</span>
                         <span wire:loading wire:target="submitPost">Đang đăng...</span>

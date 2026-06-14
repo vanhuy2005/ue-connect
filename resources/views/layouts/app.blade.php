@@ -233,6 +233,128 @@
         @stack('scripts')
 
         @auth
+            <script>
+                document.addEventListener('alpine:init', () => {
+                    Alpine.data('mentionComposer', (config) => ({
+                        showDropdown: false,
+                        suggestions: [],
+                        searchQuery: '',
+                        cursorPosition: 0,
+                        selectedIndex: 0,
+                        taggedUsers: [],
+                        localBody: '',
+                        init() {
+                            this.localBody = this.$wire[config.wireModel] || '';
+                            this.$watch('$wire.' + config.wireModel, value => {
+                                this.localBody = value || '';
+                                if (!value) {
+                                    this.taggedUsers = [];
+                                }
+                            });
+                            
+                            if (this.localBody) {
+                                const matches = this.localBody.match(/@([^\s@#?!.,:;"]+(?:\s+[^\s@#?!.,:;"]+){0,4})/g);
+                                if (matches) {
+                                    matches.forEach(m => {
+                                        const name = m.substring(1).trim();
+                                        if (name && !this.taggedUsers.includes(name)) {
+                                            this.taggedUsers.push(name);
+                                        }
+                                    });
+                                }
+                            }
+
+                            if (config.initialMention && !this.taggedUsers.includes(config.initialMention)) {
+                                this.taggedUsers.push(config.initialMention);
+                            }
+                         },
+                        handleInput(event) {
+                            const textarea = event.target;
+                            const value = textarea.value;
+                            this.localBody = value;
+                            const pos = textarea.selectionStart;
+                            this.cursorPosition = pos;
+
+                            if (value === '') {
+                                this.taggedUsers = [];
+                            }
+
+                            const textBeforeCursor = value.slice(0, pos);
+                            const lastAt = textBeforeCursor.lastIndexOf('@');
+
+                            if (lastAt !== -1 && (lastAt === 0 || /\s/.test(textBeforeCursor[lastAt - 1]))) {
+                                const query = textBeforeCursor.slice(lastAt + 1);
+                                if (query.length >= 0 && query.length <= 50 && !/\s{2,}/.test(query) && !/^\s/.test(query)) {
+                                    this.searchQuery = query;
+                                    this.$wire.searchMentionUsers(query).then(results => {
+                                        this.suggestions = results;
+                                        this.showDropdown = results.length > 0;
+                                        this.selectedIndex = 0;
+                                    });
+                                    return;
+                                }
+                            }
+                            this.closeDropdown();
+                        },
+                        selectNext() {
+                            if (!this.showDropdown) return;
+                            this.selectedIndex = (this.selectedIndex + 1) % this.suggestions.length;
+                        },
+                        selectPrev() {
+                            if (!this.showDropdown) return;
+                            this.selectedIndex = (this.selectedIndex - 1 + this.suggestions.length) % this.suggestions.length;
+                        },
+                        confirmSelection() {
+                            if (!this.showDropdown || this.suggestions.length === 0) return;
+                            this.insertMention(this.suggestions[this.selectedIndex]);
+                        },
+                        insertMention(user) {
+                            const textarea = document.getElementById(config.textareaId);
+                            if (!textarea) return;
+                            const value = textarea.value;
+                            const pos = this.cursorPosition;
+                            
+                            const textBeforeCursor = value.slice(0, pos);
+                            const lastAt = textBeforeCursor.lastIndexOf('@');
+                            
+                            const before = value.slice(0, lastAt);
+                            const after = value.slice(pos);
+                            
+                            const mentionText = '@' + user.display_name + ' ';
+                            const newValue = before + mentionText + after;
+                            
+                            textarea.value = newValue;
+                            this.localBody = newValue;
+                            if (!this.taggedUsers.includes(user.display_name)) {
+                                this.taggedUsers.push(user.display_name);
+                            }
+                            this.$wire.set(config.wireModel, newValue);
+                            textarea.dispatchEvent(new Event('input'));
+                            
+                            const newPos = lastAt + mentionText.length;
+                            const setCaret = () => {
+                                textarea.focus();
+                                textarea.setSelectionRange(newPos, newPos);
+                            };
+                            
+                            setCaret();
+                            this.$nextTick(setCaret);
+                            setTimeout(setCaret, 20);
+                            setTimeout(setCaret, 50);
+                            setTimeout(setCaret, 100);
+                            
+                            this.closeDropdown();
+                        },
+                        closeDropdown() {
+                            this.showDropdown = false;
+                            this.suggestions = [];
+                            this.searchQuery = '';
+                            this.selectedIndex = 0;
+                        }
+                    }));
+                });
+            </script>
+
             @php
                 $metrics = app(\App\Support\Navigation\UserNavigationMetrics::class)->forUser(auth()->user());
                 $initialUnreadCount = $metrics['unread_notifications'] + $metrics['unread_messages'];

@@ -2284,3 +2284,48 @@
     display: none;
 }
 
+.ue-composer__textarea-highlighted {
+    color: transparent !important;
+    caret-color: var(--ue-text, #0f172a) !important;
+}
+
+.ue-composer__textarea-highlighted::placeholder {
+    color: #94a3b8 !important;
+    opacity: 1 !important;
+    -webkit-text-fill-color: #94a3b8 !important;
+}
+
+.ue-composer__mirror {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    padding: 0;
+    margin: 0;
+    border: none;
+    background: transparent;
+    white-space: pre-wrap;
+    word-wrap: break-word;
+    overflow-wrap: break-word;
+    overflow: hidden;
+    pointer-events: none;
+    font-family: inherit;
+    font-size: inherit;
+    line-height: inherit;
+    font-weight: inherit;
+    color: #334155;
+    z-index: 0;
+}
+
+.ue-composer__mirror span {
+    color: var(--ue-brand, #3b82f6) !important;
+    font-weight: 600;
+    background-color: rgba(59, 130, 246, 0.08);
+    padding: 0;
+    margin: 0;
+    border: none;
+    border-radius: 2px;
+    display: inline;
+}
+
