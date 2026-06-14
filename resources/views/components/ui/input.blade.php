@@ -40,6 +40,30 @@ $sizeClasses = match($size) {
 $hasError = $hasError || ($name && $errors->has($name));
 @endphp
 
+@if($type === 'password')
+<div x-data="{ show: false }" class="relative w-full">
+    <input
+        @if($id) id="{{ $id }}" @endif
+        @if($name) name="{{ $name }}" @endif
+        :type="show ? 'text' : 'password'"
+        @if($disabled) disabled @endif
+        @if($readonly) readonly @endif
+        @if($hasError && $id) aria-describedby="{{ $id }}-error" @endif
+        @if($hasError) aria-invalid="true" @endif
+        {{ $attributes->class([
+            'ue-input block w-full pr-10',
+            $sizeClasses,
+            'ue-input--error' => $hasError,
+            'cursor-not-allowed' => $disabled,
+            'cursor-default bg-ue-surface-subtle' => $readonly && !$disabled,
+        ]) }}
+    />
+    <button type="button" @click="show = !show" class="absolute inset-y-0 right-0 pr-3 flex items-center text-ue-text-muted hover:text-ue-text transition-colors" tabindex="-1">
+        <x-ui.icon name="eye" x-show="!show" class="w-4 h-4" />
+        <x-ui.icon name="eye-off" x-show="show" class="w-4 h-4" x-cloak />
+    </button>
+</div>
+@else
 <input
     @if($id) id="{{ $id }}" @endif
     @if($name) name="{{ $name }}" @endif
@@ -49,10 +73,11 @@ $hasError = $hasError || ($name && $errors->has($name));
     @if($hasError && $id) aria-describedby="{{ $id }}-error" @endif
     @if($hasError) aria-invalid="true" @endif
     {{ $attributes->class([
-        'ue-input block',
+        'ue-input block w-full',
         $sizeClasses,
         'ue-input--error' => $hasError,
         'cursor-not-allowed' => $disabled,
         'cursor-default bg-ue-surface-subtle' => $readonly && !$disabled,
     ]) }}
 />
+@endif
