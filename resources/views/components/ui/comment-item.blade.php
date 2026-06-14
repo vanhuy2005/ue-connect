@@ -210,7 +210,7 @@
                                 <div class="flex justify-start">
                                     <x-ui.avatar :user="$currentUser" size="sm" />
                                 </div>
-                                <div class="min-w-0 relative flex-1" x-data="mentionComposer({ textareaId: 'reply-text-{{ $comment->id }}', wireModel: 'commentBody', initialMention: '{{ $commentAuthor->profile?->display_name ?? $commentAuthor->name }}' })">
+                                <div class="min-w-0 relative flex-1" x-data="mentionComposer({ textareaId: 'reply-text-{{ $comment->id }}', wireModel: 'commentBody', initialMention: '{{ $commentAuthor->profile?->display_name ?? $commentAuthor->name }}' })" @focusout="setTimeout(() => { if (! $el.contains(document.activeElement)) closeDropdown() }, 150)" wire:key="reply-composer-{{ $comment->id }}">
                                     <div class="mb-3 px-3 py-1.5 rounded-lg bg-blue-50 border border-blue-100 text-xxs text-ue-brand font-bold flex items-center justify-between">
                                         <span>Đang phản hồi bình luận của {{ $commentAuthor->name }}</span>
                                         <button type="button" wire:click="setReplyingTo(null)" class="text-slate-400 hover:text-slate-655 transition-colors">
@@ -224,6 +224,7 @@
                                                 <label for="reply-text-{{ $comment->id }}" class="sr-only">Nội dung phản hồi</label>
                                                 <textarea
                                                     id="reply-text-{{ $comment->id }}"
+                                                    x-ref="textarea"
                                                     wire:model.live.debounce.150ms="commentBody"
                                                     @input="handleInput($event)"
                                                     @keydown.arrow-down.prevent="selectNext()"
@@ -235,36 +236,38 @@
                                                     class="ue-composer__textarea focus:outline-none"
                                                     maxlength="1000"
                                                 ></textarea>
-                                            </div>
-                                            @error('commentBody')
-                                                <p class="text-xs text-red-655 font-semibold mt-1">{{ $message }}</p>
-                                            @enderror
 
-                                            {{-- Suggestion Dropdown --}}
-                                            <div 
-                                                x-show="showDropdown" 
-                                                x-transition
-                                                @click.outside="closeDropdown()"
-                                                class="absolute left-0 right-0 mt-1 bg-white border border-slate-200 rounded-xl shadow-lg z-50 max-h-48 overflow-y-auto divide-y divide-slate-50"
-                                                style="display: none;"
-                                            >
-                                                <template x-for="(user, index) in suggestions" :key="user.id">
-                                                    <button
-                                                        type="button"
-                                                        @click="insertMention(user)"
-                                                        @mouseenter="selectedIndex = index"
-                                                        class="w-full text-left px-4 py-2 flex items-center gap-3 transition-colors"
-                                                        x-bind:class="selectedIndex === index ? 'bg-slate-50 text-ue-brand' : 'text-slate-700'"
-                                                    >
-                                                        <img :src="user.avatar_url || 'https://www.gravatar.com/avatar/' + user.id + '?d=mp&s=100'" class="w-6 h-6 rounded-full object-cover border border-slate-100" />
-                                                        <div class="flex-1 min-w-0">
-                                                            <span class="text-xxs font-bold block truncate" x-text="user.display_name"></span>
-                                                            <span class="text-[9px] text-slate-400 block truncate" x-text="'@' + user.name + (user.role ? ' · ' + user.role : '')"></span>
-                                                        </div>
-                                                    </button>
+                                                {{-- Suggestion Dropdown --}}
+                                                <div 
+                                                    x-show="showDropdown" 
+                                                    x-transition
+                                                    @click.outside="closeDropdown()"
+                                                    class="absolute left-0 right-0 bg-white border border-slate-200 rounded-xl shadow-lg z-50 max-h-48 overflow-y-auto divide-y divide-slate-50"
+                                                    :style="openUpward ? 'top: auto; bottom: 100%; margin-bottom: 6px;' : 'bottom: auto; top: ' + dropdownTop"
+                                                    style="display: none;"
+                                                >
+                                                    <template x-for="(user, index) in suggestions" :key="user.id">
+                                                        <button
+                                                            type="button"
+                                                            @click="insertMention(user)"
+                                                            @mouseenter="selectedIndex = index"
+                                                            class="w-full text-left px-4 py-2 flex items-center gap-3 transition-colors"
+                                                            x-bind:class="selectedIndex === index ? 'bg-slate-50 text-ue-brand' : 'text-slate-700'"
+                                                        >
+                                                            <img :src="user.avatar_url || 'https://www.gravatar.com/avatar/' + user.id + '?d=mp&s=100'" class="w-6 h-6 rounded-full object-cover border border-slate-100" />
+                                                            <div class="flex-1 min-w-0">
+                                                                <span class="text-xxs font-bold block truncate" x-text="user.display_name"></span>
+                                                                <span class="text-[9px] text-slate-400 block truncate" x-text="'@' + user.name + (user.role ? ' · ' + user.role : '')"></span>
+                                                            </div>
+                                                        </button>
+                                                    </template>
                                                 </template>
                                             </div>
                                         </div>
+                                        @error('commentBody')
+                                            <p class="text-xs text-red-655 font-semibold mt-1">{{ $message }}</p>
+                                        @enderror
+                                    </div>
 
                                         <div class="ue-composer__toolbar">
                                             <div class="ue-composer__actions">

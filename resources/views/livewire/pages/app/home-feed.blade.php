@@ -1668,10 +1668,11 @@ new #[Layout('layouts.app')] class extends Component
 
                                 <div>
                                     <div class="flex items-start gap-2">
-                                        <div class="flex-1 min-w-0 relative" x-data="mentionComposer({ textareaId: 'post-body', wireModel: 'body' })">
+                                        <div class="flex-1 min-w-0 relative" x-data="mentionComposer({ textareaId: 'post-body', wireModel: 'body' })" @focusout="setTimeout(() => { if (! $el.contains(document.activeElement)) closeDropdown() }, 150)">
                                             <label for="post-body" class="sr-only">Nội dung bài viết</label>
                                             <textarea
                                                 id="post-body"
+                                                x-ref="textarea"
                                                 wire:model.live.debounce.150ms="body"
                                                 @input="handleInput($event)"
                                                 @keydown.arrow-down.prevent="showDropdown ? selectNext() : true"
@@ -1689,7 +1690,8 @@ new #[Layout('layouts.app')] class extends Component
                                                 x-show="showDropdown" 
                                                 x-transition
                                                 @click.outside="closeDropdown()"
-                                                class="absolute left-0 right-0 mt-1 bg-white border border-slate-200 rounded-xl shadow-lg z-50 max-h-48 overflow-y-auto divide-y divide-slate-50"
+                                                class="absolute left-0 right-0 bg-white border border-slate-200 rounded-xl shadow-lg z-50 max-h-48 overflow-y-auto divide-y divide-slate-50"
+                                                :style="openUpward ? 'top: auto; bottom: 100%; margin-bottom: 6px;' : 'bottom: auto; top: ' + dropdownTop"
                                                 style="display: none;"
                                             >
                                                 <template x-for="(user, index) in suggestions" :key="user.id">

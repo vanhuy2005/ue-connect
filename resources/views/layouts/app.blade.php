@@ -243,6 +243,10 @@
                         selectedIndex: 0,
                         taggedUsers: [],
                         localBody: '',
+                        openUpward: false,
+                        dropdownTop: 'auto',
+                        scrollHandler: null,
+                        resizeHandler: null,
                         init() {
                             this.localBody = this.$wire[config.wireModel] || '';
                             this.$watch('$wire.' + config.wireModel, value => {
@@ -267,7 +271,62 @@
                             if (config.initialMention && !this.taggedUsers.includes(config.initialMention)) {
                                 this.taggedUsers.push(config.initialMention);
                             }
-                         },
+
+                            this.scrollHandler = () => {
+                                if (this.showDropdown) {
+                                    const textarea = this.$refs.textarea;
+                                    if (textarea) {
+                                        const rect = textarea.getBoundingClientRect();
+                                        if (rect.bottom < 0 || rect.top > window.innerHeight || rect.right < 0 || rect.left > window.innerWidth) {
+                                            this.closeDropdown();
+                                        } else {
+                                            this.adjustDropdownPosition();
+                                        }
+                                    }
+                                }
+                            };
+
+                            this.resizeHandler = () => {
+                                if (this.showDropdown) {
+                                    this.adjustDropdownPosition();
+                                }
+                            };
+
+                            window.addEventListener('scroll', this.scrollHandler, true);
+                            window.addEventListener('resize', this.resizeHandler, true);
+                        },
+                        destroy() {
+                            if (this.scrollHandler) {
+                                window.removeEventListener('scroll', this.scrollHandler, true);
+                            }
+                            if (this.resizeHandler) {
+                                window.removeEventListener('resize', this.resizeHandler, true);
+                            }
+                        },
+                        adjustDropdownPosition() {
+                            const textarea = this.$refs.textarea;
+                            if (!textarea) return;
+
+                            const style = window.getComputedStyle(textarea);
+                            const lineHeight = parseInt(style.lineHeight) || 20;
+                            const paddingTop = parseInt(style.paddingTop) || 0;
+                            
+                            const textBeforeCursor = textarea.value.slice(0, this.cursorPosition);
+                            const lines = textBeforeCursor.split('\n').length;
+                            const topOffset = paddingTop + (lines * lineHeight) - textarea.scrollTop + 6;
+
+                            const rect = textarea.getBoundingClientRect();
+                            const spaceBelow = window.innerHeight - rect.bottom;
+                            const spaceAbove = rect.top;
+                            
+                            if (spaceBelow < 200 && spaceAbove > spaceBelow) {
+                                this.openUpward = true;
+                                this.dropdownTop = 'auto';
+                            } else {
+                                this.openUpward = false;
+                                this.dropdownTop = Math.max(paddingTop, topOffset) + 'px';
+                            }
+                        },
                         handleInput(event) {
                             const textarea = event.target;
                             const value = textarea.value;
@@ -290,6 +349,9 @@
                                         this.suggestions = results;
                                         this.showDropdown = results.length > 0;
                                         this.selectedIndex = 0;
+                                        this.$nextTick(() => {
+                                            this.adjustDropdownPosition();
+                                        });
                                     });
                                     return;
                                 }
@@ -309,7 +371,7 @@
                             this.insertMention(this.suggestions[this.selectedIndex]);
                         },
                         insertMention(user) {
-                            const textarea = document.getElementById(config.textareaId);
+                            const textarea = this.$refs.textarea;
                             if (!textarea) return;
                             const value = textarea.value;
                             const pos = this.cursorPosition;
