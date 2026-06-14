@@ -16,6 +16,10 @@ new #[Layout('layouts.app', ['shell' => 'conversation'])] class extends Componen
     public string $input = '';
     public bool $isTyping = false;
     
+    // Title edit state
+    public bool $isEditingTitle = false;
+    public string $editTitleInput = '';
+    
     // Feedback state
     public array $activeFeedbackAnswerId = []; // key: answer_id, value: rating
     public array $feedbackComments = []; // key: answer_id, value: comment text
@@ -50,6 +54,7 @@ new #[Layout('layouts.app', ['shell' => 'conversation'])] class extends Componen
 
         $this->selectedSessionId = $session->id;
         $this->input = '';
+        $this->cancelEditingTitle();
     }
 
     public function selectSession(int $id): void
@@ -58,6 +63,7 @@ new #[Layout('layouts.app', ['shell' => 'conversation'])] class extends Componen
         $this->selectedSessionId = $session->id;
         $this->input = '';
         $this->loadSubmittedFeedback();
+        $this->cancelEditingTitle();
         $this->dispatch('scroll-bottom');
     }
 
@@ -77,6 +83,49 @@ new #[Layout('layouts.app', ['shell' => 'conversation'])] class extends Componen
             }
         }
         $this->loadSubmittedFeedback();
+        $this->cancelEditingTitle();
+    }
+
+    public function startEditingTitle(): void
+    {
+        if (!$this->selectedSessionId) {
+            return;
+        }
+        $session = ChatSession::where('user_id', Auth::id())->findOrFail($this->selectedSessionId);
+        $this->editTitleInput = $session->title;
+        $this->isEditingTitle = true;
+    }
+
+    public function cancelEditingTitle(): void
+    {
+        $this->isEditingTitle = false;
+        $this->editTitleInput = '';
+        $this->resetErrorBag('editTitleInput');
+    }
+
+    public function saveTitle(): void
+    {
+        if (!$this->selectedSessionId) {
+            return;
+        }
+        $this->editTitleInput = trim($this->editTitleInput);
+        if (empty($this->editTitleInput)) {
+            $this->addError('editTitleInput', 'Tên hội thoại không được để trống.');
+            return;
+        }
+        if (mb_strlen($this->editTitleInput) > 100) {
+            $this->addError('editTitleInput', 'Tên hội thoại không được quá 100 ký tự.');
+            return;
+        }
+
+        $session = ChatSession::where('user_id', Auth::id())->findOrFail($this->selectedSessionId);
+        $session->update([
+            'title' => $this->editTitleInput
+        ]);
+
+        $this->isEditingTitle = false;
+        $this->editTitleInput = '';
+        $this->resetErrorBag('editTitleInput');
     }
 
     public function sendMessage(HcmueChatService $chatService): void
@@ -263,7 +312,7 @@ new #[Layout('layouts.app', ['shell' => 'conversation'])] class extends Componen
 }
 ?>
 
-<div class="flex h-[calc(100vh-64px)] bg-slate-50 dark:bg-zinc-950 overflow-hidden" 
+<div class="flex h-[calc(100vh-64px)] lg:h-screen bg-slate-50 dark:bg-zinc-950 overflow-hidden" 
      x-data="{ sidebarOpen: false }"
      x-init="
         $wire.on('scroll-bottom', () => {
@@ -334,23 +383,58 @@ new #[Layout('layouts.app', ['shell' => 'conversation'])] class extends Componen
     </div>
 
     <!-- Right Chat Area -->
-    <main class="flex-1 flex flex-col min-w-0 bg-slate-50 dark:bg-zinc-950 relative">
+    <main class="flex-1 flex flex-col min-h-0 h-full min-w-0 bg-slate-50 dark:bg-zinc-950 relative">
         
         <!-- Header -->
-        <header class="h-16 bg-white dark:bg-zinc-900 border-b border-slate-200 dark:border-zinc-800 px-4 flex items-center gap-3">
-            <button @click="sidebarOpen = true" class="lg:hidden p-2 text-slate-500 hover:bg-slate-100 dark:hover:bg-zinc-800 rounded-lg">
-                <x-ui.icon name="menu" />
-            </button>
-            <div>
-                <h1 class="font-bold text-slate-800 dark:text-zinc-100 text-sm leading-tight">
-                    {{ $currentSession ? $currentSession->title : 'AI Chatbot' }}
-                </h1>
-                <p class="text-[10px] text-slate-400 dark:text-zinc-500">Trợ lý học vụ ĐH Sư Phạm TPHCM</p>
+        <header class="h-16 bg-white dark:bg-zinc-900 border-b border-slate-200 dark:border-zinc-800 px-4 flex items-center justify-between gap-3">
+            <div class="flex items-center gap-3 flex-1 min-w-0">
+                <button @click="sidebarOpen = true" class="lg:hidden p-2 text-slate-500 hover:bg-slate-100 dark:hover:bg-zinc-800 rounded-lg">
+                    <x-ui.icon name="menu" />
+                </button>
+                @if($isEditingTitle)
+                    <div class="flex flex-col flex-1 max-w-md">
+                        <div class="flex items-center gap-2 w-full">
+                            <input type="text" 
+                                   wire:model.defer="editTitleInput" 
+                                   wire:keydown.enter="saveTitle"
+                                   wire:keydown.escape="cancelEditingTitle"
+                                   class="bg-slate-50 dark:bg-zinc-800 border border-slate-300 dark:border-zinc-700 rounded-lg px-3 py-1.5 text-xs text-slate-800 dark:text-zinc-200 focus:outline-none focus:ring-1 focus:ring-indigo-500 w-full"
+                                   placeholder="Tên hội thoại..."
+                                   autofocus>
+                            <button wire:click="saveTitle" class="px-3 py-1.5 bg-ue-brand hover:bg-ue-brand-hover text-white rounded-lg text-xs font-semibold flex-shrink-0">
+                                Lưu
+                            </button>
+                            <button wire:click="cancelEditingTitle" class="px-3 py-1.5 bg-slate-200 hover:bg-slate-300 text-slate-700 dark:bg-zinc-800 dark:hover:bg-zinc-700 dark:text-zinc-300 rounded-lg text-xs font-semibold flex-shrink-0">
+                                Hủy
+                            </button>
+                        </div>
+                        @error('editTitleInput')
+                            <span class="text-[10px] text-red-500 mt-1 font-semibold">{{ $message }}</span>
+                        @enderror
+                    </div>
+                @else
+                    <div class="flex items-center gap-2 min-w-0">
+                        <div class="min-w-0">
+                            <h1 class="font-bold text-slate-800 dark:text-zinc-100 text-sm leading-tight truncate">
+                                {{ $currentSession ? $currentSession->title : 'AI Chatbot' }}
+                            </h1>
+                            <p class="text-[10px] text-slate-400 dark:text-zinc-500">Trợ lý học vụ ĐH Sư Phạm TPHCM</p>
+                        </div>
+                        @if($currentSession)
+                            <button wire:click="startEditingTitle" class="p-1.5 text-slate-400 hover:text-slate-600 dark:text-zinc-500 dark:hover:text-zinc-300 rounded-lg transition-colors flex-shrink-0" title="Đổi tên hội thoại">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                    <path d="M12 20h9"/>
+                                    <path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/>
+                                </svg>
+                            </button>
+                        @endif
+                    </div>
+                @endif
             </div>
         </header>
 
         <!-- Messages scroll container -->
-        <div id="chat-messages-scroll" class="flex-1 overflow-y-auto p-4 space-y-6">
+        <div id="chat-messages-scroll" class="flex-1 min-h-0 overflow-y-auto p-4 space-y-6 flex flex-col justify-start items-stretch">
             @if(empty($chatMessages))
                 <!-- Starter / Welcome state -->
                 <div class="max-w-2xl mx-auto py-12 px-4 text-center space-y-6">
@@ -385,25 +469,25 @@ new #[Layout('layouts.app', ['shell' => 'conversation'])] class extends Componen
                 </div>
             @else
                 <!-- Messages List -->
-                <div class="max-w-3xl mx-auto space-y-6 pb-20">
+                <div class="max-w-4xl w-full mx-auto px-6 pt-12 pb-6 space-y-6">
                     @foreach($chatMessages as $msg)
                         <!-- User message -->
                         <div class="flex justify-end">
-                            <div class="bg-ue-brand text-white rounded-2xl rounded-tr-sm px-4 py-2.5 max-w-[85%] shadow-sm text-xs font-medium leading-relaxed">
+                            <div class="bg-ue-brand text-white rounded-2xl rounded-tr-md px-5 py-3 max-w-[70%] shadow-xs text-xs font-medium leading-relaxed">
                                 {{ $msg['question_text'] }}
                             </div>
                         </div>
 
                         <!-- Bot response -->
                         <div class="space-y-2">
-                            <div class="flex items-start gap-3">
+                            <div class="flex items-start gap-4">
                                 <!-- Bot avatar -->
                                 <div class="w-8 h-8 rounded-xl bg-ue-brand-soft flex-shrink-0 flex items-center justify-center text-ue-brand font-bold text-xs">
                                     AI
                                 </div>
 
                                 <!-- Response body card -->
-                                <div class="flex-1 bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 rounded-2xl rounded-tl-sm shadow-xs p-4 space-y-3 max-w-[90%]">
+                                <div class="flex-1 max-w-[760px] w-full bg-white dark:bg-zinc-900 border border-slate-100 dark:border-zinc-800 rounded-3xl rounded-tl-lg shadow-sm p-6 space-y-4">
                                     
                                     <!-- Route badge -->
                                     <div class="flex items-center gap-2">
@@ -517,11 +601,11 @@ new #[Layout('layouts.app', ['shell' => 'conversation'])] class extends Componen
 
                     <!-- Typing loader indicator -->
                     @if($isTyping)
-                        <div class="flex items-start gap-3">
+                        <div class="flex items-start gap-4">
                             <div class="w-8 h-8 rounded-xl bg-ue-brand-soft flex-shrink-0 flex items-center justify-center text-ue-brand font-bold text-xs">
                                 AI
                             </div>
-                            <div class="bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 rounded-2xl rounded-tl-sm shadow-xs p-4 flex items-center gap-1.5">
+                            <div class="bg-white dark:bg-zinc-900 border border-slate-100 dark:border-zinc-800 rounded-3xl rounded-tl-lg shadow-sm p-4 flex items-center gap-1.5">
                                 <div class="w-1.5 h-1.5 bg-ue-brand rounded-full animate-bounce" style="animation-delay: 0ms"></div>
                                 <div class="w-1.5 h-1.5 bg-ue-brand rounded-full animate-bounce" style="animation-delay: 150ms"></div>
                                 <div class="w-1.5 h-1.5 bg-ue-brand rounded-full animate-bounce" style="animation-delay: 300ms"></div>
@@ -533,33 +617,77 @@ new #[Layout('layouts.app', ['shell' => 'conversation'])] class extends Componen
         </div>
 
         <!-- Input Area at bottom -->
-        <div class="absolute bottom-0 inset-x-0 px-4 pt-4 pb-4 lg:pb-6 bg-gradient-to-t from-slate-50 via-slate-50/90 to-transparent dark:from-zinc-950 dark:via-zinc-950/90 dark:to-transparent z-10">
-            <form wire:submit.prevent="sendMessage" class="max-w-3xl mx-auto relative flex items-center bg-white dark:bg-[#1e1f22] border border-slate-200 dark:border-zinc-800 rounded-full shadow-sm focus-within:ring-2 focus-within:ring-ue-brand focus-within:border-transparent transition-all">
-                <input type="text" 
-                       wire:model.defer="input" 
-                       placeholder="Nhập thắc mắc học vụ của bạn..."
-                       class="w-full bg-transparent border-none rounded-full pl-6 py-3.5 pr-[88px] text-sm text-slate-800 dark:text-zinc-200 focus:outline-none focus:ring-0 placeholder-slate-400"
-                       @if($isTyping) disabled @endif>
-                
-                <div class="absolute right-2 flex items-center gap-2">
-                    <button type="button" class="p-1.5 text-slate-400 hover:text-slate-600 dark:text-zinc-400 dark:hover:text-zinc-300 transition-colors cursor-not-allowed opacity-70" title="Nhập bằng giọng nói (Sắp ra mắt)" disabled>
-                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                            <path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"/>
-                            <path d="M19 10v2a7 7 0 0 1-14 0v-2"/>
-                            <line x1="12" y1="19" x2="12" y2="22"/>
-                        </svg>
-                    </button>
+        <div class="w-full bg-slate-50 dark:bg-zinc-950 border-t border-slate-200/80 dark:border-zinc-850/80 flex-shrink-0 z-10">
+            <form wire:submit.prevent="sendMessage" class="max-w-4xl mx-auto px-6 pt-3 pb-1">
+                <div class="relative flex items-center bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 rounded-3xl shadow-sm focus-within:ring-2 focus-within:ring-ue-brand focus-within:border-transparent transition-all">
+                    <textarea 
+                        wire:model.defer="input" 
+                        x-init="$watch('input', value => { if (!value) { $nextTick(() => autoGrowTextarea($el, 180)); } })"
+                        rows="1"
+                        placeholder="Nhập thắc mắc học vụ của bạn..."
+                        class="chat-page-input w-full bg-transparent border-none pl-6 pr-[88px] text-sm text-slate-800 dark:text-zinc-200 focus:outline-none focus:ring-0 focus:border-transparent"
+                        style="height: 48px;"
+                        oninput="autoGrowTextarea(this, 180)"
+                        @keydown.enter="
+                            if (!$event.shiftKey) {
+                                $event.preventDefault();
+                                $el.closest('form')?.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
+                            }
+                        "
+                        @if($isTyping) disabled @endif
+                    ></textarea>
                     
-                    <button type="submit" 
-                            class="w-10 h-10 flex items-center justify-center bg-ue-brand hover:bg-ue-brand-hover text-white rounded-full transition-all disabled:opacity-50 disabled:cursor-not-allowed"
-                            @if($isTyping) disabled @endif>
-                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                            <line x1="5" y1="12" x2="19" y2="12"/>
-                            <polyline points="12 5 19 12 12 19"/>
-                        </svg>
-                    </button>
+                    <div class="absolute right-2 bottom-1 flex items-center gap-2">
+                        <button type="button" class="p-1.5 text-slate-400 hover:text-slate-600 dark:text-zinc-400 dark:hover:text-zinc-300 transition-colors cursor-not-allowed opacity-70" title="Nhập bằng giọng nói (Sắp ra mắt)" disabled>
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"/>
+                                <path d="M19 10v2a7 7 0 0 1-14 0v-2"/>
+                                <line x1="12" y1="19" x2="12" y2="22"/>
+                            </svg>
+                        </button>
+                        
+                        <button type="submit" 
+                                class="w-10 h-10 flex items-center justify-center bg-ue-brand hover:bg-ue-brand-hover text-white rounded-full transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                                @if($isTyping) disabled @endif>
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <line x1="5" y1="12" x2="19" y2="12"/>
+                                <polyline points="12 5 19 12 12 19"/>
+                            </svg>
+                        </button>
+                    </div>
                 </div>
             </form>
         </div>
     </main>
 </div>
+
+<script>
+    if (typeof window.autoGrowTextarea !== 'function') {
+        window.autoGrowTextarea = function(el, maxHeight = 180) {
+            el.style.height = 'auto';
+            const nextHeight = Math.min(el.scrollHeight, maxHeight);
+            el.style.height = nextHeight + 'px';
+            el.style.overflowY = el.scrollHeight > maxHeight ? 'auto' : 'hidden';
+        };
+    }
+</script>
+
+<style>
+    .chat-page-input {
+        resize: none;
+        overflow-y: hidden;
+        font-family: inherit;
+        min-height: 48px !important;
+        max-height: 180px !important;
+        padding-top: 14px !important;
+        padding-bottom: 14px !important;
+        line-height: 1.5 !important;
+    }
+    .chat-page-input::placeholder {
+        color: #94a3b8 !important;
+        opacity: 1 !important;
+    }
+    .dark .chat-page-input::placeholder {
+        color: #4b5563 !important;
+    }
+</style>
