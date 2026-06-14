@@ -104,6 +104,14 @@
             Cộng đồng
         </a>
         <a
+            href="{{ route('app.career-pathway.index') }}"
+            class="flex items-center gap-3 px-2 py-2.5 hover:text-ue-brand transition-colors"
+            role="menuitem"
+        >
+            <x-ui.icon name="map" size="sm" class="text-slate-400" />
+            Bản đồ học tập
+        </a>
+        <a
             href="{{ route('mentor.discovery') }}"
             class="flex items-center gap-3 px-2 py-2.5 hover:text-ue-brand transition-colors"
             role="menuitem"
