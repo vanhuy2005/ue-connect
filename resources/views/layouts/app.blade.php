@@ -85,7 +85,7 @@
                 {{-- Page content --}}
                 <main
                     id="main-content"
-                    class="flex-1 flex flex-col h-full min-h-0 {{ in_array($shell, ['social']) ? 'pb-24 lg:pb-12 overflow-y-auto overflow-x-hidden' : (in_array($shell, ['conversation']) ? 'pb-16 lg:pb-0 overflow-hidden' : 'overflow-y-auto overflow-x-hidden') }}"
+                    class="flex-1 flex flex-col h-full min-h-0 {{ in_array($shell, ['social']) ? 'pb-24 lg:pb-4 overflow-y-auto overflow-x-hidden' : (in_array($shell, ['conversation']) ? 'pb-16 lg:pb-0 overflow-hidden' : 'overflow-y-auto overflow-x-hidden') }}"
                     tabindex="-1"
                 >
                     @if($shell === 'admin')

@@ -31,6 +31,9 @@ class ProductionAdminSeeder extends Seeder
                 'roles',
                 'permissions',
                 'role_has_permissions',
+                'majors',
+                'training_programs',
+                'admission_cohorts',
             ];
 
             // Get all tables in the database dynamically
