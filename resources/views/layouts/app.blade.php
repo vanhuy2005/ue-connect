@@ -292,11 +292,16 @@
                             return;
                         }
 
+                        const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
+                        if (!csrfToken) {
+                            return;
+                        }
+
                         fetch('{{ route('presence.heartbeat') }}', {
                             method: 'POST',
                             headers: {
                                 'Content-Type': 'application/json',
-                                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
+                                'X-CSRF-TOKEN': csrfToken
                             }
                         }).catch(err => console.error('Heartbeat error:', err));
                     }

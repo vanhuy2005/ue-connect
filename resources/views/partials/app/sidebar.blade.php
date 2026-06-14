@@ -60,6 +60,16 @@ $primaryNav = [
 
 $secondaryNav = [
     [
+        'icon' => 'map',
+        'label' => 'Bản đồ học tập',
+        'href' => route('app.career-pathway.index'),
+        'active' => request()->routeIs('app.career-pathway.*')
+            || request()->routeIs('career-pathways.index')
+            || request()->routeIs('app.career-positions.*')
+            || request()->routeIs('app.senior-pathways.*')
+            || request()->routeIs('app.career-pathways.search'),
+    ],
+    [
         'icon' => 'community',
         'label' => 'Cộng đồng',
         'href' => route('community.index'),
