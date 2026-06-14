@@ -1,0 +1,1638 @@
+erDiagram
+
+    USERS {
+        bigint id PK
+        string name
+        string email
+        timestamp email_verified_at "nullable"
+        string password
+        string remember_token
+        timestamp created_at "nullable"
+        timestamp updated_at "nullable"
+        string account_status
+        text account_status_reason "nullable"
+        timestamp account_restricted_until "nullable"
+        timestamp last_login_at "nullable"
+        timestamp deleted_at
+        string intended_identity_type "nullable"
+        timestamp last_seen_at "nullable"
+    }
+
+    PASSWORD_RESET_TOKENS {
+        string email PK
+        string token
+        timestamp created_at "nullable"
+    }
+
+    SESSIONS {
+        string id PK
+        foreignId user_id FK "nullable"
+        string ip_address "nullable"
+        text user_agent "nullable"
+        longText payload
+        integer last_activity
+    }
+
+    CACHE {
+        string key PK
+        mediumText value
+        bigInteger expiration
+    }
+
+    CACHE_LOCKS {
+        string key PK
+        string owner
+        bigInteger expiration
+    }
+
+    JOBS {
+        bigint id PK
+        string queue
+        longText payload
+        unsignedSmallInteger attempts
+        unsignedInteger reserved_at "nullable"
+        unsignedInteger available_at
+        unsignedInteger created_at
+    }
+
+    JOB_BATCHES {
+        string id PK
+        string name
+        integer total_jobs
+        integer pending_jobs
+        integer failed_jobs
+        longText failed_job_ids
+        mediumText options "nullable"
+        integer cancelled_at "nullable"
+        integer created_at
+        integer finished_at "nullable"
+    }
+
+    FAILED_JOBS {
+        bigint id PK
+        string uuid
+        string connection
+        string queue
+        longText payload
+        longText exception
+        timestamp failed_at
+    }
+
+    NOTIFICATIONS {
+        uuid id PK
+        string type
+        morphs notifiable
+        text data
+        timestamp read_at "nullable"
+        timestamp created_at "nullable"
+        timestamp updated_at "nullable"
+    }
+
+    FACULTIES {
+        bigint id PK
+        string name
+        string slug
+        text description "nullable"
+        string status
+        timestamp created_at "nullable"
+        timestamp updated_at "nullable"
+        string code "nullable"
+        string normalized_name "nullable"
+        text source_url "nullable"
+    }
+
+    ACADEMIC_PROGRAMS {
+        bigint id PK
+        foreignId faculty_id FK
+        string name
+        string slug
+        string degree_level
+        text description "nullable"
+        string status
+        timestamp created_at "nullable"
+        timestamp updated_at "nullable"
+    }
+
+    MEDIA_FILES {
+        bigint id PK
+        foreignId owner_id FK
+        string disk
+        string path
+        string original_name
+        string mime_type
+        string extension
+        unsignedBigInteger size_bytes
+        string visibility
+        string file_category
+        string checksum "nullable"
+        json metadata_json "nullable"
+        timestamp created_at "nullable"
+        timestamp updated_at "nullable"
+        timestamp deleted_at
+    }
+
+    PROFILES {
+        bigint id PK
+        foreignId user_id FK
+        string display_name
+        foreignId avatar_media_file_id FK "nullable"
+        text bio "nullable"
+        string role_type
+        string profile_status
+        string visibility
+        boolean discoverable
+        timestamp profile_completed_at "nullable"
+        timestamp created_at "nullable"
+        timestamp updated_at "nullable"
+        timestamp deleted_at
+    }
+
+    STUDENT_PROFILES {
+        bigint id PK
+        foreignId profile_id FK
+        string student_code
+        foreignId faculty_id FK
+        foreignId academic_program_id FK
+        string cohort "nullable"
+        integer current_year "nullable"
+        string class_name "nullable"
+        text learning_goals "nullable"
+        text career_orientation "nullable"
+        timestamp created_at "nullable"
+        timestamp updated_at "nullable"
+    }
+
+    ALUMNI_PROFILES {
+        bigint id PK
+        foreignId profile_id FK
+        foreignId faculty_id FK "nullable"
+        foreignId academic_program_id FK "nullable"
+        string cohort "nullable"
+        integer graduation_year "nullable"
+        string current_position "nullable"
+        string current_organization "nullable"
+        string industry "nullable"
+        text career_summary "nullable"
+        boolean willing_to_mentor
+        timestamp created_at "nullable"
+        timestamp updated_at "nullable"
+    }
+
+    ADVISOR_PROFILES {
+        bigint id PK
+        foreignId profile_id FK
+        foreignId faculty_id FK "nullable"
+        string department "nullable"
+        string title "nullable"
+        string office_location "nullable"
+        text advising_areas "nullable"
+        timestamp created_at "nullable"
+        timestamp updated_at "nullable"
+        boolean is_academic_advisor
+        text advised_class_codes "nullable"
+    }
+
+    VERIFICATION_REQUESTS {
+        bigint id PK
+        foreignId user_id FK
+        string role_requested
+        string status
+        string submitted_name
+        string submitted_student_code "nullable"
+        foreignId submitted_faculty_id FK "nullable"
+        foreignId submitted_academic_program_id FK "nullable"
+        string submitted_cohort "nullable"
+        string submitted_email
+        text submitted_note "nullable"
+        foreignId assigned_admin_id FK "nullable"
+        timestamp submitted_at "nullable"
+        timestamp reviewed_at "nullable"
+        timestamp expires_at "nullable"
+        timestamp created_at "nullable"
+        timestamp updated_at "nullable"
+        timestamp deleted_at
+        string requested_identity_type "nullable"
+        string submitted_graduation_year "nullable"
+        string submitted_old_student_email "nullable"
+        string submitted_position "nullable"
+        string submitted_organization "nullable"
+        text review_reason "nullable"
+        text review_instruction "nullable"
+        boolean submitted_is_academic_advisor
+        text submitted_advised_class_codes "nullable"
+    }
+
+    VERIFICATION_EVIDENCES {
+        bigint id PK
+        foreignId verification_request_id FK
+        foreignId media_file_id FK "nullable"
+        string evidence_type
+        string evidence_link "nullable"
+        text user_note "nullable"
+        string status
+        text review_note "nullable"
+        timestamp created_at "nullable"
+        timestamp updated_at "nullable"
+        timestamp deleted_at
+        string capture_method "nullable"
+        timestamp captured_at "nullable"
+        foreignId capture_session_id FK "nullable"
+        text client_user_agent "nullable"
+        decimal image_quality_score "nullable"
+    }
+
+    VERIFICATION_REVIEW_ACTIONS {
+        bigint id PK
+        foreignId verification_request_id FK
+        foreignId admin_id FK
+        string action_key
+        text reason
+        text instruction "nullable"
+        json before_snapshot_json "nullable"
+        json after_snapshot_json "nullable"
+        timestamp created_at "nullable"
+    }
+
+    AUDIT_LOGS {
+        bigint id PK
+        foreignId actor_id FK "nullable"
+        string actor_type
+        string action_key
+        string target_type
+        unsignedBigInteger target_id "nullable"
+        string context_type "nullable"
+        unsignedBigInteger context_id "nullable"
+        json before_snapshot_json "nullable"
+        json after_snapshot_json "nullable"
+        text reason "nullable"
+        json metadata_json "nullable"
+        string ip_address "nullable"
+        text user_agent "nullable"
+        timestamp created_at "nullable"
+    }
+
+    USER_IDENTITY_PROVIDERS {
+        bigint id PK
+        foreignId user_id FK
+        string provider_name
+        string provider_user_id
+        string provider_tenant_id "nullable"
+        string provider_email "nullable"
+        timestamp linked_at "nullable"
+        timestamp last_login_at "nullable"
+        timestamp created_at "nullable"
+        timestamp updated_at "nullable"
+    }
+
+    POSTS {
+        bigint id PK
+        foreignId user_id FK
+        text body
+        string visibility
+        string status
+        timestamp edited_at "nullable"
+        timestamp published_at "nullable"
+        timestamp deleted_at
+        timestamp created_at "nullable"
+        timestamp updated_at "nullable"
+        string media_url "nullable"
+        unsignedBigInteger scope_id "nullable"
+        unsignedBigInteger pinned_by FK "nullable"
+    }
+
+    COMMENTS {
+        bigint id PK
+        foreignId post_id FK
+        foreignId user_id FK
+        foreignId parent_id FK "nullable"
+        text body
+        string status
+        timestamp edited_at "nullable"
+        timestamp deleted_at
+        timestamp created_at "nullable"
+        timestamp updated_at "nullable"
+    }
+
+    POST_LIKES {
+        bigint id PK
+        foreignId post_id FK
+        foreignId user_id FK
+        timestamp created_at
+    }
+
+    POST_SAVES {
+        bigint id PK
+        foreignId post_id FK
+        foreignId user_id FK
+        timestamp created_at
+    }
+
+    COMMENT_LIKES {
+        bigint id PK
+        foreignId comment_id FK
+        foreignId user_id FK
+        timestamp created_at
+    }
+
+    REPORTS {
+        bigint id PK
+        foreignId reporter_id FK
+        string target_type
+        unsignedBigInteger target_id
+        string reason
+        text description "nullable"
+        string status
+        timestamp created_at "nullable"
+        timestamp updated_at "nullable"
+    }
+
+    EVIDENCE_CAPTURE_SESSIONS {
+        bigint id PK
+        foreignId user_id FK
+        foreignId verification_request_id FK "nullable"
+        string session_token_hash
+        string status
+        string required_evidence_type
+        timestamp started_at
+        timestamp expires_at
+        timestamp completed_at "nullable"
+        timestamp failed_at "nullable"
+        unsignedInteger attempt_count
+        text client_user_agent "nullable"
+        timestamp created_at "nullable"
+        timestamp updated_at "nullable"
+    }
+
+    EVIDENCE_ANALYSIS_JOBS {
+        bigint id PK
+        foreignId verification_request_id FK
+        foreignId verification_evidence_id FK
+        foreignId media_file_id FK "nullable"
+        string provider
+        string model_name "nullable"
+        string status
+        unsignedInteger attempt_count
+        timestamp queued_at "nullable"
+        timestamp started_at "nullable"
+        timestamp finished_at "nullable"
+        timestamp failed_at "nullable"
+        string error_code "nullable"
+        text error_message "nullable"
+        timestamp created_at "nullable"
+        timestamp updated_at "nullable"
+    }
+
+    EVIDENCE_ANALYSIS_RESULTS {
+        bigint id PK
+        foreignId analysis_job_id FK
+        foreignId verification_request_id FK
+        foreignId verification_evidence_id FK
+        string document_type_detected "nullable"
+        decimal document_type_confidence "nullable"
+        longText ocr_text "nullable"
+        json extracted_fields_json "nullable"
+        json match_result_json "nullable"
+        json risk_flags_json "nullable"
+        decimal confidence_score "nullable"
+        string recommendation
+        text review_summary "nullable"
+        timestamp created_at "nullable"
+        timestamp updated_at "nullable"
+    }
+
+    POST_HIDES {
+        bigint id PK
+        foreignId post_id FK
+        foreignId user_id FK
+        timestamp created_at
+    }
+
+    MENTOR_ACCESSES {
+        bigint id PK
+        foreignId user_id FK
+        string status
+        text note "nullable"
+        timestamp reviewed_at "nullable"
+        timestamp created_at "nullable"
+        timestamp updated_at "nullable"
+    }
+
+    PERMISSION_GRANTS {
+        bigint id PK
+        foreignId user_id FK
+        string permission_key
+        string scope_type "nullable"
+        unsignedBigInteger scope_id "nullable"
+        unsignedBigInteger revoked_by "nullable"
+        text reason
+        timestamp starts_at "nullable"
+        timestamp expires_at "nullable"
+        string status
+        timestamp revoked_at "nullable"
+        timestamp deleted_at
+        timestamp created_at "nullable"
+        timestamp updated_at "nullable"
+    }
+
+    ANNOUNCEMENTS {
+        bigint id PK
+        string title
+        text body
+        string type
+        json target "nullable"
+        unsignedBigInteger created_by "nullable"
+        timestamp starts_at "nullable"
+        timestamp expires_at "nullable"
+        string status
+        timestamp deleted_at
+        timestamp created_at "nullable"
+        timestamp updated_at "nullable"
+    }
+
+    COMMUNITIES {
+        bigint id PK
+        string name
+        string slug
+        text description "nullable"
+        string status
+        unsignedBigInteger created_by "nullable"
+        json settings "nullable"
+        timestamp deleted_at
+        timestamp created_at "nullable"
+        timestamp updated_at "nullable"
+        unsignedInteger members_count
+        string join_policy
+        unsignedBigInteger related_program_id FK "nullable"
+        unsignedInteger resource_count
+        string suspended_safe_reason "nullable"
+        timestamp suspended_at "nullable"
+        timestamp archived_at "nullable"
+    }
+
+    BLOCKED_USERS {
+        bigint id PK
+        foreignId blocker_id FK
+        foreignId blocked_id FK
+        text reason "nullable"
+        string source_type "nullable"
+        unsignedBigInteger source_id "nullable"
+        timestamp created_at "nullable"
+        timestamp updated_at "nullable"
+    }
+
+    GREETINGS {
+        bigint id PK
+        foreignId sender_id FK
+        foreignId receiver_id FK
+        text message "nullable"
+        string status
+        text decline_reason "nullable"
+        timestamp accepted_at "nullable"
+        timestamp declined_at "nullable"
+        timestamp expires_at "nullable"
+        timestamp deleted_at
+        timestamp created_at "nullable"
+        timestamp updated_at "nullable"
+    }
+
+    CONNECTIONS {
+        bigint id PK
+        foreignId user_one_id FK
+        foreignId user_two_id FK
+        string status
+        foreignId source_greeting_id FK "nullable"
+        timestamp connected_at
+        timestamp disconnected_at "nullable"
+        timestamp deleted_at
+        timestamp created_at "nullable"
+        timestamp updated_at "nullable"
+    }
+
+    CONVERSATIONS {
+        bigint id PK
+        string conversation_type
+        string status
+        foreignId created_by FK "nullable"
+        foreignId direct_user_low_id FK "nullable"
+        foreignId direct_user_high_id FK "nullable"
+        unsignedBigInteger last_message_id "nullable"
+        timestamp last_message_at "nullable"
+        timestamp deleted_at
+        timestamp created_at "nullable"
+        timestamp updated_at "nullable"
+        unsignedBigInteger mentor_request_id "nullable"
+        unsignedBigInteger source_id "nullable"
+    }
+
+    CONVERSATION_PARTICIPANTS {
+        bigint id PK
+        foreignId conversation_id FK
+        foreignId user_id FK
+        string participant_role
+        string status
+        timestamp joined_at
+        timestamp left_at "nullable"
+        timestamp last_read_at "nullable"
+        timestamp muted_until "nullable"
+        timestamp created_at "nullable"
+        timestamp updated_at "nullable"
+    }
+
+    MESSAGES {
+        bigint id PK
+        foreignId conversation_id FK
+        foreignId sender_id FK
+        text body "nullable"
+        string message_type
+        string status
+        foreignId shared_post_id FK "nullable"
+        json metadata_json "nullable"
+        timestamp edited_at "nullable"
+        timestamp deleted_at
+        timestamp created_at "nullable"
+        timestamp updated_at "nullable"
+        foreignId reply_to_message_id FK "nullable"
+        foreignId forwarded_from_message_id FK "nullable"
+        timestamp recalled_at "nullable"
+        foreignId recalled_by FK "nullable"
+    }
+
+    CONVERSATION_USER_SETTINGS {
+        bigint id PK
+        foreignId conversation_id FK
+        foreignId user_id FK
+        foreignId target_user_id FK "nullable"
+        string nickname "nullable"
+        timestamp muted_until "nullable"
+        boolean is_restricted
+        timestamp deleted_at "nullable"
+        timestamp created_at "nullable"
+        timestamp updated_at "nullable"
+    }
+
+    CONVERSATION_PINNED_MESSAGES {
+        bigint id PK
+        foreignId conversation_id FK
+        foreignId message_id FK
+        foreignId pinned_by FK
+        timestamp created_at "nullable"
+        timestamp updated_at "nullable"
+    }
+
+    PROFILE_PRIVACY_SETTINGS {
+        bigint id PK
+        foreignId user_id FK
+        string profile_visibility
+        boolean show_major
+        boolean show_cohort
+        boolean show_class_code
+        boolean show_bio
+        boolean show_interests
+        boolean show_connection_goals
+        boolean show_communities
+        boolean show_career_info
+        boolean show_mentor_topics
+        timestamp created_at "nullable"
+        timestamp updated_at "nullable"
+        timestamp deleted_at
+        string mentions_preference
+    }
+
+    NOTIFICATION_PREFERENCES {
+        bigint id PK
+        foreignId user_id FK
+        boolean in_app_enabled
+        boolean browser_push_enabled
+        boolean email_enabled
+        boolean greeting_notifications
+        boolean message_notifications
+        boolean mentor_notifications
+        boolean community_notifications
+        boolean safety_notifications
+        timestamp deleted_at
+        boolean push_messages_enabled
+        boolean push_greetings_enabled
+        boolean push_mentor_enabled
+        boolean push_community_enabled
+        boolean push_verification_enabled
+        boolean push_admin_announcements_enabled
+        boolean push_mentions
+        boolean push_comments
+        boolean push_connections
+        boolean push_messages
+        boolean push_system
+        boolean email_mentions
+        boolean email_comments
+        boolean email_connections
+        boolean email_messages
+        boolean email_system
+        boolean email_marketing
+    }
+
+    MEDIA {
+        bigint id PK
+        uuid uuid
+        foreignId user_id FK
+        nullableMorphs mediable
+        string primary_provider
+        string primary_disk
+        string primary_path
+        string delivery_provider "nullable"
+        string delivery_url "nullable"
+        string storage_strategy
+        string visibility
+        string original_filename
+        string mime_type
+        string extension
+        unsignedBigInteger size_bytes
+        unsignedInteger width "nullable"
+        unsignedInteger height "nullable"
+        string checksum_sha256
+        string status
+        json metadata_json "nullable"
+        timestamp created_at "nullable"
+        timestamp updated_at "nullable"
+        timestamp deleted_at
+    }
+
+    MEDIA_VARIANTS {
+        bigint id PK
+        foreignId media_id FK
+        string variant_name
+        string provider
+        string disk
+        string path
+        string url "nullable"
+        string mime_type
+        unsignedBigInteger size_bytes
+        unsignedInteger width
+        unsignedInteger height
+        timestamp created_at "nullable"
+        timestamp updated_at "nullable"
+        string cloudinary_public_id "nullable"
+        unsignedBigInteger cloudinary_version "nullable"
+        string cloudinary_secure_url "nullable"
+        string cloudinary_format "nullable"
+        unsignedBigInteger cloudinary_bytes "nullable"
+        string cloudinary_resource_type "nullable"
+        timestamp cloudinary_synced_at "nullable"
+        string cloudinary_sync_status
+        string cloudinary_error_code "nullable"
+        string cloudinary_error_message "nullable"
+    }
+
+    COMMUNITY_MEMBERS {
+        bigint id PK
+        unsignedBigInteger community_id FK
+        unsignedBigInteger user_id FK
+        string role
+        timestamp joined_at "nullable"
+        string status
+        timestamp deleted_at
+        timestamp created_at "nullable"
+        timestamp updated_at "nullable"
+        timestamp removed_at "nullable"
+        text remove_reason "nullable"
+    }
+
+    MENTOR_ACCESS_REQUESTS {
+        bigint id PK
+        foreignId user_id FK
+        string requested_role_context
+        text experience_summary "nullable"
+        json expertise_topics "nullable"
+        json career_paths "nullable"
+        text availability_note "nullable"
+        boolean policy_agreed
+        string headline "nullable"
+        text bio "nullable"
+        json help_topics "nullable"
+        json preferred_request_types "nullable"
+        json skills "nullable"
+        string response_expectation_text "nullable"
+        string office_hours_text "nullable"
+        unsignedBigInteger evidence_media_id FK "nullable"
+        unsignedBigInteger reviewed_by FK "nullable"
+        timestamp reviewed_at "nullable"
+        text review_reason "nullable"
+        text admin_notes "nullable"
+        timestamp deleted_at
+        timestamp created_at "nullable"
+        timestamp updated_at "nullable"
+    }
+
+    MENTOR_PROFILES {
+        bigint id PK
+        foreignId user_id FK
+        string headline "nullable"
+        text bio "nullable"
+        json expertise_topics "nullable"
+        json career_paths "nullable"
+        json skills "nullable"
+        json help_topics "nullable"
+        json preferred_request_types "nullable"
+        string availability_status
+        boolean is_public_ready
+        unsignedSmallInteger max_monthly_accepts "nullable"
+        string response_expectation_text "nullable"
+        string office_hours_text "nullable"
+        boolean is_active
+        timestamp approved_at "nullable"
+        unsignedBigInteger approved_by FK "nullable"
+        timestamp deleted_at
+        timestamp created_at "nullable"
+        timestamp updated_at "nullable"
+    }
+
+    MENTOR_REQUESTS {
+        bigint id PK
+        foreignId student_id FK
+        foreignId mentor_id FK
+        foreignId mentor_profile_id FK
+        string topic
+        text goal
+        text question
+        string urgency
+        text expected_outcome "nullable"
+        string status
+        text decline_reason "nullable"
+        text more_info_question "nullable"
+        unsignedBigInteger conversation_id FK "nullable"
+        timestamp accepted_at "nullable"
+        timestamp declined_at "nullable"
+        timestamp completed_at "nullable"
+        timestamp deleted_at
+        timestamp created_at "nullable"
+        timestamp updated_at "nullable"
+    }
+
+    MENTOR_FEEDBACK {
+        bigint id PK
+        foreignId mentor_request_id FK
+        foreignId student_id FK
+        foreignId mentor_id FK
+        string helpfulness_level
+        boolean is_private
+        timestamp deleted_at
+        timestamp created_at "nullable"
+        timestamp updated_at "nullable"
+    }
+
+    COMMUNITY_JOIN_REQUESTS {
+        bigint id PK
+        unsignedBigInteger community_id
+        unsignedBigInteger user_id FK
+        text join_reason "nullable"
+        string status
+        text review_reason "nullable"
+        timestamp reviewed_at "nullable"
+        timestamp deleted_at
+        timestamp created_at "nullable"
+        timestamp updated_at "nullable"
+    }
+
+    COMMUNITY_RESOURCES {
+        bigint id PK
+        unsignedBigInteger community_id
+        string title
+        text description "nullable"
+        string category "nullable"
+        unsignedBigInteger approved_by FK "nullable"
+        timestamp approved_at "nullable"
+        text rejection_reason "nullable"
+        timestamp deleted_at
+        timestamp created_at "nullable"
+        timestamp updated_at "nullable"
+    }
+
+    COMMUNITY_SUGGESTIONS {
+        bigint id PK
+        unsignedBigInteger submitted_by
+        string suggested_name
+        string community_type
+        text purpose
+        text target_members
+        unsignedBigInteger related_program_id FK "nullable"
+        unsignedBigInteger proposed_owner_id FK "nullable"
+        text admin_instruction "nullable"
+        text admin_reason "nullable"
+        unsignedBigInteger reviewed_by FK "nullable"
+        timestamp deleted_at
+        timestamp created_at "nullable"
+        timestamp updated_at "nullable"
+        string join_policy
+        string visibility
+        text rules "nullable"
+    }
+
+    COMMUNITY_EVENTS {
+        bigint id PK
+        unsignedBigInteger community_id
+        unsignedBigInteger created_by FK
+        string title
+        string slug
+        text description "nullable"
+        timestamp ends_at "nullable"
+        string online_link "nullable"
+        timestamp rsvp_deadline "nullable"
+        unsignedInteger capacity "nullable"
+        boolean waitlist_enabled
+        unsignedInteger interested_count
+        unsignedInteger waitlist_count
+        timestamp cancelled_at "nullable"
+        timestamp deleted_at
+        timestamp created_at "nullable"
+        timestamp updated_at "nullable"
+    }
+
+    COMMUNITY_EVENT_RSVPS {
+        bigint id PK
+        unsignedBigInteger event_id FK
+        unsignedBigInteger user_id FK
+        text note "nullable"
+        timestamp created_at "nullable"
+        timestamp updated_at "nullable"
+    }
+
+    USER_FOLLOWS {
+        bigint id PK
+        foreignId follower_id FK
+        foreignId following_id FK
+        timestamp created_at "nullable"
+        timestamp updated_at "nullable"
+    }
+
+    POST_REPOSTS {
+        bigint id PK
+        foreignId post_id FK
+        foreignId user_id FK
+        timestamp created_at "nullable"
+        timestamp updated_at "nullable"
+    }
+
+    TEMPORARY_AVATARS {
+        bigint id PK
+        foreignId user_id FK
+        foreignId previous_media_id FK "nullable"
+        foreignId current_media_id FK
+        timestamp expires_at
+        timestamp created_at "nullable"
+        timestamp updated_at "nullable"
+    }
+
+    OPPORTUNITIES {
+        foreignId post_id PK,FK
+        boolean is_expired
+        string category
+        timestamp created_at "nullable"
+        timestamp updated_at "nullable"
+    }
+
+    MAJORS {
+        bigint id PK
+        foreignId faculty_id FK
+        string code
+        string name
+        string normalized_name "nullable"
+        string degree_level
+        text source_url "nullable"
+        timestamp created_at "nullable"
+        timestamp updated_at "nullable"
+    }
+
+    ADMISSION_COHORTS {
+        bigint id PK
+        integer year
+        string cohort_name
+        string normalized_name "nullable"
+        text note "nullable"
+        timestamp created_at "nullable"
+        timestamp updated_at "nullable"
+    }
+
+    TRAINING_PROGRAMS {
+        bigint id PK
+        foreignId cohort_id FK
+        foreignId faculty_id FK
+        foreignId major_id FK
+        string title
+        integer total_credits
+        year effective_from "nullable"
+        year effective_to "nullable"
+        string status
+        text source_url "nullable"
+        unsignedBigInteger source_file_id "nullable"
+        timestamp published_at "nullable"
+        timestamp created_at "nullable"
+        timestamp updated_at "nullable"
+    }
+
+    CURRICULUM_COURSE_GROUPS {
+        bigint id PK
+        foreignId program_id FK
+        string name
+        string group_type "nullable"
+        text note "nullable"
+        timestamp created_at "nullable"
+        timestamp updated_at "nullable"
+    }
+
+    CURRICULUM_COURSES {
+        bigint id PK
+        foreignId program_id FK
+        foreignId group_id FK "nullable"
+        integer semester "nullable"
+        string course_code
+        string course_name
+        string normalized_course_name "nullable"
+        integer credits
+        integer theory_hours
+        integer practice_hours
+        integer self_study_hours
+        string course_type "nullable"
+        text prerequisite "nullable"
+        string source_location "nullable"
+        timestamp created_at "nullable"
+        timestamp updated_at "nullable"
+    }
+
+    PROGRAM_LEARNING_OUTCOMES {
+        bigint id PK
+        foreignId program_id FK
+        string code
+        text description
+        string category "nullable"
+        string source_location "nullable"
+        timestamp created_at "nullable"
+        timestamp updated_at "nullable"
+    }
+
+    SOURCE_DOCUMENTS {
+        bigint id PK
+        string document_type
+        string cohort "nullable"
+        integer effective_year "nullable"
+        text source_url "nullable"
+        string file_path "nullable"
+        string mime_type "nullable"
+        string source_hash "nullable"
+        string status
+        foreignId uploaded_by FK "nullable"
+        timestamp published_at "nullable"
+        timestamp created_at "nullable"
+        timestamp updated_at "nullable"
+        foreignId knowledge_batch_id FK "nullable"
+        string knowledge_batch_key "nullable"
+    }
+
+    DOCUMENT_CHUNKS {
+        bigint id PK
+        foreignId source_document_id FK
+        integer chunk_index
+        text chunk_text
+        integer token_count
+        integer page_start "nullable"
+        integer page_end "nullable"
+        string part "nullable"
+        string chapter "nullable"
+        string section "nullable"
+        string article "nullable"
+        text clause "nullable"
+        json metadata_json "nullable"
+        string embedding_status
+        timestamp created_at "nullable"
+        timestamp updated_at "nullable"
+        foreignId knowledge_batch_id FK "nullable"
+        string knowledge_batch_key "nullable"
+    }
+
+    CHAT_SESSIONS {
+        bigint id PK
+        foreignId user_id FK "nullable"
+        string title "nullable"
+        timestamp created_at "nullable"
+        timestamp updated_at "nullable"
+    }
+
+    CHAT_MESSAGES {
+        bigint id PK
+        foreignId session_id FK
+        string role
+        json metadata_json "nullable"
+        timestamp created_at "nullable"
+        timestamp updated_at "nullable"
+    }
+
+    AI_QUESTIONS {
+        bigint id PK
+        foreignId session_id FK
+        foreignId user_id FK "nullable"
+        text original_question
+        text normalized_question "nullable"
+        string intent "nullable"
+        string source_route "nullable"
+        double confidence
+        timestamp created_at
+    }
+
+    AI_ANSWERS {
+        bigint id PK
+        foreignId question_id FK
+        text answer_text
+        string model_provider "nullable"
+        string model_name "nullable"
+        string prompt_version "nullable"
+        integer latency_ms
+        integer input_tokens
+        integer output_tokens
+        integer total_tokens
+        string status
+        timestamp created_at
+    }
+
+    AI_RETRIEVED_CHUNKS {
+        bigint id PK
+        foreignId question_id FK
+        foreignId document_chunk_id FK
+        double score
+        double rerank_score "nullable"
+        json metadata_json "nullable"
+        timestamp created_at
+    }
+
+    AI_STRUCTURED_QUERIES {
+        bigint id PK
+        foreignId question_id FK
+        string query_type
+        json filters_json "nullable"
+        integer result_count
+        json metadata_json "nullable"
+        timestamp created_at
+    }
+
+    AI_FEEDBACK {
+        bigint id PK
+        foreignId answer_id FK
+        foreignId user_id FK "nullable"
+        integer rating
+        timestamp created_at
+    }
+
+    AI_PROMPT_VERSIONS {
+        bigint id PK
+        string name
+        string version
+        text content
+        boolean is_active
+        timestamp created_at "nullable"
+        timestamp updated_at "nullable"
+    }
+
+    SOURCE_SYNC_LOGS {
+        bigint id PK
+        string source_type
+        text source_url "nullable"
+        string status
+        timestamp started_at
+        timestamp finished_at "nullable"
+        integer records_found
+        integer records_created
+        integer records_updated
+        text error_message "nullable"
+        json metadata_json "nullable"
+        timestamp created_at "nullable"
+        timestamp updated_at "nullable"
+    }
+
+    KNOWLEDGE_BATCHES {
+        bigint id PK
+        string batch_key
+        string name
+        string root_path "nullable"
+        string status
+        integer total_imported
+        integer total_failed
+        integer total_needs_ocr
+        integer total_chunks
+        integer total_vectors
+        timestamp started_at "nullable"
+        timestamp finished_at "nullable"
+        text metadata_json "nullable"
+        timestamp created_at "nullable"
+        timestamp updated_at "nullable"
+    }
+
+    TRAINING_PROGRAM_EXTRACTION_CANDIDATES {
+        bigint id PK
+        foreignId source_document_id FK
+        string field_name
+        string candidate_value
+        double confidence
+        text evidence_text "nullable"
+        integer page "nullable"
+        text metadata_json "nullable"
+        timestamp created_at
+    }
+
+    PUSH_SUBSCRIPTIONS {
+        bigint id PK
+        foreignId user_id FK
+        string endpoint
+        text public_key
+        text auth_token
+        string content_encoding
+        text user_agent "nullable"
+        string browser_name "nullable"
+        string device_name "nullable"
+        timestamp last_used_at "nullable"
+        unsignedInteger failed_attempts
+        timestamp revoked_at "nullable"
+        timestamp created_at "nullable"
+        timestamp updated_at "nullable"
+    }
+
+    USER_CONTENT_PREFERENCES {
+        bigint id PK
+        foreignId user_id FK
+        boolean prioritize_academic_content
+        boolean hide_reported_content
+        boolean reduce_sensitive_content
+        timestamp created_at "nullable"
+        timestamp updated_at "nullable"
+    }
+
+    SUPPORT_TICKETS {
+        bigint id PK
+        foreignId user_id FK
+        string category
+        text message
+        string status
+        string priority
+        foreignId assigned_to FK "nullable"
+        timestamp resolved_at "nullable"
+        timestamp created_at "nullable"
+        timestamp updated_at "nullable"
+    }
+
+    CAREER_IMPORT_RUNS {
+        bigint id PK
+        string status
+        timestamp started_at "nullable"
+        timestamp completed_at "nullable"
+        text log "nullable"
+        timestamp created_at "nullable"
+        timestamp updated_at "nullable"
+    }
+
+    CAREER_SOURCE_DOCUMENTS {
+        bigint id PK
+        foreignId import_run_id FK
+        string file_path
+        string document_type
+        string extraction_status
+        text error_message "nullable"
+        timestamp created_at "nullable"
+        timestamp updated_at "nullable"
+    }
+
+    CAREER_COHORTS {
+        bigint id PK
+        string name
+        string slug
+        integer start_year "nullable"
+        timestamp created_at "nullable"
+        timestamp updated_at "nullable"
+    }
+
+    CAREER_FACULTIES {
+        bigint id PK
+        string name
+        string slug
+        timestamp created_at "nullable"
+        timestamp updated_at "nullable"
+    }
+
+    CAREER_MAJORS {
+        bigint id PK
+        foreignId faculty_id FK
+        string name
+        string slug
+        timestamp created_at "nullable"
+        timestamp updated_at "nullable"
+    }
+
+    CAREER_PROGRAMS {
+        bigint id PK
+        foreignId cohort_id FK
+        foreignId faculty_id FK
+        foreignId major_id FK
+        foreignId source_document_id FK "nullable"
+        string name
+        string slug
+        string status
+        integer total_credits "nullable"
+        integer total_semesters "nullable"
+        string original_dir "nullable"
+        timestamp created_at "nullable"
+        timestamp updated_at "nullable"
+    }
+
+    CAREER_SEMESTERS {
+        bigint id PK
+        foreignId program_id FK
+        integer semester_number
+        string title "nullable"
+        timestamp created_at "nullable"
+        timestamp updated_at "nullable"
+    }
+
+    CAREER_COURSES {
+        bigint id PK
+        string code
+        string name
+        timestamp created_at "nullable"
+        timestamp updated_at "nullable"
+    }
+
+    CAREER_PROGRAM_COURSES {
+        bigint id PK
+        foreignId program_id FK
+        foreignId semester_id FK "nullable"
+        foreignId course_id FK
+        foreignId source_document_id FK "nullable"
+        integer credits "nullable"
+        boolean is_mandatory
+        string knowledge_block "nullable"
+        timestamp created_at "nullable"
+        timestamp updated_at "nullable"
+    }
+
+    CAREER_COURSE_DESCRIPTIONS {
+        bigint id PK
+        foreignId course_id FK
+        text description_text
+        timestamp created_at "nullable"
+        timestamp updated_at "nullable"
+    }
+
+    CAREER_DATA_QUALITY_ISSUES {
+        bigint id PK
+        foreignId import_run_id FK
+        foreignId source_document_id FK "nullable"
+        foreignId program_id FK "nullable"
+        string issue_type
+        string severity
+        text message
+        json context "nullable"
+        timestamp created_at "nullable"
+        timestamp updated_at "nullable"
+    }
+
+    CAREER_CONTRIBUTIONS {
+        bigint id PK
+        foreignId user_id FK
+        unsignedBigInteger target_id
+        string contribution_type
+        string title "nullable"
+        text content
+        string status
+        string visibility
+        string source_type
+        unsignedInteger upvotes_count
+        unsignedInteger downvotes_count
+        unsignedInteger reports_count
+        timestamp verified_at "nullable"
+        foreignId verified_by FK "nullable"
+        json metadata_json "nullable"
+        timestamp created_at "nullable"
+        timestamp updated_at "nullable"
+        timestamp deleted_at
+    }
+
+    CAREER_CONTRIBUTION_MODERATION_LOGS {
+        bigint id PK
+        foreignId career_contribution_id FK
+        foreignId admin_id FK
+        string action
+        text reason "nullable"
+        string previous_status "nullable"
+        string new_status "nullable"
+        timestamp created_at "nullable"
+        timestamp updated_at "nullable"
+    }
+
+    CAREER_CONTRIBUTION_VOTES {
+        bigint id PK
+        foreignId career_contribution_id FK
+        foreignId user_id FK
+        tinyInteger value
+        timestamp created_at "nullable"
+        timestamp updated_at "nullable"
+    }
+
+    CAREER_SKILLS {
+        bigint id PK
+        string name
+        string normalized_name
+        string category
+        text description "nullable"
+        foreignId created_by FK "nullable"
+        boolean is_active
+        timestamp created_at "nullable"
+        timestamp updated_at "nullable"
+    }
+
+    CAREER_COURSE_SKILL_EDGES {
+        bigint id PK
+        foreignId career_course_id FK
+        foreignId career_skill_id FK
+        string source_type
+        string relevance_level
+        boolean is_active
+        foreignId verified_by FK "nullable"
+        timestamp verified_at "nullable"
+        json metadata_json "nullable"
+        timestamp created_at "nullable"
+        timestamp updated_at "nullable"
+    }
+
+    CAREER_POSITIONS {
+        bigint id PK
+        foreignId created_by FK
+        string title
+        string slug
+        text description "nullable"
+        string industry "nullable"
+        string target_audience "nullable"
+        foreignId related_faculty_id FK "nullable"
+        foreignId related_major_id FK "nullable"
+        foreignId related_program_id FK "nullable"
+        string status
+        string visibility
+        timestamp published_at "nullable"
+        unsignedInteger upvotes_count
+        unsignedInteger saves_count
+        unsignedInteger reports_count
+        json metadata_json "nullable"
+        timestamp created_at "nullable"
+        timestamp updated_at "nullable"
+        timestamp deleted_at
+    }
+
+    CAREER_POSITION_SECTIONS {
+        bigint id PK
+        foreignId position_id FK
+        string title
+        string section_type
+        text description "nullable"
+        integer order_index
+        json metadata_json "nullable"
+        timestamp created_at "nullable"
+        timestamp updated_at "nullable"
+    }
+
+    CAREER_POSITION_ITEMS {
+        bigint id PK
+        foreignId position_id FK
+        foreignId section_id FK "nullable"
+        string item_type
+        nullableMorphs target
+        text description "nullable"
+        string importance_level
+        string source_type
+        integer order_index
+        json metadata_json "nullable"
+        timestamp created_at "nullable"
+        timestamp updated_at "nullable"
+    }
+
+    CAREER_POSITION_SAVES {
+        bigint id PK
+        foreignId user_id FK
+        foreignId position_id FK
+        timestamp created_at "nullable"
+        timestamp updated_at "nullable"
+    }
+
+    CAREER_USER_PATHWAYS {
+        bigint id PK
+        foreignId user_id FK
+        string title
+        string slug
+        foreignId program_id FK "nullable"
+        foreignId career_position_id FK "nullable"
+        text story "nullable"
+        string status
+        string visibility
+        timestamp published_at "nullable"
+        unsignedInteger saves_count
+        unsignedInteger comments_count
+        unsignedInteger reports_count
+        json metadata_json "nullable"
+        timestamp created_at "nullable"
+        timestamp updated_at "nullable"
+        timestamp deleted_at
+    }
+
+    CAREER_USER_PATHWAY_ITEMS {
+        bigint id PK
+        foreignId pathway_id FK
+        string item_type
+        string target_type "nullable"
+        unsignedBigInteger target_id "nullable"
+        unsignedInteger semester_number "nullable"
+        string title "nullable"
+        text note "nullable"
+        integer order_index
+        json metadata_json "nullable"
+        timestamp created_at "nullable"
+        timestamp updated_at "nullable"
+    }
+
+    CAREER_USER_PATHWAY_SAVES {
+        bigint id PK
+        foreignId user_id FK
+        foreignId pathway_id FK
+        timestamp created_at "nullable"
+        timestamp updated_at "nullable"
+    }
+
+    CAREER_USER_PATHWAY_COMMENTS {
+        bigint id PK
+        foreignId pathway_id FK
+        foreignId user_id FK
+        foreignId parent_id FK "nullable"
+        text body
+        string status
+        timestamp deleted_at
+    }
+
+    CAREER_USER_PATHWAY_REPORTS {
+        bigint id PK
+        foreignId reporter_id FK
+        foreignId pathway_id FK
+        string reason
+        text description "nullable"
+        string status
+    }
+
+    USERS ||--o{ SESSIONS : "user_id"
+    FACULTIES ||--o{ ACADEMIC_PROGRAMS : "faculty_id"
+    USERS ||--o{ MEDIA_FILES : "owner_id"
+    USERS ||--o{ PROFILES : "user_id"
+    MEDIA_FILES ||--o{ PROFILES : "avatar_media_file_id"
+    PROFILES ||--o{ STUDENT_PROFILES : "profile_id"
+    FACULTIES ||--o{ STUDENT_PROFILES : "faculty_id"
+    ACADEMIC_PROGRAMS ||--o{ STUDENT_PROFILES : "academic_program_id"
+    PROFILES ||--o{ ALUMNI_PROFILES : "profile_id"
+    FACULTIES ||--o{ ALUMNI_PROFILES : "faculty_id"
+    ACADEMIC_PROGRAMS ||--o{ ALUMNI_PROFILES : "academic_program_id"
+    PROFILES ||--o{ ADVISOR_PROFILES : "profile_id"
+    FACULTIES ||--o{ ADVISOR_PROFILES : "faculty_id"
+    USERS ||--o{ VERIFICATION_REQUESTS : "user_id"
+    FACULTIES ||--o{ VERIFICATION_REQUESTS : "submitted_faculty_id"
+    ACADEMIC_PROGRAMS ||--o{ VERIFICATION_REQUESTS : "submitted_academic_program_id"
+    VERIFICATION_REQUESTS ||--o{ VERIFICATION_EVIDENCES : "verification_request_id"
+    MEDIA_FILES ||--o{ VERIFICATION_EVIDENCES : "media_file_id"
+    EVIDENCE_CAPTURE_SESSIONS ||--o{ VERIFICATION_EVIDENCES : "capture_session_id"
+    VERIFICATION_REQUESTS ||--o{ VERIFICATION_REVIEW_ACTIONS : "verification_request_id"
+    USERS ||--o{ VERIFICATION_REVIEW_ACTIONS : "admin_id"
+    USERS ||--o{ AUDIT_LOGS : "actor_id"
+    USERS ||--o{ USER_IDENTITY_PROVIDERS : "user_id"
+    USERS ||--o{ POSTS : "user_id"
+    POSTS ||--o{ COMMENTS : "post_id"
+    USERS ||--o{ COMMENTS : "user_id"
+    COMMENTS ||--o{ COMMENTS : "parent_id"
+    POSTS ||--o{ POST_LIKES : "post_id"
+    USERS ||--o{ POST_LIKES : "user_id"
+    POSTS ||--o{ POST_SAVES : "post_id"
+    USERS ||--o{ POST_SAVES : "user_id"
+    COMMENTS ||--o{ COMMENT_LIKES : "comment_id"
+    USERS ||--o{ COMMENT_LIKES : "user_id"
+    USERS ||--o{ REPORTS : "reporter_id"
+    USERS ||--o{ EVIDENCE_CAPTURE_SESSIONS : "user_id"
+    VERIFICATION_REQUESTS ||--o{ EVIDENCE_CAPTURE_SESSIONS : "verification_request_id"
+    VERIFICATION_REQUESTS ||--o{ EVIDENCE_ANALYSIS_JOBS : "verification_request_id"
+    VERIFICATION_EVIDENCES ||--o{ EVIDENCE_ANALYSIS_JOBS : "verification_evidence_id"
+    MEDIA_FILES ||--o{ EVIDENCE_ANALYSIS_JOBS : "media_file_id"
+    EVIDENCE_ANALYSIS_JOBS ||--o{ EVIDENCE_ANALYSIS_RESULTS : "analysis_job_id"
+    VERIFICATION_REQUESTS ||--o{ EVIDENCE_ANALYSIS_RESULTS : "verification_request_id"
+    VERIFICATION_EVIDENCES ||--o{ EVIDENCE_ANALYSIS_RESULTS : "verification_evidence_id"
+    POSTS ||--o{ POST_HIDES : "post_id"
+    USERS ||--o{ POST_HIDES : "user_id"
+    USERS ||--o{ MENTOR_ACCESSES : "user_id"
+    USERS ||--o{ PERMISSION_GRANTS : "user_id"
+    ACADEMIC_PROGRAMS ||--o{ COMMUNITIES : "related_program_id"
+    USERS ||--o{ BLOCKED_USERS : "blocker_id"
+    USERS ||--o{ GREETINGS : "sender_id"
+    USERS ||--o{ CONNECTIONS : "user_one_id"
+    GREETINGS ||--o{ CONNECTIONS : "source_greeting_id"
+    USERS ||--o{ CONVERSATIONS : "created_by"
+    CONVERSATIONS ||--o{ CONVERSATION_PARTICIPANTS : "conversation_id"
+    USERS ||--o{ CONVERSATION_PARTICIPANTS : "user_id"
+    CONVERSATIONS ||--o{ MESSAGES : "conversation_id"
+    USERS ||--o{ MESSAGES : "sender_id"
+    POSTS ||--o{ MESSAGES : "shared_post_id"
+    MESSAGES ||--o{ MESSAGES : "reply_to_message_id"
+    CONVERSATIONS ||--o{ CONVERSATION_USER_SETTINGS : "conversation_id"
+    USERS ||--o{ CONVERSATION_USER_SETTINGS : "user_id"
+    CONVERSATIONS ||--o{ CONVERSATION_PINNED_MESSAGES : "conversation_id"
+    MESSAGES ||--o{ CONVERSATION_PINNED_MESSAGES : "message_id"
+    USERS ||--o{ CONVERSATION_PINNED_MESSAGES : "pinned_by"
+    USERS ||--o{ PROFILE_PRIVACY_SETTINGS : "user_id"
+    USERS ||--o{ NOTIFICATION_PREFERENCES : "user_id"
+    USERS ||--o{ MEDIA : "user_id"
+    MEDIA ||--o{ MEDIA_VARIANTS : "media_id"
+    COMMUNITIES ||--o{ COMMUNITY_MEMBERS : "community_id"
+    USERS ||--o{ COMMUNITY_MEMBERS : "user_id"
+    USERS ||--o{ MENTOR_ACCESS_REQUESTS : "user_id"
+    MEDIA ||--o{ MENTOR_ACCESS_REQUESTS : "evidence_media_id"
+    USERS ||--o{ MENTOR_PROFILES : "user_id"
+    USERS ||--o{ MENTOR_REQUESTS : "student_id"
+    MENTOR_PROFILES ||--o{ MENTOR_REQUESTS : "mentor_profile_id"
+    CONVERSATIONS ||--o{ MENTOR_REQUESTS : "conversation_id"
+    MENTOR_REQUESTS ||--o{ MENTOR_FEEDBACK : "mentor_request_id"
+    USERS ||--o{ MENTOR_FEEDBACK : "student_id"
+    USERS ||--o{ COMMUNITY_JOIN_REQUESTS : "user_id"
+    USERS ||--o{ COMMUNITY_RESOURCES : "approved_by"
+    ACADEMIC_PROGRAMS ||--o{ COMMUNITY_SUGGESTIONS : "related_program_id"
+    USERS ||--o{ COMMUNITY_SUGGESTIONS : "proposed_owner_id"
+    USERS ||--o{ COMMUNITY_EVENTS : "created_by"
+    COMMUNITY_EVENTS ||--o{ COMMUNITY_EVENT_RSVPS : "event_id"
+    USERS ||--o{ COMMUNITY_EVENT_RSVPS : "user_id"
+    USERS ||--o{ USER_FOLLOWS : "follower_id"
+    POSTS ||--o{ POST_REPOSTS : "post_id"
+    USERS ||--o{ POST_REPOSTS : "user_id"
+    USERS ||--o{ TEMPORARY_AVATARS : "user_id"
+    MEDIA ||--o{ TEMPORARY_AVATARS : "previous_media_id"
+    POSTS ||--o{ OPPORTUNITIES : "post_id"
+    FACULTIES ||--o{ MAJORS : "faculty_id"
+    ADMISSION_COHORTS ||--o{ TRAINING_PROGRAMS : "cohort_id"
+    FACULTIES ||--o{ TRAINING_PROGRAMS : "faculty_id"
+    MAJORS ||--o{ TRAINING_PROGRAMS : "major_id"
+    TRAINING_PROGRAMS ||--o{ CURRICULUM_COURSE_GROUPS : "program_id"
+    TRAINING_PROGRAMS ||--o{ CURRICULUM_COURSES : "program_id"
+    CURRICULUM_COURSE_GROUPS ||--o{ CURRICULUM_COURSES : "group_id"
+    TRAINING_PROGRAMS ||--o{ PROGRAM_LEARNING_OUTCOMES : "program_id"
+    USERS ||--o{ SOURCE_DOCUMENTS : "uploaded_by"
+    KNOWLEDGE_BATCHES ||--o{ SOURCE_DOCUMENTS : "knowledge_batch_id"
+    SOURCE_DOCUMENTS ||--o{ DOCUMENT_CHUNKS : "source_document_id"
+    KNOWLEDGE_BATCHES ||--o{ DOCUMENT_CHUNKS : "knowledge_batch_id"
+    USERS ||--o{ CHAT_SESSIONS : "user_id"
+    CHAT_SESSIONS ||--o{ CHAT_MESSAGES : "session_id"
+    CHAT_SESSIONS ||--o{ AI_QUESTIONS : "session_id"
+    USERS ||--o{ AI_QUESTIONS : "user_id"
+    AI_QUESTIONS ||--o{ AI_ANSWERS : "question_id"
+    AI_QUESTIONS ||--o{ AI_RETRIEVED_CHUNKS : "question_id"
+    DOCUMENT_CHUNKS ||--o{ AI_RETRIEVED_CHUNKS : "document_chunk_id"
+    AI_QUESTIONS ||--o{ AI_STRUCTURED_QUERIES : "question_id"
+    AI_ANSWERS ||--o{ AI_FEEDBACK : "answer_id"
+    USERS ||--o{ AI_FEEDBACK : "user_id"
+    SOURCE_DOCUMENTS ||--o{ TRAINING_PROGRAM_EXTRACTION_CANDIDATES : "source_document_id"
+    USERS ||--o{ PUSH_SUBSCRIPTIONS : "user_id"
+    USERS ||--o{ USER_CONTENT_PREFERENCES : "user_id"
+    USERS ||--o{ SUPPORT_TICKETS : "user_id"
+    CAREER_IMPORT_RUNS ||--o{ CAREER_SOURCE_DOCUMENTS : "import_run_id"
+    CAREER_FACULTIES ||--o{ CAREER_MAJORS : "faculty_id"
+    CAREER_COHORTS ||--o{ CAREER_PROGRAMS : "cohort_id"
+    CAREER_FACULTIES ||--o{ CAREER_PROGRAMS : "faculty_id"
+    CAREER_MAJORS ||--o{ CAREER_PROGRAMS : "major_id"
+    CAREER_SOURCE_DOCUMENTS ||--o{ CAREER_PROGRAMS : "source_document_id"
+    CAREER_PROGRAMS ||--o{ CAREER_SEMESTERS : "program_id"
+    CAREER_PROGRAMS ||--o{ CAREER_PROGRAM_COURSES : "program_id"
+    CAREER_SEMESTERS ||--o{ CAREER_PROGRAM_COURSES : "semester_id"
+    CAREER_COURSES ||--o{ CAREER_PROGRAM_COURSES : "course_id"
+    CAREER_SOURCE_DOCUMENTS ||--o{ CAREER_PROGRAM_COURSES : "source_document_id"
+    CAREER_COURSES ||--o{ CAREER_COURSE_DESCRIPTIONS : "course_id"
+    CAREER_IMPORT_RUNS ||--o{ CAREER_DATA_QUALITY_ISSUES : "import_run_id"
+    CAREER_SOURCE_DOCUMENTS ||--o{ CAREER_DATA_QUALITY_ISSUES : "source_document_id"
+    CAREER_PROGRAMS ||--o{ CAREER_DATA_QUALITY_ISSUES : "program_id"
+    USERS ||--o{ CAREER_CONTRIBUTIONS : "user_id"
+    CAREER_CONTRIBUTIONS ||--o{ CAREER_CONTRIBUTION_MODERATION_LOGS : "career_contribution_id"
+    USERS ||--o{ CAREER_CONTRIBUTION_MODERATION_LOGS : "admin_id"
+    CAREER_CONTRIBUTIONS ||--o{ CAREER_CONTRIBUTION_VOTES : "career_contribution_id"
+    USERS ||--o{ CAREER_CONTRIBUTION_VOTES : "user_id"
+    USERS ||--o{ CAREER_SKILLS : "created_by"
+    CAREER_COURSES ||--o{ CAREER_COURSE_SKILL_EDGES : "career_course_id"
+    CAREER_SKILLS ||--o{ CAREER_COURSE_SKILL_EDGES : "career_skill_id"
+    USERS ||--o{ CAREER_COURSE_SKILL_EDGES : "verified_by"
+    USERS ||--o{ CAREER_POSITIONS : "created_by"
+    CAREER_FACULTIES ||--o{ CAREER_POSITIONS : "related_faculty_id"
+    CAREER_MAJORS ||--o{ CAREER_POSITIONS : "related_major_id"
+    CAREER_PROGRAMS ||--o{ CAREER_POSITIONS : "related_program_id"
+    CAREER_POSITIONS ||--o{ CAREER_POSITION_SECTIONS : "position_id"
+    CAREER_POSITIONS ||--o{ CAREER_POSITION_ITEMS : "position_id"
+    CAREER_POSITION_SECTIONS ||--o{ CAREER_POSITION_ITEMS : "section_id"
+    USERS ||--o{ CAREER_POSITION_SAVES : "user_id"
+    CAREER_POSITIONS ||--o{ CAREER_POSITION_SAVES : "position_id"
+    USERS ||--o{ CAREER_USER_PATHWAYS : "user_id"
+    CAREER_PROGRAMS ||--o{ CAREER_USER_PATHWAYS : "program_id"
+    CAREER_POSITIONS ||--o{ CAREER_USER_PATHWAYS : "career_position_id"
+    CAREER_USER_PATHWAYS ||--o{ CAREER_USER_PATHWAY_ITEMS : "pathway_id"
+    USERS ||--o{ CAREER_USER_PATHWAY_SAVES : "user_id"
+    CAREER_USER_PATHWAYS ||--o{ CAREER_USER_PATHWAY_SAVES : "pathway_id"
+    CAREER_USER_PATHWAYS ||--o{ CAREER_USER_PATHWAY_COMMENTS : "pathway_id"
+    USERS ||--o{ CAREER_USER_PATHWAY_COMMENTS : "user_id"
+    CAREER_USER_PATHWAY_COMMENTS ||--o{ CAREER_USER_PATHWAY_COMMENTS : "parent_id"
+    USERS ||--o{ CAREER_USER_PATHWAY_REPORTS : "reporter_id"
+    CAREER_USER_PATHWAYS ||--o{ CAREER_USER_PATHWAY_REPORTS : "pathway_id"

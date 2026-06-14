@@ -1,0 +1,57 @@
+erDiagram
+
+    CACHE {
+        string key PK
+        mediumText value
+        bigInteger expiration
+    }
+
+    CACHE_LOCKS {
+        string key PK
+        string owner
+        bigInteger expiration
+    }
+
+    JOBS {
+        bigint id PK
+        string queue
+        longText payload
+        unsignedSmallInteger attempts
+        unsignedInteger reserved_at "nullable"
+        unsignedInteger available_at
+        unsignedInteger created_at
+    }
+
+    JOB_BATCHES {
+        string id PK
+        string name
+        integer total_jobs
+        integer pending_jobs
+        integer failed_jobs
+        longText failed_job_ids
+        mediumText options "nullable"
+        integer cancelled_at "nullable"
+        integer created_at
+        integer finished_at "nullable"
+    }
+
+    FAILED_JOBS {
+        bigint id PK
+        string uuid
+        string connection
+        string queue
+        longText payload
+        longText exception
+        timestamp failed_at
+    }
+
+    NOTIFICATIONS {
+        uuid id PK
+        string type
+        morphs notifiable
+        text data
+        timestamp read_at "nullable"
+        timestamp created_at "nullable"
+        timestamp updated_at "nullable"
+    }
+

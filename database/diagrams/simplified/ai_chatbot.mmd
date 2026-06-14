@@ -1,0 +1,187 @@
+erDiagram
+
+    SOURCE_DOCUMENTS {
+        bigint id PK
+        string document_type
+        string cohort "nullable"
+        integer effective_year "nullable"
+        text source_url "nullable"
+        string file_path "nullable"
+        string mime_type "nullable"
+        string source_hash "nullable"
+        string status
+        foreignId uploaded_by FK "nullable"
+        timestamp published_at "nullable"
+        timestamp created_at "nullable"
+        timestamp updated_at "nullable"
+        foreignId knowledge_batch_id FK "nullable"
+        string knowledge_batch_key "nullable"
+    }
+
+    DOCUMENT_CHUNKS {
+        bigint id PK
+        foreignId source_document_id FK
+        integer chunk_index
+        text chunk_text
+        integer token_count
+        integer page_start "nullable"
+        integer page_end "nullable"
+        string part "nullable"
+        string chapter "nullable"
+        string section "nullable"
+        string article "nullable"
+        text clause "nullable"
+        json metadata_json "nullable"
+        string embedding_status
+        timestamp created_at "nullable"
+        timestamp updated_at "nullable"
+        foreignId knowledge_batch_id FK "nullable"
+        string knowledge_batch_key "nullable"
+    }
+
+    CHAT_SESSIONS {
+        bigint id PK
+        foreignId user_id FK "nullable"
+        string title "nullable"
+        timestamp created_at "nullable"
+        timestamp updated_at "nullable"
+    }
+
+    CHAT_MESSAGES {
+        bigint id PK
+        foreignId session_id FK
+        string role
+        json metadata_json "nullable"
+        timestamp created_at "nullable"
+        timestamp updated_at "nullable"
+    }
+
+    AI_QUESTIONS {
+        bigint id PK
+        foreignId session_id FK
+        foreignId user_id FK "nullable"
+        text original_question
+        text normalized_question "nullable"
+        string intent "nullable"
+        string source_route "nullable"
+        double confidence
+        timestamp created_at
+    }
+
+    AI_ANSWERS {
+        bigint id PK
+        foreignId question_id FK
+        text answer_text
+        string model_provider "nullable"
+        string model_name "nullable"
+        string prompt_version "nullable"
+        integer latency_ms
+        integer input_tokens
+        integer output_tokens
+        integer total_tokens
+        string status
+        timestamp created_at
+    }
+
+    AI_RETRIEVED_CHUNKS {
+        bigint id PK
+        foreignId question_id FK
+        foreignId document_chunk_id FK
+        double score
+        double rerank_score "nullable"
+        json metadata_json "nullable"
+        timestamp created_at
+    }
+
+    AI_STRUCTURED_QUERIES {
+        bigint id PK
+        foreignId question_id FK
+        string query_type
+        json filters_json "nullable"
+        integer result_count
+        json metadata_json "nullable"
+        timestamp created_at
+    }
+
+    AI_FEEDBACK {
+        bigint id PK
+        foreignId answer_id FK
+        foreignId user_id FK "nullable"
+        integer rating
+        timestamp created_at
+    }
+
+    AI_PROMPT_VERSIONS {
+        bigint id PK
+        string name
+        string version
+        text content
+        boolean is_active
+        timestamp created_at "nullable"
+        timestamp updated_at "nullable"
+    }
+
+    SOURCE_SYNC_LOGS {
+        bigint id PK
+        string source_type
+        text source_url "nullable"
+        string status
+        timestamp started_at
+        timestamp finished_at "nullable"
+        integer records_found
+        integer records_created
+        integer records_updated
+        text error_message "nullable"
+        json metadata_json "nullable"
+        timestamp created_at "nullable"
+        timestamp updated_at "nullable"
+    }
+
+    KNOWLEDGE_BATCHES {
+        bigint id PK
+        string batch_key
+        string name
+        string root_path "nullable"
+        string status
+        integer total_imported
+        integer total_failed
+        integer total_needs_ocr
+        integer total_chunks
+        integer total_vectors
+        timestamp started_at "nullable"
+        timestamp finished_at "nullable"
+        text metadata_json "nullable"
+        timestamp created_at "nullable"
+        timestamp updated_at "nullable"
+    }
+
+    TRAINING_PROGRAM_EXTRACTION_CANDIDATES {
+        bigint id PK
+        foreignId source_document_id FK
+        string field_name
+        string candidate_value
+        double confidence
+        text evidence_text "nullable"
+        integer page "nullable"
+        text metadata_json "nullable"
+        timestamp created_at
+    }
+
+    %% External References
+    USERS {}
+
+    USERS ||--o{ SOURCE_DOCUMENTS : "uploaded_by"
+    KNOWLEDGE_BATCHES ||--o{ SOURCE_DOCUMENTS : "knowledge_batch_id"
+    SOURCE_DOCUMENTS ||--o{ DOCUMENT_CHUNKS : "source_document_id"
+    KNOWLEDGE_BATCHES ||--o{ DOCUMENT_CHUNKS : "knowledge_batch_id"
+    USERS ||--o{ CHAT_SESSIONS : "user_id"
+    CHAT_SESSIONS ||--o{ CHAT_MESSAGES : "session_id"
+    CHAT_SESSIONS ||--o{ AI_QUESTIONS : "session_id"
+    USERS ||--o{ AI_QUESTIONS : "user_id"
+    AI_QUESTIONS ||--o{ AI_ANSWERS : "question_id"
+    AI_QUESTIONS ||--o{ AI_RETRIEVED_CHUNKS : "question_id"
+    DOCUMENT_CHUNKS ||--o{ AI_RETRIEVED_CHUNKS : "document_chunk_id"
+    AI_QUESTIONS ||--o{ AI_STRUCTURED_QUERIES : "question_id"
+    AI_ANSWERS ||--o{ AI_FEEDBACK : "answer_id"
+    USERS ||--o{ AI_FEEDBACK : "user_id"
+    SOURCE_DOCUMENTS ||--o{ TRAINING_PROGRAM_EXTRACTION_CANDIDATES : "source_document_id"

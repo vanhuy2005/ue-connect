@@ -1,0 +1,351 @@
+erDiagram
+
+    CAREER_IMPORT_RUNS {
+        bigint id PK
+        string status
+        timestamp started_at "nullable"
+        timestamp completed_at "nullable"
+        text log "nullable"
+        timestamp created_at "nullable"
+        timestamp updated_at "nullable"
+    }
+
+    CAREER_SOURCE_DOCUMENTS {
+        bigint id PK
+        foreignId import_run_id FK
+        string file_path
+        string document_type
+        string extraction_status
+        text error_message "nullable"
+        timestamp created_at "nullable"
+        timestamp updated_at "nullable"
+    }
+
+    CAREER_COHORTS {
+        bigint id PK
+        string name
+        string slug
+        integer start_year "nullable"
+        timestamp created_at "nullable"
+        timestamp updated_at "nullable"
+    }
+
+    CAREER_FACULTIES {
+        bigint id PK
+        string name
+        string slug
+        timestamp created_at "nullable"
+        timestamp updated_at "nullable"
+    }
+
+    CAREER_MAJORS {
+        bigint id PK
+        foreignId faculty_id FK
+        string name
+        string slug
+        timestamp created_at "nullable"
+        timestamp updated_at "nullable"
+    }
+
+    CAREER_PROGRAMS {
+        bigint id PK
+        foreignId cohort_id FK
+        foreignId faculty_id FK
+        foreignId major_id FK
+        foreignId source_document_id FK "nullable"
+        string name
+        string slug
+        string status
+        integer total_credits "nullable"
+        integer total_semesters "nullable"
+        string original_dir "nullable"
+        timestamp created_at "nullable"
+        timestamp updated_at "nullable"
+    }
+
+    CAREER_SEMESTERS {
+        bigint id PK
+        foreignId program_id FK
+        integer semester_number
+        string title "nullable"
+        timestamp created_at "nullable"
+        timestamp updated_at "nullable"
+    }
+
+    CAREER_COURSES {
+        bigint id PK
+        string code
+        string name
+        timestamp created_at "nullable"
+        timestamp updated_at "nullable"
+    }
+
+    CAREER_PROGRAM_COURSES {
+        bigint id PK
+        foreignId program_id FK
+        foreignId semester_id FK "nullable"
+        foreignId course_id FK
+        foreignId source_document_id FK "nullable"
+        integer credits "nullable"
+        boolean is_mandatory
+        string knowledge_block "nullable"
+        timestamp created_at "nullable"
+        timestamp updated_at "nullable"
+    }
+
+    CAREER_COURSE_DESCRIPTIONS {
+        bigint id PK
+        foreignId course_id FK
+        text description_text
+        timestamp created_at "nullable"
+        timestamp updated_at "nullable"
+    }
+
+    CAREER_DATA_QUALITY_ISSUES {
+        bigint id PK
+        foreignId import_run_id FK
+        foreignId source_document_id FK "nullable"
+        foreignId program_id FK "nullable"
+        string issue_type
+        string severity
+        text message
+        json context "nullable"
+        timestamp created_at "nullable"
+        timestamp updated_at "nullable"
+    }
+
+    CAREER_CONTRIBUTIONS {
+        bigint id PK
+        foreignId user_id FK
+        unsignedBigInteger target_id
+        string contribution_type
+        string title "nullable"
+        text content
+        string status
+        string visibility
+        string source_type
+        unsignedInteger upvotes_count
+        unsignedInteger downvotes_count
+        unsignedInteger reports_count
+        timestamp verified_at "nullable"
+        foreignId verified_by FK "nullable"
+        json metadata_json "nullable"
+        timestamp created_at "nullable"
+        timestamp updated_at "nullable"
+        timestamp deleted_at
+    }
+
+    CAREER_CONTRIBUTION_MODERATION_LOGS {
+        bigint id PK
+        foreignId career_contribution_id FK
+        foreignId admin_id FK
+        string action
+        text reason "nullable"
+        string previous_status "nullable"
+        string new_status "nullable"
+        timestamp created_at "nullable"
+        timestamp updated_at "nullable"
+    }
+
+    CAREER_CONTRIBUTION_VOTES {
+        bigint id PK
+        foreignId career_contribution_id FK
+        foreignId user_id FK
+        tinyInteger value
+        timestamp created_at "nullable"
+        timestamp updated_at "nullable"
+    }
+
+    CAREER_SKILLS {
+        bigint id PK
+        string name
+        string normalized_name
+        string category
+        text description "nullable"
+        foreignId created_by FK "nullable"
+        boolean is_active
+        timestamp created_at "nullable"
+        timestamp updated_at "nullable"
+    }
+
+    CAREER_COURSE_SKILL_EDGES {
+        bigint id PK
+        foreignId career_course_id FK
+        foreignId career_skill_id FK
+        string source_type
+        string relevance_level
+        boolean is_active
+        foreignId verified_by FK "nullable"
+        timestamp verified_at "nullable"
+        json metadata_json "nullable"
+        timestamp created_at "nullable"
+        timestamp updated_at "nullable"
+    }
+
+    CAREER_POSITIONS {
+        bigint id PK
+        foreignId created_by FK
+        string title
+        string slug
+        text description "nullable"
+        string industry "nullable"
+        string target_audience "nullable"
+        foreignId related_faculty_id FK "nullable"
+        foreignId related_major_id FK "nullable"
+        foreignId related_program_id FK "nullable"
+        string status
+        string visibility
+        timestamp published_at "nullable"
+        unsignedInteger upvotes_count
+        unsignedInteger saves_count
+        unsignedInteger reports_count
+        json metadata_json "nullable"
+        timestamp created_at "nullable"
+        timestamp updated_at "nullable"
+        timestamp deleted_at
+    }
+
+    CAREER_POSITION_SECTIONS {
+        bigint id PK
+        foreignId position_id FK
+        string title
+        string section_type
+        text description "nullable"
+        integer order_index
+        json metadata_json "nullable"
+        timestamp created_at "nullable"
+        timestamp updated_at "nullable"
+    }
+
+    CAREER_POSITION_ITEMS {
+        bigint id PK
+        foreignId position_id FK
+        foreignId section_id FK "nullable"
+        string item_type
+        nullableMorphs target
+        text description "nullable"
+        string importance_level
+        string source_type
+        integer order_index
+        json metadata_json "nullable"
+        timestamp created_at "nullable"
+        timestamp updated_at "nullable"
+    }
+
+    CAREER_POSITION_SAVES {
+        bigint id PK
+        foreignId user_id FK
+        foreignId position_id FK
+        timestamp created_at "nullable"
+        timestamp updated_at "nullable"
+    }
+
+    CAREER_USER_PATHWAYS {
+        bigint id PK
+        foreignId user_id FK
+        string title
+        string slug
+        foreignId program_id FK "nullable"
+        foreignId career_position_id FK "nullable"
+        text story "nullable"
+        string status
+        string visibility
+        timestamp published_at "nullable"
+        unsignedInteger saves_count
+        unsignedInteger comments_count
+        unsignedInteger reports_count
+        json metadata_json "nullable"
+        timestamp created_at "nullable"
+        timestamp updated_at "nullable"
+        timestamp deleted_at
+    }
+
+    CAREER_USER_PATHWAY_ITEMS {
+        bigint id PK
+        foreignId pathway_id FK
+        string item_type
+        string target_type "nullable"
+        unsignedBigInteger target_id "nullable"
+        unsignedInteger semester_number "nullable"
+        string title "nullable"
+        text note "nullable"
+        integer order_index
+        json metadata_json "nullable"
+        timestamp created_at "nullable"
+        timestamp updated_at "nullable"
+    }
+
+    CAREER_USER_PATHWAY_SAVES {
+        bigint id PK
+        foreignId user_id FK
+        foreignId pathway_id FK
+        timestamp created_at "nullable"
+        timestamp updated_at "nullable"
+    }
+
+    CAREER_USER_PATHWAY_COMMENTS {
+        bigint id PK
+        foreignId pathway_id FK
+        foreignId user_id FK
+        foreignId parent_id FK "nullable"
+        text body
+        string status
+        timestamp deleted_at
+    }
+
+    CAREER_USER_PATHWAY_REPORTS {
+        bigint id PK
+        foreignId reporter_id FK
+        foreignId pathway_id FK
+        string reason
+        text description "nullable"
+        string status
+    }
+
+    %% External References
+    USERS {}
+
+    CAREER_IMPORT_RUNS ||--o{ CAREER_SOURCE_DOCUMENTS : "import_run_id"
+    CAREER_FACULTIES ||--o{ CAREER_MAJORS : "faculty_id"
+    CAREER_COHORTS ||--o{ CAREER_PROGRAMS : "cohort_id"
+    CAREER_FACULTIES ||--o{ CAREER_PROGRAMS : "faculty_id"
+    CAREER_MAJORS ||--o{ CAREER_PROGRAMS : "major_id"
+    CAREER_SOURCE_DOCUMENTS ||--o{ CAREER_PROGRAMS : "source_document_id"
+    CAREER_PROGRAMS ||--o{ CAREER_SEMESTERS : "program_id"
+    CAREER_PROGRAMS ||--o{ CAREER_PROGRAM_COURSES : "program_id"
+    CAREER_SEMESTERS ||--o{ CAREER_PROGRAM_COURSES : "semester_id"
+    CAREER_COURSES ||--o{ CAREER_PROGRAM_COURSES : "course_id"
+    CAREER_SOURCE_DOCUMENTS ||--o{ CAREER_PROGRAM_COURSES : "source_document_id"
+    CAREER_COURSES ||--o{ CAREER_COURSE_DESCRIPTIONS : "course_id"
+    CAREER_IMPORT_RUNS ||--o{ CAREER_DATA_QUALITY_ISSUES : "import_run_id"
+    CAREER_SOURCE_DOCUMENTS ||--o{ CAREER_DATA_QUALITY_ISSUES : "source_document_id"
+    CAREER_PROGRAMS ||--o{ CAREER_DATA_QUALITY_ISSUES : "program_id"
+    USERS ||--o{ CAREER_CONTRIBUTIONS : "user_id"
+    CAREER_CONTRIBUTIONS ||--o{ CAREER_CONTRIBUTION_MODERATION_LOGS : "career_contribution_id"
+    USERS ||--o{ CAREER_CONTRIBUTION_MODERATION_LOGS : "admin_id"
+    CAREER_CONTRIBUTIONS ||--o{ CAREER_CONTRIBUTION_VOTES : "career_contribution_id"
+    USERS ||--o{ CAREER_CONTRIBUTION_VOTES : "user_id"
+    USERS ||--o{ CAREER_SKILLS : "created_by"
+    CAREER_COURSES ||--o{ CAREER_COURSE_SKILL_EDGES : "career_course_id"
+    CAREER_SKILLS ||--o{ CAREER_COURSE_SKILL_EDGES : "career_skill_id"
+    USERS ||--o{ CAREER_COURSE_SKILL_EDGES : "verified_by"
+    USERS ||--o{ CAREER_POSITIONS : "created_by"
+    CAREER_FACULTIES ||--o{ CAREER_POSITIONS : "related_faculty_id"
+    CAREER_MAJORS ||--o{ CAREER_POSITIONS : "related_major_id"
+    CAREER_PROGRAMS ||--o{ CAREER_POSITIONS : "related_program_id"
+    CAREER_POSITIONS ||--o{ CAREER_POSITION_SECTIONS : "position_id"
+    CAREER_POSITIONS ||--o{ CAREER_POSITION_ITEMS : "position_id"
+    CAREER_POSITION_SECTIONS ||--o{ CAREER_POSITION_ITEMS : "section_id"
+    USERS ||--o{ CAREER_POSITION_SAVES : "user_id"
+    CAREER_POSITIONS ||--o{ CAREER_POSITION_SAVES : "position_id"
+    USERS ||--o{ CAREER_USER_PATHWAYS : "user_id"
+    CAREER_PROGRAMS ||--o{ CAREER_USER_PATHWAYS : "program_id"
+    CAREER_POSITIONS ||--o{ CAREER_USER_PATHWAYS : "career_position_id"
+    CAREER_USER_PATHWAYS ||--o{ CAREER_USER_PATHWAY_ITEMS : "pathway_id"
+    USERS ||--o{ CAREER_USER_PATHWAY_SAVES : "user_id"
+    CAREER_USER_PATHWAYS ||--o{ CAREER_USER_PATHWAY_SAVES : "pathway_id"
+    CAREER_USER_PATHWAYS ||--o{ CAREER_USER_PATHWAY_COMMENTS : "pathway_id"
+    USERS ||--o{ CAREER_USER_PATHWAY_COMMENTS : "user_id"
+    CAREER_USER_PATHWAY_COMMENTS ||--o{ CAREER_USER_PATHWAY_COMMENTS : "parent_id"
+    USERS ||--o{ CAREER_USER_PATHWAY_REPORTS : "reporter_id"
+    CAREER_USER_PATHWAYS ||--o{ CAREER_USER_PATHWAY_REPORTS : "pathway_id"

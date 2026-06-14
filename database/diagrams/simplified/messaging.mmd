@@ -1,0 +1,120 @@
+erDiagram
+
+    CONVERSATIONS {
+        bigint id PK
+        string conversation_type
+        string status
+        foreignId created_by FK "nullable"
+        foreignId direct_user_low_id FK "nullable"
+        foreignId direct_user_high_id FK "nullable"
+        unsignedBigInteger last_message_id "nullable"
+        timestamp last_message_at "nullable"
+        timestamp deleted_at
+        timestamp created_at "nullable"
+        timestamp updated_at "nullable"
+        unsignedBigInteger mentor_request_id "nullable"
+        unsignedBigInteger source_id "nullable"
+    }
+
+    CONVERSATION_PARTICIPANTS {
+        bigint id PK
+        foreignId conversation_id FK
+        foreignId user_id FK
+        string participant_role
+        string status
+        timestamp joined_at
+        timestamp left_at "nullable"
+        timestamp last_read_at "nullable"
+        timestamp muted_until "nullable"
+        timestamp created_at "nullable"
+        timestamp updated_at "nullable"
+    }
+
+    MESSAGES {
+        bigint id PK
+        foreignId conversation_id FK
+        foreignId sender_id FK
+        text body "nullable"
+        string message_type
+        string status
+        foreignId shared_post_id FK "nullable"
+        json metadata_json "nullable"
+        timestamp edited_at "nullable"
+        timestamp deleted_at
+        timestamp created_at "nullable"
+        timestamp updated_at "nullable"
+        foreignId reply_to_message_id FK "nullable"
+        foreignId forwarded_from_message_id FK "nullable"
+        timestamp recalled_at "nullable"
+        foreignId recalled_by FK "nullable"
+    }
+
+    CONVERSATION_USER_SETTINGS {
+        bigint id PK
+        foreignId conversation_id FK
+        foreignId user_id FK
+        foreignId target_user_id FK "nullable"
+        string nickname "nullable"
+        timestamp muted_until "nullable"
+        boolean is_restricted
+        timestamp deleted_at "nullable"
+        timestamp created_at "nullable"
+        timestamp updated_at "nullable"
+    }
+
+    CONVERSATION_PINNED_MESSAGES {
+        bigint id PK
+        foreignId conversation_id FK
+        foreignId message_id FK
+        foreignId pinned_by FK
+        timestamp created_at "nullable"
+        timestamp updated_at "nullable"
+    }
+
+    GREETINGS {
+        bigint id PK
+        foreignId sender_id FK
+        foreignId receiver_id FK
+        text message "nullable"
+        string status
+        text decline_reason "nullable"
+        timestamp accepted_at "nullable"
+        timestamp declined_at "nullable"
+        timestamp expires_at "nullable"
+        timestamp deleted_at
+        timestamp created_at "nullable"
+        timestamp updated_at "nullable"
+    }
+
+    CONNECTIONS {
+        bigint id PK
+        foreignId user_one_id FK
+        foreignId user_two_id FK
+        string status
+        foreignId source_greeting_id FK "nullable"
+        timestamp connected_at
+        timestamp disconnected_at "nullable"
+        timestamp deleted_at
+        timestamp created_at "nullable"
+        timestamp updated_at "nullable"
+    }
+
+    %% External References
+    USERS {}
+    POSTS {}
+
+    USERS ||--o{ GREETINGS : "sender_id"
+    USERS ||--o{ CONNECTIONS : "user_one_id"
+    GREETINGS ||--o{ CONNECTIONS : "source_greeting_id"
+    USERS ||--o{ CONVERSATIONS : "created_by"
+    CONVERSATIONS ||--o{ CONVERSATION_PARTICIPANTS : "conversation_id"
+    USERS ||--o{ CONVERSATION_PARTICIPANTS : "user_id"
+    CONVERSATIONS ||--o{ MESSAGES : "conversation_id"
+    USERS ||--o{ MESSAGES : "sender_id"
+    POSTS ||--o{ MESSAGES : "shared_post_id"
+    MESSAGES ||--o{ MESSAGES : "reply_to_message_id"
+    CONVERSATIONS ||--o{ CONVERSATION_USER_SETTINGS : "conversation_id"
+    USERS ||--o{ CONVERSATION_USER_SETTINGS : "user_id"
+    CONVERSATIONS ||--o{ CONVERSATION_PINNED_MESSAGES : "conversation_id"
+    MESSAGES ||--o{ CONVERSATION_PINNED_MESSAGES : "message_id"
+    USERS ||--o{ CONVERSATION_PINNED_MESSAGES : "pinned_by"
