@@ -1192,7 +1192,7 @@ new #[Layout('layouts.app')] class extends Component
     }
 };
 ?>
-<section data-home-feed-shell class="mx-auto grid h-full min-h-0 w-full max-w-[760px] grid-rows-[auto_auto_minmax(0,1fr)] overflow-hidden" wire:init="loadInitialFeed">
+<section data-home-feed-shell class="mx-auto grid h-full min-h-0 w-full max-w-[860px] grid-rows-[auto_auto_minmax(0,1fr)] overflow-hidden" wire:init="loadInitialFeed">
     {{-- Page-local Header --}}
     <header data-feed-header class="hidden lg:block min-h-0 pb-1 lg:pb-3 pt-3 lg:pt-6 bg-white lg:bg-transparent px-4 lg:px-0">
         <h1 class="text-xl lg:text-2xl font-bold text-ue-text">Bảng tin</h1>
@@ -1266,7 +1266,7 @@ new #[Layout('layouts.app')] class extends Component
     <x-ui.toast />
 
     {{-- Feed Card Container (Fixed borders & background) --}}
-    <div data-feed-card class="min-h-0 flex-1 flex flex-col border-0 bg-transparent shadow-none rounded-none overflow-visible lg:overflow-hidden lg:rounded-[28px] lg:border lg:border-slate-200 lg:bg-white lg:shadow-sm lg:mb-6">
+    <div data-feed-card class="min-h-0 flex-1 flex flex-col border-0 bg-transparent shadow-none rounded-none overflow-visible lg:overflow-hidden lg:rounded-[28px] lg:border lg:border-slate-200 lg:bg-white lg:shadow-sm lg:mb-2">
         {{-- Scroll viewport --}}
         <div
             x-data="{
@@ -2188,4 +2188,3 @@ new #[Layout('layouts.app')] class extends Component
         @endif
     @endif
 </section>
-
