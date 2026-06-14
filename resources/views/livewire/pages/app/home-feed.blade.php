@@ -1278,26 +1278,26 @@ new #[Layout('layouts.app')] class extends Component
 
     {{-- Feed tabs, separated from feed stream --}}
     <nav data-feed-tabs class="mb-0 lg:mb-3 overflow-hidden border-b border-slate-200 bg-white lg:rounded-[24px] lg:border lg:shadow-sm shadow-none rounded-none">
-        <div class="flex h-11 lg:h-14 items-center overflow-x-auto ue-scrollbar-none px-4">
+        <div class="flex h-11 lg:h-14 items-center overflow-x-auto whitespace-nowrap no-scrollbar ue-scrollbar-none px-4">
                 {{-- Feed Tabs --}}
                 <button
                     type="button"
                     wire:click="setFeedTab('for_you')"
-                    class="relative flex h-full items-center px-4 sm:px-5 text-[15px] font-semibold transition-colors whitespace-nowrap {{ ($activeFeedTab === 'for_you' && $activeTypeFilter === 'all') ? 'text-ue-brand hover:text-ue-brand-active' : 'text-slate-500 hover:text-slate-800 hover:bg-slate-50/50' }}"
+                    class="relative flex-none h-full flex items-center px-4 py-3 text-sm font-semibold transition-colors whitespace-nowrap {{ ($activeFeedTab === 'for_you' && $activeTypeFilter === 'all') ? 'text-ue-brand hover:text-ue-brand-active' : 'text-slate-500 hover:text-slate-800 hover:bg-slate-50/50' }}"
                 >
                     Dành cho bạn
                     @if($activeFeedTab === 'for_you' && $activeTypeFilter === 'all')
-                        <span class="absolute bottom-0 left-4 right-4 sm:left-5 sm:right-5 h-[2px] rounded-full bg-ue-brand"></span>
+                        <span class="absolute bottom-0 left-4 right-4 h-[2px] rounded-full bg-ue-brand"></span>
                     @endif
                 </button>
                 <button
                     type="button"
                     wire:click="setFeedTab('following')"
-                    class="relative flex h-full items-center px-4 sm:px-5 text-[15px] font-semibold transition-colors whitespace-nowrap {{ ($activeFeedTab === 'following' && $activeTypeFilter === 'all') ? 'text-ue-brand hover:text-ue-brand-active' : 'text-slate-500 hover:text-slate-800 hover:bg-slate-50/50' }}"
+                    class="relative flex-none h-full flex items-center px-4 py-3 text-sm font-semibold transition-colors whitespace-nowrap {{ ($activeFeedTab === 'following' && $activeTypeFilter === 'all') ? 'text-ue-brand hover:text-ue-brand-active' : 'text-slate-500 hover:text-slate-800 hover:bg-slate-50/50' }}"
                 >
                     Theo dõi
                     @if($activeFeedTab === 'following' && $activeTypeFilter === 'all')
-                        <span class="absolute bottom-0 left-4 right-4 sm:left-5 sm:right-5 h-[2px] rounded-full bg-ue-brand"></span>
+                        <span class="absolute bottom-0 left-4 right-4 h-[2px] rounded-full bg-ue-brand"></span>
                     @endif
                 </button>
 
@@ -1307,7 +1307,7 @@ new #[Layout('layouts.app')] class extends Component
                 <button
                     type="button"
                     wire:click="setTypeFilter('experience')"
-                    class="relative flex h-full items-center px-4 text-[15px] font-semibold transition-colors whitespace-nowrap {{ $activeTypeFilter === 'experience' ? 'text-ue-brand hover:text-ue-brand-active' : 'text-slate-500 hover:text-slate-800 hover:bg-slate-50/50' }}"
+                    class="relative flex-none h-full flex items-center px-4 py-3 text-sm font-semibold transition-colors whitespace-nowrap {{ $activeTypeFilter === 'experience' ? 'text-ue-brand hover:text-ue-brand-active' : 'text-slate-500 hover:text-slate-800 hover:bg-slate-50/50' }}"
                 >
                     Kinh nghiệm
                     @if($activeTypeFilter === 'experience')
@@ -1317,7 +1317,7 @@ new #[Layout('layouts.app')] class extends Component
                 <button
                     type="button"
                     wire:click="setTypeFilter('opportunity')"
-                    class="relative flex h-full items-center px-4 text-[15px] font-semibold transition-colors whitespace-nowrap {{ $activeTypeFilter === 'opportunity' ? 'text-ue-brand hover:text-ue-brand-active' : 'text-slate-500 hover:text-slate-800 hover:bg-slate-50/50' }}"
+                    class="relative flex-none h-full flex items-center px-4 py-3 text-sm font-semibold transition-colors whitespace-nowrap {{ $activeTypeFilter === 'opportunity' ? 'text-ue-brand hover:text-ue-brand-active' : 'text-slate-500 hover:text-slate-800 hover:bg-slate-50/50' }}"
                 >
                     Cơ hội
                     @if($activeTypeFilter === 'opportunity')
@@ -1327,7 +1327,7 @@ new #[Layout('layouts.app')] class extends Component
                 <button
                     type="button"
                     wire:click="setTypeFilter('pedagogy')"
-                    class="relative flex h-full items-center px-4 text-[15px] font-semibold transition-colors whitespace-nowrap {{ $activeTypeFilter === 'pedagogy' ? 'text-ue-brand hover:text-ue-brand-active' : 'text-slate-500 hover:text-slate-800 hover:bg-slate-50/50' }}"
+                    class="relative flex-none h-full flex items-center px-4 py-3 text-sm font-semibold transition-colors whitespace-nowrap {{ $activeTypeFilter === 'pedagogy' ? 'text-ue-brand hover:text-ue-brand-active' : 'text-slate-500 hover:text-slate-800 hover:bg-slate-50/50' }}"
                 >
                     Sư phạm
                     @if($activeTypeFilter === 'pedagogy')
@@ -1433,8 +1433,9 @@ new #[Layout('layouts.app')] class extends Component
                                         }
                                     }
                                 @endphp
-                                <div class="flex flex-wrap items-center gap-1.5 mb-2 select-none">
-                                    <span class="text-sm font-bold text-slate-800 mr-0.5">{{ $currentUser->name }}</span>
+                                <div class="flex items-center gap-2 min-w-0 mb-2 select-none">
+                                    <span class="text-sm font-bold text-slate-800 truncate">{{ $currentUser->name }}</span>
+                                    <x-ui.icon name="check-circle" size="xs" class="text-ue-brand shrink-0" aria-label="Đã xác thực" />
 
                                     {{-- Visibility custom panel (Facebook-style) --}}
                                     <div class="relative flex-shrink-0">
@@ -1668,7 +1669,7 @@ new #[Layout('layouts.app')] class extends Component
 
                                 <div>
                                     <div class="flex items-start gap-2">
-                                        <div class="flex-1 min-w-0 relative" x-data="mentionComposer({ textareaId: 'post-body', wireModel: 'body' })" @focusout="setTimeout(() => { if (! $el.contains(document.activeElement)) closeDropdown() }, 150)">
+                                        <div class="flex-1 min-w-0 relative" x-data="typeof mentionComposer === 'function' ? mentionComposer({ textareaId: 'post-body', wireModel: 'body' }) : { showDropdown: false, suggestions: [], openUpward: false, dropdownTop: '100%', activeIndex: 0, selectedIndex: 0, closeDropdown() {}, handleInput() {}, selectNext() {}, selectPrev() {}, confirmSelection() {}, insertMention() {} }" @focusout="setTimeout(() => { if (! $el.contains(document.activeElement)) closeDropdown() }, 150)" wire:key="home-feed-composer-container">
                                             <label for="post-body" class="sr-only">Nội dung bài viết</label>
                                             <textarea
                                                 id="post-body"
@@ -1687,12 +1688,13 @@ new #[Layout('layouts.app')] class extends Component
 
                                             {{-- Suggestion Dropdown --}}
                                             <div 
-                                                x-show="showDropdown" 
+                                                x-show="showDropdown && suggestions && suggestions.length > 0" 
                                                 x-transition
                                                 @click.outside="closeDropdown()"
                                                 class="absolute left-0 right-0 bg-white border border-slate-200 rounded-xl shadow-lg z-50 max-h-48 overflow-y-auto divide-y divide-slate-50"
-                                                :style="openUpward ? 'top: auto; bottom: 100%; margin-bottom: 6px;' : 'bottom: auto; top: ' + dropdownTop"
+                                                :style="openUpward ? 'top: auto; bottom: 100%; margin-bottom: 6px;' : 'bottom: auto; top: ' + (dropdownTop || '100%')"
                                                 style="display: none;"
+                                                wire:ignore
                                             >
                                                 <template x-for="(user, index) in suggestions" :key="user.id">
                                                     <button

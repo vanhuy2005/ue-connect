@@ -241,20 +241,23 @@
                         searchQuery: '',
                         cursorPosition: 0,
                         selectedIndex: 0,
+                        activeIndex: 0,
                         taggedUsers: [],
                         localBody: '',
                         openUpward: false,
-                        dropdownTop: 'auto',
+                        dropdownTop: '100%',
                         scrollHandler: null,
                         resizeHandler: null,
                         init() {
-                            this.localBody = this.$wire[config.wireModel] || '';
-                            this.$watch('$wire.' + config.wireModel, value => {
-                                this.localBody = value || '';
-                                if (!value) {
-                                    this.taggedUsers = [];
-                                }
-                            });
+                            this.localBody = (this.$wire && this.$wire[config.wireModel]) || '';
+                            if (this.$wire) {
+                                this.$watch('$wire.' + config.wireModel, value => {
+                                    this.localBody = value || '';
+                                    if (!value) {
+                                        this.taggedUsers = [];
+                                    }
+                                });
+                            }
                             
                             if (this.localBody) {
                                 const matches = this.localBody.match(/@([^\s@#?!.,:;"]+(?:\s+[^\s@#?!.,:;"]+){0,4})/g);
@@ -345,14 +348,16 @@
                                 const query = textBeforeCursor.slice(lastAt + 1);
                                 if (query.length >= 0 && query.length <= 50 && !/\s{2,}/.test(query) && !/^\s/.test(query)) {
                                     this.searchQuery = query;
-                                    this.$wire.searchMentionUsers(query).then(results => {
-                                        this.suggestions = results;
-                                        this.showDropdown = results.length > 0;
-                                        this.selectedIndex = 0;
-                                        this.$nextTick(() => {
-                                            this.adjustDropdownPosition();
+                                    if (this.$wire) {
+                                        this.$wire.searchMentionUsers(query).then(results => {
+                                            this.suggestions = results;
+                                            this.showDropdown = results.length > 0;
+                                            this.selectedIndex = 0;
+                                            this.$nextTick(() => {
+                                                this.adjustDropdownPosition();
+                                            });
                                         });
-                                    });
+                                    }
                                     return;
                                 }
                             }
@@ -390,7 +395,9 @@
                             if (!this.taggedUsers.includes(user.display_name)) {
                                 this.taggedUsers.push(user.display_name);
                             }
-                            this.$wire.set(config.wireModel, newValue);
+                            if (this.$wire) {
+                                this.$wire.set(config.wireModel, newValue);
+                            }
                             textarea.dispatchEvent(new Event('input'));
                             
                             const newPos = lastAt + mentionText.length;

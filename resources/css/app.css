@@ -2275,12 +2275,14 @@
 
 
 
-.ue-scrollbar-none {
+.ue-scrollbar-none,
+.no-scrollbar {
     scrollbar-width: none;
     -ms-overflow-style: none;
 }
 
-.ue-scrollbar-none::-webkit-scrollbar {
+.ue-scrollbar-none::-webkit-scrollbar,
+.no-scrollbar::-webkit-scrollbar {
     display: none;
 }
 

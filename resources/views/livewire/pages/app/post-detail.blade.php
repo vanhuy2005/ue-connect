@@ -793,12 +793,12 @@ new #[Layout('layouts.app')] class extends Component
                             {{-- Header --}}
                             <div class="ue-post-card__header">
                                 <div>
-                                    <div class="flex items-center gap-1.5">
-                                        <a href="{{ $authorProfileUrl }}" class="text-[15px] font-bold text-slate-800 leading-tight hover:text-ue-brand hover:underline">
+                                    <div class="flex items-center gap-2 min-w-0">
+                                        <a href="{{ $authorProfileUrl }}" class="text-[15px] font-bold text-slate-800 leading-tight hover:text-ue-brand hover:underline truncate">
                                             {{ $author->name }}
                                         </a>
-                                        <x-ui.icon name="check-circle" size="xs" class="text-ue-brand flex-shrink-0" />
-                                        <span class="ue-post-card__meta" title="{{ $post->published_at->format('H:i d/m/Y') }}">
+                                        <x-ui.icon name="check-circle" size="xs" class="text-ue-brand shrink-0" />
+                                        <span class="ue-post-card__meta shrink-0" title="{{ $post->published_at->format('H:i d/m/Y') }}">
                                             · {{ $post->published_at->diffForHumans() }}
                                         </span>
                                     </div>
@@ -1150,7 +1150,7 @@ new #[Layout('layouts.app')] class extends Component
                         </div>
                         
                         {{-- Right Column: Form --}}
-                        <div class="min-w-0 relative flex-1" x-data="mentionComposer({ textareaId: 'comment-text', wireModel: 'commentBody' })" @focusout="setTimeout(() => { if (! $el.contains(document.activeElement)) closeDropdown() }, 150)" wire:key="comment-composer-container">
+                        <div class="min-w-0 relative flex-1" x-data="typeof mentionComposer === 'function' ? mentionComposer({ textareaId: 'comment-text', wireModel: 'commentBody' }) : { showDropdown: false, suggestions: [], openUpward: false, dropdownTop: '100%', activeIndex: 0, selectedIndex: 0, closeDropdown() {}, handleInput() {}, selectNext() {}, selectPrev() {}, confirmSelection() {}, insertMention() {} }" @focusout="setTimeout(() => { if (! $el.contains(document.activeElement)) closeDropdown() }, 150)" wire:key="comment-composer-container">
                             @if ($replyingToCommentId)
                                 <div class="mb-3 px-3 py-1.5 rounded-lg bg-blue-50 border border-blue-100 text-xxs text-ue-brand font-bold flex items-center justify-between ue-animate-fade-in">
                                     <span>Đang phản hồi một bình luận</span>
@@ -1181,12 +1181,13 @@ new #[Layout('layouts.app')] class extends Component
 
                                         {{-- Suggestion Dropdown --}}
                                         <div 
-                                            x-show="showDropdown" 
+                                            x-show="showDropdown && suggestions && suggestions.length > 0" 
                                             x-transition
                                             @click.outside="closeDropdown()"
                                             class="absolute left-0 right-0 bg-white border border-slate-200 rounded-xl shadow-lg z-50 max-h-48 overflow-y-auto divide-y divide-slate-50"
-                                            :style="openUpward ? 'top: auto; bottom: 100%; margin-bottom: 6px;' : 'bottom: auto; top: ' + dropdownTop"
+                                            :style="openUpward ? 'top: auto; bottom: 100%; margin-bottom: 6px;' : 'bottom: auto; top: ' + (dropdownTop || '100%')"
                                             style="display: none;"
+                                            wire:ignore
                                         >
                                             <template x-for="(user, index) in suggestions" :key="user.id">
                                                 <button
