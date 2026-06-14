@@ -79,28 +79,33 @@
                 <div class="flex-shrink-0">
                     <x-ui.avatar :user="auth()->user()" size="md" />
                 </div>
-                <div class="flex-1 min-w-0 flex flex-wrap items-center gap-1.5">
-                    <span class="text-sm font-bold text-slate-800">{{ auth()->user()->name }}</span>
-                    <button
-                        type="button"
-                        @click.stop="visOpen = true"
-                        class="flex items-center gap-1 px-2 py-1 bg-slate-100 text-slate-600 border border-slate-200 rounded-lg whitespace-nowrap flex-shrink-0 hover:bg-slate-200 transition-colors cursor-pointer"
-                    >
-                        <x-ui.icon name="shield-check" size="xs" class="text-ue-brand flex-shrink-0" x-show="selectedVis === 'verified_users'" />
-                        <x-ui.icon name="users" size="xs" class="text-ue-brand flex-shrink-0" x-show="selectedVis === 'connections_only'" style="display:none;" />
-                        <x-ui.icon name="globe" size="xs" class="text-ue-brand flex-shrink-0" x-show="selectedVis === 'community'" style="display:none;" />
-                        <span
-                            class="text-xxs font-bold"
-                            x-text="selectedVis === 'connections_only' ? 'Chỉ bạn bè' : (selectedVis === 'community' ? 'Cộng đồng' : 'Chỉ sinh viên xác thực')"
-                        ></span>
-                        <x-ui.icon name="chevron-down" size="xs" class="text-slate-400 flex-shrink-0" />
-                    </button>
+                <div class="flex-1 min-w-0 flex flex-col justify-center gap-1">
+                    <div class="flex items-center gap-2 min-w-0">
+                        <span class="text-sm font-bold text-slate-800 truncate">{{ auth()->user()->name }}</span>
+                        <x-ui.icon name="check-circle" size="xs" class="text-ue-brand shrink-0" aria-label="Đã xác thực" />
+                    </div>
+                    <div>
+                        <button
+                            type="button"
+                            @click.stop="visOpen = true"
+                            class="flex items-center gap-1 px-2 py-1 bg-slate-100 text-slate-600 border border-slate-200 rounded-lg whitespace-nowrap flex-shrink-0 hover:bg-slate-200 transition-colors cursor-pointer w-fit"
+                        >
+                            <x-ui.icon name="shield-check" size="xs" class="text-ue-brand flex-shrink-0" x-show="selectedVis === 'verified_users'" />
+                            <x-ui.icon name="users" size="xs" class="text-ue-brand flex-shrink-0" x-show="selectedVis === 'connections_only'" style="display:none;" />
+                            <x-ui.icon name="globe" size="xs" class="text-ue-brand flex-shrink-0" x-show="selectedVis === 'community'" style="display:none;" />
+                            <span
+                                class="text-xxs font-bold"
+                                x-text="selectedVis === 'connections_only' ? 'Chỉ bạn bè' : (selectedVis === 'community' ? 'Cộng đồng' : 'Chỉ sinh viên xác thực')"
+                            ></span>
+                            <x-ui.icon name="chevron-down" size="xs" class="text-slate-400 flex-shrink-0" />
+                        </button>
+                    </div>
                 </div>
             </div>
 
             {{-- Textarea --}}
             <div class="flex items-start gap-2">
-                <div class="flex-1 min-w-0 relative" x-data="mentionComposer({ textareaId: 'modal-post-body', wireModel: 'body' })" @focusout="setTimeout(() => { if (! $el.contains(document.activeElement)) closeDropdown() }, 150)">
+                <div class="flex-1 min-w-0 relative" x-data="typeof mentionComposer === 'function' ? mentionComposer({ textareaId: 'modal-post-body', wireModel: 'body' }) : { showDropdown: false, suggestions: [], openUpward: false, dropdownTop: '100%', activeIndex: 0, selectedIndex: 0, closeDropdown() {}, handleInput() {}, selectNext() {}, selectPrev() {}, confirmSelection() {}, insertMention() {} }" @focusout="setTimeout(() => { if (! $el.contains(document.activeElement)) closeDropdown() }, 150)" wire:key="create-post-modal-composer-container">
                     <label for="modal-post-body" class="sr-only">Nội dung bài viết</label>
                     <textarea
                         id="modal-post-body"
@@ -119,12 +124,13 @@
 
                     {{-- Suggestion Dropdown --}}
                     <div 
-                        x-show="showDropdown" 
+                        x-show="showDropdown && suggestions && suggestions.length > 0" 
                         x-transition
                         @click.outside="closeDropdown()"
                         class="absolute left-0 right-0 bg-white border border-slate-200 rounded-xl shadow-lg z-50 max-h-48 overflow-y-auto divide-y divide-slate-50"
-                        :style="openUpward ? 'top: auto; bottom: 100%; margin-bottom: 6px;' : 'bottom: auto; top: ' + dropdownTop"
+                        :style="openUpward ? 'top: auto; bottom: 100%; margin-bottom: 6px;' : 'bottom: auto; top: ' + (dropdownTop || '100%')"
                         style="display: none;"
+                        wire:ignore
                     >
                         <template x-for="(user, index) in suggestions" :key="user.id">
                             <button

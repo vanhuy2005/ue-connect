@@ -99,14 +99,14 @@
             {{-- Post Author Header --}}
             <div class="ue-post-card__header">
                 <div>
-                    <div class="flex items-center gap-1.5 flex-nowrap min-w-0">
-                        <a href="{{ $authorProfileUrl }}" class="ue-text-body-strong text-slate-850 truncate min-w-0 hover:text-ue-brand hover:underline">
+                    <div class="flex items-center gap-2 min-w-0">
+                        <a href="{{ $authorProfileUrl }}" class="ue-text-body-strong text-slate-850 truncate hover:text-ue-brand hover:underline">
                             {{ $author->name }}
                         </a>
-                        <x-ui.icon name="check-circle" size="xs" class="text-ue-brand flex-shrink-0" aria-label="Đã xác thực" />
+                        <x-ui.icon name="check-circle" size="xs" class="text-ue-brand shrink-0" aria-label="Đã xác thực" />
                         
                         {{-- Relative timestamp --}}
-                        <span class="ue-post-card__meta flex-shrink-0 whitespace-nowrap">
+                        <span class="ue-post-card__meta shrink-0 whitespace-nowrap">
                             · {{ ($post->published_at ?? $post->created_at)->diffForHumans() }}
                         </span>
                     </div>

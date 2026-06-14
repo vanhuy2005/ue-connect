@@ -91,12 +91,12 @@
                 {{-- Comment Header --}}
                 <div class="flex items-start justify-between">
                     <div>
-                        <div class="flex items-center gap-1.5">
-                            <a href="{{ $commentAuthorProfileUrl }}" class="text-sm font-bold text-slate-800 leading-tight hover:text-ue-brand hover:underline">
+                        <div class="flex items-center gap-2 min-w-0">
+                            <a href="{{ $commentAuthorProfileUrl }}" class="text-sm font-bold text-slate-800 leading-tight hover:text-ue-brand hover:underline truncate">
                                 {{ $commentAuthor->name }}
                             </a>
-                            <x-ui.icon name="check-circle" size="xs" class="text-ue-brand flex-shrink-0" />
-                            <span class="text-xs text-slate-400 font-semibold">
+                            <x-ui.icon name="check-circle" size="xs" class="text-ue-brand shrink-0" />
+                            <span class="text-xs text-slate-400 font-semibold shrink-0">
                                 · {{ $comment->created_at->diffForHumans() }}
                             </span>
                         </div>
@@ -210,7 +210,7 @@
                                 <div class="flex justify-start">
                                     <x-ui.avatar :user="$currentUser" size="sm" />
                                 </div>
-                                <div class="min-w-0 relative flex-1" x-data="mentionComposer({ textareaId: 'reply-text-{{ $comment->id }}', wireModel: 'commentBody', initialMention: '{{ $commentAuthor->profile?->display_name ?? $commentAuthor->name }}' })" @focusout="setTimeout(() => { if (! $el.contains(document.activeElement)) closeDropdown() }, 150)" wire:key="reply-composer-{{ $comment->id }}">
+                                <div class="min-w-0 relative flex-1" x-data="typeof mentionComposer === 'function' ? mentionComposer({ textareaId: 'reply-text-{{ $comment->id }}', wireModel: 'commentBody', initialMention: '{{ $commentAuthor->profile?->display_name ?? $commentAuthor->name }}' }) : { showDropdown: false, suggestions: [], openUpward: false, dropdownTop: '100%', activeIndex: 0, selectedIndex: 0, closeDropdown() {}, handleInput() {}, selectNext() {}, selectPrev() {}, confirmSelection() {}, insertMention() {} }" @focusout="setTimeout(() => { if (! $el.contains(document.activeElement)) closeDropdown() }, 150)" wire:key="reply-composer-{{ $comment->id }}">
                                     <div class="mb-3 px-3 py-1.5 rounded-lg bg-blue-50 border border-blue-100 text-xxs text-ue-brand font-bold flex items-center justify-between">
                                         <span>Đang phản hồi bình luận của {{ $commentAuthor->name }}</span>
                                         <button type="button" wire:click="setReplyingTo(null)" class="text-slate-400 hover:text-slate-655 transition-colors">
@@ -239,12 +239,13 @@
 
                                                 {{-- Suggestion Dropdown --}}
                                                 <div 
-                                                    x-show="showDropdown" 
+                                                    x-show="showDropdown && suggestions && suggestions.length > 0" 
                                                     x-transition
                                                     @click.outside="closeDropdown()"
                                                     class="absolute left-0 right-0 bg-white border border-slate-200 rounded-xl shadow-lg z-50 max-h-48 overflow-y-auto divide-y divide-slate-50"
-                                                    :style="openUpward ? 'top: auto; bottom: 100%; margin-bottom: 6px;' : 'bottom: auto; top: ' + dropdownTop"
+                                                    :style="openUpward ? 'top: auto; bottom: 100%; margin-bottom: 6px;' : 'bottom: auto; top: ' + (dropdownTop || '100%')"
                                                     style="display: none;"
+                                                    wire:ignore
                                                 >
                                                     <template x-for="(user, index) in suggestions" :key="user.id">
                                                         <button
