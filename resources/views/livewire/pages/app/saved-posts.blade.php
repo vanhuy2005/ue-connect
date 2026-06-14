@@ -452,11 +452,11 @@ new #[Layout('layouts.app')] class extends Component
 
 ?>
 
-<div class="ue-feed-layout">
+<div class="ue-feed-layout pt-6 lg:pt-8 max-w-4xl mx-auto px-6">
     <div class="ue-feed-column">
 
         {{-- Header title --}}
-        <div class="flex items-start gap-3 border-b border-slate-150 pb-4 mb-2 px-4 lg:px-0">
+        <div class="flex items-start gap-3 border-b border-slate-150 pb-4 mb-6 px-4 lg:px-0">
             <x-ui.icon name="bookmark" size="lg" class="text-ue-brand" />
             <div>
                 <h1 class="text-xl font-bold text-slate-800">Bài viết đã lưu</h1>
@@ -466,7 +466,7 @@ new #[Layout('layouts.app')] class extends Component
 
         {{-- System feedback alerts --}}
         @if ($feedbackMessage)
-            <div class="p-4 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-800 text-sm flex items-start gap-2 shadow-xs ue-animate-fade-in" role="alert">
+            <div class="p-4 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-800 text-sm flex items-start gap-2 shadow-xs ue-animate-fade-in mb-6" role="alert">
                 <x-ui.icon name="check-circle" size="sm" class="text-emerald-600 mt-0.5 flex-shrink-0" />
                 <div class="flex-1 font-semibold">{{ $feedbackMessage }}</div>
                 <button type="button" wire:click="$set('feedbackMessage', null)" class="text-emerald-400 hover:text-emerald-600 transition-colors">
@@ -476,52 +476,9 @@ new #[Layout('layouts.app')] class extends Component
         @endif
 
         {{-- SAVED POSTS LIST --}}
-        <section class="ue-feed-surface">
-            <div class="ue-feed-list">
-                @forelse ($saves as $save)
-                    @php
-                        $post = $save->post;
-                        $isLiked = (int) $post->liked_by_current_user_count > 0;
-                        $isSaved = true; // since it is in saves
-                        $likeCount = (int) $post->likes_count;
-                        $commentCount = (int) $post->published_comments_count;
-                    @endphp
-
-                    @if (in_array($post->id, $locallyHiddenPostIds))
-                        {{-- Hidden Saved Post Placeholder with Hoàn tác button --}}
-                        <article class="ue-feed-item p-4 sm:p-5 bg-slate-50/50 flex items-center justify-between gap-4 ue-animate-fade-in" wire:key="hidden-saved-placeholder-{{ $post->id }}">
-                            <div class="flex items-center gap-3">
-                                <div class="w-8 h-8 rounded-full bg-slate-100 border border-slate-200 flex items-center justify-center text-slate-500 flex-shrink-0">
-                                    <x-ui.icon name="eye-off" size="xs" />
-                                </div>
-                                <div class="space-y-0.5 text-left">
-                                    <h4 class="text-xs font-bold text-slate-800">Đã ẩn bài viết</h4>
-                                    <p class="text-[10px] text-slate-500 leading-normal">Việc ẩn bài viết giúp UEConnect cá nhân hóa Bảng tin của bạn.</p>
-                                </div>
-                            </div>
-                            <button
-                                type="button"
-                                wire:click="undoHidePost({{ $post->id }})"
-                                class="px-3 py-1.5 text-xs font-bold text-ue-brand bg-ue-brand-soft border border-ue-brand/10 rounded-xl hover:bg-ue-brand hover:text-white transition-all flex-shrink-0"
-                            >
-                                Hoàn tác
-                            </button>
-                        </article>
-                    @else
-                        <article class="ue-feed-item" wire:key="post-item-{{ $post->id }}">
-                            <x-ui.post-card
-                                :post="$post"
-                                :currentUser="$currentUser"
-                                :isSaved="$isSaved"
-                                :isLiked="$isLiked"
-                                :likeCount="$likeCount"
-                                :commentCount="$commentCount"
-                                :editingPostId="$editingPostId"
-                                :editingBody="$editingBody"
-                            />
-                        </article>
-                    @endif
-                @empty
+        @if ($saves->isEmpty())
+            <div class="min-h-[55vh] flex items-center justify-center">
+                <section class="ue-feed-surface w-full">
                     <div class="p-8">
                         <x-ui.empty-state
                             icon="bookmark"
@@ -538,17 +495,66 @@ new #[Layout('layouts.app')] class extends Component
                             </x-ui.button>
                         </x-ui.empty-state>
                     </div>
-                @endforelse
+                </section>
             </div>
+        @else
+            <section class="ue-feed-surface">
+                <div class="ue-feed-list">
+                    @foreach ($saves as $save)
+                        @php
+                            $post = $save->post;
+                            $isLiked = (int) $post->liked_by_current_user_count > 0;
+                            $isSaved = true; // since it is in saves
+                            $likeCount = (int) $post->likes_count;
+                            $commentCount = (int) $post->published_comments_count;
+                        @endphp
 
-            {{-- End state / Pagination Sentinel inside feed surface --}}
-            <div class="ue-feed-end-state">
-                <div class="w-full flex flex-col items-center justify-center gap-2">
-                    <span class="text-xxs text-slate-400 font-semibold mb-1">Bạn đã xem hết danh sách lưu trữ.</span>
-                    {{ $saves->links() }}
+                        @if (in_array($post->id, $locallyHiddenPostIds))
+                            {{-- Hidden Saved Post Placeholder with Hoàn tác button --}}
+                            <article class="ue-feed-item p-4 sm:p-5 bg-slate-50/50 flex items-center justify-between gap-4 ue-animate-fade-in" wire:key="hidden-saved-placeholder-{{ $post->id }}">
+                                <div class="flex items-center gap-3">
+                                    <div class="w-8 h-8 rounded-full bg-slate-100 border border-slate-200 flex items-center justify-center text-slate-500 flex-shrink-0">
+                                        <x-ui.icon name="eye-off" size="xs" />
+                                    </div>
+                                    <div class="space-y-0.5 text-left">
+                                        <h4 class="text-xs font-bold text-slate-800">Đã ẩn bài viết</h4>
+                                        <p class="text-[10px] text-slate-500 leading-normal">Việc ẩn bài viết giúp UEConnect cá nhân hóa Bảng tin của bạn.</p>
+                                    </div>
+                                </div>
+                                <button
+                                    type="button"
+                                    wire:click="undoHidePost({{ $post->id }})"
+                                    class="px-3 py-1.5 text-xs font-bold text-ue-brand bg-ue-brand-soft border border-ue-brand/10 rounded-xl hover:bg-ue-brand hover:text-white transition-all flex-shrink-0"
+                                >
+                                    Hoàn tác
+                                </button>
+                            </article>
+                        @else
+                            <article class="ue-feed-item" wire:key="post-item-{{ $post->id }}">
+                                <x-ui.post-card
+                                    :post="$post"
+                                    :currentUser="$currentUser"
+                                    :isSaved="$isSaved"
+                                    :isLiked="$isLiked"
+                                    :likeCount="$likeCount"
+                                    :commentCount="$commentCount"
+                                    :editingPostId="$editingPostId"
+                                    :editingBody="$editingBody"
+                                />
+                            </article>
+                        @endif
+                    @endforeach
                 </div>
-            </div>
-        </section>
+
+                {{-- End state / Pagination Sentinel inside feed surface --}}
+                <div class="ue-feed-end-state">
+                    <div class="w-full flex flex-col items-center justify-center gap-2">
+                        <span class="text-xxs text-slate-400 font-semibold mb-1">Bạn đã xem hết danh sách lưu trữ.</span>
+                        {{ $saves->links() }}
+                    </div>
+                </div>
+            </section>
+        @endif
 
     </div>
 
