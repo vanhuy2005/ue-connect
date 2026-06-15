@@ -3,6 +3,7 @@
 namespace Tests\Feature;
 
 use App\Enums\ConnectionStatus;
+use App\Enums\PostStatus;
 use App\Models\Community;
 use App\Models\CommunityJoinRequest;
 use App\Models\CommunityMember;
@@ -10,6 +11,7 @@ use App\Models\CommunityResource;
 use App\Models\Connection;
 use App\Models\MediaFile;
 use App\Models\PermissionGrant;
+use App\Models\Post;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Storage;
@@ -515,5 +517,30 @@ class CommunityDetailTest extends TestCase
             'body' => 'Hello community!',
             'user_id' => $user->id,
         ]);
+    }
+
+    public function test_active_member_can_delete_their_own_post(): void
+    {
+        $user = $this->createActiveUser();
+        $community = Community::factory()->active()->create();
+        CommunityMember::factory()->active()->for($community)->for($user)->create();
+
+        $post = Post::factory()->create([
+            'scope_type' => 'community',
+            'scope_id' => $community->id,
+            'user_id' => $user->id,
+            'status' => PostStatus::PUBLISHED->value,
+        ]);
+
+        Volt::actingAs($user)
+            ->test('pages.app.community-show', ['community' => $community])
+            ->call('openDeleteModal', $post->id)
+            ->assertSet('deletingPostId', $post->id)
+            ->assertSet('showDeleteModal', true)
+            ->call('executeDelete')
+            ->assertSet('deletingPostId', null)
+            ->assertSet('showDeleteModal', false);
+
+        $this->assertSoftDeleted($post);
     }
 }

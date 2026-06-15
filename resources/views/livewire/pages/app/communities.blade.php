@@ -7,6 +7,14 @@ use App\Actions\Messaging\SendSharedPostMessage;
 use App\Actions\Posts\HidePostFromFeed;
 use App\Actions\Posts\TogglePostLike;
 use App\Actions\Posts\TogglePostSave;
+use App\Actions\Posts\DeletePost;
+use App\Actions\Posts\UpdatePost;
+use App\Actions\Posts\TogglePostRepost;
+use App\Actions\Reports\CreateReport;
+use App\Actions\Follows\FollowUser;
+use App\Actions\Follows\UnfollowUser;
+use Illuminate\Support\Facades\Gate;
+use Illuminate\Support\Facades\Auth;
 use App\Enums\CommentStatus;
 use App\Enums\CommunityJoinPolicy;
 use App\Enums\CommunityMemberRole;
@@ -69,6 +77,24 @@ new class extends Component
 
     // Hidden posts in session
     public array $locallyHiddenPostIds = [];
+
+    // Post actions & modal state properties
+    public ?int $deletingPostId = null;
+    public bool $showDeleteModal = false;
+
+    public ?int $editingPostId = null;
+    public string $editingBody = '';
+
+    public ?Post $reportingPost = null;
+    public string $reportReason = 'spam';
+    public string $reportDescription = '';
+    public bool $showReportModal = false;
+
+    public bool $showQuickFollowModal = false;
+    public ?int $quickFollowUserId = null;
+    public bool $quickFollowCompleted = false;
+
+    public ?string $feedbackMessage = null;
 
     protected $queryString = [
         'search' => ['except' => ''],
@@ -329,23 +355,264 @@ new class extends Component
 
     public function toggleLike(int $postId, TogglePostLike $togglePostLike): void
     {
-        $post = Post::findOrFail($postId);
-        $togglePostLike->execute(auth()->user(), $post);
+        try {
+            $post = Post::findOrFail($postId);
+            $togglePostLike->execute(Auth::user(), $post);
+        } catch (\Illuminate\Auth\Access\AuthorizationException $e) {
+            $this->feedbackMessage = $e->getMessage();
+        }
     }
 
     public function toggleSave(int $postId, TogglePostSave $togglePostSave): void
     {
+        try {
+            $post = Post::findOrFail($postId);
+            $togglePostSave->execute(Auth::user(), $post);
+            $this->dispatch('notify', type: 'success', message: 'Đã cập nhật trạng thái lưu bài viết.');
+        } catch (\Illuminate\Auth\Access\AuthorizationException $e) {
+            $this->feedbackMessage = $e->getMessage();
+        }
+    }
+
+    public function toggleRepost(int $postId, TogglePostRepost $togglePostRepost): void
+    {
         $post = Post::findOrFail($postId);
-        $togglePostSave->execute(auth()->user(), $post);
-        $this->dispatch('notify', type: 'success', message: 'Đã cập nhật trạng thái lưu bài viết.');
+        try {
+            $isReposted = $togglePostRepost->execute(Auth::user(), $post);
+            $this->dispatch('notify', type: 'success', message: $isReposted ? 'Đã đăng lại bài viết.' : 'Đã hủy đăng lại bài viết.');
+        } catch (\Illuminate\Auth\Access\AuthorizationException $e) {
+            $this->feedbackMessage = $e->getMessage();
+        }
+    }
+
+    public function startEdit(int $postId): void
+    {
+        $post = Post::findOrFail($postId);
+        if (! Gate::allows('update', $post)) {
+            $this->dispatch('notify', type: 'error', message: 'Bạn không có quyền chỉnh sửa bài viết này.');
+            return;
+        }
+        $this->editingPostId = $postId;
+        $this->editingBody = $post->body;
+    }
+
+    public function saveEdit(UpdatePost $updatePost): void
+    {
+        if (! $this->editingPostId) {
+            return;
+        }
+        try {
+            $post = Post::findOrFail($this->editingPostId);
+            $this->validate([
+                'editingBody' => 'required|string|max:3000',
+            ]);
+            $updatePost->execute(Auth::user(), $post, [
+                'body' => $this->editingBody,
+            ]);
+            $this->editingPostId = null;
+            $this->editingBody = '';
+            $this->dispatch('notify', type: 'success', message: 'Đã cập nhật bài viết thành công.');
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            $this->addError('editingBody', $e->getMessage());
+        } catch (\Illuminate\Auth\Access\AuthorizationException $e) {
+            $this->dispatch('notify', type: 'error', message: $e->getMessage());
+            $this->editingPostId = null;
+            $this->editingBody = '';
+        }
+    }
+
+    public function cancelEdit(): void
+    {
+        $this->editingPostId = null;
+        $this->editingBody = '';
+    }
+
+    public function openDeleteModal(int $postId): void
+    {
+        $this->deletingPostId = $postId;
+        $this->showDeleteModal = true;
+    }
+
+    public function executeDelete(DeletePost $deletePost): void
+    {
+        if (! $this->deletingPostId) {
+            return;
+        }
+        try {
+            $post = Post::findOrFail($this->deletingPostId);
+            $deletePost->execute(Auth::user(), $post);
+            $this->dispatch('notify', type: 'success', message: 'Đã xóa bài viết thành công.');
+        } catch (\Illuminate\Auth\Access\AuthorizationException $e) {
+            $this->dispatch('notify', type: 'error', message: $e->getMessage());
+        }
+        $this->deletingPostId = null;
+        $this->showDeleteModal = false;
+    }
+
+    public function openReport(int $postId): void
+    {
+        $this->reportingPost = Post::findOrFail($postId);
+        $this->reportReason = 'spam';
+        $this->reportDescription = '';
+        $this->showReportModal = true;
+        $this->resetErrorBag();
+    }
+
+    public function submitReport(CreateReport $createReport): void
+    {
+        if (! $this->reportingPost) {
+            return;
+        }
+        try {
+            $createReport->execute(Auth::user(), $this->reportingPost, [
+                'reason' => $this->reportReason,
+                'description' => $this->reportDescription,
+            ]);
+            $this->showReportModal = false;
+            $this->reportingPost = null;
+            $this->dispatch('notify', type: 'success', message: 'Báo cáo của bạn đã được gửi. Cảm ơn bạn đã góp phần xây dựng cộng đồng HCMUE an toàn.');
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            $this->addError('report', $e->getMessage());
+        } catch (\Illuminate\Auth\Access\AuthorizationException $e) {
+            $this->showReportModal = false;
+            $this->reportingPost = null;
+            $this->dispatch('notify', type: 'error', message: $e->getMessage());
+        }
+    }
+
+    public function closeReport(): void
+    {
+        $this->showReportModal = false;
+        $this->reportingPost = null;
     }
 
     public function hidePost(int $postId, HidePostFromFeed $hidePostFromFeed): void
     {
+        try {
+            $post = Post::findOrFail($postId);
+            $hidePostFromFeed->execute(Auth::user(), $post);
+            $this->locallyHiddenPostIds[] = $postId;
+            $this->dispatch('notify', type: 'success', message: 'Đã ẩn bài viết khỏi bảng tin của bạn.');
+        } catch (\Illuminate\Auth\Access\AuthorizationException $e) {
+            $this->dispatch('notify', type: 'error', message: $e->getMessage());
+        }
+    }
+
+    public function undoHidePost(int $postId): void
+    {
+        $user = Auth::user();
+        \App\Models\PostHide::where('post_id', $postId)
+            ->where('user_id', $user->id)
+            ->delete();
+        $this->locallyHiddenPostIds = array_diff($this->locallyHiddenPostIds, [$postId]);
+        $this->dispatch('notify', type: 'success', message: 'Đã hoàn tác ẩn bài viết.');
+    }
+
+    public function hidePostGlobally(int $postId): void
+    {
+        if (! Auth::user()->hasPermissionTo('moderate_content')) {
+            $this->dispatch('notify', type: 'error', message: 'Bạn không có quyền thực hiện hành động này.');
+            return;
+        }
         $post = Post::findOrFail($postId);
-        $hidePostFromFeed->execute(auth()->user(), $post);
-        $this->locallyHiddenPostIds[] = $postId;
-        $this->dispatch('notify', type: 'success', message: 'Đã ẩn bài viết khỏi bảng tin.');
+        $post->status = PostStatus::HIDDEN_BY_MODERATION;
+        $post->save();
+        $this->dispatch('notify', type: 'success', message: 'Đã ẩn bài viết khỏi cộng đồng.');
+    }
+
+    public function copyLinkFeedback(): void
+    {
+        $this->dispatch('notify', type: 'success', message: 'Đã sao chép liên kết bài viết vào bộ nhớ tạm.');
+    }
+
+    public function toggleFollow(int $userId, FollowUser $followUser, UnfollowUser $unfollowUser): void
+    {
+        try {
+            $targetUser = User::findOrFail($userId);
+            $currentUser = Auth::user();
+            if ($currentUser->id === $targetUser->id) {
+                $this->dispatch('notify', type: 'error', message: 'Bạn không thể tự theo dõi chính mình.');
+                return;
+            }
+            $isFollowing = \App\Models\UserFollow::where('follower_id', $currentUser->id)
+                ->where('following_id', $targetUser->id)
+                ->exists();
+            if ($isFollowing) {
+                $unfollowUser->execute($currentUser, $targetUser);
+                $this->dispatch('notify', type: 'success', message: 'Đã bỏ theo dõi ' . $targetUser->name . '.');
+            } else {
+                $followUser->execute($currentUser, $targetUser);
+                $this->dispatch('notify', type: 'success', message: 'Đã theo dõi ' . $targetUser->name . '.');
+            }
+        } catch (\Exception $e) {
+            $this->dispatch('notify', type: 'error', message: $e->getMessage());
+        }
+    }
+
+    public function openQuickFollowModal(int $authorId): void
+    {
+        $author = User::findOrFail($authorId);
+        $currentUser = Auth::user();
+        if ($author->id === $currentUser->id) {
+            $this->dispatch('notify', type: 'error', message: 'Bạn không thể tự theo dõi chính mình.');
+            return;
+        }
+        $isFriend = Connection::where(function ($query) use ($currentUser, $author) {
+                $query->where('user_one_id', $currentUser->id)->where('user_two_id', $author->id);
+            })
+            ->orWhere(function ($query) use ($currentUser, $author) {
+                $query->where('user_one_id', $author->id)->where('user_two_id', $currentUser->id);
+            })
+            ->where('status', ConnectionStatus::ACTIVE)
+            ->exists();
+        if ($isFriend) {
+            $this->dispatch('notify', type: 'error', message: 'Người dùng này đã kết nối bạn bè với bạn.');
+            return;
+        }
+        $this->quickFollowUserId = $author->id;
+        $this->quickFollowCompleted = \App\Models\UserFollow::where('follower_id', $currentUser->id)
+            ->where('following_id', $author->id)
+            ->exists();
+        $this->showQuickFollowModal = true;
+    }
+
+    public function confirmQuickFollow(FollowUser $followUser): void
+    {
+        if (! $this->quickFollowUserId) {
+            return;
+        }
+        $author = User::findOrFail($this->quickFollowUserId);
+        try {
+            $followUser->execute(Auth::user(), $author);
+            $this->quickFollowCompleted = true;
+            $this->dispatch('notify', type: 'success', message: 'Đã theo dõi ' . $author->name . '.');
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            $this->dispatch('notify', type: 'error', message: collect($e->errors())->flatten()->first() ?: 'Không thể theo dõi người dùng này.');
+        } catch (\Exception $e) {
+            $this->dispatch('notify', type: 'error', message: $e->getMessage());
+        }
+    }
+
+    public function confirmQuickUnfollow(UnfollowUser $unfollowUser): void
+    {
+        if (! $this->quickFollowUserId) {
+            return;
+        }
+        $author = User::findOrFail($this->quickFollowUserId);
+        try {
+            $unfollowUser->execute(Auth::user(), $author);
+            $this->quickFollowCompleted = false;
+            $this->dispatch('notify', type: 'success', message: 'Đã bỏ theo dõi ' . $author->name . '.');
+        } catch (\Exception $e) {
+            $this->dispatch('notify', type: 'error', message: $e->getMessage());
+        }
+    }
+
+    public function closeQuickFollowModal(): void
+    {
+        $this->showQuickFollowModal = false;
+        $this->quickFollowUserId = null;
+        $this->quickFollowCompleted = false;
     }
 
     public function startShare(int $postId): void
@@ -580,6 +847,8 @@ new class extends Component
                                 :isLiked="$isLiked"
                                 :likeCount="$likeCount"
                                 :commentCount="$commentCount"
+                                :editingPostId="$editingPostId"
+                                :editingBody="$editingBody"
                             />
                         </article>
                     @endif
@@ -1176,4 +1445,162 @@ new class extends Component
         </div>
     @endif
 
+    {{-- CUSTOM DELETE CONFIRMATION MODAL --}}
+    @if ($showDeleteModal && $deletingPostId)
+        <div class="fixed inset-0 z-50 overflow-y-auto flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs" role="dialog" aria-modal="true" aria-labelledby="delete-modal-title">
+            <div class="bg-white rounded-2xl max-w-md w-full border border-slate-200 shadow-2xl overflow-hidden">
+                <div class="p-6 text-center space-y-4">
+                    <div class="w-12 h-12 rounded-full bg-red-50 border border-red-100 flex items-center justify-center mx-auto text-red-650">
+                        <x-ui.icon name="trash" size="md" />
+                    </div>
+                    <div class="space-y-2">
+                        <h3 id="delete-modal-title" class="text-base font-bold text-slate-800">Xóa bài viết?</h3>
+                        <p class="text-xs text-slate-500 leading-relaxed">
+                            Bài viết sẽ không còn hiển thị trong bảng tin. Bạn không thể hoàn tác thao tác này trong phiên bản hiện tại.
+                        </p>
+                    </div>
+                </div>
+
+                <div class="flex items-center justify-end gap-3 px-6 py-4 bg-slate-50 border-t border-slate-100">
+                    <button type="button" wire:click="$set('showDeleteModal', false)" class="px-4 py-2 text-xs font-bold text-slate-500 hover:text-slate-700 transition">
+                        Hủy
+                    </button>
+                    <button type="button" wire:click="executeDelete"
+                        class="px-4 py-2 text-xs font-bold text-white bg-red-655 hover:bg-red-700 rounded-xl shadow-2xs transition disabled:opacity-60"
+                        wire:loading.attr="disabled" wire:target="executeDelete">
+                        <span wire:loading.remove wire:target="executeDelete">Xóa bài viết</span>
+                        <span wire:loading wire:target="executeDelete">Đang xóa...</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+    @endif
+
+    {{-- REPORT POST MODAL --}}
+    @if ($showReportModal && $reportingPost)
+        <div class="fixed inset-0 z-50 overflow-y-auto flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs" role="dialog" aria-modal="true" aria-labelledby="report-modal-title">
+            <div class="bg-white rounded-2xl max-w-md w-full border border-slate-200 shadow-2xl overflow-hidden">
+                <div class="px-6 py-4 border-b border-slate-100 flex items-center justify-between">
+                    <h3 id="report-modal-title" class="text-sm font-bold text-slate-800 flex items-center gap-2">
+                        <x-ui.icon name="alert-triangle" size="xs" class="text-red-500" />
+                        Báo cáo bài viết vi phạm
+                    </h3>
+                    <button type="button" wire:click="closeReport" class="text-slate-400 hover:text-slate-600 transition">
+                        <x-ui.icon name="x" size="xs" />
+                    </button>
+                </div>
+
+                <form wire:submit.prevent="submitReport">
+                    <div class="p-6 space-y-4">
+                        <div class="space-y-1.5">
+                            <label class="block text-xs font-bold text-slate-500">Lý do báo cáo</label>
+                            <select wire:model="reportReason" class="w-full rounded-xl border border-slate-200 text-xs p-3 bg-slate-50 text-slate-700 focus:outline-none focus:ring-1 focus:ring-ue-brand/40">
+                                <option value="spam">Thư rác (Spam)</option>
+                                <option value="harassment">Quấy rối hoặc bắt nạt</option>
+                                <option value="hate_speech">Ngôn từ kích động thù hận</option>
+                                <option value="inappropriate">Nội dung không phù hợp</option>
+                                <option value="other">Lý do khác</option>
+                            </select>
+                        </div>
+
+                        <div class="space-y-1.5">
+                            <label class="block text-xs font-bold text-slate-500">Chi tiết thêm (tùy chọn)</label>
+                            <textarea wire:model="reportDescription" placeholder="Cung cấp thêm chi tiết để giúp ban kiểm duyệt xử lý..." rows="3"
+                                class="w-full rounded-xl border border-slate-200 text-xs p-3 bg-slate-50 text-slate-700 focus:outline-none focus:ring-1 focus:ring-ue-brand/40 resize-none" maxlength="500"></textarea>
+                        </div>
+
+                        @error('report')
+                            <p class="text-xs font-bold text-red-650">{{ $message }}</p>
+                        @enderror
+                    </div>
+
+                    <div class="flex items-center justify-end gap-3 px-6 py-4 bg-slate-50 border-t border-slate-100">
+                        <button type="button" wire:click="closeReport" class="px-4 py-2 text-xs font-bold text-slate-500 hover:text-slate-700 transition">
+                            Hủy bỏ
+                        </button>
+                        <button type="submit" class="px-4 py-2 text-xs font-bold text-white bg-ue-brand hover:bg-ue-brand-dark rounded-xl shadow-2xs transition disabled:opacity-60"
+                            wire:loading.attr="disabled" wire:target="submitReport">
+                            <span wire:loading.remove wire:target="submitReport">Gửi báo cáo</span>
+                            <span wire:loading wire:target="submitReport">Đang gửi...</span>
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    @endif
+
+    {{-- QUICK FOLLOW MODAL --}}
+    @if ($showQuickFollowModal && $quickFollowUserId)
+        @php $quickFollowUser = \App\Models\User::find($quickFollowUserId); @endphp
+        @if ($quickFollowUser)
+            @php
+                $quickFollowFollowersCount = \App\Models\UserFollow::where('following_id', $quickFollowUser->id)->count();
+                $quickFollowUserFaculty = $quickFollowUser->profile?->faculty;
+                $quickFollowDisplayName = $quickFollowUser->profile?->display_name ?? $quickFollowUser->name;
+                $quickFollowUsername = $quickFollowUser->username ?? \Illuminate\Support\Str::slug($quickFollowUser->name, '');
+            @endphp
+            <div class="fixed inset-0 z-50 overflow-y-auto flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs" role="dialog" aria-modal="true" aria-labelledby="follow-modal-title">
+                <div class="bg-white rounded-2xl max-w-sm w-full border border-slate-200 shadow-2xl overflow-hidden">
+                    <div class="px-5 py-3 border-b border-slate-100 flex items-center justify-between">
+                        <span class="text-xs font-bold text-slate-400 uppercase tracking-wider">Thông tin người dùng</span>
+                        <button type="button" wire:click="closeQuickFollowModal" class="text-slate-400 hover:text-slate-600 transition p-1 rounded-lg hover:bg-slate-50">
+                            <x-ui.icon name="x" size="xs" />
+                        </button>
+                    </div>
+
+                    <div class="p-6 flex flex-col items-center text-center">
+                        <x-ui.avatar :user="$quickFollowUser" size="xl" class="mb-4 shadow-sm" />
+                        
+                        <h3 id="follow-modal-title" class="text-lg font-bold text-slate-800 flex items-center gap-1.5 justify-center leading-tight">
+                            <span>{{ $quickFollowDisplayName }}</span>
+                            @if ($quickFollowUser->isActive())
+                                <x-ui.icon name="shield-check" size="xs" class="text-ue-brand fill-ue-brand" />
+                            @endif
+                        </h3>
+                        
+                        <p class="text-xs text-slate-400 font-semibold mt-1">
+                            @<span>{{ $quickFollowUsername }}</span>
+                        </p>
+
+                        @if ($quickFollowUserFaculty)
+                            <p class="text-[10px] text-slate-500 font-bold bg-slate-50 border border-slate-150 px-2 py-0.5 rounded-full mt-2.5">
+                                Khoa {{ $quickFollowUserFaculty }}
+                            </p>
+                        @endif
+
+                        <div class="mt-4 flex items-center gap-1 text-xs text-slate-500 font-medium">
+                            <span class="font-bold text-slate-800">{{ $quickFollowFollowersCount }}</span>
+                            <span>người theo dõi</span>
+                        </div>
+                    </div>
+
+                    <div class="px-6 py-4 bg-slate-50 border-t border-slate-100 flex flex-col gap-2">
+                        @if ($quickFollowCompleted)
+                            <button type="button" wire:click="confirmQuickUnfollow" class="w-full py-2.5 px-4 text-xs font-bold text-slate-700 bg-slate-100 hover:bg-slate-200 border border-slate-200 rounded-xl transition flex items-center justify-center gap-1.5"
+                                wire:loading.attr="disabled" wire:target="confirmQuickUnfollow">
+                                <span wire:loading.remove wire:target="confirmQuickUnfollow" class="flex items-center gap-1.5 justify-center w-full">
+                                    Bỏ theo dõi
+                                </span>
+                                <span wire:loading wire:target="confirmQuickUnfollow" class="flex items-center gap-1.5 justify-center w-full">
+                                    <span class="animate-spin rounded-full h-3 w-3 border border-slate-500 border-t-transparent"></span>
+                                    Đang xử lý...
+                                </span>
+                            </button>
+                        @else
+                            <button type="button" wire:click="confirmQuickFollow" class="w-full py-2.5 px-4 text-xs font-bold text-white bg-ue-brand hover:bg-ue-brand-dark rounded-xl shadow-2xs transition flex items-center justify-center gap-1.5"
+                                wire:loading.attr="disabled" wire:target="confirmQuickFollow">
+                                <span wire:loading.remove wire:target="confirmQuickFollow" class="flex items-center gap-1.5 justify-center w-full">
+                                    Theo dõi
+                                </span>
+                                <span wire:loading wire:target="confirmQuickFollow" class="flex items-center gap-1.5 justify-center w-full">
+                                    <span class="animate-spin rounded-full h-3 w-3 border border-white border-t-transparent"></span>
+                                    Đang xử lý...
+                                </span>
+                            </button>
+                        @endif
+                    </div>
+                </div>
+            </div>
+        @endif
+    @endif
 </div>

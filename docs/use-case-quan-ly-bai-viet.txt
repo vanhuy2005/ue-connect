@@ -1,0 +1,127 @@
+================================================================================
+TÀI LIỆU PHÂN TÍCH USE CASE: QUẢN LÝ KẾT NỐI (CONNECTION MANAGEMENT)
+Dự án: UEConnect (Mạng xã hội học tập HCMUE)
+Trạng thái: Bản thảo (Draft 1.1)
+Tác giả: Antigravity Code Assistant
+Ngày cập nhật: 2026-06-13
+================================================================================
+
+I. SƠ ĐỒ USE CASE PHÂN RÃ (USE CASE DIAGRAM BREAKDOWN)
+--------------------------------------------------------------------------------
+Dưới đây là sơ đồ Use Case phân rã của "Quản lý kết nối" biểu diễn bằng mã Mermaid.
+
+```mermaid
+@startuml
+left to right direction
+
+actor "Sinh viên" as Student
+actor "Hệ thống (System)" as System
+
+rectangle "UEConnect - Chức năng Quản lý kết nối" {
+  usecase "UC: Quản lý kết nối" as UC_Manage
+  usecase "Gửi lời chào (Send Greeting)" as UC_SendGreeting
+  usecase "Hủy lời chào đã gửi" as UC_CancelGreeting
+  usecase "Phản hồi lời chào (Chấp nhận/Từ chối)" as UC_RespondGreeting
+  usecase "Xem danh sách bạn bè" as UC_ViewConnections
+  usecase "Tìm kiếm bạn bè" as UC_SearchConnections
+  usecase "Hủy kết nối (Remove Connection)" as UC_Disconnect
+  usecase "Chặn người dùng (Block User)" as UC_Block
+}
+
+Student --> UC_Manage
+Student --> UC_CancelGreeting
+Student --> UC_RespondGreeting
+Student --> UC_ViewConnections
+Student --> UC_SearchConnections
+Student --> UC_Disconnect
+Student --> UC_Block
+
+UC_Manage ..> UC_SendGreeting : <<include>>
+UC_RespondGreeting ..> UC_ViewConnections : "Nếu chấp nhận, kích hoạt kết nối"
+
+System --> UC_RespondGreeting : "Tự động tạo Connection khi Chấp nhận"
+System --> UC_SendGreeting : "Gửi thông báo lời chào"
+@endum
+```
+
+Bản vẽ ASCII phân rã chi tiết:
+  
+                 +--------------------------------------------------------+
+                 | UEConnect - Chức năng Quản lý kết nối                   |
+                 |                                                        |
+                 |               +----------------------------+           |
+                 |      +------> | Gửi lời chào (Greeting)    |           |
+                 |      |        +----------------------------+           |
+                 |      |        +----------------------------+           |
+                 |      +------> | Phản hồi lời chào          |           |
+                 |      |        | (Chấp nhận / Từ chối)      |           |
+  (Sinh viên) ---|--> (UC: Quản lý kết nối)                               |
+                 |      |        +----------------------------+           |
+                 |      +------> | Hủy kết nối (Disconnect)   |           |
+                 |      |        +----------------------------+           |
+                 |      |        +----------------------------+           |
+                 |      +------> | Chặn kết nối (Block)       |           |
+                 |               +----------------------------+           |
+                 +--------------------------------------------------------+
+
+
+II. ĐỊNH NGHĨA CÁC TÁC NHÂN (ACTORS)
+--------------------------------------------------------------------------------
+1. Sinh viên (Student): Sinh viên đã xác thực tài khoản, thực hiện các hành động 
+   gửi lời chào, phản hồi lời chào từ người khác, hủy kết nối hoặc chặn người dùng.
+2. Hệ thống (System): Kiểm tra điều kiện ràng buộc giữa hai tài khoản, lưu trữ 
+   trạng thái lời chào (`Greeting`), tự động thiết lập bản ghi bạn bè hoạt động 
+   (`Connection` với trạng thái `active`) khi lời chào được chấp nhận và gửi thông báo.
+
+
+III. PHÂN TÍCH CHI TIẾT CÁC USE CASE CON
+--------------------------------------------------------------------------------
+
+- Actor chính: Sinh viên (Student)
+- Actor phụ: Hệ thống (System)
+- Mục tiêu: Thiết lập, phản hồi và duy trì các mối quan hệ kết nối bạn bè nhằm trao 
+  đổi học tập, chia sẻ bài viết giới hạn và trò chuyện trực tiếp.
+- Tiền điều kiện (Preconditions):
+  * Tài khoản sinh viên đã xác thực (`verified`) và đang hoạt động (`status = 'active'`).
+  * Sinh viên chưa có kết nối hoạt động hoặc lời chào đang chờ duyệt với đối phương.
+  * Hai người dùng không chặn (Block) lẫn nhau.
+
+- Các luồng xử lý chi tiết:
+
+  * UC_SendGreeting: Gửi lời chào (Gửi yêu cầu kết nối)
+    - Sinh viên truy cập profile đối phương -> Nhấn "Gửi lời chào" -> Nhập tin nhắn giới thiệu tùy chọn (Optional message) -> Nhấn "Gửi".
+    - Hệ thống kiểm tra giới hạn gửi tin nhắn và trạng thái chặn, sau đó lưu bản ghi `Greeting` với trạng thái `pending` và gửi thông báo đến đối phương.
+
+  * UC_CancelGreeting: Hủy lời chào đã gửi
+    - Sinh viên truy cập danh sách lời chào đã gửi -> Chọn hủy lời chào đang chờ duyệt.
+    - Hệ thống chuyển trạng thái `Greeting` sang `cancelled` và thu hồi thông báo đã gửi.
+
+  * UC_RespondGreeting: Phản hồi lời chào (Nhận yêu cầu kết nối)
+    - Sinh viên mở xem lời chào nhận được trong hòm thư kết nối:
+      * Chấp nhận (Accept): Hệ thống chuyển `Greeting` thành `accepted`, tự động tạo bản ghi `Connection` mới với trạng thái `active`, ghi nhận thời gian kết nối, và gửi thông báo thành công cho người gửi.
+      * Từ chối (Decline): Sinh viên có thể nhập lý do từ chối. Hệ thống chuyển `Greeting` thành `declined` và lưu lý do.
+
+  * UC_ViewConnections & UC_SearchConnections: Xem và Tìm kiếm bạn bè
+    - Sinh viên mở danh sách bạn bè đã kết nối.
+    - Hệ thống hiển thị danh sách toàn bộ các tài khoản có `Connection` hoạt động (`status = 'active'`). Sinh viên có thể gõ từ khóa tìm kiếm theo tên/khoa học để lọc nhanh.
+
+  * UC_Disconnect: Hủy kết nối (Xóa bạn bè)
+    - Sinh viên nhấn "Hủy kết nối" tại trang cá nhân bạn bè hoặc trong danh sách.
+    - Sau khi xác nhận, hệ thống cập nhật trạng thái `Connection` thành `removed`, lưu thời gian hủy kết nối. Hai người không còn xem được các nội dung riêng tư của nhau.
+
+  * UC_Block: Chặn người dùng (Block User)
+    - Sinh viên chọn "Chặn" người dùng khác trên profile của họ.
+    - Hệ thống hủy bỏ kết nối bạn bè (nếu có), chuyển trạng thái sang `blocked` hoặc tạo bản ghi chặn mới. Cắt mọi liên lạc và ẩn hoàn toàn bài đăng hai chiều.
+
+
+IV. QUY TẮC NGHIỆP VỤ & BẢO MẬT LIÊN QUAN (BUSINESS RULES)
+--------------------------------------------------------------------------------
+1. Chặn hai chiều (Blocklist Rule): Sinh viên A đã chặn sinh viên B thì cả hai 
+   không bao giờ có thể tìm thấy, gửi lời chào, kết nối hay xem thông tin của nhau.
+2. Giới hạn số lời chào (Rate Limit): Mỗi sinh viên chỉ được phép gửi tối đa 20 
+   lời chào mới trong vòng 24 giờ nhằm ngăn chặn hành vi spam hoặc quấy rối.
+3. Không tự động kết nối (No Auto-connection): Mọi kết nối bạn bè bắt buộc phải đi 
+   qua sự đồng ý chủ động của người nhận (Receiver) thông qua hành động "Chấp nhận".
+4. Phân quyền truy cập bài đăng: Chỉ tài khoản bạn bè (`Connection` status là `active`) 
+   mới được quyền xem bài viết có Visibility là `CONNECTIONS_ONLY`.
+================================================================================
