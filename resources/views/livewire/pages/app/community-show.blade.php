@@ -2952,12 +2952,18 @@ new class extends Component
                     <button type="button" wire:click="$set('showDeleteModal', false)" class="px-4 py-2 text-xs font-bold text-slate-500 hover:text-slate-700 transition">
                         Hủy
                     </button>
-                    <button type="button" wire:click="executeDelete"
-                        class="px-4 py-2 text-xs font-bold text-white bg-red-650 hover:bg-red-700 rounded-xl shadow-2xs transition disabled:opacity-60"
-                        wire:loading.attr="disabled" wire:target="executeDelete">
+                    <x-ui.button
+                        type="button"
+                        wire:click="executeDelete"
+                        variant="danger"
+                        size="sm"
+                        icon="trash"
+                        wire:loading.attr="disabled"
+                        wire:target="executeDelete"
+                    >
                         <span wire:loading.remove wire:target="executeDelete">Xóa bài viết</span>
                         <span wire:loading wire:target="executeDelete">Đang xóa...</span>
-                    </button>
+                    </x-ui.button>
                 </div>
             </div>
         </div>
