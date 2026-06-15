@@ -66,7 +66,7 @@ class RealtimeHealthCommand extends Command
         }
 
         // Check Reverb Config
-        $reverbHost = env('REVERB_HOST');
+        $reverbHost = config('broadcasting.connections.reverb.options.host');
         if ($reverbHost) {
             $this->info('Reverb host configured: yes');
         } else {
