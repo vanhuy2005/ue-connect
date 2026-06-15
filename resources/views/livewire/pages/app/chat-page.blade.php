@@ -14,6 +14,7 @@ new #[Layout('layouts.app', ['shell' => 'conversation'])] class extends Componen
 {
     public ?int $selectedSessionId = null;
     public string $input = '';
+    public ?string $pendingMessage = null;
     public bool $isTyping = false;
     
     // Title edit state
@@ -25,7 +26,10 @@ new #[Layout('layouts.app', ['shell' => 'conversation'])] class extends Componen
     public array $feedbackComments = []; // key: answer_id, value: comment text
     public array $submittedFeedback = []; // key: answer_id, value: true
 
-    protected $listeners = ['scroll-bottom' => 'scrollBottom'];
+    protected $listeners = [
+        'scroll-bottom' => 'scrollBottom',
+        'process-chat-message' => 'handleMessageSent',
+    ];
 
     public function mount(): void
     {
@@ -54,7 +58,14 @@ new #[Layout('layouts.app', ['shell' => 'conversation'])] class extends Componen
 
         $this->selectedSessionId = $session->id;
         $this->input = '';
+        $this->pendingMessage = null;
+        $this->isTyping = false;
         $this->cancelEditingTitle();
+    }
+
+    public function startNewConversation(): void
+    {
+        $this->createNewSession();
     }
 
     public function selectSession(int $id): void
@@ -62,6 +73,8 @@ new #[Layout('layouts.app', ['shell' => 'conversation'])] class extends Componen
         $session = ChatSession::where('user_id', Auth::id())->findOrFail($id);
         $this->selectedSessionId = $session->id;
         $this->input = '';
+        $this->pendingMessage = null;
+        $this->isTyping = false;
         $this->loadSubmittedFeedback();
         $this->cancelEditingTitle();
         $this->dispatch('scroll-bottom');
@@ -82,6 +95,8 @@ new #[Layout('layouts.app', ['shell' => 'conversation'])] class extends Componen
                 $this->createNewSession();
             }
         }
+        $this->pendingMessage = null;
+        $this->isTyping = false;
         $this->loadSubmittedFeedback();
         $this->cancelEditingTitle();
     }
@@ -146,10 +161,22 @@ new #[Layout('layouts.app', ['shell' => 'conversation'])] class extends Componen
 
         $userMessage = $trimmed;
         $this->input = '';
+        $this->pendingMessage = $userMessage;
         $this->isTyping = true;
 
         // Force UI update
         $this->dispatch('scroll-bottom');
+
+        if (app()->runningUnitTests()) {
+            $this->handleMessageSent($userMessage, $chatService);
+        } else {
+            $this->dispatch('process-chat-message', userMessage: $userMessage);
+        }
+    }
+
+    public function handleMessageSent(string $userMessage, HcmueChatService $chatService): void
+    {
+        $session = ChatSession::where('user_id', Auth::id())->findOrFail($this->selectedSessionId);
 
         try {
             // Process query
@@ -186,7 +213,9 @@ new #[Layout('layouts.app', ['shell' => 'conversation'])] class extends Componen
             ]);
         }
 
+        $this->pendingMessage = null;
         $this->isTyping = false;
+        $this->loadSubmittedFeedback();
         $this->dispatch('scroll-bottom');
     }
 
@@ -298,6 +327,19 @@ new #[Layout('layouts.app', ['shell' => 'conversation'])] class extends Componen
                         'intent' => $q->intent,
                         'sources' => $sources,
                         'created_at' => $q->created_at,
+                    ];
+                }
+
+                if ($this->pendingMessage) {
+                    $chatMessages[] = [
+                        'question_id' => null,
+                        'question_text' => $this->pendingMessage,
+                        'answer_id' => null,
+                        'answer_text' => null,
+                        'route' => 'none',
+                        'intent' => 'none',
+                        'sources' => [],
+                        'created_at' => now(),
                     ];
                 }
             }
@@ -479,6 +521,7 @@ new #[Layout('layouts.app', ['shell' => 'conversation'])] class extends Componen
                         </div>
 
                         <!-- Bot response -->
+                        @if($msg['answer_text'] !== null)
                         <div class="space-y-2">
                             <div class="flex items-start gap-4">
                                 <!-- Bot avatar -->
@@ -515,8 +558,8 @@ new #[Layout('layouts.app', ['shell' => 'conversation'])] class extends Componen
                                     </div>
 
                                     <!-- Response text -->
-                                    <div class="text-slate-700 dark:text-zinc-300 text-xs leading-relaxed prose prose-sm dark:prose-invert max-w-none">
-                                        {!! Str::markdown(e($msg['answer_text'])) !!}
+                                    <div class="text-slate-700 dark:text-zinc-300 text-xs leading-relaxed max-w-none">
+                                        <x-ui.markdown :content="$msg['answer_text']" />
                                     </div>
 
                                     <!-- Citations / Sources collapsible panel -->
@@ -597,6 +640,7 @@ new #[Layout('layouts.app', ['shell' => 'conversation'])] class extends Componen
                                 </div>
                             </div>
                         </div>
+                        @endif
                     @endforeach
 
                     <!-- Typing loader indicator -->
@@ -605,10 +649,8 @@ new #[Layout('layouts.app', ['shell' => 'conversation'])] class extends Componen
                             <div class="w-8 h-8 rounded-xl bg-ue-brand-soft flex-shrink-0 flex items-center justify-center text-ue-brand font-bold text-xs">
                                 AI
                             </div>
-                            <div class="bg-white dark:bg-zinc-900 border border-slate-100 dark:border-zinc-800 rounded-3xl rounded-tl-lg shadow-sm p-4 flex items-center gap-1.5">
-                                <div class="w-1.5 h-1.5 bg-ue-brand rounded-full animate-bounce" style="animation-delay: 0ms"></div>
-                                <div class="w-1.5 h-1.5 bg-ue-brand rounded-full animate-bounce" style="animation-delay: 150ms"></div>
-                                <div class="w-1.5 h-1.5 bg-ue-brand rounded-full animate-bounce" style="animation-delay: 300ms"></div>
+                            <div class="bg-white dark:bg-zinc-900 border border-slate-100 dark:border-zinc-800 rounded-3xl rounded-tl-lg shadow-sm px-4 py-3 flex items-center min-h-[44px]">
+                                <x-ui.loading-state variant="dots" class="!py-0 !px-0" />
                             </div>
                         </div>
                     @endif
