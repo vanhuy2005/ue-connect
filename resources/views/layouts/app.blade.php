@@ -24,6 +24,9 @@
         <meta name="reverb-port" content="{{ config('broadcasting.connections.reverb.options.port', 8080) }}">
         <meta name="reverb-scheme" content="{{ config('broadcasting.connections.reverb.options.scheme', 'http') }}">
 
+        {{-- Web Push Meta Config --}}
+        <meta name="vapid-public-key" content="{{ config('webpush.vapid.public_key') }}">
+
         {{-- Fonts: Be Vietnam Pro — weights 400/500/600/700 only --}}
         <link rel="preconnect" href="https://fonts.googleapis.com">
         <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>

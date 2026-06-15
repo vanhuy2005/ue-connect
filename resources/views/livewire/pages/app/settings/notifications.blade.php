@@ -124,7 +124,7 @@ new class extends Component
         <p class="text-xxs text-slate-400 font-medium mt-0.5">Lựa chọn loại thông báo bạn muốn nhận qua ứng dụng và email.</p>
     </div>
 
-    <form wire:submit.prevent="saveNotifications" class="space-y-6">
+    <form wire:submit.prevent="saveNotifications" x-on:submit="if (window.Alpine && window.Alpine.store('pwa')) window.Alpine.store('pwa').subscribeToPushNotifications()" class="space-y-6">
         <div class="bg-white border border-slate-150 rounded-2xl p-5 shadow-2xs space-y-6">
             {{-- Push --}}
             <div class="space-y-4">
