@@ -1766,34 +1766,7 @@ new #[Layout('layouts.app')] class extends Component
                             @endif
                         </div>
 
-                        {{-- Display feedback to mentor if present --}}
-                        @if ($isMentor && $mentorRequest->feedback()->exists())
-                            @php
-                                $feedback = $mentorRequest->feedback;
-                                $levelLabels = [
-                                    'helpful' => 'Hữu ích',
-                                    'somewhat_helpful' => 'Tạm được',
-                                    'not_helpful' => 'Chưa tốt',
-                                ];
-                                $levelColors = [
-                                    'helpful' => 'text-emerald-700 bg-emerald-50 border-emerald-100',
-                                    'somewhat_helpful' => 'text-amber-700 bg-amber-50 border-amber-100',
-                                    'not_helpful' => 'text-red-700 bg-red-50 border-red-100',
-                                ];
-                            @endphp
-                            <div class="w-full max-w-sm mt-3 p-3 rounded-xl border border-slate-100 bg-slate-50/50 text-left space-y-1.5">
-                                <p class="text-[9px] font-bold text-slate-400 uppercase tracking-wider">Đánh giá từ sinh viên</p>
-                                <div class="flex items-center justify-between">
-                                    <span class="px-2 py-0.5 rounded-full text-[9px] font-bold border {{ $levelColors[$feedback->helpfulness_level->value] ?? 'text-slate-700 bg-slate-100' }}">
-                                        {{ $levelLabels[$feedback->helpfulness_level->value] ?? $feedback->helpfulness_level->value }}
-                                    </span>
-                                    <span class="text-[9px] text-slate-400 font-semibold">{{ $feedback->created_at->format('d/m/Y') }}</span>
-                                </div>
-                                @if ($feedback->feedback_text)
-                                    <p class="text-[10px] text-slate-650 italic leading-relaxed">"{{ $feedback->feedback_text }}"</p>
-                                @endif
-                            </div>
-                        @endif
+
                     </div>
                     @elseif ($isRestricted)
                     <div class="bg-slate-50 border border-slate-150 rounded-xl p-3.5 flex items-center gap-3 text-xxs font-semibold text-slate-500">
