@@ -132,7 +132,11 @@ new class extends Component {
                         <div class="max-w-[85%] rounded-2xl px-4 py-2 text-sm shadow-sm
                             {{ $msg['role'] === 'model' ? 'bg-white dark:bg-zinc-800 text-zinc-800 dark:text-zinc-200 border border-zinc-150 dark:border-zinc-700' : 'bg-indigo-600 text-white' }}"
                             style="max-width: 85%; border-radius: 16px; padding: 8px 16px; font-size: 14px; {{ $msg['role'] === 'model' ? 'background-color: #ffffff; color: #27272a; border: 1px solid #e4e4e7;' : 'background-color: #4f46e5; color: #ffffff;' }}">
-                            {!! nl2br(e($msg['content'])) !!}
+                            @if($msg['role'] === 'model')
+                                <x-ui.markdown :content="$msg['content']" />
+                            @else
+                                {!! nl2br(e($msg['content'])) !!}
+                            @endif
                         </div>
                     </div>
                 @endforeach
@@ -142,10 +146,8 @@ new class extends Component {
                         <div class="w-6 h-6 rounded-full bg-indigo-100 flex items-center justify-center text-indigo-600 font-bold text-[10px] mr-2 shrink-0 mt-1" style="width: 24px; height: 24px; border-radius: 9999px; background-color: #e0e7ff; color: #4f46e5; display: flex; align-items: center; justify-content: center; font-size: 10px; font-weight: bold; margin-right: 8px; flex-shrink: 0; margin-top: 4px;">
                             AI
                         </div>
-                        <div class="bg-white dark:bg-zinc-800 border border-zinc-100 dark:border-zinc-700 rounded-2xl px-4 py-3 shadow-sm flex items-center gap-1" style="background-color: #ffffff; border: 1px solid #f4f4f5; border-radius: 16px; padding: 12px 16px; display: flex; align-items: center; gap: 4px;">
-                            <div class="w-1.5 h-1.5 bg-zinc-400 rounded-full animate-bounce" style="width: 6px; height: 6px; background-color: #a1a1aa; border-radius: 9999px; animation: bounce 1s infinite;"></div>
-                            <div class="w-1.5 h-1.5 bg-zinc-400 rounded-full animate-bounce" style="width: 6px; height: 6px; background-color: #a1a1aa; border-radius: 9999px; animation: bounce 1s infinite; animation-delay: 0.2s;"></div>
-                            <div class="w-1.5 h-1.5 bg-zinc-400 rounded-full animate-bounce" style="width: 6px; height: 6px; background-color: #a1a1aa; border-radius: 9999px; animation: bounce 1s infinite; animation-delay: 0.4s;"></div>
+                        <div class="bg-white dark:bg-zinc-800 border border-zinc-100 dark:border-zinc-700 rounded-2xl px-4 py-3 shadow-sm flex items-center" style="background-color: #ffffff; border: 1px solid #f4f4f5; border-radius: 16px; padding: 12px 16px; display: flex; align-items: center;">
+                            <x-ui.loading-state variant="dots" class="!py-0 !px-0" />
                         </div>
                     </div>
                 @endif
