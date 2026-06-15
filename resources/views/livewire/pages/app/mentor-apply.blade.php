@@ -19,6 +19,8 @@ new class extends Component
     // File uploads
     public $avatarFile;
 
+    public int $step = 1;
+
     public $evidenceFile;
 
     // Form fields
@@ -203,6 +205,84 @@ new class extends Component
             $this->evidencePreviewUrl = app(GenerateMediaUrlAction::class)->execute($media, 'preview', $user);
         } catch (Throwable $exception) {
             $this->addError('evidenceFile', 'Không tải được file minh chứng: '.$exception->getMessage());
+        }
+    }
+
+    public function previousStep(): void
+    {
+        if ($this->step > 1) {
+            $this->step--;
+        }
+    }
+
+    public function nextStep(): void
+    {
+        if ($this->step === 1) {
+            $user = Auth::user();
+            if (! ($user->profile && $user->profile->avatar()->exists())) {
+                $this->addError('avatarFile', 'Vui lòng tải lên ảnh đại diện rõ mặt.');
+
+                return;
+            }
+
+            if (! $this->evidenceMediaId) {
+                $this->addError('evidenceFile', 'Vui lòng tải lên tài liệu/minh chứng năng lực.');
+
+                return;
+            }
+
+            $this->step = 2;
+
+            return;
+        }
+
+        if ($this->step === 2) {
+            $this->validate([
+                'headline' => ['required', 'string', 'min:12', 'max:160'],
+                'bio' => ['required', 'string', 'min:40', 'max:5000'],
+                'expertise_topics_text' => ['required', 'string', 'max:1000'],
+            ]);
+
+            $normalizeList = function (?string $value, int $limit): array {
+                return collect(preg_split('/[\r\n,]+/', (string) $value))
+                    ->map(fn (string $item) => trim($item))
+                    ->filter()
+                    ->unique()
+                    ->take($limit)
+                    ->values()
+                    ->all();
+            };
+            $expertiseTopics = $normalizeList($this->expertise_topics_text, 10);
+            if (count($expertiseTopics) < 2) {
+                $this->addError('expertise_topics_text', 'Vui lòng nhập ít nhất 2 chủ đề chuyên môn.');
+
+                return;
+            }
+
+            $this->step = 3;
+
+            return;
+        }
+
+        if ($this->step === 3) {
+            $this->validate([
+                'preferred_request_types' => ['required', 'array', 'min:1'],
+                'preferred_request_types.*' => ['string', 'max:80'],
+                'custom_preferred_request' => [
+                    Rule::requiredIf(in_array('other', $this->preferred_request_types, true)),
+                    'nullable',
+                    'string',
+                    'max:80',
+                ],
+                'response_expectation_text' => ['required', 'string', 'max:255'],
+                'office_hours_text' => ['nullable', 'string', 'max:255'],
+                'portfolio_link' => ['nullable', 'url', 'max:255'],
+                'availability_note' => ['nullable', 'string', 'max:1000'],
+            ]);
+
+            $this->step = 4;
+
+            return;
         }
     }
 
@@ -403,7 +483,7 @@ new class extends Component
         @endif
         <div class="grid gap-6 lg:grid-cols-[minmax(0,1fr)_380px]">
             {{-- Left side - Interactive Registration Form --}}
-            <form wire:submit.prevent="submit" x-data="{ step: 1 }" class="space-y-6">
+            <form wire:submit.prevent="submit" x-data="{ step: @entangle('step') }" class="space-y-6">
                 @if ($errors->any())
                     <div class="rounded-2xl border border-red-150 bg-red-50 p-4 text-sm text-red-700">
                         <p class="font-bold text-red-900">Vui lòng sửa các lỗi sau trước khi gửi:</p>
@@ -696,12 +776,12 @@ new class extends Component
 
                 {{-- Step Navigation --}}
                 <div class="flex items-center justify-between gap-3">
-                    <button type="button" @click="step--" x-show="step > 1"
+                    <button type="button" wire:click="previousStep" x-show="step > 1"
                         class="rounded-xl border border-slate-200 bg-white hover:bg-slate-50 px-5 py-3 text-sm font-bold text-slate-700 shadow-xs transition-all">
                         ← Quay lại
                     </button>
                     <div class="flex-1"></div>
-                    <button type="button" @click="step++" x-show="step < 4"
+                    <button type="button" wire:click="nextStep" x-show="step < 4"
                         class="rounded-xl bg-ue-brand hover:bg-ue-brand-dark px-5 py-3 text-sm font-bold text-white shadow-xs transition-all">
                         Tiếp theo →
                     </button>
