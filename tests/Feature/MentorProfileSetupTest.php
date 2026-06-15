@@ -29,7 +29,7 @@ class MentorProfileSetupTest extends TestCase
     public function test_inactive_mentor_profile_setup_page_renders_without_forbidden_response(): void
     {
         $mentor = $this->activeUser('alumni');
-        $this->mentorProfile($mentor, [
+        $profile = $this->mentorProfile($mentor, [
             'is_active' => false,
             'mentor_visibility' => false,
         ]);
