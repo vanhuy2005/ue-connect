@@ -253,11 +253,11 @@ class BuildAdminDashboardAction
                     ->limit(8)
                     ->get()
                     ->map(fn ($log) => [
-                        'action' => $log->action,
-                        'action_key' => $log->action_key,
+                        'action' => $this->humanizeActionKey($log->action ?? $log->action_key ?? ''),
+                        'action_key' => $log->action_key ?? $log->action,  // raw, for tooltip
                         'actor_name' => $log->actor?->name,
                         'actor_type' => $log->actor_type,
-                        'target_type' => $log->target_type,
+                        'target_type' => $this->humanizeTargetType($log->target_type ?? ''),
                         'target_id' => $log->target_id,
                         'created_at' => $log->created_at?->toIso8601String(),
                     ])
@@ -265,5 +265,68 @@ class BuildAdminDashboardAction
                 'trends' => $trends,
             ];
         });
+    }
+
+    /**
+     * Map a raw audit action key to a human-readable Vietnamese label.
+     */
+    private function humanizeActionKey(string $key): string
+    {
+        $map = [
+            'admin.evidence.preview' => 'Admin đã xem minh chứng xác thực',
+            'admin.evidence.download' => 'Admin đã tải minh chứng xác thực',
+            'verification.start_review' => 'Bắt đầu xét duyệt hồ sơ xác thực',
+            'verification.start review' => 'Bắt đầu xét duyệt hồ sơ xác thực',
+            'verification.ai_analysis_completed' => 'AI đã hoàn tất phân tích hồ sơ',
+            'verification.ai analysis completed' => 'AI đã hoàn tất phân tích hồ sơ',
+            'verification.approved' => 'Đã phê duyệt xác thực sinh viên',
+            'verification.rejected' => 'Đã từ chối yêu cầu xác thực',
+            'verification.needs_more_info' => 'Yêu cầu bổ sung thông tin xác thực',
+            'verification.conflict_flagged' => 'Gắn cờ xung đột MSSV',
+            'verification.conflict_resolved' => 'Đã giải quyết xung đột MSSV',
+            'report.reviewed' => 'Đã xử lý báo cáo vi phạm',
+            'report.dismissed' => 'Đã bỏ qua báo cáo',
+            'user.restricted' => 'Đã hạn chế tài khoản người dùng',
+            'user.suspended' => 'Đã đình chỉ tài khoản người dùng',
+            'user.reactivated' => 'Đã kích hoạt lại tài khoản',
+            'post.hidden' => 'Đã ẩn bài viết vi phạm',
+            'post.restored' => 'Đã khôi phục bài viết',
+            'media.deleted' => 'Đã xoá tệp media',
+            'media.quarantined' => 'Đã cách ly tệp media',
+            'admin.login' => 'Quản trị viên đăng nhập',
+            'admin.logout' => 'Quản trị viên đăng xuất',
+            'system.cache_cleared' => 'Hệ thống đã xoá cache',
+            'system.queue_restarted' => 'Hệ thống đã khởi động lại queue',
+            'announcement.published' => 'Đã đăng thông báo mới',
+            'community.suspended' => 'Đã đình chỉ cộng đồng',
+            'community.reactivated' => 'Đã khôi phục cộng đồng',
+        ];
+
+        $lower = strtolower(trim($key));
+
+        return $map[$lower] ?? $map[$key] ?? 'Hoạt động quản trị';
+    }
+
+    /**
+     * Map a raw target_type string to a human-readable Vietnamese label.
+     */
+    private function humanizeTargetType(string $type): string
+    {
+        $map = [
+            'verification_evidence' => 'Minh chứng xác thực',
+            'verification_request' => 'Yêu cầu xác thực',
+            'verification_requests' => 'Yêu cầu xác thực',
+            'report' => 'Báo cáo',
+            'reports' => 'Báo cáo',
+            'user' => 'Người dùng',
+            'users' => 'Người dùng',
+            'post' => 'Bài viết',
+            'posts' => 'Bài viết',
+            'media' => 'Tệp media',
+            'community' => 'Cộng đồng',
+            'announcement' => 'Thông báo',
+        ];
+
+        return $map[strtolower($type)] ?? ucfirst(str_replace('_', ' ', $type));
     }
 }

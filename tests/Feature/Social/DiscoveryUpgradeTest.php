@@ -91,7 +91,7 @@ class DiscoveryUpgradeTest extends TestCase
             'discoverable' => false,
         ]);
 
-        Volt::test('pages.app.discovery')
+        Volt::test('pages.app.connections', ['activeTab' => 'discovery'])
             ->assertSee('Visible Student')
             ->assertSeeHtml(route('profile.show', $visibleUser))
             ->assertDontSee('Suspended Student')
@@ -142,7 +142,7 @@ class DiscoveryUpgradeTest extends TestCase
             'blocked_id' => $this->user->id,
         ]);
 
-        Volt::test('pages.app.discovery')
+        Volt::test('pages.app.connections', ['activeTab' => 'discovery'])
             ->assertDontSee('Blocked Student')
             ->assertDontSee('Blocker Student');
     }
@@ -168,7 +168,7 @@ class DiscoveryUpgradeTest extends TestCase
             'academic_program_id' => AcademicProgram::where('slug', 'ngon-ngu-anh')->first()->id,
         ]);
 
-        Volt::test('pages.app.discovery')
+        Volt::test('pages.app.connections', ['activeTab' => 'discovery'])
             ->set('search', 'Alice')
             ->assertSee('Alice English')
             ->set('search', 'Tiếng Anh')
@@ -213,7 +213,7 @@ class DiscoveryUpgradeTest extends TestCase
             'academic_program_id' => $this->programCs->id,
         ]);
 
-        Volt::test('pages.app.discovery')
+        Volt::test('pages.app.connections', ['activeTab' => 'discovery'])
             ->set('roleFilter', 'teacher')
             ->assertSee('Professor Smith')
             ->assertDontSee('Bob Student')
@@ -242,7 +242,7 @@ class DiscoveryUpgradeTest extends TestCase
             'cohort' => 'K49',
         ]);
 
-        Volt::test('pages.app.discovery')
+        Volt::test('pages.app.connections', ['activeTab' => 'discovery'])
             ->assertSee('Cùng ngành')
             ->assertSee('Cùng khóa')
             ->assertSee('Cùng khoa');

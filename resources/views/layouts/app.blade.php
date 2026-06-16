@@ -90,11 +90,14 @@
                 {{-- Page content --}}
                 <main
                     id="main-content"
-                    class="flex-1 flex flex-col h-full min-h-0 {{ in_array($shell, ['social']) ? 'pb-24 lg:pb-4 overflow-y-auto overflow-x-hidden' : (in_array($shell, ['conversation']) ? 'pb-16 lg:pb-0 overflow-hidden' : 'overflow-y-auto overflow-x-hidden') }}"
+                    class="flex-1 flex flex-col min-h-0 {{ in_array($shell, ['social']) ? 'pb-24 lg:pb-4 overflow-y-auto overflow-x-hidden' : (in_array($shell, ['conversation', 'admin']) ? 'pb-16 lg:pb-0 overflow-hidden' : 'overflow-y-auto overflow-x-hidden') }}"
                     tabindex="-1"
                 >
                     @if($shell === 'admin')
-                        <div class="flex-1 flex flex-col min-w-0" x-data="{ adminDrawerOpen: false }">
+                        <div class="flex h-full w-full min-w-0" x-data="{ adminDrawerOpen: false }">
+                            @include('partials.app.admin-subsidebar')
+                            
+                            <div class="flex-1 flex flex-col min-w-0 h-full">
                             {{-- Top Admin Bar - Mobile only --}}
                             <div class="lg:hidden bg-ue-surface border-b border-ue-border px-4 py-3 flex items-center justify-between sticky top-0 z-sticky">
                                 <div class="flex items-center gap-2">
@@ -188,7 +191,7 @@
                                                         }
                                                     @endphp
                                                     <a
-                                                        href="{{ route('admin.console', ['group' => $groupKey]) }}"
+                                                        href="{{ route($group['items'][0]['route'] ?? 'admin.dashboard') }}"
                                                         @click="adminDrawerOpen = false"
                                                         class="ue-admin-nav-link {{ $active ? 'active' : '' }}"
                                                         @if($active) aria-current="page" @endif
@@ -204,13 +207,14 @@
                             </div>
 
                             {{-- Content Area --}}
-                            <div class="flex-1 min-w-0">
+                            <div class="flex-1 w-full min-w-0 overflow-y-auto lg:p-2">
                                 @if(isset($slot))
                                     {!! $slot !!}
                                 @else
                                     {!! $__env->yieldContent('content') !!}
                                 @endif
                             </div>
+                        </div>
                         </div>
                     @else
                         @if(isset($slot))
