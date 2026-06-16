@@ -19,10 +19,7 @@
         <link rel="apple-touch-icon" href="{{ asset('icons/apple-touch-icon.png') }}">
 
         {{-- Realtime Meta Config --}}
-        <meta name="reverb-app-key" content="{{ config('broadcasting.connections.reverb.key') }}">
-        <meta name="reverb-host" content="{{ config('broadcasting.connections.reverb.options.host', '127.0.0.1') }}">
-        <meta name="reverb-port" content="{{ config('broadcasting.connections.reverb.options.port', 8080) }}">
-        <meta name="reverb-scheme" content="{{ config('broadcasting.connections.reverb.options.scheme', 'http') }}">
+        @include('partials.realtime-meta')
 
         {{-- Web Push Meta Config --}}
         <meta name="vapid-public-key" content="{{ config('webpush.vapid.public_key') }}">
