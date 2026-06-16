@@ -1010,23 +1010,20 @@ new #[Layout('layouts.app')] class extends Component
                     <div class="flex items-center gap-3 min-w-0 flex-1">
                         @if ($convo['recipient'])
                             <div class="relative flex-shrink-0">
-                                <x-ui.avatar :user="$convo['recipient']" size="md" />
-                                @if ($convo['recipient']->isOnline() && $convo['recipient']->canSeeOnlineStatus(auth()->user()))
-                                    <span class="absolute bottom-0 right-0 block h-2.5 w-2.5 rounded-full bg-green-500 border-2 border-white ring-1 ring-slate-100" title="Trực tuyến"></span>
-                                @endif
+                                <x-ui.avatar :user="$convo['recipient']" size="lg" />
                             </div>
                             <div class="min-w-0 flex-1">
                                 <div class="flex items-center justify-between gap-2">
-                                    <h2 class="text-xs font-bold text-slate-800 flex items-center gap-1 truncate">
+                                    <h2 class="text-sm font-bold text-slate-800 flex items-center gap-1 truncate">
                                         {{ $convo['nickname'] ?: $convo['recipient']->name }}
                                         <x-ui.icon name="shield-check" size="xs" class="text-ue-brand fill-ue-brand" />
                                     </h2>
-                                    <span class="text-[9px] text-slate-400 font-semibold flex-shrink-0">
+                                    <span class="text-xxs text-slate-400 font-semibold flex-shrink-0">
                                         {{ $convo['updated_at']->diffForHumans(null, true) }}
                                     </span>
                                 </div>
                                 @if ($convo['last_message'])
-                                    <p class="text-xxs text-slate-500 font-medium truncate mt-0.5 {{ $convo['is_unread'] ? 'text-slate-800 font-bold' : '' }}">
+                                    <p class="text-xs text-slate-500 font-medium truncate mt-0.5 {{ $convo['is_unread'] ? 'text-slate-800 font-bold' : '' }}">
                                         @if ($convo['last_message']->message_type === MessageType::SHARED_POST)
                                             <span class="text-ue-brand font-semibold">[Bài viết chia sẻ]</span>
                                         @else
@@ -1034,7 +1031,7 @@ new #[Layout('layouts.app')] class extends Component
                                         @endif
                                     </p>
                                 @else
-                                    <p class="text-xxs text-slate-350 italic font-semibold mt-0.5">Bắt đầu cuộc trò chuyện.</p>
+                                    <p class="text-xs text-slate-350 italic font-semibold mt-0.5">Bắt đầu cuộc trò chuyện.</p>
                                 @endif
                             </div>
                         @else
@@ -1238,8 +1235,8 @@ new #[Layout('layouts.app')] class extends Component
                 $recipient = $activeConvo->getRecipientFor(Auth::user());
             @endphp
             {{-- Header --}}
-            <div class="h-14 px-4 bg-white border-b border-slate-150 flex items-center justify-between flex-shrink-0 z-10">
-                <div class="flex items-center gap-2.5 min-w-0 flex-1">
+            <div class="h-16 px-5 bg-white border-b border-slate-150 flex items-center justify-between flex-shrink-0 z-10">
+                <div class="flex items-center gap-3 min-w-0 flex-1">
                     {{-- Back button for mobile --}}
                     <button
                         type="button"
@@ -1253,37 +1250,34 @@ new #[Layout('layouts.app')] class extends Component
                     @if ($recipient)
                         <a href="{{ route('profile.show', $recipient) }}" class="block rounded-full focus:outline-none focus:ring-2 focus:ring-ue-brand/30" aria-label="Xem trang cá nhân của {{ $recipient->name }}">
                             <div class="relative flex-shrink-0">
-                                <x-ui.avatar :user="$recipient" size="sm" />
-                                @if ($recipient->isOnline() && $recipient->canSeeOnlineStatus(auth()->user()))
-                                    <span class="absolute bottom-0 right-0 block h-2 w-2 rounded-full bg-green-500 border-2 border-white ring-1 ring-slate-100" title="Trực tuyến"></span>
-                                @endif
+                                <x-ui.avatar :user="$recipient" size="md" />
                             </div>
                         </a>
                         <div class="min-w-0">
                             @if ($recipientNickname)
-                                <a href="{{ route('profile.show', $recipient) }}" class="text-xs font-bold text-slate-800 truncate flex items-center gap-1 leading-tight hover:text-ue-brand hover:underline">
-                                    {{ $recipientNickname }} <span class="text-[9px] text-slate-400 font-normal">({{ $recipient->name }})</span>
+                                <a href="{{ route('profile.show', $recipient) }}" class="text-sm font-bold text-slate-800 truncate flex items-center gap-1 leading-tight hover:text-ue-brand hover:underline">
+                                    {{ $recipientNickname }} <span class="text-xxs text-slate-400 font-normal">({{ $recipient->name }})</span>
                                     <x-ui.icon name="shield-check" size="xs" class="text-ue-brand fill-ue-brand" />
                                 </a>
                             @else
-                                <a href="{{ route('profile.show', $recipient) }}" class="text-xs font-bold text-slate-800 truncate flex items-center gap-1 leading-tight hover:text-ue-brand hover:underline">
+                                <a href="{{ route('profile.show', $recipient) }}" class="text-sm font-bold text-slate-800 truncate flex items-center gap-1 leading-tight hover:text-ue-brand hover:underline">
                                     {{ $recipient->name }}
                                     <x-ui.icon name="shield-check" size="xs" class="text-ue-brand fill-ue-brand" />
                                 </a>
                             @endif
                             @if ($recipient->profile && $recipient->profile->faculty)
-                                <p class="text-[9px] text-slate-400 font-semibold truncate leading-none mt-0.5">
+                                <p class="text-xxs text-slate-400 font-semibold truncate leading-none mt-0.5">
                                     {{ $recipient->profile->faculty }}
                                     @if ($recipient->isOnline() && $recipient->canSeeOnlineStatus(auth()->user()))
                                         <span class="text-green-500 font-bold ml-1.5">• Đang hoạt động</span>
                                     @endif
                                 </p>
                             @elseif ($recipient->isOnline() && $recipient->canSeeOnlineStatus(auth()->user()))
-                                <p class="text-[9px] text-green-500 font-bold truncate leading-none mt-0.5">Đang hoạt động</p>
+                                <p class="text-xxs text-green-500 font-bold truncate leading-none mt-0.5">Đang hoạt động</p>
                             @endif
                         </div>
                     @else
-                        <h2 class="text-xs font-bold text-slate-800">Thành viên UEConnect</h2>
+                        <h2 class="text-sm font-bold text-slate-800">Thành viên UEConnect</h2>
                     @endif
                 </div>
 
