@@ -506,7 +506,7 @@ new class extends Component {
                     </button>
                 @endif
 
-                @if ($this->hasFeedback())
+                @if ($this->isStudent() && $this->hasFeedback())
                     <span class="inline-flex items-center gap-1.5 px-4 py-2 text-sm font-semibold text-emerald-700 bg-emerald-50 rounded-lg border border-emerald-200">
                         <x-ui.icon name="check-circle" size="xs" class="text-emerald-600" />
                         Đã gửi phản hồi
