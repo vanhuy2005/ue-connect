@@ -1492,7 +1492,7 @@ new #[Layout('layouts.app')] class extends Component
                             </div>
                         @endif
 
-                        <div class="flex flex-col max-w-[70%] gap-1">
+                        <div class="flex flex-col min-w-0 max-w-[70%] gap-1">
                             {{-- Reply quoted preview inside bubble --}}
                             @if (!$message->isRecalled() && $message->replyTo)
                                 <div class="mb-1.5 p-2 rounded-xl text-[10px] font-semibold max-w-full truncate
@@ -1521,7 +1521,7 @@ new #[Layout('layouts.app')] class extends Component
                             @else
                                 {{-- Standard text bubble --}}
                                 @if ($message->message_type === MessageType::TEXT)
-                                    <div class="px-3.5 py-2 rounded-2xl text-xxs font-medium leading-relaxed
+                                    <div class="max-w-full px-3.5 py-2 rounded-2xl text-xxs font-medium leading-relaxed whitespace-normal break-words [overflow-wrap:anywhere]
                                                 {{ $isMine ? 'bg-ue-brand text-white rounded-br-xs shadow-2xs' : 'bg-white border border-slate-150 text-slate-700 rounded-bl-xs' }}">
                                         {{ $message->body }}
                                     </div>
@@ -1548,7 +1548,7 @@ new #[Layout('layouts.app')] class extends Component
                                                 </a>
                                             </div>
                                             @if ($message->body)
-                                                <div class="px-3.5 py-2 rounded-2xl text-xxs font-medium leading-relaxed
+                                                <div class="max-w-full px-3.5 py-2 rounded-2xl text-xxs font-medium leading-relaxed whitespace-normal break-words [overflow-wrap:anywhere]
                                                             {{ $isMine ? 'bg-ue-brand text-white rounded-br-xs shadow-2xs' : 'bg-white border border-slate-150 text-slate-700 rounded-bl-xs' }}">
                                                     {{ $message->body }}
                                                 </div>
@@ -1575,7 +1575,7 @@ new #[Layout('layouts.app')] class extends Component
                                                     </a>
                                                     <a href="{{ route('profile.show', $message->sharedPost->user) }}" class="text-xxs font-bold text-slate-800 hover:text-ue-brand hover:underline">{{ $message->sharedPost->user->name }}</a>
                                                 </div>
-                                                <p class="text-xxs font-medium text-slate-600 line-clamp-2 leading-relaxed">
+                                                <p class="text-xxs font-medium text-slate-600 line-clamp-2 leading-relaxed break-words [overflow-wrap:anywhere]">
                                                     {{ $message->sharedPost->body }}
                                                 </p>
                                             </div>
@@ -1594,7 +1594,7 @@ new #[Layout('layouts.app')] class extends Component
                                         @endif
 
                                         @if ($message->body)
-                                            <div class="text-xxs font-semibold border-t border-slate-100 pt-2 text-slate-650 leading-normal">
+                                            <div class="text-xxs font-semibold border-t border-slate-100 pt-2 text-slate-650 leading-normal whitespace-normal break-words [overflow-wrap:anywhere]">
                                                 {{ $message->body }}
                                             </div>
                                         @endif
@@ -1627,7 +1627,7 @@ new #[Layout('layouts.app')] class extends Component
                 {{-- Alpine Pending Messages (Optimistic UI) --}}
                 <template x-for="msg in pendingMessages" :key="msg.client_message_id">
                     <div class="flex justify-end items-center gap-2 group w-full opacity-80 animate-pulse">
-                        <div class="flex flex-col max-w-[70%] gap-1">
+                        <div class="flex flex-col min-w-0 max-w-[70%] gap-1">
                             <template x-if="msg.imageUrl">
                                 <div class="flex flex-col gap-2">
                                     <div class="rounded-2xl overflow-hidden border border-slate-150 max-w-[280px] bg-slate-100 shadow-2xs flex items-center justify-center">
@@ -1641,15 +1641,15 @@ new #[Layout('layouts.app')] class extends Component
                                         </div>
                                     </div>
                                     <template x-if="msg.body">
-                                        <div class="px-3.5 py-2 rounded-2xl text-xxs font-medium leading-relaxed bg-ue-brand text-white rounded-br-xs shadow-2xs">
-                                            <span x-text="msg.body"></span>
+                                        <div class="max-w-full px-3.5 py-2 rounded-2xl text-xxs font-medium leading-relaxed whitespace-normal break-words [overflow-wrap:anywhere] bg-ue-brand text-white rounded-br-xs shadow-2xs">
+                                            <span class="block max-w-full whitespace-normal break-words [overflow-wrap:anywhere]" x-text="msg.body"></span>
                                         </div>
                                     </template>
                                 </div>
                             </template>
                             <template x-if="!msg.imageUrl">
-                                <div class="px-3.5 py-2 rounded-2xl text-xxs font-medium leading-relaxed bg-ue-brand text-white rounded-br-xs shadow-2xs">
-                                    <span x-text="msg.body"></span>
+                                <div class="max-w-full px-3.5 py-2 rounded-2xl text-xxs font-medium leading-relaxed whitespace-normal break-words [overflow-wrap:anywhere] bg-ue-brand text-white rounded-br-xs shadow-2xs">
+                                    <span class="block max-w-full whitespace-normal break-words [overflow-wrap:anywhere]" x-text="msg.body"></span>
                                 </div>
                             </template>
                             <div class="text-[8px] font-semibold px-1 self-end flex items-center gap-1 select-none">
