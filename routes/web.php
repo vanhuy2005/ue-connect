@@ -872,7 +872,7 @@ Route::prefix('admin')
         Route::get('moderation', function () {
             return view('admin.moderation', [
                 'pendingReports' => Report::where('status', 'pending')->count(),
-                'pendingVerifications' => VerificationRequest::where('status', 'pending_review')->count(),
+                'pendingVerifications' => VerificationRequest::whereIn('status', ['pending_review', 'under_review', 'resubmitted'])->count(),
                 'suspendedUsers' => User::where('account_status', 'suspended')->count(),
                 'recentActions' => AuditLog::latest()->limit(5)->get(),
             ]);
