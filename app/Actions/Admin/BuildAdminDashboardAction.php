@@ -74,7 +74,9 @@ class BuildAdminDashboardAction
                 ->groupBy('status')
                 ->pluck('total', 'status');
 
-            $pendingVerificationsCount = $verificationCounts[VerificationStatus::PENDING_REVIEW->value] ?? 0;
+            $pendingVerificationsCount = ($verificationCounts[VerificationStatus::PENDING_REVIEW->value] ?? 0)
+                + ($verificationCounts[VerificationStatus::UNDER_REVIEW->value] ?? 0)
+                + ($verificationCounts[VerificationStatus::RESUBMITTED->value] ?? 0);
             $needsInfoVerificationsCount = $verificationCounts[VerificationStatus::NEEDS_MORE_INFORMATION->value] ?? 0;
             $conflictsVerificationsCount = $verificationCounts[VerificationStatus::CONFLICT->value] ?? 0;
 
@@ -88,7 +90,12 @@ class BuildAdminDashboardAction
             $priorityItems = [];
 
             // Add verification requests
-            $pendingVerifications = VerificationRequest::whereIn('status', [VerificationStatus::PENDING_REVIEW, VerificationStatus::CONFLICT])
+            $pendingVerifications = VerificationRequest::whereIn('status', [
+                VerificationStatus::PENDING_REVIEW,
+                VerificationStatus::UNDER_REVIEW,
+                VerificationStatus::RESUBMITTED,
+                VerificationStatus::CONFLICT,
+            ])
                 ->with('user')
                 ->latest()
                 ->limit(5)

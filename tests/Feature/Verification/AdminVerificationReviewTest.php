@@ -2,6 +2,7 @@
 
 namespace Tests\Feature\Verification;
 
+use App\Actions\Admin\BuildAdminDashboardAction;
 use App\Enums\AccountStatus;
 use App\Enums\VerificationStatus;
 use App\Models\AcademicProgram;
@@ -12,6 +13,7 @@ use App\Models\User;
 use App\Models\VerificationRequest;
 use Database\Seeders\Reference\AccessControlReferenceSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Cache;
 use Livewire\Volt\Volt;
 use Tests\TestCase;
 
@@ -241,5 +243,84 @@ class AdminVerificationReviewTest extends TestCase
 
         $this->request->refresh();
         $this->assertNotEquals(VerificationStatus::APPROVED, $this->request->status);
+    }
+
+    public function test_queue_defaults_to_pending_and_includes_under_review_and_resubmitted(): void
+    {
+        $this->actingAs($this->admin);
+
+        // Create requests with different statuses
+        $underReviewRequest = VerificationRequest::create([
+            'user_id' => User::factory()->create()->id,
+            'role_requested' => 'student',
+            'status' => VerificationStatus::UNDER_REVIEW,
+            'submitted_name' => 'Nguyen Van Under Review',
+            'submitted_email' => 'underreview@student.hcmue.edu.vn',
+            'submitted_at' => now(),
+        ]);
+
+        $resubmittedRequest = VerificationRequest::create([
+            'user_id' => User::factory()->create()->id,
+            'role_requested' => 'student',
+            'status' => VerificationStatus::RESUBMITTED,
+            'submitted_name' => 'Nguyen Van Resubmitted',
+            'submitted_email' => 'resubmitted@student.hcmue.edu.vn',
+            'submitted_at' => now(),
+        ]);
+
+        $approvedRequest = VerificationRequest::create([
+            'user_id' => User::factory()->create()->id,
+            'role_requested' => 'student',
+            'status' => VerificationStatus::APPROVED,
+            'submitted_name' => 'Nguyen Van Approved',
+            'submitted_email' => 'approved@student.hcmue.edu.vn',
+            'submitted_at' => now(),
+        ]);
+
+        $component = Volt::test('pages.admin.verification-queue')
+            ->assertSet('status', 'pending');
+
+        $requests = $component->get('requests');
+        $requestIds = collect($requests->items())->pluck('id')->all();
+
+        // Should contain pending_review (this->request), under_review, and resubmitted requests
+        $this->assertContains($this->request->id, $requestIds);
+        $this->assertContains($underReviewRequest->id, $requestIds);
+        $this->assertContains($resubmittedRequest->id, $requestIds);
+
+        // Should not contain approved request
+        $this->assertNotContains($approvedRequest->id, $requestIds);
+    }
+
+    public function test_admin_dashboard_counts_all_pending_under_review_and_resubmitted(): void
+    {
+        $this->actingAs($this->admin);
+
+        // Create extra requests with under_review and resubmitted statuses
+        VerificationRequest::create([
+            'user_id' => User::factory()->create()->id,
+            'role_requested' => 'student',
+            'status' => VerificationStatus::UNDER_REVIEW,
+            'submitted_name' => 'Nguyen Van Under Review 2',
+            'submitted_email' => 'underreview2@student.hcmue.edu.vn',
+            'submitted_at' => now(),
+        ]);
+
+        VerificationRequest::create([
+            'user_id' => User::factory()->create()->id,
+            'role_requested' => 'student',
+            'status' => VerificationStatus::RESUBMITTED,
+            'submitted_name' => 'Nguyen Van Resubmitted 2',
+            'submitted_email' => 'resubmitted2@student.hcmue.edu.vn',
+            'submitted_at' => now(),
+        ]);
+
+        // Clear cache so dashboard gets fresh data
+        Cache::forget('admin_dashboard_data');
+
+        $dashboardData = app(BuildAdminDashboardAction::class)->execute();
+
+        // Count should be 3: 1 pending_review (from setUp), 1 under_review, 1 resubmitted
+        $this->assertEquals(3, $dashboardData['snapshot']['pending_verification']);
     }
 }
