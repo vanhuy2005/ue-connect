@@ -140,7 +140,7 @@ $secondaryNav = [
                             @if($active) aria-current="page" @endif
                             :title="collapsed ? '{{ $group['vn_label'] }}' : ''"
                         >
-                            <div class="relative flex items-center justify-center">
+                            <div class="ue-nav-icon-container relative flex items-center justify-center">
                                 <x-ui.icon :name="$group['icon']" size="md" aria-hidden="true" class="flex-shrink-0" />
                             </div>
                             <span x-show="!collapsed" x-transition:enter="transition ease-out duration-200 delay-75" x-transition:enter-start="opacity-0 translate-x-[-8px]" x-transition:enter-end="opacity-100 translate-x-0" x-transition:leave="transition ease-in duration-100" x-transition:leave-start="opacity-100" x-transition:leave-end="opacity-0" class="truncate text-sm font-semibold whitespace-nowrap">{{ $group['vn_label'] }}</span>
@@ -166,7 +166,7 @@ $secondaryNav = [
             aria-label="Xem thêm menu"
             :title="collapsed ? '{{ $currentUser?->name }}' : ''"
         >
-            <div class="relative flex items-center justify-center">
+            <div class="ue-nav-icon-container relative flex items-center justify-center">
                 <x-ui.avatar :user="$currentUser" size="xs" class="flex-shrink-0" />
             </div>
             <span x-show="!collapsed" x-transition:enter="transition ease-out duration-200 delay-75" x-transition:enter-start="opacity-0 translate-x-[-8px]" x-transition:enter-end="opacity-100 translate-x-0" x-transition:leave="transition ease-in duration-100" x-transition:leave-start="opacity-100" x-transition:leave-end="opacity-0" class="truncate text-sm font-semibold text-slate-800 group-hover/profile:text-slate-950 whitespace-nowrap">{{ $currentUser?->name }}</span>
@@ -263,7 +263,7 @@ $secondaryNav = [
                                 @click="notificationsOpen = false"
                             @endif
                         >
-                            <div class="relative flex items-center justify-center">
+                            <div class="ue-nav-icon-container relative flex items-center justify-center">
                                 <x-ui.icon :name="$item['icon']" size="md" aria-hidden="true" class="flex-shrink-0" />
                                 <span x-show="collapsed" class="absolute -top-1 -right-1 h-2 w-2 rounded-full bg-red-500 ring-2 ring-white {{ !empty($item['badge']) && $item['badge'] > 0 ? '' : 'hidden' }} js-badge-dot-{{ $item['icon'] }}"></span>
                             </div>
@@ -296,7 +296,7 @@ $secondaryNav = [
                             :title="collapsed ? '{{ $item['label'] }}' : ''"
                             @click="notificationsOpen = false"
                         >
-                            <div class="relative flex items-center justify-center">
+                            <div class="ue-nav-icon-container relative flex items-center justify-center">
                                 <x-ui.icon :name="$item['icon']" size="md" aria-hidden="true" class="flex-shrink-0" />
                             </div>
                             <span x-show="!collapsed" x-transition:enter="transition ease-out duration-200 delay-75" x-transition:enter-start="opacity-0 translate-x-[-8px]" x-transition:enter-end="opacity-100 translate-x-0" x-transition:leave="transition ease-in duration-100" x-transition:leave-start="opacity-100" x-transition:leave-end="opacity-0" class="whitespace-nowrap">{{ $item['label'] }}</span>
@@ -321,7 +321,7 @@ $secondaryNav = [
             aria-label="Xem thêm menu"
             :title="collapsed ? 'Xem thêm' : ''"
         >
-            <div class="relative flex items-center justify-center">
+            <div class="ue-nav-icon-container relative flex items-center justify-center">
                 <x-ui.icon name="menu" size="md" class="flex-shrink-0" />
             </div>
             <span x-show="!collapsed" x-transition:enter="transition ease-out duration-200 delay-75" x-transition:enter-start="opacity-0 translate-x-[-8px]" x-transition:enter-end="opacity-100 translate-x-0" x-transition:leave="transition ease-in duration-100" x-transition:leave-start="opacity-100" x-transition:leave-end="opacity-0" class="whitespace-nowrap">Xem thêm</span>
