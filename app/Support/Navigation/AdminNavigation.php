@@ -203,6 +203,22 @@ class AdminNavigation
             }
 
             if (! empty($filteredItems)) {
+                // Determine badges for items
+                foreach ($filteredItems as &$fItem) {
+                    $badge = 0;
+                    if ($fItem['key'] === 'verification' && class_exists(\App\Models\VerificationRequest::class)) {
+                        try {
+                            $badge = \App\Models\VerificationRequest::where('status', 'pending')->count();
+                        } catch (\Exception $e) {}
+                    }
+                    if ($fItem['key'] === 'mentors' && class_exists(\App\Models\MentorAccessRequest::class)) {
+                        try {
+                            $badge = \App\Models\MentorAccessRequest::where('status', 'pending')->count();
+                        } catch (\Exception $e) {}
+                    }
+                    $fItem['badge'] = $badge;
+                }
+
                 $group['items'] = $filteredItems;
                 $filtered[$groupKey] = $group;
             }

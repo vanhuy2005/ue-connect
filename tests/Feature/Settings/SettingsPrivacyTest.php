@@ -150,7 +150,7 @@ class SettingsPrivacyTest extends TestCase
 
         $this->actingAs($this->user);
 
-        Volt::test('pages.app.discovery')
+        Volt::test('pages.app.connections', ['activeTab' => 'discovery'])
             ->assertDontSee('Private Person');
     }
 

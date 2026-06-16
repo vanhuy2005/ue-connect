@@ -147,7 +147,7 @@ class ConnectionRequestTest extends TestCase
     {
         $this->actingAs($this->user);
 
-        Volt::test('pages.app.discovery')
+        Volt::test('pages.app.connections', ['activeTab' => 'discovery'])
             ->assertSee('Other User')
             ->call('startGreeting', $this->otherUser->id)
             ->assertSet('showGreetingModal', true)
