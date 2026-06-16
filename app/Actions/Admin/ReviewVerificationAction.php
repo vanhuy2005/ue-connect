@@ -187,12 +187,13 @@ class ReviewVerificationAction
 
     private function approve(VerificationRequest $requestModel, User $user, string $reason, User $admin): void
     {
-        $profile = Profile::updateOrCreate(
+        $profile = Profile::withTrashed()->updateOrCreate(
             ['user_id' => $user->id],
             [
                 'display_name' => $requestModel->submitted_name,
                 'role_type' => $requestModel->role_requested,
                 'profile_status' => 'incomplete',
+                'deleted_at' => null,
             ]
         );
 
