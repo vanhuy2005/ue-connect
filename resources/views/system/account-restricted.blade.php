@@ -10,6 +10,10 @@
         <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
         <link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700&display=swap" rel="stylesheet">
         <link rel="icon" type="image/png" href="{{ asset('images/brand/ueconnect-mark-nobg.png') }}">
+        
+        {{-- Realtime Meta Config --}}
+        @include('partials.realtime-meta')
+
         @vite(['resources/css/app.css', 'resources/js/app.js'])
         <script>
             if (window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone) {

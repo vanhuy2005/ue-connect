@@ -4,6 +4,10 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
     <title>@yield('title') - {{ config('app.name', 'UEConnect') }}</title>
+    
+    {{-- Realtime Meta Config --}}
+    @include('partials.realtime-meta')
+
     @vite(['resources/css/app.css', 'resources/js/app.js'])
     <script>
         if (window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone) {
