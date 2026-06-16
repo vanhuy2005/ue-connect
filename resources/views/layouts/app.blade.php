@@ -19,10 +19,13 @@
         <link rel="apple-touch-icon" href="{{ asset('icons/apple-touch-icon.png') }}">
 
         {{-- Realtime Meta Config --}}
-        <meta name="reverb-app-key" content="{{ config('reverb.apps.apps.0.key', env('REVERB_APP_KEY')) }}">
-        <meta name="reverb-host" content="{{ env('REVERB_HOST', '127.0.0.1') }}">
-        <meta name="reverb-port" content="{{ config('reverb.servers.reverb.port', env('REVERB_PORT')) }}">
-        <meta name="reverb-scheme" content="{{ config('reverb.servers.reverb.scheme', env('REVERB_SCHEME')) }}">
+        <meta name="reverb-app-key" content="{{ config('broadcasting.connections.reverb.key') }}">
+        <meta name="reverb-host" content="{{ config('broadcasting.connections.reverb.options.host', '127.0.0.1') }}">
+        <meta name="reverb-port" content="{{ config('broadcasting.connections.reverb.options.port', 8080) }}">
+        <meta name="reverb-scheme" content="{{ config('broadcasting.connections.reverb.options.scheme', 'http') }}">
+
+        {{-- Web Push Meta Config --}}
+        <meta name="vapid-public-key" content="{{ config('webpush.vapid.public_key') }}">
 
         {{-- Fonts: Be Vietnam Pro — weights 400/500/600/700 only --}}
         <link rel="preconnect" href="https://fonts.googleapis.com">

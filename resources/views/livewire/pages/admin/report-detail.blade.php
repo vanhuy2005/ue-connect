@@ -7,6 +7,7 @@ use App\Models\MentorProfile;
 use App\Enums\ReportStatus;
 use App\Enums\PostStatus;
 use App\Enums\CommentStatus;
+use App\Actions\Mentor\RevokeMentorAccessAction;
 use App\Services\AuditLogService;
 use Illuminate\Support\Facades\Auth;
 use Livewire\Volt\Component;
@@ -100,13 +101,17 @@ new class extends Component {
         // Hide target content based on type (do not hard delete)
         if ($target instanceof Post) {
             $target->status = PostStatus::HIDDEN_BY_MODERATION;
+            $target->save();
         } elseif ($target instanceof Comment) {
             $target->status = CommentStatus::HIDDEN_BY_MODERATION;
+            $target->save();
         } else {
-            $target->is_active = false;
-            $target->mentor_visibility = false;
+            // Đối tượng là MentorProfile. Tiến hành thu hồi quyền mentor đầy đủ.
+            app(RevokeMentorAccessAction::class)->execute(Auth::user(), $target, [
+                'reason' => 'Báo cáo vi phạm về hồ sơ mentor đã được phê duyệt.',
+                'admin_notes' => 'Tự động thu hồi do quyết định ẩn nội dung vi phạm từ trang kiểm duyệt báo cáo.',
+            ]);
         }
-        $target->save();
 
         // Update report status
         $this->report->status = ReportStatus::ACTION_TAKEN;

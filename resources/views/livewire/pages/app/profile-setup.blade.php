@@ -1,16 +1,19 @@
 <?php
 
+use App\Actions\Media\AttachMediaToModelAction;
+use App\Actions\Media\GenerateMediaUrlAction;
+use App\Actions\Media\StoreTemporaryMediaAction;
 use App\Enums\AccountStatus;
 use App\Enums\IdentityType;
 use App\Enums\VerificationStatus;
-use App\Models\Faculty;
 use App\Models\AcademicProgram;
+use App\Models\AdvisorProfile;
+use App\Models\AlumniProfile;
+use App\Models\Faculty;
 use App\Models\Profile;
 use App\Models\StudentProfile;
-use App\Models\AlumniProfile;
-use App\Models\AdvisorProfile;
-use App\Models\VerificationRequest;
 use App\Models\User;
+use App\Models\VerificationRequest;
 use Illuminate\Support\Facades\DB;
 use Livewire\Attributes\Layout;
 use Livewire\Volt\Component;
@@ -21,50 +24,117 @@ new #[Layout('layouts.app')] class extends Component
     use WithFileUploads;
 
     public string $role_type = 'student'; // 'student', 'alumni', 'teacher'
-    
+
     // Common fields
     public $avatar;
+
+    public ?string $avatarUrl = null;
+
     public string $display_name = '';
+
     public string $bio = '';
+
     public string $visibility = 'public';
+
     public bool $discoverable = true;
+
     public ?int $faculty_id = null;
-    
+
     // Role-specific fields
     public string $student_code = '';
+
     public string $cohort = '';
+
     public ?int $academic_program_id = null;
+
     public ?int $graduation_year = null;
+
     public bool $willing_to_mentor = false;
+
     public string $department = '';
+
     public string $title = '';
+
     public bool $is_academic_advisor = false;
+
     public string $advised_class_codes = '';
-    
+
     // Wizard Steps
     public int $currentStep = 1;
 
     public function mount(): void
     {
         $user = auth()->user();
-        if (!$user) {
+        if (! $user) {
             $this->redirect(route('login'));
+
             return;
         }
 
         // Server-side guard: Only allow PROFILE_INCOMPLETE users
         if ($user->account_status === AccountStatus::ACTIVE) {
             $this->redirect(route('dashboard'), navigate: true);
+
             return;
         }
 
         if ($user->account_status !== AccountStatus::PROFILE_INCOMPLETE) {
             $this->redirect(route('verification.status'), navigate: true);
+
             return;
         }
-        
+
         // Load data from approved request or intended identity
         $this->loadIdentityData($user);
+
+        // Load existing avatar if it exists
+        $profile = $user->profile;
+        if ($profile && $profile->avatar()->exists()) {
+            $this->avatarUrl = app(GenerateMediaUrlAction::class)->execute($profile->avatar()->first(), 'thumb', $user);
+        }
+    }
+
+    public function updatedAvatar(): void
+    {
+        if ($this->avatar) {
+            $this->validate([
+                'avatar' => ['image', 'max:2048'], // 2MB Max
+            ]);
+
+            $user = auth()->user();
+            DB::transaction(function () use ($user) {
+                // Find existing profile (including soft-deleted ones)
+                $profile = Profile::withTrashed()->where('user_id', $user->id)->first();
+
+                if (! $profile) {
+                    $profile = Profile::create([
+                        'user_id' => $user->id,
+                        'display_name' => $this->display_name ?: $user->name,
+                        'role_type' => $this->role_type,
+                        'profile_status' => 'incomplete',
+                        'visibility' => $this->visibility,
+                        'discoverable' => $this->discoverable,
+                    ]);
+                } elseif ($profile->trashed()) {
+                    $profile->restore();
+                }
+
+                $storeAction = app(StoreTemporaryMediaAction::class);
+                $attachAction = app(AttachMediaToModelAction::class);
+
+                // Demote old avatars to history (to clean up current avatar collection)
+                $profile->avatar()->each(fn ($m) => $m->update(['collection' => 'avatar_history']));
+
+                // Store uploaded avatar as temporary media, collection 'avatar'
+                $media = $storeAction->execute($user, $this->avatar, 'avatar', ['visibility' => 'public']);
+
+                // Link/attach to the profile
+                $attachAction->execute($user, $profile, [$media->id], 'avatar');
+
+                // Get URL of the newly attached avatar
+                $this->avatarUrl = app(GenerateMediaUrlAction::class)->execute($media, 'thumb', $user);
+            });
+        }
     }
 
     protected function loadIdentityData(User $user): void
@@ -83,7 +153,7 @@ new #[Layout('layouts.app')] class extends Component
             $this->student_code = $request->submitted_student_code ?? '';
             $this->cohort = $request->submitted_cohort ?? '';
             if ($this->role_type === 'alumni') {
-                $this->graduation_year = (int)$request->submitted_graduation_year ?: null;
+                $this->graduation_year = (int) $request->submitted_graduation_year ?: null;
             } elseif (in_array($this->role_type, ['teacher', 'advisor'], true)) {
                 $this->role_type = 'teacher';
                 $this->department = $request->submitted_organization ?? '';
@@ -94,7 +164,7 @@ new #[Layout('layouts.app')] class extends Component
         } else {
             // Fallback to intended_identity_type
             $intended = $user->intended_identity_type->value ?? $user->intended_identity_type ?? '';
-            $this->role_type = match($intended) {
+            $this->role_type = match ($intended) {
                 IdentityType::CURRENT_STUDENT->value, 'current_student' => 'student',
                 IdentityType::ALUMNI->value, 'alumni' => 'alumni',
                 IdentityType::TEACHER_ADVISOR->value, 'teacher_advisor' => 'teacher',
@@ -111,9 +181,10 @@ new #[Layout('layouts.app')] class extends Component
 
     public function getAcademicProgramsProperty()
     {
-        if (!$this->faculty_id) {
+        if (! $this->faculty_id) {
             return collect();
         }
+
         return AcademicProgram::where('faculty_id', $this->faculty_id)
             ->where('status', 'active')
             ->orderBy('name')
@@ -152,7 +223,7 @@ new #[Layout('layouts.app')] class extends Component
             } elseif ($this->role_type === 'alumni') {
                 $rules['faculty_id'] = ['nullable', 'integer', 'exists:faculties,id'];
                 $rules['academic_program_id'] = ['required', 'integer', 'exists:academic_programs,id'];
-                $rules['graduation_year'] = ['required', 'integer', 'min:1950', 'max:' . (date('Y') + 5)];
+                $rules['graduation_year'] = ['required', 'integer', 'min:1950', 'max:'.(date('Y') + 5)];
                 $rules['willing_to_mentor'] = ['required', 'boolean'];
                 $rules['cohort'] = ['nullable', 'string', 'max:50'];
             } elseif ($this->role_type === 'teacher') {
@@ -186,8 +257,9 @@ new #[Layout('layouts.app')] class extends Component
     public function save()
     {
         $user = auth()->user();
-        if (!$user || $user->account_status !== AccountStatus::PROFILE_INCOMPLETE) {
+        if (! $user || $user->account_status !== AccountStatus::PROFILE_INCOMPLETE) {
             session()->flash('error', 'Hành động không hợp lệ.');
+
             return;
         }
 
@@ -265,6 +337,8 @@ new #[Layout('layouts.app')] class extends Component
                 ]);
             }
 
+            // Avatar is already saved immediately on upload via updatedAvatar()
+
             // Transition user status to ACTIVE!
             $user->update([
                 'account_status' => AccountStatus::ACTIVE,
@@ -339,6 +413,8 @@ new #[Layout('layouts.app')] class extends Component
                             <div class="w-40 h-40 rounded-full bg-ue-surface-hover border-4 border-white shadow-md flex items-center justify-center overflow-hidden">
                                 @if($avatar)
                                     <img src="{{ $avatar->temporaryUrl() }}" class="w-full h-full object-cover" />
+                                @elseif($avatarUrl)
+                                    <img src="{{ $avatarUrl }}" class="w-full h-full object-cover" />
                                 @else
                                     <div class="text-ue-brand text-5xl font-bold">
                                         {{ Str::upper(Str::substr($display_name ?: auth()->user()->name, 0, 2)) }}
