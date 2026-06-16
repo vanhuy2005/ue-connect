@@ -92,7 +92,7 @@ $secondaryNav = [
 
 @if(isset($shell) && $shell === 'admin')
 <nav
-    class="ue-shell__sidebar hidden lg:flex flex-col py-4 px-3 justify-between h-100dvh sticky top-0 border-r border-ue-border/80"
+    class="ue-shell__sidebar hidden lg:flex flex-col py-5 px-3.5 justify-between h-100dvh sticky top-0 border-r border-slate-100 bg-white"
     :class="collapsed ? 'ue-shell__sidebar--collapsed' : 'ue-shell__sidebar--expanded'"
     aria-label="Điều hướng quản trị"
     role="navigation"
@@ -100,12 +100,13 @@ $secondaryNav = [
     @mouseenter="collapsed = false"
     @mouseleave="collapsed = true"
 >
-    <div class="flex flex-col gap-5 flex-1 min-h-0 overflow-y-auto pr-1">
+    <div class="flex flex-col gap-6 flex-1 min-h-0 overflow-y-auto pr-1">
         {{-- Logo --}}
         <div class="ue-sidebar-logo-wrapper pl-1.5">
-            <a href="{{ route('dashboard') }}" wire:navigate.hover class="inline-flex items-center gap-2.5 ue-focus-ring rounded-lg" aria-label="UEConnect - Trang chủ">
+            <a href="{{ route('admin.dashboard') }}" wire:navigate.hover class="inline-flex items-center gap-2.5 ue-focus-ring rounded-lg" aria-label="UEConnect - Trang chủ">
                 <x-brand.logo variant="mark" size="lg" class="h-9 w-9 flex-shrink-0" />
                 <span x-show="!collapsed" x-transition:enter="transition ease-out duration-200 delay-75" x-transition:enter-start="opacity-0 translate-x-[-8px]" x-transition:enter-end="opacity-100 translate-x-0" x-transition:leave="transition ease-in duration-100" x-transition:leave-start="opacity-100" x-transition:leave-end="opacity-0" class="font-bold text-lg text-ue-brand tracking-tight whitespace-nowrap">UEConnect</span>
+                <span x-show="!collapsed" x-transition:enter="transition ease-out duration-200 delay-100" x-transition:enter-start="opacity-0 scale-95" x-transition:enter-end="opacity-100 scale-100" class="ml-1 px-1.5 py-0.5 rounded text-[8px] font-bold tracking-wider uppercase bg-gradient-to-r from-ue-brand to-cyan-500 text-white shadow-sm">Admin</span>
             </a>
         </div>
 
@@ -135,14 +136,28 @@ $secondaryNav = [
                         <a
                             href="{{ route('admin.console', ['group' => $groupKey]) }}"
                             wire:navigate.hover
-                            class="ue-nav-link {{ $active ? 'active' : '' }}"
+                            class="ue-nav-link relative group/nav transition-all duration-300 {{ $active ? 'active bg-slate-50 text-ue-brand font-bold shadow-sm' : 'text-slate-600 hover:bg-slate-50' }}"
                             @if($active) aria-current="page" @endif
                             :title="collapsed ? '{{ $group['vn_label'] }}' : ''"
                         >
-                            <div class="relative flex items-center justify-center">
-                                <x-ui.icon :name="$group['icon']" size="md" aria-hidden="true" class="flex-shrink-0" />
+                            {{-- Vertical glowing marker --}}
+                            <div x-show="!collapsed" class="absolute left-0 top-2 bottom-2 w-1 rounded-r-xl bg-gradient-to-b from-ue-brand to-cyan-500 transition-all duration-300 transform scale-y-0 origin-center {{ $active ? 'scale-y-100' : 'group-hover/nav:scale-y-50' }}"></div>
+
+                            <div class="relative flex items-center justify-center w-6 h-6 transition-transform duration-300 group-hover/nav:scale-110">
+                                <x-ui.icon :name="$group['icon']" size="md" aria-hidden="true" class="flex-shrink-0 {{ $active ? 'text-ue-brand' : 'text-slate-500 group-hover/nav:text-slate-700' }}" />
                             </div>
-                            <span x-show="!collapsed" x-transition:enter="transition ease-out duration-200 delay-75" x-transition:enter-start="opacity-0 translate-x-[-8px]" x-transition:enter-end="opacity-100 translate-x-0" x-transition:leave="transition ease-in duration-100" x-transition:leave-start="opacity-100" x-transition:leave-end="opacity-0" class="whitespace-nowrap">{{ $group['vn_label'] }}</span>
+                            <span x-show="!collapsed" 
+                                  x-transition:enter="transition ease-out duration-200 delay-75" 
+                                  x-transition:enter-start="opacity-0 translate-x-[-8px]" 
+                                  x-transition:enter-end="opacity-100 translate-x-0" 
+                                  x-transition:leave="transition ease-in duration-100" 
+                                  x-transition:leave-start="opacity-100" 
+                                  x-transition:leave-end="opacity-0" 
+                                  class="whitespace-nowrap transition-colors duration-200 {{ $active ? 'text-slate-900' : 'text-slate-650 group-hover/nav:text-slate-900' }}">{{ $group['vn_label'] }}</span>
+
+                            @if($active)
+                                <span x-show="!collapsed" class="ml-auto w-1.5 h-1.5 rounded-full bg-ue-brand animate-pulse"></span>
+                            @endif
                         </a>
                     </li>
                 @endforeach
@@ -151,57 +166,66 @@ $secondaryNav = [
     </div>
 
     {{-- Bottom Account trigger --}}
-    <div class="relative mt-auto pt-4 flex flex-col gap-1.5">
+    <div class="relative mt-auto pt-4 flex flex-col gap-1.5 border-t border-slate-100">
         <button
             type="button"
             @click="moreOpen = !moreOpen"
             @click.away="moreOpen = false"
-            class="ue-nav-link w-full"
-            :class="moreOpen ? 'bg-ue-brand-soft text-ue-brand-active' : ''"
+            class="ue-nav-link w-full relative group/profile transition-all duration-300"
+            :class="moreOpen ? 'bg-slate-55 text-ue-brand font-bold' : ''"
             aria-haspopup="true"
             :aria-expanded="moreOpen"
             aria-label="Xem thêm menu"
             :title="collapsed ? '{{ $currentUser?->name }}' : ''"
         >
             <div class="relative flex items-center justify-center">
-                <x-ui.avatar :user="$currentUser" size="xs" class="flex-shrink-0" />
+                <div class="relative p-0.5 rounded-full bg-gradient-to-tr from-ue-brand to-cyan-500 group-hover/profile:scale-105 transition-transform duration-300 shadow-sm shadow-ue-brand/10">
+                    <x-ui.avatar :user="$currentUser" size="xs" class="flex-shrink-0 border border-white" />
+                </div>
+                <span class="absolute bottom-0 right-0 block h-2 w-2 rounded-full bg-green-400 ring-1 ring-white"></span>
             </div>
-            <span x-show="!collapsed" x-transition:enter="transition ease-out duration-200 delay-75" x-transition:enter-start="opacity-0 translate-x-[-8px]" x-transition:enter-end="opacity-100 translate-x-0" x-transition:leave="transition ease-in duration-100" x-transition:leave-start="opacity-100" x-transition:leave-end="opacity-0" class="truncate text-sm font-semibold whitespace-nowrap">{{ $currentUser?->name }}</span>
-            <x-ui.icon name="chevron-up" size="xs" x-show="!collapsed" x-transition:enter="transition ease-out duration-200 delay-75" x-transition:enter-start="opacity-0" x-transition:enter-end="opacity-100" x-transition:leave="transition ease-in duration-100" x-transition:leave-start="opacity-100" x-transition:leave-end="opacity-0" class="ml-auto text-ue-text-muted/60 transition-transform duration-150" x-bind:class="moreOpen ? 'rotate-180' : ''" />
+            <span x-show="!collapsed" x-transition:enter="transition ease-out duration-200 delay-75" x-transition:enter-start="opacity-0 translate-x-[-8px]" x-transition:enter-end="opacity-100 translate-x-0" x-transition:leave="transition ease-in duration-100" x-transition:leave-start="opacity-100" x-transition:leave-end="opacity-0" class="truncate text-sm font-semibold text-slate-800 group-hover/profile:text-slate-950 whitespace-nowrap">{{ $currentUser?->name }}</span>
+            <x-ui.icon name="chevron-up" size="xs" x-show="!collapsed" x-transition:enter="transition ease-out duration-200 delay-75" x-transition:enter-start="opacity-0" x-transition:enter-end="opacity-100" x-transition:leave="transition ease-in duration-100" x-transition:leave-start="opacity-100" x-transition:leave-end="opacity-0" class="ml-auto text-slate-400 group-hover/profile:text-slate-600 transition-transform duration-150" x-bind:class="moreOpen ? 'rotate-180' : ''" />
         </button>
 
         {{-- More popover menu --}}
         <div
             x-show="moreOpen"
-            x-transition:enter="transition ease-out duration-100"
+            x-transition:enter="transition ease-out duration-150"
             x-transition:enter-start="transform opacity-0 scale-95 translate-y-2"
             x-transition:enter-end="transform opacity-100 scale-100 translate-y-0"
-            x-transition:leave="transition ease-in duration-75"
+            x-transition:leave="transition ease-in duration-100"
             x-transition:leave-start="transform opacity-100 scale-100 translate-y-0"
             x-transition:leave-end="transform opacity-0 scale-95 translate-y-2"
-            class="absolute left-0 bottom-full mb-2 w-60 bg-white rounded-2xl shadow-lg ring-1 ring-black/5 py-2 z-dropdown"
+            class="absolute left-0 bottom-full mb-3 w-64 bg-white/95 backdrop-blur-md rounded-2xl shadow-2xl ring-1 ring-slate-950/5 p-2 z-dropdown border border-slate-100/80"
             style="display: none;"
             @keydown.escape.window="moreOpen = false"
         >
-            <a href="{{ route('settings') }}" wire:navigate.hover class="flex items-center gap-3 px-4 py-2 text-xs font-semibold text-ue-text-secondary hover:bg-ue-surface-hover hover:text-ue-brand-active transition-colors">
-                <x-ui.icon name="settings" size="sm" class="text-ue-text-muted" />
+            <div class="px-3 py-2 border-b border-slate-100 mb-1.5">
+                <p class="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Tài khoản quản trị</p>
+                <p class="text-sm font-bold text-slate-800 truncate mt-0.5">{{ $currentUser?->name }}</p>
+                <p class="text-xs text-slate-500 truncate mt-0.5">{{ $currentUser?->email }}</p>
+            </div>
+
+            <a href="{{ route('settings') }}" wire:navigate.hover class="flex items-center gap-3 px-3 py-2 text-xs font-bold text-slate-600 rounded-xl hover:bg-slate-50 hover:text-ue-brand transition-colors group/item">
+                <x-ui.icon name="settings" size="sm" class="text-slate-400 group-hover/item:text-ue-brand transition-colors" />
                 <span>Cài đặt cá nhân</span>
             </a>
 
-            <a href="{{ route('dashboard') }}" wire:navigate.hover class="flex items-center gap-3 px-4 py-2 text-xs font-semibold text-ue-text-secondary hover:bg-ue-surface-hover hover:text-ue-brand-active transition-colors">
-                <x-ui.icon name="arrow-left" size="sm" class="text-ue-text-muted" />
+            <a href="{{ route('dashboard') }}" wire:navigate.hover class="flex items-center gap-3 px-3 py-2 text-xs font-bold text-slate-600 rounded-xl hover:bg-slate-50 hover:text-ue-brand transition-colors group/item">
+                <x-ui.icon name="arrow-left" size="sm" class="text-slate-400 group-hover/item:text-ue-brand transition-colors" />
                 <span>Quay lại ứng dụng</span>
             </a>
 
-            <div class="h-px bg-ue-border/60 my-1"></div>
+            <div class="h-px bg-slate-100 my-1.5"></div>
 
             <form method="POST" action="{{ route('logout') }}" class="w-full">
                 @csrf
                 <button
                     type="submit"
-                    class="w-full text-left flex items-center gap-3 px-4 py-2 text-xs font-semibold text-red-600 hover:bg-red-50/60 transition-colors"
+                    class="w-full text-left flex items-center gap-3 px-3 py-2 text-xs font-bold text-red-600 rounded-xl hover:bg-red-50 hover:text-red-700 transition-colors group/logout"
                 >
-                    <x-ui.icon name="log-out" size="sm" class="text-red-500" />
+                    <x-ui.icon name="log-out" size="sm" class="text-red-400 group-hover/logout:text-red-600 transition-colors" />
                     <span>Đăng xuất</span>
                 </button>
             </form>

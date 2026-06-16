@@ -93,11 +93,11 @@
                 {{-- Page content --}}
                 <main
                     id="main-content"
-                    class="flex-1 flex flex-col h-full min-h-0 {{ in_array($shell, ['social']) ? 'pb-24 lg:pb-4 overflow-y-auto overflow-x-hidden' : (in_array($shell, ['conversation']) ? 'pb-16 lg:pb-0 overflow-hidden' : 'overflow-y-auto overflow-x-hidden') }}"
+                    class="flex-1 flex flex-col min-h-0 {{ in_array($shell, ['social']) ? 'pb-24 lg:pb-4 overflow-y-auto overflow-x-hidden' : (in_array($shell, ['conversation']) ? 'pb-16 lg:pb-0 overflow-hidden' : 'overflow-y-auto overflow-x-hidden') }}"
                     tabindex="-1"
                 >
                     @if($shell === 'admin')
-                        <div class="flex-1 flex flex-col min-w-0" x-data="{ adminDrawerOpen: false }">
+                        <div class="w-full min-w-0" x-data="{ adminDrawerOpen: false }">
                             {{-- Top Admin Bar - Mobile only --}}
                             <div class="lg:hidden bg-ue-surface border-b border-ue-border px-4 py-3 flex items-center justify-between sticky top-0 z-sticky">
                                 <div class="flex items-center gap-2">
@@ -207,7 +207,7 @@
                             </div>
 
                             {{-- Content Area --}}
-                            <div class="flex-1 min-w-0">
+                            <div class="w-full min-w-0">
                                 @if(isset($slot))
                                     {!! $slot !!}
                                 @else
