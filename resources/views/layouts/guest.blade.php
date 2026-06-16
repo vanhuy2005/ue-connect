@@ -18,6 +18,9 @@
         <meta name="apple-mobile-web-app-title" content="UEConnect">
         <link rel="apple-touch-icon" href="{{ asset('icons/apple-touch-icon.png') }}">
 
+        {{-- Realtime Meta Config --}}
+        @include('partials.realtime-meta')
+
         {{-- Fonts: Be Vietnam Pro --}}
         <link rel="preconnect" href="https://fonts.googleapis.com">
         <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>

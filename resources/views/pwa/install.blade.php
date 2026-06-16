@@ -12,6 +12,9 @@
     <meta name="apple-mobile-web-app-title" content="UEConnect">
     <link rel="apple-touch-icon" href="{{ asset('icons/apple-touch-icon.png') }}">
 
+    {{-- Realtime Meta Config --}}
+    @include('partials.realtime-meta')
+
     @vite(['resources/css/app.css', 'resources/js/app.js'])
     @livewireStyles
 </head>
