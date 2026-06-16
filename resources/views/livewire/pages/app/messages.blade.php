@@ -1005,28 +1005,25 @@ new #[Layout('layouts.app')] class extends Component
                     wire:click="selectConversation({{ $convo['id'] }})"
                     wire:loading.attr="disabled"
                     wire:target="selectConversation({{ $convo['id'] }})"
-                    class="w-full p-4 flex items-center justify-between hover:bg-slate-50/80 transition-colors text-left {{ $selectedConversationId === $convo['id'] ? 'bg-slate-50 font-bold' : '' }}"
+                    class="w-full py-3 px-4 flex items-center justify-between hover:bg-slate-50/80 transition-colors text-left {{ $selectedConversationId === $convo['id'] ? 'bg-slate-50 font-bold' : '' }}"
                 >
                     <div class="flex items-center gap-3 min-w-0 flex-1">
                         @if ($convo['recipient'])
                             <div class="relative flex-shrink-0">
-                                <x-ui.avatar :user="$convo['recipient']" size="md" />
-                                @if ($convo['recipient']->isOnline() && $convo['recipient']->canSeeOnlineStatus(auth()->user()))
-                                    <span class="absolute bottom-0 right-0 block h-2.5 w-2.5 rounded-full bg-green-500 border-2 border-white ring-1 ring-slate-100" title="Trực tuyến"></span>
-                                @endif
+                                <x-ui.avatar :user="$convo['recipient']" size="lg" />
                             </div>
                             <div class="min-w-0 flex-1">
                                 <div class="flex items-center justify-between gap-2">
-                                    <h2 class="text-xs font-bold text-slate-800 flex items-center gap-1 truncate">
+                                    <h2 class="text-base font-bold text-slate-800 flex items-center gap-1 truncate">
                                         {{ $convo['nickname'] ?: $convo['recipient']->name }}
                                         <x-ui.icon name="shield-check" size="xs" class="text-ue-brand fill-ue-brand" />
                                     </h2>
-                                    <span class="text-[9px] text-slate-400 font-semibold flex-shrink-0">
+                                    <span class="text-xxs text-slate-400 font-semibold flex-shrink-0">
                                         {{ $convo['updated_at']->diffForHumans(null, true) }}
                                     </span>
                                 </div>
                                 @if ($convo['last_message'])
-                                    <p class="text-xxs text-slate-500 font-medium truncate mt-0.5 {{ $convo['is_unread'] ? 'text-slate-800 font-bold' : '' }}">
+                                    <p class="text-sm text-slate-500 font-medium truncate mt-0.5 {{ $convo['is_unread'] ? 'text-slate-800 font-bold' : '' }}">
                                         @if ($convo['last_message']->message_type === MessageType::SHARED_POST)
                                             <span class="text-ue-brand font-semibold">[Bài viết chia sẻ]</span>
                                         @else
@@ -1034,7 +1031,7 @@ new #[Layout('layouts.app')] class extends Component
                                         @endif
                                     </p>
                                 @else
-                                    <p class="text-xxs text-slate-350 italic font-semibold mt-0.5">Bắt đầu cuộc trò chuyện.</p>
+                                    <p class="text-sm text-slate-350 italic font-semibold mt-0.5">Bắt đầu cuộc trò chuyện.</p>
                                 @endif
                             </div>
                         @else
@@ -1238,8 +1235,8 @@ new #[Layout('layouts.app')] class extends Component
                 $recipient = $activeConvo->getRecipientFor(Auth::user());
             @endphp
             {{-- Header --}}
-            <div class="h-14 px-4 bg-white border-b border-slate-150 flex items-center justify-between flex-shrink-0 z-10">
-                <div class="flex items-center gap-2.5 min-w-0 flex-1">
+            <div class="h-[62px] px-4 bg-white border-b border-slate-150 flex items-center justify-between flex-shrink-0 z-10">
+                <div class="flex items-center gap-3 min-w-0 flex-1">
                     {{-- Back button for mobile --}}
                     <button
                         type="button"
@@ -1253,37 +1250,41 @@ new #[Layout('layouts.app')] class extends Component
                     @if ($recipient)
                         <a href="{{ route('profile.show', $recipient) }}" class="block rounded-full focus:outline-none focus:ring-2 focus:ring-ue-brand/30" aria-label="Xem trang cá nhân của {{ $recipient->name }}">
                             <div class="relative flex-shrink-0">
-                                <x-ui.avatar :user="$recipient" size="sm" />
-                                @if ($recipient->isOnline() && $recipient->canSeeOnlineStatus(auth()->user()))
-                                    <span class="absolute bottom-0 right-0 block h-2 w-2 rounded-full bg-green-500 border-2 border-white ring-1 ring-slate-100" title="Trực tuyến"></span>
-                                @endif
+                                <x-ui.avatar :user="$recipient" size="md" :status="false" />
                             </div>
                         </a>
                         <div class="min-w-0">
                             @if ($recipientNickname)
-                                <a href="{{ route('profile.show', $recipient) }}" class="text-xs font-bold text-slate-800 truncate flex items-center gap-1 leading-tight hover:text-ue-brand hover:underline">
-                                    {{ $recipientNickname }} <span class="text-[9px] text-slate-400 font-normal">({{ $recipient->name }})</span>
+                                <a href="{{ route('profile.show', $recipient) }}" class="text-sm font-bold text-slate-800 truncate flex items-center gap-1 leading-tight hover:text-ue-brand hover:underline">
+                                    {{ $recipientNickname }} <span class="text-xs text-slate-400 font-normal">({{ $recipient->name }})</span>
                                     <x-ui.icon name="shield-check" size="xs" class="text-ue-brand fill-ue-brand" />
                                 </a>
                             @else
-                                <a href="{{ route('profile.show', $recipient) }}" class="text-xs font-bold text-slate-800 truncate flex items-center gap-1 leading-tight hover:text-ue-brand hover:underline">
+                                <a href="{{ route('profile.show', $recipient) }}" class="text-sm font-bold text-slate-800 truncate flex items-center gap-1 leading-tight hover:text-ue-brand hover:underline">
                                     {{ $recipient->name }}
                                     <x-ui.icon name="shield-check" size="xs" class="text-ue-brand fill-ue-brand" />
                                 </a>
                             @endif
                             @if ($recipient->profile && $recipient->profile->faculty)
-                                <p class="text-[9px] text-slate-400 font-semibold truncate leading-none mt-0.5">
-                                    {{ $recipient->profile->faculty }}
+                                <p class="text-xs text-slate-550 font-medium truncate mt-0.5 flex items-center gap-1.5 leading-normal">
+                                    <span>{{ $recipient->profile->faculty }}</span>
                                     @if ($recipient->isOnline() && $recipient->canSeeOnlineStatus(auth()->user()))
-                                        <span class="text-green-500 font-bold ml-1.5">• Đang hoạt động</span>
+                                        <span class="text-slate-300 font-bold">•</span>
+                                        <span class="inline-flex items-center gap-1 text-green-500 font-bold">
+                                            <span class="w-1.5 h-1.5 rounded-full bg-green-500 flex-shrink-0"></span>
+                                            Đang hoạt động
+                                        </span>
                                     @endif
                                 </p>
                             @elseif ($recipient->isOnline() && $recipient->canSeeOnlineStatus(auth()->user()))
-                                <p class="text-[9px] text-green-500 font-bold truncate leading-none mt-0.5">Đang hoạt động</p>
+                                <p class="text-xs text-green-500 font-bold truncate mt-0.5 flex items-center gap-1 leading-normal">
+                                    <span class="w-1.5 h-1.5 rounded-full bg-green-500 flex-shrink-0"></span>
+                                    Đang hoạt động
+                                </p>
                             @endif
                         </div>
                     @else
-                        <h2 class="text-xs font-bold text-slate-800">Thành viên UEConnect</h2>
+                        <h2 class="text-sm font-bold text-slate-800">Thành viên UEConnect</h2>
                     @endif
                 </div>
 
@@ -1433,7 +1434,7 @@ new #[Layout('layouts.app')] class extends Component
                     </div>
                 </div>
 
-                <div wire:loading.remove wire:target="selectConversation" class="space-y-4 flex flex-col flex-1">
+                <div wire:loading.remove wire:target="selectConversation" class="flex flex-col flex-1">
                     <div class="text-center py-6">
                         <x-ui.icon name="shield-alert" size="md" class="text-slate-300 mx-auto" />
                     <p class="text-[10px] text-slate-400 font-medium max-w-xs mx-auto mt-2 leading-relaxed">
@@ -1444,17 +1445,31 @@ new #[Layout('layouts.app')] class extends Component
                 @php
                     $lastDate = null;
                 @endphp
-                @foreach ($messages as $message)
+                @foreach ($messages as $index => $message)
                     @php
                         $msgDate = $message->created_at->format('d/m/Y');
                         $isMine = (int) $message->sender_id === (int) Auth::id();
+                        
+                        $nextMessage = $messages[$index + 1] ?? null;
+                        $isGroupedWithNext = $nextMessage && 
+                            (int)$nextMessage->sender_id === (int)$message->sender_id && 
+                            $nextMessage->created_at->diffInMinutes($message->created_at) < 2 &&
+                            $nextMessage->created_at->format('d/m/Y') === $msgDate &&
+                            $nextMessage->message_type !== MessageType::SYSTEM;
+
+                        $prevMessage = $index > 0 ? $messages[$index - 1] : null;
+                        $isFirstInGroup = !$prevMessage || 
+                            (int)$prevMessage->sender_id !== (int)$message->sender_id || 
+                            $message->created_at->diffInMinutes($prevMessage->created_at) >= 2 ||
+                            $prevMessage->created_at->format('d/m/Y') !== $msgDate ||
+                            $prevMessage->message_type === MessageType::SYSTEM;
                     @endphp
                     @if ($message->message_type === MessageType::SYSTEM)
                         @continue
                     @endif
                     {{-- Date Separator --}}
                     @if ($msgDate !== $lastDate)
-                        <div class="text-center my-3 flex items-center justify-center gap-3">
+                        <div class="text-center mt-6 mb-2 flex items-center justify-center gap-3">
                             <span class="h-px bg-slate-200/60 flex-1"></span>
                             <span class="text-[9px] text-slate-400 font-bold uppercase tracking-wider">{{ $msgDate }}</span>
                             <span class="h-px bg-slate-200/60 flex-1"></span>
@@ -1470,12 +1485,16 @@ new #[Layout('layouts.app')] class extends Component
                         data-message-id="{{ $message->id }}"
                         data-sender-id="{{ $message->sender_id }}"
                         data-own-message="{{ $isMine ? 'true' : 'false' }}"
-                        class="flex {{ $isMine ? 'justify-end' : 'justify-start' }} items-center gap-2 group w-full"
+                        class="flex {{ $isMine ? 'justify-end' : 'justify-start' }} items-end gap-2 group w-full {{ $isFirstInGroup ? ($index > 0 ? 'mt-3' : 'mt-1') : 'mt-[2px]' }}"
                     >
-                        @if (! $isMine && $message->sender)
-                            <a href="{{ route('profile.show', $message->sender) }}" class="self-end flex-shrink-0 rounded-full focus:outline-none focus:ring-2 focus:ring-ue-brand/30" aria-label="Xem trang cá nhân của {{ $message->sender->name }}">
-                                <x-ui.avatar :user="$message->sender" size="xs" />
-                            </a>
+                        @if (! $isMine)
+                            @if (!$isGroupedWithNext && $message->sender)
+                                <a href="{{ route('profile.show', $message->sender) }}" class="self-end flex-shrink-0 rounded-full focus:outline-none focus:ring-2 focus:ring-ue-brand/30 mb-2.5" aria-label="Xem trang cá nhân của {{ $message->sender->name }}">
+                                    <x-ui.avatar :user="$message->sender" size="xs" :status="false" />
+                                </a>
+                            @else
+                                <div class="w-6 h-6 flex-shrink-0"></div>
+                            @endif
                         @endif
 
                         {{-- Hover Actions - Left for own message --}}
@@ -1492,8 +1511,8 @@ new #[Layout('layouts.app')] class extends Component
                             </div>
                         @endif
 
-                        <div class="flex flex-col min-w-0 max-w-[70%] gap-1">
-                            {{-- Reply quoted preview inside bubble --}}
+                        <div class="flex flex-col min-w-0 max-w-[70%] gap-0.5">
+                            {{-- Quoted message block --}}
                             @if (!$message->isRecalled() && $message->replyTo)
                                 <div class="mb-1.5 p-2 rounded-xl text-[10px] font-semibold max-w-full truncate
                                             {{ $isMine ? 'bg-ue-brand-dark/20 border-l-2 border-white/60 text-white/90' : 'bg-slate-50 border border-slate-150 border-l-2 border-l-ue-brand text-slate-550' }}">
@@ -1571,7 +1590,7 @@ new #[Layout('layouts.app')] class extends Component
                                             <div class="bg-slate-50 border border-slate-100 p-2.5 rounded-xl flex flex-col gap-1.5">
                                                 <div class="flex items-center gap-1.5">
                                                     <a href="{{ route('profile.show', $message->sharedPost->user) }}" class="block rounded-full focus:outline-none focus:ring-2 focus:ring-ue-brand/30" aria-label="Xem trang cá nhân của {{ $message->sharedPost->user->name }}">
-                                                        <x-ui.avatar :user="$message->sharedPost->user" size="xs" />
+                                                        <x-ui.avatar :user="$message->sharedPost->user" size="xs" :status="false" />
                                                     </a>
                                                     <a href="{{ route('profile.show', $message->sharedPost->user) }}" class="text-xxs font-bold text-slate-800 hover:text-ue-brand hover:underline">{{ $message->sharedPost->user->name }}</a>
                                                 </div>
@@ -1603,9 +1622,11 @@ new #[Layout('layouts.app')] class extends Component
                             @endif
 
                             {{-- Time tag --}}
-                            <span class="text-[8px] text-slate-400 font-semibold px-1 {{ $isMine ? 'self-end' : 'self-start' }}">
-                                {{ $message->created_at->format('H:i') }}
-                            </span>
+                            @if (!$isGroupedWithNext)
+                                <span class="text-[8px] text-slate-400 font-semibold px-1 mt-0.5 leading-none {{ $isMine ? 'self-end' : 'self-start' }}">
+                                    {{ $message->created_at->format('H:i') }}
+                                </span>
+                            @endif
                         </div>
 
                         {{-- Hover Actions - Right for incoming message --}}
@@ -1626,7 +1647,7 @@ new #[Layout('layouts.app')] class extends Component
 
                 {{-- Alpine Pending Messages (Optimistic UI) --}}
                 <template x-for="msg in pendingMessages" :key="msg.client_message_id">
-                    <div class="flex justify-end items-center gap-2 group w-full opacity-80 animate-pulse">
+                    <div class="flex justify-end items-center gap-2 group w-full opacity-80 animate-pulse mt-[2px]">
                         <div class="flex flex-col min-w-0 max-w-[70%] gap-1">
                             <template x-if="msg.imageUrl">
                                 <div class="flex flex-col gap-2">
@@ -1677,9 +1698,9 @@ new #[Layout('layouts.app')] class extends Component
                 </template>
 
                 {{-- Typing Indicator --}}
-                <div x-show="recipientTyping" class="flex justify-start items-center gap-2 w-full animate-pulse" style="display: none;">
+                <div x-show="recipientTyping" class="flex justify-start items-center gap-2 w-full animate-pulse mt-3" style="display: none;">
                     @if ($recipient)
-                        <x-ui.avatar :user="$recipient" size="xs" />
+                        <x-ui.avatar :user="$recipient" size="xs" :status="false" />
                     @endif
                     <div class="px-3.5 py-2 rounded-2xl bg-white border border-slate-150 text-slate-500 rounded-bl-xs flex items-center gap-1">
                         <span class="w-1.5 h-1.5 bg-slate-400 rounded-full animate-bounce" style="animation-delay: 0.1s"></span>
