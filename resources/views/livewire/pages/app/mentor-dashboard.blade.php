@@ -56,7 +56,7 @@ new class extends Component {
 ?>
 
 <div class="mx-auto max-w-5xl px-4 py-6 sm:px-6 lg:px-8">
-    @if (session('status'))
+    @if (session('status') && !($pendingRequest && !$profile))
         <div class="mb-6 rounded-2xl border border-emerald-200 bg-emerald-50 p-4 text-sm text-emerald-800 shadow-sm">
             <p class="font-bold">{{ session('status') }}</p>
         </div>
