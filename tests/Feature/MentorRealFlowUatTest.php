@@ -9,6 +9,8 @@ use App\Enums\MentorAvailabilityStatus;
 use App\Enums\MentorFeedbackLevel;
 use App\Enums\MentorRequestStatus;
 use App\Enums\MessageType;
+use App\Enums\ReportReason;
+use App\Enums\ReportStatus;
 use App\Models\AuditLog;
 use App\Models\Conversation;
 use App\Models\MentorAccessRequest;
@@ -18,6 +20,8 @@ use App\Models\MentorRequest;
 use App\Models\Report;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Livewire\Volt\Volt;
+use Spatie\Permission\Models\Permission;
 use Tests\Feature\Concerns\BuildsMentorFixtures;
 use Tests\TestCase;
 
@@ -338,6 +342,44 @@ class MentorRealFlowUatTest extends TestCase
                 'urgency' => 'normal',
             ])
             ->assertRedirect(route('system.account-restricted'));
+    }
+
+    public function test_admin_hides_reported_mentor_profile_revokes_mentor_access(): void
+    {
+        $admin = $this->adminUser();
+        $admin->givePermissionTo(Permission::findOrCreate('manage_reports', 'web'));
+
+        $mentorProfile = $this->mentorProfile();
+        $mentorUser = $mentorProfile->user;
+
+        $this->assertTrue($mentorProfile->is_active);
+        $this->assertTrue($mentorUser->hasApprovedMentorAccess());
+
+        $report = Report::create([
+            'reporter_id' => $this->activeUser('student')->id,
+            'target_type' => 'mentor_profile',
+            'target_id' => $mentorProfile->id,
+            'reason' => ReportReason::INAPPROPRIATE_CONTENT,
+            'description' => 'Inappropriate bio content.',
+            'status' => ReportStatus::PENDING,
+        ]);
+
+        $this->actingAs($admin);
+
+        Volt::test('pages.admin.report-detail', ['report' => $report])
+            ->call('hideTargetContent')
+            ->assertSet('feedbackMessage', 'Đã ẩn nội dung vi phạm và cập nhật báo cáo thành công.');
+
+        $this->assertFalse($mentorProfile->fresh()->is_active);
+        $this->assertFalse($mentorProfile->fresh()->mentor_visibility);
+
+        $this->assertDatabaseHas('mentor_access_requests', [
+            'user_id' => $mentorUser->id,
+            'status' => MentorAccessStatus::Revoked->value,
+        ]);
+
+        $this->assertFalse($mentorUser->fresh()->hasDirectPermission('mentor_access'));
+        $this->assertFalse($mentorUser->fresh()->hasApprovedMentorAccess());
     }
 
     private function assertNotificationTypeExists(User $user, string $type): void

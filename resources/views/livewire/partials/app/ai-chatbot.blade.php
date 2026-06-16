@@ -223,9 +223,7 @@ new class extends Component {
             </svg>
         @endif
     </button>
-</div>
-
-<style>
+    <style>
     .chat-widget-input {
         color: #111827 !important;
         background-color: #ffffff !important;
@@ -272,3 +270,4 @@ new class extends Component {
         background-color: #1f2937 !important;
     }
 </style>
+</div>
