@@ -11,7 +11,7 @@ new #[Layout('layouts.app', ['shell' => 'admin'])] class extends Component {
     use WithPagination;
 
     public string $search = '';
-    public string $status = 'pending_review'; // default to pending_review
+    public string $status = 'pending'; // default to pending
     public string $role = '';
     public ?int $faculty_id = null;
     public string $cohort = '';
@@ -73,7 +73,15 @@ new #[Layout('layouts.app', ['shell' => 'admin'])] class extends Component {
         }
 
         if ($this->status) {
-            $query->where('status', $this->status);
+            if ($this->status === 'pending') {
+                $query->whereIn('status', [
+                    VerificationStatus::PENDING_REVIEW,
+                    VerificationStatus::UNDER_REVIEW,
+                    VerificationStatus::RESUBMITTED,
+                ]);
+            } else {
+                $query->where('status', $this->status);
+            }
         }
 
         if ($this->role) {
@@ -115,6 +123,7 @@ new #[Layout('layouts.app', ['shell' => 'admin'])] class extends Component {
                 <x-ui.label for="status" class="text-xs">Trạng thái hồ sơ</x-ui.label>
                 <x-ui.select wire:model.live="status" id="status" class="mt-1 h-9 text-xs py-1">
                     <option value="">-- Tất cả --</option>
+                    <option value="pending">Chờ xử lý (Chưa quyết định)</option>
                     <option value="pending_review">Chờ duyệt (Mới)</option>
                     <option value="under_review">Đang kiểm tra</option>
                     <option value="resubmitted">Gửi lại (Chờ duyệt)</option>

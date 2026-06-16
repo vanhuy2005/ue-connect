@@ -193,13 +193,12 @@ class MentorAccessController extends Controller
             && ! empty($request->headline)
             && ! empty($request->bio)
             && is_array($request->expertise_topics) && count($request->expertise_topics) >= 2
-            && is_array($request->help_topics) && count($request->help_topics) >= 2
             && is_array($request->preferred_request_types) && count($request->preferred_request_types) >= 1
             && ! empty($request->response_expectation_text);
 
         if (! $isValid) {
             throw ValidationException::withMessages([
-                'mentor_profile' => 'Hồ sơ đăng ký của Mentor chưa đủ điều kiện tin cậy tối thiểu (ảnh đại diện, headline, tiểu sử, ít nhất 2 chủ đề chuyên môn, ít nhất 2 chủ đề hỗ trợ, ít nhất 1 loại yêu cầu nhận được, kỳ vọng phản hồi).',
+                'mentor_profile' => 'Hồ sơ đăng ký của Mentor chưa đủ điều kiện tin cậy tối thiểu (ảnh đại diện, headline, tiểu sử, ít nhất 2 chủ đề chuyên môn, ít nhất 1 loại yêu cầu nhận được, kỳ vọng phản hồi).',
             ]);
         }
     }

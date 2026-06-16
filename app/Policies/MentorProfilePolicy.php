@@ -29,7 +29,7 @@ class MentorProfilePolicy
      */
     public function revoke(User $user, MentorProfile $mentorProfile): bool
     {
-        return $user->isActive() && $user->can('manage_mentor_access');
+        return $user->isActive() && ($user->can('manage_mentor_access') || $user->can('manage_reports'));
     }
 
     /**

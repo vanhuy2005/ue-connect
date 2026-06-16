@@ -29,6 +29,22 @@ function getBrowser() {
     return 'unknown';
 }
 
+function urlBase64ToUint8Array(base64String) {
+    if (!base64String) return null;
+    const padding = '='.repeat((4 - base64String.length % 4) % 4);
+    const base64 = (base64String + padding)
+        .replace(/\-/g, '+')
+        .replace(/_/g, '/');
+
+    const rawData = window.atob(base64);
+    const outputArray = new Uint8Array(rawData.length);
+
+    for (let i = 0; i < rawData.length; ++i) {
+        outputArray[i] = rawData.charCodeAt(i);
+    }
+    return outputArray;
+}
+
 // Register Service Worker
 if ('serviceWorker' in navigator) {
     window.addEventListener('load', () => {
@@ -94,6 +110,11 @@ document.addEventListener('alpine:init', () => {
             } else {
                 this.checkBannerEligibility();
             }
+
+            // Re-subscribe automatically if permission already granted
+            if ('Notification' in window && Notification.permission === 'granted') {
+                this.subscribeToPushNotifications();
+            }
         },
 
         checkBannerEligibility() {
@@ -145,6 +166,54 @@ document.addEventListener('alpine:init', () => {
                 localStorage.setItem('ue_pwa_install_never_show', 'true');
             } else {
                 localStorage.setItem('ue_pwa_install_dismissed_at', Date.now().toString());
+            }
+        },
+
+        async subscribeToPushNotifications() {
+            if (!('serviceWorker' in navigator) || !('PushManager' in window)) {
+                console.warn('Push messaging is not supported.');
+                return;
+            }
+
+            try {
+                const permission = await Notification.requestPermission();
+                if (permission !== 'granted') {
+                    console.warn('Notification permission denied.');
+                    return;
+                }
+
+                const registration = await navigator.serviceWorker.ready;
+                
+                const vapidPublicKeyMeta = document.querySelector('meta[name="vapid-public-key"]');
+                if (!vapidPublicKeyMeta) {
+                    console.error('VAPID public key meta tag not found.');
+                    return;
+                }
+                
+                const vapidPublicKey = vapidPublicKeyMeta.getAttribute('content');
+                const convertedVapidKey = urlBase64ToUint8Array(vapidPublicKey);
+
+                const subscription = await registration.pushManager.subscribe({
+                    userVisibleOnly: true,
+                    applicationServerKey: convertedVapidKey
+                });
+
+                const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
+                if (!csrfToken) return;
+
+                await fetch('/app/notifications/push-subscriptions', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRF-TOKEN': csrfToken,
+                        'Accept': 'application/json'
+                    },
+                    body: JSON.stringify(subscription)
+                });
+                
+                window.trackPwaEvent('pwa_push_subscribed');
+            } catch (error) {
+                console.error('Error subscribing to push notifications', error);
             }
         }
     });
