@@ -121,6 +121,7 @@ new class extends Component
     public function getCommunitiesProperty()
     {
         $query = Community::discoverable()
+            ->with(['media'])
             ->latest('members_count');
 
         if ($this->search) {
@@ -149,6 +150,7 @@ new class extends Component
                 $query->where('owner_id', $userId)
                     ->orWhereIn('id', $memberIds);
             })
+            ->with(['media'])
             ->latest('updated_at')
             ->get();
     }
@@ -168,6 +170,7 @@ new class extends Component
                 $query->where('owner_id', auth()->id())
                     ->orWhereIn('id', $managedMemberIds);
             })
+            ->with(['media'])
             ->latest()
             ->get();
     }
@@ -676,6 +679,21 @@ new class extends Component
 
         return $connections->values();
     }
+
+    public function resolveAvatarUrl(Community $c): ?string
+    {
+        $avatarMedia = $c->relationLoaded('media')
+            ? $c->media->firstWhere('collection', 'community_avatar')
+            : $c->avatar()->first();
+        $avatarUrl = $avatarMedia ? \App\Support\Media\MediaUrlResolver::publicUrl($avatarMedia, 'display') : null;
+        if (!$avatarUrl) {
+            $coverMedia = $c->relationLoaded('media')
+                ? $c->media->firstWhere('collection', 'community_cover')
+                : $c->cover()->first();
+            $avatarUrl = $coverMedia ? \App\Support\Media\MediaUrlResolver::publicUrl($coverMedia, 'thumb') : null;
+        }
+        return $avatarUrl;
+    }
 };
 ?>
 
@@ -736,10 +754,15 @@ new class extends Component
             
             <div class="space-y-1">
                 @forelse ($this->joinedCommunities as $c)
+                    @php $avatarUrl = $this->resolveAvatarUrl($c); @endphp
                     <a href="{{ route('community.show', $c->id) }}" wire:navigate
                         class="flex items-center gap-3 p-2 rounded-xl hover:bg-slate-100 transition group">
-                        <div class="w-9 h-9 rounded-lg bg-gradient-to-br from-ue-brand/20 to-ue-brand/5 border border-slate-150 flex items-center justify-center text-ue-brand flex-shrink-0 group-hover:scale-105 transition-transform duration-200">
-                            <x-ui.icon name="users" size="sm" class="text-ue-brand" />
+                        <div class="w-9 h-9 rounded-lg bg-gradient-to-br from-ue-brand/20 to-ue-brand/5 border border-slate-150 flex items-center justify-center text-ue-brand flex-shrink-0 group-hover:scale-105 transition-transform duration-200 overflow-hidden">
+                            @if ($avatarUrl)
+                                <img src="{{ $avatarUrl }}" class="w-full h-full object-cover" alt="{{ $c->name }}">
+                            @else
+                                <x-ui.icon name="users" size="sm" class="text-ue-brand" />
+                            @endif
                         </div>
                         <div class="min-w-0 flex-1">
                             <p class="text-xs font-bold text-slate-800 truncate group-hover:text-ue-brand transition-colors">{{ $c->name }}</p>
@@ -922,8 +945,13 @@ new class extends Component
 
                             <div class="p-4 flex-1 flex flex-col pt-6 relative">
                                 {{-- Overlapping Group Avatar --}}
-                                <div class="w-12 h-12 rounded-xl bg-ue-brand text-white border-2 border-white shadow-sm flex items-center justify-center absolute -top-6 left-4">
-                                    <x-ui.icon name="users" size="sm" class="text-white" />
+                                @php $avatarUrl = $this->resolveAvatarUrl($c); @endphp
+                                <div class="w-12 h-12 rounded-xl bg-ue-brand text-white border-2 border-white shadow-sm flex items-center justify-center absolute -top-6 left-4 overflow-hidden">
+                                    @if ($avatarUrl)
+                                        <img src="{{ $avatarUrl }}" class="w-full h-full object-cover" alt="{{ $c->name }}">
+                                    @else
+                                        <x-ui.icon name="users" size="sm" class="text-white" />
+                                    @endif
                                 </div>
 
                                 <div class="min-w-0 mb-2 mt-1">
@@ -1107,10 +1135,15 @@ new class extends Component
                     </div>
 
                     @forelse ($this->managedCommunities as $c)
+                        @php $avatarUrl = $this->resolveAvatarUrl($c); @endphp
                         <div class="bg-white border border-slate-200 rounded-2xl p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4 hover:shadow-2xs transition mb-3">
                             <div class="flex items-center gap-3">
-                                <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-ue-brand/20 to-ue-brand/5 flex items-center justify-center text-ue-brand flex-shrink-0">
-                                    <x-ui.icon name="users" size="sm" class="text-ue-brand" />
+                                <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-ue-brand/20 to-ue-brand/5 flex items-center justify-center text-ue-brand flex-shrink-0 overflow-hidden">
+                                    @if ($avatarUrl)
+                                        <img src="{{ $avatarUrl }}" class="w-full h-full object-cover" alt="{{ $c->name }}">
+                                    @else
+                                        <x-ui.icon name="users" size="sm" class="text-ue-brand" />
+                                    @endif
                                 </div>
                                 <div class="min-w-0">
                                     <a href="{{ route('community.show', $c->id) }}" wire:navigate
@@ -1163,10 +1196,15 @@ new class extends Component
 
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                         @forelse ($this->joinedCommunities as $c)
+                            @php $avatarUrl = $this->resolveAvatarUrl($c); @endphp
                             <div class="bg-white border border-slate-200 rounded-2xl p-4 flex items-center justify-between hover:shadow-2xs transition">
                                 <div class="flex items-center gap-3 min-w-0">
-                                    <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-ue-brand/20 to-ue-brand/5 flex items-center justify-center text-ue-brand flex-shrink-0">
-                                        <x-ui.icon name="users" size="sm" class="text-ue-brand" />
+                                    <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-ue-brand/20 to-ue-brand/5 flex items-center justify-center text-ue-brand flex-shrink-0 overflow-hidden">
+                                        @if ($avatarUrl)
+                                            <img src="{{ $avatarUrl }}" class="w-full h-full object-cover" alt="{{ $c->name }}">
+                                        @else
+                                            <x-ui.icon name="users" size="sm" class="text-ue-brand" />
+                                        @endif
                                     </div>
                                     <div class="min-w-0 flex-1">
                                         <a href="{{ route('community.show', $c->id) }}" wire:navigate
