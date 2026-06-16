@@ -123,13 +123,12 @@ new class extends Component {
 
         {{-- Metric: Chờ duyệt xác thực --}}
         <a href="{{ route('admin.verifications.queue') }}?status=pending"
-           class="group relative flex flex-col gap-1 rounded-xl border border-slate-200 bg-white p-4 shadow-sm
-                  transition-all duration-150 ease-out hover:-translate-y-0.5 hover:border-blue-300 hover:shadow-md
-                  focus:outline-none focus:ring-2 focus:ring-blue-400 focus:ring-offset-1
-                  {{ $snapshot['pending_verification'] > 0 ? 'border-l-4 border-l-blue-500' : '' }}">
+           class="group relative flex flex-col gap-1 rounded-xl border border-slate-200 bg-white px-4 py-3 shadow-sm
+                  transition-all duration-150 ease-out hover:-translate-y-0.5 hover:border-ue-brand hover:shadow-md
+                  focus:outline-none focus:ring-2 focus:ring-ue-brand/40 focus:ring-offset-1">
             <span class="text-xs font-semibold text-slate-500 leading-none">Chờ duyệt xác thực</span>
-            <span class="text-3xl font-bold text-slate-900 leading-none mt-1">{{ $snapshot['pending_verification'] }}</span>
-            <span class="text-[11px] text-blue-600 font-medium mt-auto pt-1
+            <span class="text-2xl font-bold text-slate-900 leading-none mt-1">{{ $snapshot['pending_verification'] }}</span>
+            <span class="text-[11px] text-ue-brand font-medium mt-auto pt-1
                          opacity-0 group-hover:opacity-100 transition-opacity duration-150">
                 Xem hàng đợi →
             </span>
@@ -140,13 +139,12 @@ new class extends Component {
 
         {{-- Metric: Báo cáo đang mở --}}
         <a href="{{ route('admin.reports.index') }}"
-           class="group relative flex flex-col gap-1 rounded-xl border border-slate-200 bg-white p-4 shadow-sm
-                  transition-all duration-150 ease-out hover:-translate-y-0.5 hover:border-amber-300 hover:shadow-md
-                  focus:outline-none focus:ring-2 focus:ring-amber-400 focus:ring-offset-1
-                  {{ $snapshot['open_reports'] > 0 ? 'border-l-4 border-l-amber-500' : '' }}">
+           class="group relative flex flex-col gap-1 rounded-xl border border-slate-200 bg-white px-4 py-3 shadow-sm
+                  transition-all duration-150 ease-out hover:-translate-y-0.5 hover:border-ue-brand hover:shadow-md
+                  focus:outline-none focus:ring-2 focus:ring-ue-brand/40 focus:ring-offset-1">
             <span class="text-xs font-semibold text-slate-500 leading-none">Báo cáo đang mở</span>
-            <span class="text-3xl font-bold text-slate-900 leading-none mt-1">{{ $snapshot['open_reports'] }}</span>
-            <span class="text-[11px] text-amber-600 font-medium mt-auto pt-1
+            <span class="text-2xl font-bold text-slate-900 leading-none mt-1">{{ $snapshot['open_reports'] }}</span>
+            <span class="text-[11px] text-ue-brand font-medium mt-auto pt-1
                          opacity-0 group-hover:opacity-100 transition-opacity duration-150">
                 Xử lý →
             </span>
@@ -158,33 +156,32 @@ new class extends Component {
         {{-- Metric: Vấn đề nghiêm trọng --}}
         @if($snapshot['critical_reports'] > 0)
             <a href="{{ route('admin.verifications.queue') }}?status=conflict"
-               class="group relative flex flex-col gap-1 rounded-xl border-l-4 border border-red-300 border-l-red-500 bg-red-50 p-4 shadow-sm
-                      transition-all duration-150 ease-out hover:-translate-y-0.5 hover:shadow-md
+               class="group relative flex flex-col gap-1 rounded-xl border border-slate-200 bg-white px-4 py-3 shadow-sm
+                      transition-all duration-150 ease-out hover:-translate-y-0.5 hover:border-red-400 hover:shadow-md
                       focus:outline-none focus:ring-2 focus:ring-red-400 focus:ring-offset-1">
-                <span class="text-xs font-semibold text-red-700 leading-none">Vấn đề nghiêm trọng</span>
-                <span class="text-3xl font-bold text-red-700 leading-none mt-1">{{ $snapshot['critical_reports'] }}</span>
+                <span class="text-xs font-semibold text-red-600 leading-none">Vấn đề nghiêm trọng</span>
+                <span class="text-2xl font-bold text-red-600 leading-none mt-1">{{ $snapshot['critical_reports'] }}</span>
                 <span class="text-[11px] text-red-600 font-medium mt-auto pt-1
                              opacity-0 group-hover:opacity-100 transition-opacity duration-150">
                     Giải quyết ngay →
                 </span>
             </a>
         @else
-            <div class="flex flex-col gap-1 rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+            <div class="flex flex-col gap-1 rounded-xl border border-slate-200 bg-white px-4 py-3 shadow-sm">
                 <span class="text-xs font-semibold text-slate-500 leading-none">Vấn đề nghiêm trọng</span>
-                <span class="text-3xl font-bold text-emerald-600 leading-none mt-1">0</span>
+                <span class="text-2xl font-bold text-emerald-600 leading-none mt-1">0</span>
                 <span class="text-[11px] text-slate-400 font-medium mt-auto pt-1">Không có sự cố</span>
             </div>
         @endif
 
         {{-- Metric: Bài viết bị ẩn --}}
         <a href="{{ route('admin.moderation.index') }}"
-           class="group relative flex flex-col gap-1 rounded-xl border border-slate-200 bg-white p-4 shadow-sm
-                  transition-all duration-150 ease-out hover:-translate-y-0.5 hover:border-slate-300 hover:shadow-md
-                  focus:outline-none focus:ring-2 focus:ring-slate-400 focus:ring-offset-1
-                  {{ $snapshot['pending_moderation'] > 0 ? 'border-l-4 border-l-slate-500' : '' }}">
+           class="group relative flex flex-col gap-1 rounded-xl border border-slate-200 bg-white px-4 py-3 shadow-sm
+                  transition-all duration-150 ease-out hover:-translate-y-0.5 hover:border-ue-brand hover:shadow-md
+                  focus:outline-none focus:ring-2 focus:ring-ue-brand/40 focus:ring-offset-1">
             <span class="text-xs font-semibold text-slate-500 leading-none">Bài viết bị ẩn</span>
-            <span class="text-3xl font-bold text-slate-900 leading-none mt-1">{{ $snapshot['pending_moderation'] }}</span>
-            <span class="text-[11px] text-slate-600 font-medium mt-auto pt-1
+            <span class="text-2xl font-bold text-slate-900 leading-none mt-1">{{ $snapshot['pending_moderation'] }}</span>
+            <span class="text-[11px] text-ue-brand font-medium mt-auto pt-1
                          opacity-0 group-hover:opacity-100 transition-opacity duration-150">
                 Kiểm duyệt →
             </span>
@@ -195,12 +192,12 @@ new class extends Component {
 
         {{-- Metric: Tài khoản bị hạn chế --}}
         <a href="{{ route('admin.users.index') }}"
-           class="group relative flex flex-col gap-1 rounded-xl border border-slate-200 bg-white p-4 shadow-sm
-                  transition-all duration-150 ease-out hover:-translate-y-0.5 hover:border-slate-300 hover:shadow-md
-                  focus:outline-none focus:ring-2 focus:ring-slate-400 focus:ring-offset-1">
+           class="group relative flex flex-col gap-1 rounded-xl border border-slate-200 bg-white px-4 py-3 shadow-sm
+                  transition-all duration-150 ease-out hover:-translate-y-0.5 hover:border-ue-brand hover:shadow-md
+                  focus:outline-none focus:ring-2 focus:ring-ue-brand/40 focus:ring-offset-1">
             <span class="text-xs font-semibold text-slate-500 leading-none">Tài khoản hạn chế</span>
-            <span class="text-3xl font-bold text-slate-900 leading-none mt-1">{{ $snapshot['restricted_users'] }}</span>
-            <span class="text-[11px] text-slate-600 font-medium mt-auto pt-1
+            <span class="text-2xl font-bold text-slate-900 leading-none mt-1">{{ $snapshot['restricted_users'] }}</span>
+            <span class="text-[11px] text-ue-brand font-medium mt-auto pt-1
                          opacity-0 group-hover:opacity-100 transition-opacity duration-150">
                 Xem danh sách →
             </span>
@@ -211,10 +208,9 @@ new class extends Component {
 
         {{-- Metric: Media --}}
         <a href="{{ route('admin.media.usage') }}"
-           class="group relative flex flex-col gap-1 rounded-xl border border-slate-200 bg-white p-4 shadow-sm
-                  transition-all duration-150 ease-out hover:-translate-y-0.5 hover:border-slate-300 hover:shadow-md
-                  focus:outline-none focus:ring-2 focus:ring-slate-400 focus:ring-offset-1
-                  {{ $snapshot['media_usage_warning_level'] === 'critical' ? 'border-l-4 border-l-red-500' : ($snapshot['media_usage_warning_level'] === 'warning' ? 'border-l-4 border-l-amber-500' : '') }}">
+           class="group relative flex flex-col gap-1 rounded-xl border border-slate-200 bg-white px-4 py-3 shadow-sm
+                  transition-all duration-150 ease-out hover:-translate-y-0.5 hover:border-ue-brand hover:shadow-md
+                  focus:outline-none focus:ring-2 focus:ring-ue-brand/40 focus:ring-offset-1">
             <span class="text-xs font-semibold text-slate-500 leading-none">Media</span>
             <span class="text-2xl font-bold text-slate-900 leading-none mt-1">
                 @if(\Illuminate\Support\Facades\Schema::hasTable('media'))
@@ -225,7 +221,7 @@ new class extends Component {
             </span>
             @if(\Illuminate\Support\Facades\Schema::hasTable('media'))
                 <div class="w-full bg-slate-100 h-1 rounded-full overflow-hidden mt-1">
-                    <div class="{{ $snapshot['media_usage_warning_level'] === 'critical' ? 'bg-red-500' : ($snapshot['media_usage_warning_level'] === 'warning' ? 'bg-amber-500' : 'bg-blue-500') }} h-full rounded-full transition-all duration-300"
+                    <div class="{{ $snapshot['media_usage_warning_level'] === 'critical' ? 'bg-red-500' : ($snapshot['media_usage_warning_level'] === 'warning' ? 'bg-amber-500' : 'bg-ue-brand') }} h-full rounded-full transition-all duration-300"
                          style="width: {{ $snapshot['media_usage_percent'] ?? 0 }}%"></div>
                 </div>
                 <span class="text-[11px] text-slate-400 mt-1">{{ number_format($snapshot['media_total_files']) }} tệp · {{ $snapshot['media_usage_percent'] }}% đã dùng</span>
@@ -296,12 +292,14 @@ new class extends Component {
                             </div>
 
                             {{-- CTA --}}
+                            @php
+                                $isPrimary = $item['type_key'] === 'verification';
+                            @endphp
                             <a href="{{ $item['cta_url'] }}"
                                class="flex-shrink-0 inline-flex items-center gap-1 px-3 py-1.5 rounded-lg
-                                      text-xs font-bold text-slate-600 bg-slate-100 border border-slate-200
-                                      transition-all duration-150 hover:bg-blue-600 hover:text-white hover:border-blue-600
-                                      focus:outline-none focus:ring-2 focus:ring-blue-400 focus:ring-offset-1
-                                      opacity-60 group-hover:opacity-100">
+                                      text-xs font-bold transition-all duration-150 focus:outline-none focus:ring-2 focus:ring-offset-1
+                                      opacity-80 group-hover:opacity-100
+                                      {{ $isPrimary ? 'bg-ue-brand text-white hover:bg-ue-brand-active focus:ring-ue-brand/40 shadow-sm' : 'bg-slate-100 text-slate-600 hover:bg-slate-200 border border-slate-200 focus:ring-slate-300' }}">
                                 {{ $item['cta_label'] }}
                                 <x-ui.icon name="chevron-right" size="xs" />
                             </a>

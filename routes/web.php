@@ -717,10 +717,8 @@ Route::prefix('admin')
                 ? $group
                 : array_key_first($groups);
 
-            return view('admin.console', [
-                'groups' => $groups,
-                'selectedGroupKey' => $selectedGroupKey,
-            ]);
+            $firstItemRoute = $groups[$selectedGroupKey]['items'][0]['route'] ?? 'admin.dashboard';
+            return redirect()->route($firstItemRoute);
         })->name('console');
 
         Route::get('dashboard', function () {

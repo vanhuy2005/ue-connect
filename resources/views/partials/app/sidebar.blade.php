@@ -134,30 +134,18 @@ $secondaryNav = [
                     @endphp
                     <li role="listitem">
                         <a
-                            href="{{ route('admin.console', ['group' => $groupKey]) }}"
+                            href="{{ route($group['items'][0]['route'] ?? 'admin.dashboard') }}"
                             wire:navigate.hover
-                            class="ue-nav-link relative group/nav transition-all duration-300 {{ $active ? 'active bg-slate-50 text-ue-brand font-bold shadow-sm' : 'text-slate-600 hover:bg-slate-50' }}"
+                            class="ue-nav-link {{ $active ? 'active' : '' }}"
                             @if($active) aria-current="page" @endif
                             :title="collapsed ? '{{ $group['vn_label'] }}' : ''"
                         >
-                            {{-- Vertical glowing marker --}}
-                            <div x-show="!collapsed" class="absolute left-0 top-2 bottom-2 w-1 rounded-r-xl bg-gradient-to-b from-ue-brand to-cyan-500 transition-all duration-300 transform scale-y-0 origin-center {{ $active ? 'scale-y-100' : 'group-hover/nav:scale-y-50' }}"></div>
-
-                            <div class="relative flex items-center justify-center w-6 h-6 transition-transform duration-300 group-hover/nav:scale-110">
-                                <x-ui.icon :name="$group['icon']" size="md" aria-hidden="true" class="flex-shrink-0 {{ $active ? 'text-ue-brand' : 'text-slate-500 group-hover/nav:text-slate-700' }}" />
+                            <div class="relative flex items-center justify-center">
+                                <x-ui.icon :name="$group['icon']" size="md" aria-hidden="true" class="flex-shrink-0" />
                             </div>
-                            <span x-show="!collapsed" 
-                                  x-transition:enter="transition ease-out duration-200 delay-75" 
-                                  x-transition:enter-start="opacity-0 translate-x-[-8px]" 
-                                  x-transition:enter-end="opacity-100 translate-x-0" 
-                                  x-transition:leave="transition ease-in duration-100" 
-                                  x-transition:leave-start="opacity-100" 
-                                  x-transition:leave-end="opacity-0" 
-                                  class="whitespace-nowrap transition-colors duration-200 {{ $active ? 'text-slate-900' : 'text-slate-650 group-hover/nav:text-slate-900' }}">{{ $group['vn_label'] }}</span>
+                            <span x-show="!collapsed" x-transition:enter="transition ease-out duration-200 delay-75" x-transition:enter-start="opacity-0 translate-x-[-8px]" x-transition:enter-end="opacity-100 translate-x-0" x-transition:leave="transition ease-in duration-100" x-transition:leave-start="opacity-100" x-transition:leave-end="opacity-0" class="truncate text-sm font-semibold whitespace-nowrap">{{ $group['vn_label'] }}</span>
 
-                            @if($active)
-                                <span x-show="!collapsed" class="ml-auto w-1.5 h-1.5 rounded-full bg-ue-brand animate-pulse"></span>
-                            @endif
+
                         </a>
                     </li>
                 @endforeach
@@ -179,10 +167,7 @@ $secondaryNav = [
             :title="collapsed ? '{{ $currentUser?->name }}' : ''"
         >
             <div class="relative flex items-center justify-center">
-                <div class="relative p-0.5 rounded-full bg-gradient-to-tr from-ue-brand to-cyan-500 group-hover/profile:scale-105 transition-transform duration-300 shadow-sm shadow-ue-brand/10">
-                    <x-ui.avatar :user="$currentUser" size="xs" class="flex-shrink-0 border border-white" />
-                </div>
-                <span class="absolute bottom-0 right-0 block h-2 w-2 rounded-full bg-green-400 ring-1 ring-white"></span>
+                <x-ui.avatar :user="$currentUser" size="xs" class="flex-shrink-0" />
             </div>
             <span x-show="!collapsed" x-transition:enter="transition ease-out duration-200 delay-75" x-transition:enter-start="opacity-0 translate-x-[-8px]" x-transition:enter-end="opacity-100 translate-x-0" x-transition:leave="transition ease-in duration-100" x-transition:leave-start="opacity-100" x-transition:leave-end="opacity-0" class="truncate text-sm font-semibold text-slate-800 group-hover/profile:text-slate-950 whitespace-nowrap">{{ $currentUser?->name }}</span>
             <x-ui.icon name="chevron-up" size="xs" x-show="!collapsed" x-transition:enter="transition ease-out duration-200 delay-75" x-transition:enter-start="opacity-0" x-transition:enter-end="opacity-100" x-transition:leave="transition ease-in duration-100" x-transition:leave-start="opacity-100" x-transition:leave-end="opacity-0" class="ml-auto text-slate-400 group-hover/profile:text-slate-600 transition-transform duration-150" x-bind:class="moreOpen ? 'rotate-180' : ''" />
