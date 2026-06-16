@@ -1039,6 +1039,7 @@ new class extends Component
                 $query->where('owner_id', $userId)
                     ->orWhereIn('id', $memberIds);
             })
+            ->with(['media'])
             ->latest('updated_at')
             ->get();
     }
@@ -1656,6 +1657,21 @@ new class extends Component
         }
         return $connections->values();
     }
+
+    public function resolveAvatarUrl(Community $c): ?string
+    {
+        $avatarMedia = $c->relationLoaded('media')
+            ? $c->media->firstWhere('collection', 'community_avatar')
+            : $c->avatar()->first();
+        $avatarUrl = $avatarMedia ? \App\Support\Media\MediaUrlResolver::publicUrl($avatarMedia, 'display') : null;
+        if (!$avatarUrl) {
+            $coverMedia = $c->relationLoaded('media')
+                ? $c->media->firstWhere('collection', 'community_cover')
+                : $c->cover()->first();
+            $avatarUrl = $coverMedia ? \App\Support\Media\MediaUrlResolver::publicUrl($coverMedia, 'thumb') : null;
+        }
+        return $avatarUrl;
+    }
 };
 ?>
 
@@ -1696,10 +1712,15 @@ new class extends Component
             
             <div class="space-y-1">
                 @foreach ($this->joinedCommunities as $c)
+                    @php $avatarUrl = $this->resolveAvatarUrl($c); @endphp
                     <a href="{{ route('community.show', $c->id) }}" wire:navigate
                         class="flex items-center gap-3 p-2 rounded-xl transition group {{ $c->id === $community->id ? 'bg-ue-brand-soft text-ue-brand' : 'hover:bg-slate-100' }}">
-                        <div class="w-9 h-9 rounded-lg bg-gradient-to-br from-ue-brand/20 to-ue-brand/5 border border-slate-150 flex items-center justify-center text-ue-brand flex-shrink-0">
-                            <x-ui.icon name="users" size="sm" class="text-ue-brand" />
+                        <div class="w-9 h-9 rounded-lg bg-gradient-to-br from-ue-brand/20 to-ue-brand/5 border border-slate-150 flex items-center justify-center text-ue-brand flex-shrink-0 overflow-hidden">
+                            @if ($avatarUrl)
+                                <img src="{{ $avatarUrl }}" class="w-full h-full object-cover" alt="{{ $c->name }}">
+                            @else
+                                <x-ui.icon name="users" size="sm" class="text-ue-brand" />
+                            @endif
                         </div>
                         <div class="min-w-0 flex-1">
                             <p class="text-xs font-bold truncate {{ $c->id === $community->id ? 'text-ue-brand' : 'text-slate-800 group-hover:text-ue-brand' }}">{{ $c->name }}</p>
