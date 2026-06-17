@@ -18,6 +18,14 @@ class GenerateMediaUrlAction
     private static array $requestUrlCache = [];
 
     /**
+     * Clear the URL resolution cache (primarily for testing).
+     */
+    public static function clearCache(): void
+    {
+        self::$requestUrlCache = [];
+    }
+
+    /**
      * Generate a dynamic safe URL for a Media, MediaVariant, or MediaFile asset.
      */
     public function execute(Media|MediaVariant|MediaFile $media, ?string $variant = null, ?User $viewer = null, ?string $context = null): ?string

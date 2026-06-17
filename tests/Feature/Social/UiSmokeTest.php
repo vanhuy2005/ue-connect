@@ -150,7 +150,7 @@ class UiSmokeTest extends TestCase
     public function test_list_loading_states_are_bound_to_real_cards_not_fake_skeleton_grids(): void
     {
         $mentorList = file_get_contents(resource_path('views/livewire/pages/app/mentors.blade.php'));
-        $discoveryList = file_get_contents(resource_path('views/livewire/pages/app/discovery.blade.php'));
+        $discoveryList = file_get_contents(resource_path('views/livewire/pages/app/connections.blade.php'));
 
         $this->assertStringContainsString('wire:loading.delay.class="ue-content-loading"', $mentorList);
         $this->assertStringContainsString('wire:loading.delay.class="ue-content-loading"', $discoveryList);

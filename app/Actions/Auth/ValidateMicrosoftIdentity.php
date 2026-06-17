@@ -83,12 +83,9 @@ class ValidateMicrosoftIdentity
         }
 
         if (! AllowedEmailDomain::check($normalizedEmail, $allowedDomains)) {
-            $studentDomains = config('ueconnect.identity.student_email_domains', ['student.hcmue.edu.vn']);
-            if (AllowedEmailDomain::check($normalizedEmail, $studentDomains)) {
-                throw ValidationException::withMessages([
-                    'email' => ['Tài khoản Microsoft của bạn không thuộc tổ chức được phép.'],
-                ]);
-            }
+            throw ValidationException::withMessages([
+                'email' => ['Tài khoản Microsoft của bạn không thuộc tổ chức được phép.'],
+            ]);
         }
 
         // 6. Resolve provider user ID

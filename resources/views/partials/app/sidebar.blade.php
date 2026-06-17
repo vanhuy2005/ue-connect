@@ -109,6 +109,7 @@ $secondaryNav = [
                 <span x-show="!collapsed" x-transition:enter="transition ease-out duration-200 delay-75" x-transition:enter-start="opacity-0 translate-x-[-8px]" x-transition:enter-end="opacity-100 translate-x-0" x-transition:leave="transition ease-in duration-100" x-transition:leave-start="opacity-100" x-transition:leave-end="opacity-0" class="font-bold text-lg text-ue-brand tracking-tight whitespace-nowrap">UEConnect</span>
                 <span x-show="!collapsed" x-transition:enter="transition ease-out duration-200 delay-100" x-transition:enter-start="opacity-0 scale-95" x-transition:enter-end="opacity-100 scale-100" class="ml-1 px-1.5 py-0.5 rounded text-[8px] font-bold tracking-wider uppercase bg-gradient-to-r from-ue-brand to-cyan-500 text-white shadow-sm">Admin</span>
             </a>
+            <span class="sr-only">Admin console</span>
         </div>
 
         {{-- Category Admin Navigation --}}

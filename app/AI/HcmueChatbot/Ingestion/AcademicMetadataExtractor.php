@@ -111,11 +111,29 @@ class AcademicMetadataExtractor
             }
         }
 
+        // Try to identify academic year from filename year range (e.g. 2025-2026.pdf)
+        if (empty($academicYear)) {
+            if (preg_match('/\b(20\d{2})\s*-\s*(?:20\d{2}|\d{2})\b/ui', $filename, $matches)) {
+                $academicYear = (int) $matches[1];
+                $evidence[] = "Matched academic year '{$academicYear}' from filename year range";
+            } elseif (preg_match('/\b(20\d{2})\s*-\s*(?:20\d{2}|\d{2})\b/ui', $normalizedPath, $matches)) {
+                $academicYear = (int) $matches[1];
+                $evidence[] = "Matched academic year '{$academicYear}' from folder path year range";
+            }
+        }
+
         // Guess academic year from cohort if not present: K49 -> 2023, K50 -> 2024, K51 -> 2025
         if (empty($academicYear) && $cohort) {
             $cohortNum = (int) substr($cohort, 1);
             $academicYear = 1974 + $cohortNum;
             $evidence[] = "Calculated academic year '{$academicYear}' from cohort '{$cohort}'";
+        }
+
+        // Guess cohort from academic year if not present: 2025 -> K51, 2023 -> K49
+        if (empty($cohort) && $academicYear) {
+            $cohortNum = $academicYear - 1974;
+            $cohort = 'K'.$cohortNum;
+            $evidence[] = "Calculated cohort '{$cohort}' from academic year '{$academicYear}'";
         }
 
         // 5. Faculty & Major Identification from path or first page text

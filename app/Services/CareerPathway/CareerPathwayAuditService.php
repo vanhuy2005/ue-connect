@@ -51,8 +51,9 @@ class CareerPathwayAuditService
         $scannedSourceDirs = [];
 
         foreach ($roadmapFiles as $file) {
-            $path = $file->getPathname();
-            $relativePath = str_replace(rtrim($sourcePath, '/').'/', '', str_replace('\\', '/', $path));
+            $path = str_replace('\\', '/', $file->getPathname());
+            $normalizedSourcePath = str_replace('\\', '/', $sourcePath);
+            $relativePath = str_replace(rtrim($normalizedSourcePath, '/').'/', '', $path);
             $dirPath = dirname($relativePath);
 
             $parts = explode('/', $dirPath);

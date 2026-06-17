@@ -108,7 +108,7 @@ class AdminNavigationTest extends TestCase
         $response->assertSee('Quản lý Mentor');
         $response->assertSee(route('admin.verifications.queue'));
 
-        $this->assertSame(2, substr_count($response->getContent(), 'aria-current="page"'));
+        $this->assertSame(3, substr_count($response->getContent(), 'aria-current="page"'));
     }
 
     public function test_admin_console_defaults_to_first_visible_category(): void
