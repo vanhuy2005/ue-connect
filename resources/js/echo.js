@@ -9,9 +9,9 @@ const metaPort = document.querySelector('meta[name="reverb-port"]')?.content;
 const metaScheme = document.querySelector('meta[name="reverb-scheme"]')?.content;
 
 const appKey = metaKey || import.meta.env.VITE_REVERB_APP_KEY;
-const host = metaHost || import.meta.env.VITE_REVERB_HOST;
-const port = metaPort || import.meta.env.VITE_REVERB_PORT || 80;
-const wssPort = metaPort || import.meta.env.VITE_REVERB_PORT || 443;
+const host = metaHost || import.meta.env.VITE_REVERB_HOST || window.location.hostname;
+const port = Number(metaPort || import.meta.env.VITE_REVERB_PORT || 80);
+const wssPort = Number(metaPort || import.meta.env.VITE_REVERB_PORT || 443);
 const scheme = metaScheme || import.meta.env.VITE_REVERB_SCHEME || 'https';
 
 if (appKey) {
