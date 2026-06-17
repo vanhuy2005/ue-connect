@@ -1,0 +1,74 @@
+name: Deploy Azure VM
+
+on:
+  workflow_dispatch:
+  workflow_run:
+    workflows:
+      - CI
+    branches:
+      - main
+    types:
+      - completed
+
+concurrency:
+  group: deploy-azure-vm
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    name: Build and restart container on VM
+    runs-on: ubuntu-latest
+    environment: production
+    if: github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success'
+
+    steps:
+      - name: Deploy over SSH
+        uses: appleboy/ssh-action@v1.2.0
+        env:
+          APP_DIR: ${{ secrets.AZURE_VM_APP_DIR }}
+          APP_PORT: ${{ secrets.AZURE_VM_APP_PORT }}
+          GIT_REF: ${{ github.event.workflow_run.head_sha || github.sha }}
+          REPOSITORY: ${{ github.repository }}
+        with:
+          host: ${{ secrets.AZURE_VM_HOST }}
+          username: ${{ secrets.AZURE_VM_USER }}
+          key: ${{ secrets.AZURE_VM_SSH_KEY }}
+          port: ${{ secrets.AZURE_VM_SSH_PORT || 22 }}
+          envs: APP_DIR,APP_PORT,GIT_REF,REPOSITORY
+          script_stop: true
+          script: |
+            set -eu
+
+            APP_DIR="${APP_DIR:-/opt/ueconnect}"
+            APP_PORT="${APP_PORT:-80}"
+            IMAGE_TAG="ueconnect:${GIT_REF}"
+            CONTAINER_NAME="ueconnect"
+
+            if [ ! -d "$APP_DIR/.git" ]; then
+              echo "Repository is not cloned at $APP_DIR"
+              echo "Clone it once with: sudo git clone git@github.com:${REPOSITORY}.git $APP_DIR"
+              exit 1
+            fi
+
+            cd "$APP_DIR"
+
+            git fetch --prune origin main
+            git reset --hard "$GIT_REF"
+
+            if [ ! -f .env.production ]; then
+              echo "$APP_DIR/.env.production is missing"
+              exit 1
+            fi
+
+            docker build --tag "$IMAGE_TAG" .
+
+            docker rm -f "$CONTAINER_NAME" 2>/dev/null || true
+            docker run -d \
+              --name "$CONTAINER_NAME" \
+              --restart unless-stopped \
+              --env-file .env.production \
+              -e PORT=10000 \
+              -p "${APP_PORT}:10000" \
+              "$IMAGE_TAG"
+
+            docker image prune -f
