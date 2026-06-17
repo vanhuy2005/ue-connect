@@ -36,8 +36,6 @@
   <img src="https://img.shields.io/badge/Azure%20VM-Production%20VPS-0078D4?style=for-the-badge&logo=microsoftazure&logoColor=white" alt="Azure VM">
   <img src="https://img.shields.io/badge/GitHub%20Actions-CI%2FCD-2088FF?style=for-the-badge&logo=githubactions&logoColor=white" alt="GitHub Actions">
   <img src="https://img.shields.io/badge/SSH-Remote%20Deploy-4B5563?style=for-the-badge&logo=gnubash&logoColor=white" alt="SSH Remote Deploy">
-  <img src="https://img.shields.io/badge/Host%20Nginx-80%2F443%20Reverse%20Proxy-009639?style=for-the-badge&logo=nginx&logoColor=white" alt="Host Nginx Reverse Proxy">
-  <img src="https://img.shields.io/badge/Docker%20Build-On%20VM-2496ED?style=for-the-badge&logo=docker&logoColor=white" alt="Docker Build On VM">
   <img src="https://img.shields.io/badge/Supervisord-Process%20Manager-111827?style=for-the-badge&logo=superuser&logoColor=white" alt="Supervisord">
   <img src="https://img.shields.io/badge/HTTPS-Let's%20Encrypt-003A70?style=for-the-badge&logo=letsencrypt&logoColor=white" alt="HTTPS">
   <img src="https://img.shields.io/badge/Smoke%20Checks-Assets%20%7C%20Reverb%20%7C%20VAPID-16A34A?style=for-the-badge&logo=checkmarx&logoColor=white" alt="Deploy Smoke Checks">
@@ -70,40 +68,7 @@
   Cảm ơn các bạn đã ghé thăm <strong>UEConnect</strong>. Tụi mình là nhóm <strong>I.102</strong>, là những lập trình viên trực tiếp xây dựng <strong>UEConnect</strong>. Đây là một dự án học thuật nhằm ứng dụng các kiến thức lý thuyết đã được học từ thầy <strong>Nguyễn Quốc Trung</strong> vào thực tế phát triển một trang mạng xã hội thu nhỏ cho cộng đồng sinh viên của Trường Đại học Sư phạm TP.HCM (HCMUE).
 </p>
 
-<p align="center"><strong>Nhóm thành viên tham gia, gồm 5 người:</strong></p>
-
-<div align="center">
-  <table>
-    <thead>
-      <tr>
-        <th align="center" width="280">Thành viên</th>
-        <th align="center" width="180">MSSV</th>
-      </tr>
-    </thead>
-    <tbody>
-      <tr>
-        <td align="center">Phạm Gia Bảo</td>
-        <td align="center"><code>49.01.104.009</code></td>
-      </tr>
-      <tr>
-        <td align="center">Nguyễn Văn Quang Huy</td>
-        <td align="center"><code>49.01.104.055</code></td>
-      </tr>
-      <tr>
-        <td align="center">Trần Gia Huy</td>
-        <td align="center"><code>49.01.104.058</code></td>
-      </tr>
-      <tr>
-        <td align="center">Nguyễn Tuấn Khôi</td>
-        <td align="center"><code>49.01.104.074</code></td>
-      </tr>
-      <tr>
-        <td align="center">Võ Chí Lâm</td>
-        <td align="center"><code>49.01.104.081</code></td>
-      </tr>
-    </tbody>
-  </table>
-</div>
+<p align="center"><strong>Nhóm thành viên tham gia, gồm 5 người.</strong></p>
 
 ---
 
@@ -530,10 +495,14 @@ chore/<task-slug>        <- maintenance / refactoring
 
 ## 14. License và bối cảnh học thuật
 
-UEConnect hiện là dự án học thuật/sản phẩm do sinh viên phát triển cho bối cảnh mạng xã hội học thuật HCMUE. Chính sách license và production public release cần được chốt trước khi mở rộng phát hành chính thức.
+UEConnect là dự án học thuật được phát triển bởi nhóm I.102 trong khuôn khổ môn học do thầy **Nguyễn Quốc Trung** hướng dẫn. Toàn bộ mã nguồn, tài liệu kỹ thuật, thiết kế giao diện, cấu hình triển khai và tài sản dự án do nhóm tạo ra thuộc quyền sở hữu của nhóm I.102, gồm các thành viên: Phạm Gia Bảo (49.01.104.009), Nguyễn Văn Quang Huy (49.01.104.055), Trần Gia Huy (49.01.104.058), Nguyễn Tuấn Khôi (49.01.104.074) và Võ Chí Lâm (49.01.104.081).
+
+Dự án **không được phát hành theo MIT, Apache, GPL hoặc bất kỳ giấy phép mã nguồn mở mặc định nào**. Mọi hành vi sao chép, phân phối lại, triển khai thương mại, sử dụng lại mã nguồn/tài liệu/tài sản thiết kế hoặc chuyển giao cho bên thứ ba cần có sự đồng ý bằng văn bản của nhóm I.102.
+
+UEConnect được xây dựng cho mục đích học tập, nghiên cứu, demo học thuật và portfolio kỹ thuật. Các tên gọi liên quan đến HCMUE, dữ liệu học thuật HCMUE hoặc bối cảnh nhà trường được sử dụng nhằm mô phỏng và phục vụ mục tiêu học thuật; việc triển khai chính thức trong phạm vi tổ chức cần có phê duyệt riêng từ các bên có thẩm quyền.
 
 ---
 
 <p align="center">
-  <strong>UEConnect</strong> · Lớp cộng đồng đã xác thực cho sinh viên HCMUE
+  <strong>Phạm Gia Bảo</strong> · <strong>Nguyễn Văn Quang Huy</strong> · <strong>Trần Gia Huy</strong> · <strong>Nguyễn Tuấn Khôi</strong> · <strong>Võ Chí Lâm</strong>
 </p>
