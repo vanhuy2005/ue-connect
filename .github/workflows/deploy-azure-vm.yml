@@ -36,7 +36,7 @@ jobs:
           port: ${{ secrets.AZURE_VM_SSH_PORT || 22 }}
           envs: APP_DIR,APP_PORT,GIT_REF,REPOSITORY
           script_stop: true
-          script: |
+          script: |-
             set -eu
 
             APP_DIR="${APP_DIR:-/opt/ueconnect}"
@@ -72,3 +72,41 @@ jobs:
               "$IMAGE_TAG"
 
             docker image prune -f
+
+            # ── Smoke tests ────────────────────────────────────────────
+            echo "Waiting for app to become ready..."
+            for i in $(seq 1 30); do
+              if curl -fsSI "http://127.0.0.1:${APP_PORT}" >/dev/null 2>&1; then
+                echo "App responded after $((i * 2))s"
+                break
+              fi
+              sleep 2
+            done
+
+            echo "Verifying container is running..."
+            docker ps --filter "name=${CONTAINER_NAME}" --filter "status=running" | grep "$CONTAINER_NAME"
+
+            echo "Checking Vite manifest inside container..."
+            docker exec "$CONTAINER_NAME" sh -c 'test -f public/build/manifest.json'
+
+            echo "Checking CSS assets inside container..."
+            docker exec "$CONTAINER_NAME" sh -c 'find public/build/assets -type f -name "*.css" | grep -q .'
+
+            echo "Checking JS assets inside container..."
+            docker exec "$CONTAINER_NAME" sh -c 'find public/build/assets -type f -name "*.js" | grep -q .'
+
+            echo "Resolving CSS file from Vite manifest..."
+            CSS_FILE="$(docker exec "$CONTAINER_NAME" sh -c \
+              'php -r "$m=json_decode(file_get_contents(\"public/build/manifest.json\"),true); echo $m[\"resources/css/app.css\"][\"file\"] ?? \"\";"')"
+
+            if [ -z "$CSS_FILE" ]; then
+              echo "ERROR: CSS entry not found in Vite manifest."
+              docker exec "$CONTAINER_NAME" sh -c 'cat public/build/manifest.json'
+              exit 1
+            fi
+
+            echo "Testing HTTP serving of /build/${CSS_FILE} ..."
+            curl -fsSI "http://127.0.0.1:${APP_PORT}/build/${CSS_FILE}" >/dev/null
+
+            echo "Smoke test passed: /build/${CSS_FILE} is served successfully."
+
