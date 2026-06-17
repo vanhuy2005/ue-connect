@@ -66,6 +66,8 @@ new class extends Component
     // Community media uploads
     public $coverFile = null;
     public $avatarFile = null;
+    public $croppedCoverFile = null;
+    public $croppedAvatarFile = null;
 
     // Post composer
     public bool $showPostComposer = false;
@@ -1281,6 +1283,106 @@ new class extends Component
     }
 
     /**
+     * Save cropped community avatar.
+     */
+    public function saveCommunityAvatarCropped(): void
+    {
+        try {
+            $this->validate([
+                'croppedAvatarFile' => 'required|image|mimes:jpg,jpeg,png,webp|max:5120',
+            ], [
+                'croppedAvatarFile.required' => 'Vui lòng chọn ảnh đại diện.',
+                'croppedAvatarFile.image' => 'Tệp tin phải là hình ảnh.',
+                'croppedAvatarFile.mimes' => 'Định dạng ảnh phải là chi tiết một trong các loại: jpg, jpeg, png hoặc webp.',
+                'croppedAvatarFile.max' => 'Kích thước ảnh đại diện không được vượt quá 5MB.',
+            ]);
+
+            $storeAction = app(StoreTemporaryMediaAction::class);
+            $attachAction = app(AttachMediaToModelAction::class);
+            $deleteAction = app(DeleteMediaAction::class);
+
+            if (! $this->canManage) {
+                $this->dispatch('notify', type: 'error', message: 'Bạn không có quyền quản lý cộng đồng này.');
+                return;
+            }
+
+            $oldAvatar = $this->community->avatar()->first();
+
+            // Store new temporary media (public visibility)
+            $media = $storeAction->execute(auth()->user(), $this->croppedAvatarFile, 'community_avatar', ['visibility' => 'public']);
+
+            // Attach to the Community model if it is different
+            if (!$oldAvatar || $oldAvatar->id !== $media->id) {
+                if ($oldAvatar) {
+                    $deleteAction->execute($oldAvatar);
+                }
+                $attachAction->execute(auth()->user(), $this->community, [$media->id], 'community_avatar');
+            }
+
+            $this->community->refresh();
+            $this->community->load('media');
+            $this->reset('croppedAvatarFile');
+            $this->dispatch('notify', type: 'success', message: 'Cập nhật ảnh đại diện cộng đồng thành công.');
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            $this->dispatch('notify', type: 'error', message: $e->validator->errors()->first());
+            throw $e;
+        } catch (\Exception $e) {
+            $this->dispatch('notify', type: 'error', message: 'Lỗi lưu ảnh đại diện: ' . $e->getMessage());
+            throw $e;
+        }
+    }
+
+    /**
+     * Save cropped community cover.
+     */
+    public function saveCommunityCoverCropped(): void
+    {
+        try {
+            $this->validate([
+                'croppedCoverFile' => 'required|image|mimes:jpg,jpeg,png,webp|max:5120',
+            ], [
+                'croppedCoverFile.required' => 'Vui lòng chọn ảnh bìa.',
+                'croppedCoverFile.image' => 'Tệp tin phải là hình ảnh.',
+                'croppedCoverFile.mimes' => 'Định dạng ảnh phải là chi tiết một trong các loại: jpg, jpeg, png hoặc webp.',
+                'croppedCoverFile.max' => 'Kích thước ảnh bìa không được vượt quá 5MB.',
+            ]);
+
+            $storeAction = app(StoreTemporaryMediaAction::class);
+            $attachAction = app(AttachMediaToModelAction::class);
+            $deleteAction = app(DeleteMediaAction::class);
+
+            if (! $this->canManage) {
+                $this->dispatch('notify', type: 'error', message: 'Bạn không có quyền quản lý cộng đồng này.');
+                return;
+            }
+
+            $oldCover = $this->community->cover()->first();
+
+            // Store new temporary media (public visibility)
+            $media = $storeAction->execute(auth()->user(), $this->croppedCoverFile, 'community_cover', ['visibility' => 'public']);
+
+            // Attach to the Community model if it is different
+            if (!$oldCover || $oldCover->id !== $media->id) {
+                if ($oldCover) {
+                    $deleteAction->execute($oldCover);
+                }
+                $attachAction->execute(auth()->user(), $this->community, [$media->id], 'community_cover');
+            }
+
+            $this->community->refresh();
+            $this->community->load('media');
+            $this->reset('croppedCoverFile');
+            $this->dispatch('notify', type: 'success', message: 'Cập nhật ảnh bìa cộng đồng thành công.');
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            $this->dispatch('notify', type: 'error', message: $e->validator->errors()->first());
+            throw $e;
+        } catch (\Exception $e) {
+            $this->dispatch('notify', type: 'error', message: 'Lỗi lưu ảnh bìa: ' . $e->getMessage());
+            throw $e;
+        }
+    }
+
+    /**
      * Get safe cover URL.
      */
     public function getCoverUrlProperty(): ?string
@@ -1751,7 +1853,7 @@ new class extends Component
                     <label class="absolute bottom-4 right-4 bg-white/80 backdrop-blur-xs text-slate-800 text-xs font-bold p-2 sm:px-3 sm:py-1.5 rounded-lg border border-slate-250 hover:bg-white transition flex items-center gap-1.5 shadow-sm cursor-pointer z-10">
                         <x-ui.icon name="camera" size="xs" />
                         <span class="hidden sm:inline">Chỉnh sửa ảnh bìa</span>
-                        <input type="file" wire:model="coverFile" class="hidden" accept="image/jpeg,image/png,image/webp">
+                        <input type="file" @change="openCoverCropper($event)" class="hidden" accept="image/jpeg,image/png,image/webp">
                     </label>
                     @error('coverFile')
                         <span class="absolute bottom-16 right-4 bg-red-500 text-white text-[10px] font-semibold px-2 py-1 rounded-md shadow-sm z-20">
@@ -1775,7 +1877,7 @@ new class extends Component
                         @if ($this->canManage)
                             <label class="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition flex items-center justify-center cursor-pointer text-white text-xs font-bold">
                                 <x-ui.icon name="camera" size="sm" class="text-white" />
-                                <input type="file" wire:model="avatarFile" class="hidden" accept="image/jpeg,image/png,image/webp">
+                                <input type="file" @change="openAvatarCropper($event)" class="hidden" accept="image/jpeg,image/png,image/webp">
                             </label>
                         @endif
 
@@ -3200,5 +3302,28 @@ new class extends Component
             </div>
         @endif
     @endif
+    <x-community.image-crop-modal />
 </div>
+
+@push('scripts')
+<script>
+    function openAvatarCropper(event) {
+        const files = event.target.files;
+        if (files && files.length > 0) {
+            window.dispatchEvent(new CustomEvent('open-community-avatar-cropper', { 
+                detail: { files: files, input: event.target } 
+            }));
+        }
+    }
+
+    function openCoverCropper(event) {
+        const files = event.target.files;
+        if (files && files.length > 0) {
+            window.dispatchEvent(new CustomEvent('open-community-cover-cropper', { 
+                detail: { files: files, input: event.target } 
+            }));
+        }
+    }
+</script>
+@endpush
 

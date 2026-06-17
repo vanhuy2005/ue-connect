@@ -22,6 +22,7 @@ use App\Models\Profile;
 use App\Models\User;
 use Database\Seeders\Reference\AccessControlReferenceSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Http\Client\Request;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Gate;
@@ -757,5 +758,59 @@ class MediaAndExperienceTest extends TestCase
         $this->assertNotNull($signedUrl);
         $this->actingAs($stranger)->get($signedUrl)->assertForbidden();
         $this->actingAs($user2)->get($signedUrl)->assertOk();
+    }
+
+    public function test_community_avatar_uses_uuid_based_path_on_cloudinary(): void
+    {
+        config([
+            'media.default_strategy' => 'hybrid_public_cloudinary',
+            'media.storage.strategy' => 'hybrid_public_cloudinary',
+            'media.r2.enabled' => true,
+            'media.providers.r2.enabled' => true,
+            'media.providers.cloudinary.enabled' => true,
+            'media.providers.cloudinary.cloud_name' => 'test-cloud',
+            'media.providers.cloudinary.api_key' => 'test-key',
+            'media.providers.cloudinary.api_secret' => 'test-secret',
+            'media.providers.cloudinary.upload_folder' => 'ueconnect',
+            'media.providers.cloudinary.sync_public_variants' => true,
+            'filesystems.disks.r2_public.url' => null,
+        ]);
+
+        Storage::fake('r2_public');
+        Storage::fake('r2_private');
+
+        Http::fake(function (Request $request) {
+            $data = $request->data();
+            $publicId = 'unknown';
+            foreach ($data as $field) {
+                if (isset($field['name']) && $field['name'] === 'public_id') {
+                    $publicId = $field['contents'];
+                    break;
+                }
+            }
+
+            return Http::response([
+                'public_id' => $publicId,
+                'version' => 123,
+                'secure_url' => "https://res.cloudinary.com/test-cloud/image/upload/v123/{$publicId}.webp",
+                'format' => 'webp',
+                'bytes' => 321,
+                'resource_type' => 'image',
+            ], 200);
+        });
+
+        $user = User::factory()->create(['account_status' => AccountStatus::ACTIVE]);
+
+        $media = app(StoreTemporaryMediaAction::class)->execute(
+            $user,
+            UploadedFile::fake()->image('community_avatar.jpg', 200, 200),
+            'community_avatar',
+            ['visibility' => 'public']
+        )->refresh();
+
+        $variant = $media->variants()->where('variant_name', 'display')->firstOrFail();
+
+        $this->assertStringContainsString($media->uuid, $variant->cloudinary_public_id);
+        $this->assertStringNotContainsString('avatars/user_', $variant->cloudinary_public_id);
     }
 }
