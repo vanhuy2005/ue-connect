@@ -256,6 +256,7 @@ Generated: 2026-06-11
 
 - docs/10-devops/
   - [docs/10-devops/local-development.md](10-devops/local-development.md)
+  - [docs/10-devops/azure-vm-setup.md](10-devops/azure-vm-setup.md)
   - [docs/10-devops/environment-variables.md](10-devops/environment-variables.md)
   - [docs/10-devops/ci-cd.md](10-devops/ci-cd.md)
   - [docs/10-devops/deployment.md](10-devops/deployment.md)
