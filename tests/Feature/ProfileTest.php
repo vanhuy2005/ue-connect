@@ -3,8 +3,11 @@
 namespace Tests\Feature;
 
 use App\Enums\AccountStatus;
+use App\Enums\CommunityMemberRole;
 use App\Enums\ConnectionStatus;
 use App\Enums\GreetingStatus;
+use App\Models\Community;
+use App\Models\CommunityMember;
 use App\Models\User;
 use Database\Seeders\Reference\AccessControlReferenceSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -182,5 +185,43 @@ class ProfileTest extends TestCase
             'user_two_id' => max($user->id, $otherUser->id),
             'status' => ConnectionStatus::REMOVED,
         ]);
+    }
+
+    public function test_profile_communities_tab_shows_active_memberships(): void
+    {
+        $user = User::factory()->create([
+            'account_status' => AccountStatus::ACTIVE,
+        ]);
+        $user->profile()->create([
+            'display_name' => $user->name,
+            'role_type' => 'student',
+            'profile_status' => 'complete',
+            'discoverable' => true,
+        ]);
+
+        $community = Community::factory()
+            ->active()
+            ->forOwner($user)
+            ->create([
+                'name' => 'Cong dong Profile Test',
+                'members_count' => 1,
+            ]);
+
+        CommunityMember::factory()
+            ->owner()
+            ->active()
+            ->create([
+                'community_id' => $community->id,
+                'user_id' => $user->id,
+                'role' => CommunityMemberRole::Owner->value,
+                'joined_at' => now(),
+            ]);
+
+        $this->actingAs($user);
+
+        Volt::test('pages.app.profile', ['user' => $user])
+            ->set('activeTab', 'communities')
+            ->assertSee('Cong dong Profile Test')
+            ->assertSeeHtml(route('community.show', $community->id));
     }
 }
