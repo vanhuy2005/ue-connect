@@ -58,8 +58,6 @@
   Cảm ơn các bạn đã ghé thăm <strong>UEConnect</strong>. Tụi mình là nhóm <strong>I.102</strong>, là những lập trình viên trực tiếp xây dựng <strong>UEConnect</strong>. Đây là một dự án học thuật nhằm ứng dụng các kiến thức lý thuyết đã được học từ thầy <strong>Nguyễn Quốc Trung</strong> vào thực tế phát triển một trang mạng xã hội thu nhỏ cho cộng đồng sinh viên của Trường Đại học Sư phạm TP.HCM (HCMUE).
 </p>
 
-<p align="center"><strong>Nhóm thành viên tham gia, gồm 5 người.</strong></p>
-
 ---
 
 ## 1. Tổng quan dự án
