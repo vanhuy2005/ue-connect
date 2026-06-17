@@ -96,9 +96,10 @@ $secondaryNav = [
     :class="collapsed ? 'ue-shell__sidebar--collapsed' : 'ue-shell__sidebar--expanded'"
     aria-label="Điều hướng quản trị"
     role="navigation"
-    x-data="{ moreOpen: false, collapsed: true }"
-    @mouseenter="collapsed = false"
-    @mouseleave="collapsed = true"
+    x-data="{ moreOpen: false, collapsed: true, hovering: false }"
+    x-init="$watch('moreOpen', value => { if (!value && !hovering) { collapsed = true; } })"
+    @mouseenter="hovering = true; collapsed = false"
+    @mouseleave="hovering = false; if (!moreOpen) { collapsed = true; }"
 >
     <div class="flex flex-col gap-6 flex-1 min-h-0 overflow-y-auto pr-1">
         {{-- Logo --}}
@@ -223,8 +224,10 @@ $secondaryNav = [
     x-data="{
         moreOpen: false,
         collapsed: true,
-        notificationsOpen: false
+        notificationsOpen: false,
+        hovering: false
     }"
+    x-init="$watch('moreOpen', value => { if (!value && !hovering && !notificationsOpen) { collapsed = true; } })"
     @click.outside="notificationsOpen = false"
     @keydown.escape.window="notificationsOpen = false"
 >
@@ -233,8 +236,8 @@ $secondaryNav = [
         :class="collapsed ? 'ue-shell__sidebar--collapsed' : 'ue-shell__sidebar--expanded'"
         aria-label="Điều hướng chính"
         role="navigation"
-        @mouseenter="if (!notificationsOpen) { collapsed = false; }"
-        @mouseleave="if (!notificationsOpen) { collapsed = true; }"
+        @mouseenter="hovering = true; if (!notificationsOpen) { collapsed = false; }"
+        @mouseleave="hovering = false; if (!notificationsOpen && !moreOpen) { collapsed = true; }"
     >
     <div class="flex flex-col gap-7 flex-1 min-h-0 overflow-y-auto pr-1">
         {{-- Logo --}}
