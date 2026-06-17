@@ -175,10 +175,8 @@ jobs:
             echo "Checking push routes and VAPID keys..."
             docker exec -w /var/www/html "$CONTAINER_NAME" php artisan route:list | grep -Ei 'push|subscription|notification' || true
             docker exec -w /var/www/html "$CONTAINER_NAME" php -r '
-              $vapidPub = getenv("VAPID_PUBLIC_KEY") ?: config("webpush.vapid.public_key");
-              $vapidPriv = getenv("VAPID_PRIVATE_KEY") ?: config("webpush.vapid.private_key");
-              if (empty($vapidPub) || empty($vapidPriv)) {
-                  echo "Missing VAPID keys! VAPID_PUBLIC_KEY=" . ($vapidPub ? "OK" : "EMPTY") . ", VAPID_PRIVATE_KEY=" . ($vapidPriv ? "OK" : "EMPTY") . "\n";
+              if (empty(config("webpush.vapid.public_key")) || empty(config("webpush.vapid.private_key"))) {
+                  echo "Missing VAPID keys!\n";
                   exit(1);
               }
               echo "VAPID Keys configuration OK\n";
