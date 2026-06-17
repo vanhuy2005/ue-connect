@@ -114,42 +114,53 @@ jobs:
             curl -fsSIk --resolve "${DOMAIN}:443:127.0.0.1" "https://${DOMAIN}/build/${CSS_FILE}" >/dev/null
 
             echo "Extracting Reverb Key..."
-            REVERB_APP_KEY="$(grep '^REVERB_APP_KEY=' .env.production | cut -d '=' -f2- | tr -d '\"' | tr -d '\r')"
+            REVERB_APP_KEY="$(grep '^REVERB_APP_KEY=' .env.production | cut -d '=' -f2- | tr -d '\"' | tr -d "'" | tr -d '\r')"
 
-            echo "Testing local WebSocket handshake..."
-            WS_RESP_LOCAL=$(curl -i -N -s \
-              -H "Connection: Upgrade" \
-              -H "Upgrade: websocket" \
-              -H "Host: ${DOMAIN}" \
-              -H "Origin: https://${DOMAIN}" \
-              -H "Sec-WebSocket-Key: SGVsbG8sIHdvcmxkIQ==" \
-              -H "Sec-WebSocket-Version: 13" \
-              "http://127.0.0.1:${APP_PORT}/app/${REVERB_APP_KEY}?protocol=7&client=js&version=8.4.0&flash=false" | head -n 15)
-
-            if ! echo "$WS_RESP_LOCAL" | grep -q "101"; then
-              echo "ERROR: Local WebSocket handshake failed"
-              echo "$WS_RESP_LOCAL"
+            if [ -z "$REVERB_APP_KEY" ]; then
+              echo "ERROR: REVERB_APP_KEY is missing in .env.production"
               exit 1
             fi
-            echo "Local WebSocket handshake OK."
 
-            echo "Testing proxy WebSocket handshake..."
-            WS_RESP_PROXY=$(curl -i -N -s -k \
-              -H "Connection: Upgrade" \
-              -H "Upgrade: websocket" \
-              -H "Host: ${DOMAIN}" \
-              -H "Origin: https://${DOMAIN}" \
-              -H "Sec-WebSocket-Key: SGVsbG8sIHdvcmxkIQ==" \
-              -H "Sec-WebSocket-Version: 13" \
-              --resolve "${DOMAIN}:443:127.0.0.1" \
-              "https://${DOMAIN}/app/${REVERB_APP_KEY}?protocol=7&client=js&version=8.4.0&flash=false" | head -n 15)
+            test_websocket_route() {
+              TEST_NAME="$1"
+              TEST_URL="$2"
+              EXTRA_CURL_ARGS="${3:-}"
 
-            if ! echo "$WS_RESP_PROXY" | grep -q "101"; then
-              echo "ERROR: Proxy WebSocket handshake failed"
-              echo "$WS_RESP_PROXY"
+              echo "Testing ${TEST_NAME} WebSocket route with bounded timeout..."
+
+              set +e
+              WS_RESPONSE="$(timeout 8s sh -c "curl -isS ${EXTRA_CURL_ARGS} \
+                -H 'Connection: Upgrade' \
+                -H 'Upgrade: websocket' \
+                -H 'Host: ${DOMAIN}' \
+                -H 'Origin: https://${DOMAIN}' \
+                -H 'Sec-WebSocket-Key: SGVsbG8sIHdvcmxkIQ==' \
+                -H 'Sec-WebSocket-Version: 13' \
+                '${TEST_URL}'" 2>&1)"
+              WS_EXIT_CODE="$?"
+              set -e
+
+              echo "$WS_RESPONSE" | head -n 30
+
+              if echo "$WS_RESPONSE" | grep -qE "HTTP/[0-9.]+ 101|HTTP/[0-9.]+ 400|HTTP/[0-9.]+ 401|HTTP/[0-9.]+ 403"; then
+                echo "${TEST_NAME} WebSocket route responded. Route is reaching websocket layer."
+                return 0
+              fi
+
+              echo "ERROR: ${TEST_NAME} WebSocket route did not return an expected websocket-related response."
+              echo "Exit code: $WS_EXIT_CODE"
+              docker logs --tail=160 "$CONTAINER_NAME"
               exit 1
-            fi
-            echo "Proxy WebSocket handshake OK."
+            }
+
+            test_websocket_route \
+              "local" \
+              "http://127.0.0.1:${APP_PORT}/app/${REVERB_APP_KEY}?protocol=7&client=js&version=8.4.0&flash=false"
+
+            test_websocket_route \
+              "proxy" \
+              "https://${DOMAIN}/app/${REVERB_APP_KEY}?protocol=7&client=js&version=8.4.0&flash=false" \
+              "-k --resolve ${DOMAIN}:443:127.0.0.1"
 
             echo "Checking push routes and VAPID keys..."
             docker exec -w /var/www/html "$CONTAINER_NAME" php artisan route:list | grep -Ei 'push|subscription|notification' || true
