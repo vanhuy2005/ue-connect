@@ -4,20 +4,6 @@
 
 > **Cập nhật lần cuối:** 2026-06-18 00:00:00 (GMT+7)
 
-## Lời chào từ đội ngũ UEConnect
-
-Cảm ơn các bạn đã ghé thăm **UEConnect**. Tụi mình là nhóm I.102, là những lập trình viên trực tiếp xây dựng **UEConnect**. Đây là một dự án học thuật nhằm ứng dụng các kiến thức lý thuyết đã được học từ thầy **Nguyễn Quốc Trung** vào thực tế phát triển một trang mạng xã hội thu nhỏ cho cộng đồng sinh viên của Trường Đại học Sư Phạm T.PHCM (HCMUE).
-
-Nhóm thành viên tham gia, gồm 5 người:
-
-| Thành viên | MSSV |
-|---|---|
-| Phạm Gia Bảo | 49.01.104.009 |
-| Nguyễn Văn Quang Huy | 49.01.104.055 |
-| Trần Gia Huy | 49.01.104.058 |
-| Nguyễn Tuấn Khôi | 49.01.104.074 |
-| Võ Chí Lâm | 49.01.104.081 |
-
 <p align="center">
   <img src="public/images/brand/primary-logo-nobg.png" alt="UEConnect Logo" width="760">
 </p>
@@ -33,8 +19,46 @@ Nhóm thành viên tham gia, gồm 5 người:
   <img src="https://img.shields.io/badge/TailwindCSS-3.x-38B2AC?style=for-the-badge&logo=tailwindcss&logoColor=white" alt="TailwindCSS 3">
   <img src="https://img.shields.io/badge/Azure%20VM-Production%20VPS-0078D4?style=for-the-badge&logo=microsoftazure&logoColor=white" alt="Azure VM">
   <img src="https://img.shields.io/badge/Docker-Container-2496ED?style=for-the-badge&logo=docker&logoColor=white" alt="Docker">
-  <img src="https://img.shields.io/badge/Reverb-Realtime%20WS-7C3AED?style=for-the-badge&logo=laravel&logoColor=white" alt="Laravel Reverb">
 </p>
+
+<p align="center">
+  <!-- DevOps & Deployment -->
+  <img src="https://img.shields.io/badge/Azure%20VM-Production%20VPS-0078D4?style=for-the-badge&logo=microsoftazure&logoColor=white" alt="Azure VM">
+  <img src="https://img.shields.io/badge/GitHub%20Actions-CI%2FCD-2088FF?style=for-the-badge&logo=githubactions&logoColor=white" alt="GitHub Actions">
+  <img src="https://img.shields.io/badge/SSH-Remote%20Deploy-4B5563?style=for-the-badge&logo=gnubash&logoColor=white" alt="SSH Remote Deploy">
+  <img src="https://img.shields.io/badge/Supervisord-Process%20Manager-111827?style=for-the-badge&logo=superuser&logoColor=white" alt="Supervisord">
+  <img src="https://img.shields.io/badge/HTTPS-Let's%20Encrypt-003A70?style=for-the-badge&logo=letsencrypt&logoColor=white" alt="HTTPS">
+  <img src="https://img.shields.io/badge/Smoke%20Checks-Assets%20%7C%20Reverb%20%7C%20VAPID-16A34A?style=for-the-badge&logo=checkmarx&logoColor=white" alt="Deploy Smoke Checks">
+</p>
+
+<p align="center">
+  <!-- Services & AI -->
+  <img src="https://img.shields.io/badge/Cloudinary-Media%20CDN-3448C5?style=for-the-badge&logo=cloudinary&logoColor=white" alt="Cloudinary">
+  <img src="https://img.shields.io/badge/Cloudflare%20R2-Object%20Storage-F38020?style=for-the-badge&logo=cloudflare&logoColor=white" alt="Cloudflare R2">
+  <img src="https://img.shields.io/badge/Gemini-AI%20Provider-4285F4?style=for-the-badge&logo=googlegemini&logoColor=white" alt="Google Gemini">
+  <img src="https://img.shields.io/badge/Ollama-Local%20LLM-000000?style=for-the-badge&logo=ollama&logoColor=white" alt="Ollama">
+  <img src="https://img.shields.io/badge/Qdrant-Vector%20DB-DC244C?style=for-the-badge&logo=qdrant&logoColor=white" alt="Qdrant">
+</p>
+
+<p align="center">
+  <!-- Auth & Tooling -->
+  <img src="https://img.shields.io/badge/Microsoft%20SSO-Azure%20Entra%20ID-0078D4?style=for-the-badge&logo=microsoftazure&logoColor=white" alt="Microsoft SSO">
+  <img src="https://img.shields.io/badge/Sanctum-API%20Auth-FF2D20?style=for-the-badge&logo=laravel&logoColor=white" alt="Laravel Sanctum">
+  <img src="https://img.shields.io/badge/Spatie-Permissions-EF4444?style=for-the-badge&logo=laravel&logoColor=white" alt="Spatie Permissions">
+  <img src="https://img.shields.io/badge/PHPUnit-Testing-6E329D?style=for-the-badge&logo=phpunit&logoColor=white" alt="PHPUnit">
+  <img src="https://img.shields.io/badge/Pint-Code%20Style-111827?style=for-the-badge&logo=laravel&logoColor=white" alt="Laravel Pint">
+  <img src="https://img.shields.io/badge/Webpush-Notifications-008080?style=for-the-badge&logo=webpush&logoColor=white" alt="Webpush">
+</p>
+
+---
+
+<h2 align="center">Lời chào từ đội ngũ UEConnect</h2>
+
+<p align="center">
+  Cảm ơn các bạn đã ghé thăm <strong>UEConnect</strong>. Tụi mình là nhóm <strong>I.102</strong>, là những lập trình viên trực tiếp xây dựng <strong>UEConnect</strong>. Đây là một dự án học thuật nhằm ứng dụng các kiến thức lý thuyết đã được học từ thầy <strong>Nguyễn Quốc Trung</strong> vào thực tế phát triển một trang mạng xã hội thu nhỏ cho cộng đồng sinh viên của Trường Đại học Sư phạm TP.HCM (HCMUE).
+</p>
+
+<p align="center"><strong>Nhóm thành viên tham gia, gồm 5 người.</strong></p>
 
 ---
 
@@ -461,10 +485,14 @@ chore/<task-slug>        <- maintenance / refactoring
 
 ## 14. License và bối cảnh học thuật
 
-UEConnect hiện là dự án học thuật/sản phẩm do sinh viên phát triển cho bối cảnh mạng xã hội học thuật HCMUE. Chính sách license và production public release cần được chốt trước khi mở rộng phát hành chính thức.
+UEConnect là dự án học thuật được phát triển bởi nhóm I.102 trong khuôn khổ môn học do thầy **Nguyễn Quốc Trung** hướng dẫn. Toàn bộ mã nguồn, tài liệu kỹ thuật, thiết kế giao diện, cấu hình triển khai và tài sản dự án do nhóm tạo ra thuộc quyền sở hữu của nhóm I.102, gồm các thành viên: Phạm Gia Bảo (49.01.104.009), Nguyễn Văn Quang Huy (49.01.104.055), Trần Gia Huy (49.01.104.058), Nguyễn Tuấn Khôi (49.01.104.074) và Võ Chí Lâm (49.01.104.081).
+
+Dự án **không được phát hành theo MIT, Apache, GPL hoặc bất kỳ giấy phép mã nguồn mở mặc định nào**. Mọi hành vi sao chép, phân phối lại, triển khai thương mại, sử dụng lại mã nguồn/tài liệu/tài sản thiết kế hoặc chuyển giao cho bên thứ ba cần có sự đồng ý bằng văn bản của nhóm I.102.
+
+UEConnect được xây dựng cho mục đích học tập, nghiên cứu, demo học thuật và portfolio kỹ thuật. Các tên gọi liên quan đến HCMUE, dữ liệu học thuật HCMUE hoặc bối cảnh nhà trường được sử dụng nhằm mô phỏng và phục vụ mục tiêu học thuật; việc triển khai chính thức trong phạm vi tổ chức cần có phê duyệt riêng từ các bên có thẩm quyền.
 
 ---
 
 <p align="center">
-  <strong>UEConnect</strong> · Lớp cộng đồng đã xác thực cho sinh viên HCMUE
+  <strong>Phạm Gia Bảo</strong> · <strong>Nguyễn Văn Quang Huy</strong> · <strong>Trần Gia Huy</strong> · <strong>Nguyễn Tuấn Khôi</strong> · <strong>Võ Chí Lâm</strong>
 </p>

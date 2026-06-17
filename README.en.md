@@ -4,20 +4,6 @@
 
 > **Last Updated / Cập nhật lần cuối:** 2026-06-18 00:00:00 (GMT+7)
 
-## Hello From The UEConnect Team
-
-Thank you for visiting **UEConnect**. We are team I.102, the developers directly building **UEConnect**. This is an academic project that applies the theoretical knowledge we learned from lecturer **Nguyễn Quốc Trung** to the real-world development of a compact social networking platform for students of Ho Chi Minh City University of Education (HCMUE).
-
-The project team has 5 members:
-
-| Member | Student ID / MSSV |
-|---|---|
-| Phạm Gia Bảo | 49.01.104.009 |
-| Nguyễn Văn Quang Huy | 49.01.104.055 |
-| Trần Gia Huy | 49.01.104.058 |
-| Nguyễn Tuấn Khôi | 49.01.104.074 |
-| Võ Chí Lâm | 49.01.104.081 |
-
 <p align="center">
   <img src="public/images/brand/primary-logo-nobg.png" alt="UEConnect Logo" width="760">
 </p>
@@ -46,6 +32,16 @@ The project team has 5 members:
 </p>
 
 <p align="center">
+  <!-- DevOps & Deployment -->
+  <img src="https://img.shields.io/badge/Azure%20VM-Production%20VPS-0078D4?style=for-the-badge&logo=microsoftazure&logoColor=white" alt="Azure VM">
+  <img src="https://img.shields.io/badge/GitHub%20Actions-CI%2FCD-2088FF?style=for-the-badge&logo=githubactions&logoColor=white" alt="GitHub Actions">
+  <img src="https://img.shields.io/badge/SSH-Remote%20Deploy-4B5563?style=for-the-badge&logo=gnubash&logoColor=white" alt="SSH Remote Deploy">
+  <img src="https://img.shields.io/badge/Supervisord-Process%20Manager-111827?style=for-the-badge&logo=superuser&logoColor=white" alt="Supervisord">
+  <img src="https://img.shields.io/badge/HTTPS-Let's%20Encrypt-003A70?style=for-the-badge&logo=letsencrypt&logoColor=white" alt="HTTPS">
+  <img src="https://img.shields.io/badge/Smoke%20Checks-Assets%20%7C%20Reverb%20%7C%20VAPID-16A34A?style=for-the-badge&logo=checkmarx&logoColor=white" alt="Deploy Smoke Checks">
+</p>
+
+<p align="center">
   <!-- Services & AI -->
   <img src="https://img.shields.io/badge/Cloudinary-Media%20CDN-3448C5?style=for-the-badge&logo=cloudinary&logoColor=white" alt="Cloudinary">
   <img src="https://img.shields.io/badge/Cloudflare%20R2-Object%20Storage-F38020?style=for-the-badge&logo=cloudflare&logoColor=white" alt="Cloudflare R2">
@@ -63,6 +59,16 @@ The project team has 5 members:
   <img src="https://img.shields.io/badge/Pint-Code%20Style-111827?style=for-the-badge&logo=laravel&logoColor=white" alt="Laravel Pint">
   <img src="https://img.shields.io/badge/Webpush-Notifications-008080?style=for-the-badge&logo=webpush&logoColor=white" alt="Webpush">
 </p>
+
+---
+
+<h2 align="center">Hello From The UEConnect Team</h2>
+
+<p align="center">
+  Thank you for visiting <strong>UEConnect</strong>. We are team <strong>I.102</strong>, the developers directly building <strong>UEConnect</strong>. This is an academic project that applies the theoretical knowledge we learned from lecturer <strong>Nguyễn Quốc Trung</strong> to the real-world development of a compact social networking platform for students of Ho Chi Minh City University of Education (HCMUE).
+</p>
+
+<p align="center"><strong>The project team has 5 members.</strong></p>
 
 ---
 
@@ -693,10 +699,14 @@ chore/<task-slug>        ← maintenance / refactoring
 
 ## 14. License and Academic Context
 
-UEConnect is currently a student-led academic/product engineering project for HCMUE-oriented social platform design and implementation. Licensing and deployment policy should be finalized before any public production release.
+UEConnect is an academic project developed by team I.102 as part of coursework guided by lecturer **Nguyễn Quốc Trung**. All source code, technical documentation, interface design, deployment configuration, and project assets created by the team are owned by team I.102, including: Phạm Gia Bảo (49.01.104.009), Nguyễn Văn Quang Huy (49.01.104.055), Trần Gia Huy (49.01.104.058), Nguyễn Tuấn Khôi (49.01.104.074), and Võ Chí Lâm (49.01.104.081).
+
+This project is **not released under MIT, Apache, GPL, or any default open-source license**. Copying, redistributing, commercial deployment, reuse of source code/documentation/design assets, or transfer to third parties requires written permission from team I.102.
+
+UEConnect is intended for learning, research, academic demonstration, and technical portfolio purposes. References to HCMUE, HCMUE academic data, and the university context are used to model an academic scenario; any official organizational deployment requires separate approval from the appropriate authorized parties.
 
 ---
 
 <p align="center">
-  <strong>UEConnect</strong> · Verified community layer for HCMUE students
+  <strong>Phạm Gia Bảo</strong> · <strong>Nguyễn Văn Quang Huy</strong> · <strong>Trần Gia Huy</strong> · <strong>Nguyễn Tuấn Khôi</strong> · <strong>Võ Chí Lâm</strong>
 </p>
