@@ -19,7 +19,7 @@ class DataIntegrityTest extends TestCase
 
     public function test_every_imported_program_has_cohort_faculty_major()
     {
-        $cohort = CareerCohort::create(['name' => 'Khoa48', 'year' => 2023]);
+        $cohort = CareerCohort::create(['name' => 'Khoa48', 'slug' => 'khoa-48', 'year' => 2023]);
         $faculty = CareerFaculty::create(['name' => 'CNTT']);
         $major = CareerMajor::create(['name' => 'CNTT', 'faculty_id' => $faculty->id]);
 
@@ -38,7 +38,7 @@ class DataIntegrityTest extends TestCase
     public function test_ready_programs_must_have_semesters_and_courses_to_be_considered_valid()
     {
         // This is a logical integrity check
-        $cohort = CareerCohort::create(['name' => 'Khoa48', 'year' => 2023]);
+        $cohort = CareerCohort::create(['name' => 'Khoa48', 'slug' => 'khoa-48', 'year' => 2023]);
         $faculty = CareerFaculty::create(['name' => 'CNTT']);
         $major = CareerMajor::create(['name' => 'CNTT', 'faculty_id' => $faculty->id]);
 
@@ -60,7 +60,7 @@ class DataIntegrityTest extends TestCase
 
     public function test_bad_status_programs_are_not_exposed_to_public_api()
     {
-        $cohort = CareerCohort::create(['name' => 'Khoa48', 'year' => 2023]);
+        $cohort = CareerCohort::create(['name' => 'Khoa48', 'slug' => 'khoa-48', 'year' => 2023]);
         $faculty = CareerFaculty::create(['name' => 'CNTT']);
         $major = CareerMajor::create(['name' => 'CNTT', 'faculty_id' => $faculty->id]);
 

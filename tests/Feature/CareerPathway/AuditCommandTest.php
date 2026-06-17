@@ -39,7 +39,7 @@ class AuditCommandTest extends TestCase
     {
         $path = $this->fixturePath.'/valid-8-semesters';
 
-        $cohort = CareerCohort::create(['name' => 'Khoa48', 'year' => 2023]);
+        $cohort = CareerCohort::create(['name' => 'Khoa48', 'slug' => 'khoa-48', 'year' => 2023]);
         $faculty = CareerFaculty::create(['name' => 'CNTT']);
         $major = CareerMajor::create(['name' => 'CNTT', 'faculty_id' => $faculty->id]);
 
@@ -68,7 +68,7 @@ class AuditCommandTest extends TestCase
     {
         $path = $this->fixturePath.'/valid-8-semesters';
 
-        $cohort = CareerCohort::create(['name' => 'Khoa48', 'year' => 2023]);
+        $cohort = CareerCohort::create(['name' => 'Khoa48', 'slug' => 'khoa-48-s', 'year' => 2023]);
         $faculty = CareerFaculty::create(['name' => 'CNTT']);
         $major = CareerMajor::create(['name' => 'CNTT', 'faculty_id' => $faculty->id]);
 
@@ -91,7 +91,7 @@ class AuditCommandTest extends TestCase
     {
         $path = $this->fixturePath.'/valid-8-semesters';
 
-        $cohort = CareerCohort::create(['name' => 'Khoa48', 'year' => 2023]);
+        $cohort = CareerCohort::create(['name' => 'Khoa48', 'slug' => 'khoa-48-c', 'year' => 2023]);
         $faculty = CareerFaculty::create(['name' => 'CNTT']);
         $major = CareerMajor::create(['name' => 'CNTT', 'faculty_id' => $faculty->id]);
 

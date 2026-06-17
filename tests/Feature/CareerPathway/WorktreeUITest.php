@@ -20,7 +20,7 @@ class WorktreeUITest extends TestCase
     public function test_can_render_career_pathway_page()
     {
         $user = User::factory()->create();
-        $response = $this->actingAs($user)->withoutMiddleware()->get(route('career-pathways.index'));
+        $response = $this->actingAs($user)->withoutMiddleware()->get(route('app.career-pathway.index'));
 
         $response->assertStatus(200);
         $response->assertSee('Career Pathway');

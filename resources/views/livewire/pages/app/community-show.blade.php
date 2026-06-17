@@ -3337,27 +3337,24 @@ new class extends Component
         @endif
     @endif
     <x-community.image-crop-modal />
+
+    <script>
+        function openAvatarCropper(event) {
+            const files = event.target.files;
+            if (files && files.length > 0) {
+                window.dispatchEvent(new CustomEvent('open-community-avatar-cropper', {
+                    detail: { files: files, input: event.target }
+                }));
+            }
+        }
+
+        function openCoverCropper(event) {
+            const files = event.target.files;
+            if (files && files.length > 0) {
+                window.dispatchEvent(new CustomEvent('open-community-cover-cropper', {
+                    detail: { files: files, input: event.target }
+                }));
+            }
+        }
+    </script>
 </div>
-
-@push('scripts')
-<script>
-    function openAvatarCropper(event) {
-        const files = event.target.files;
-        if (files && files.length > 0) {
-            window.dispatchEvent(new CustomEvent('open-community-avatar-cropper', { 
-                detail: { files: files, input: event.target } 
-            }));
-        }
-    }
-
-    function openCoverCropper(event) {
-        const files = event.target.files;
-        if (files && files.length > 0) {
-            window.dispatchEvent(new CustomEvent('open-community-cover-cropper', { 
-                detail: { files: files, input: event.target } 
-            }));
-        }
-    }
-</script>
-@endpush
-
