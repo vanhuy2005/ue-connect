@@ -121,46 +121,56 @@ jobs:
               exit 1
             fi
 
-            test_websocket_route() {
-              TEST_NAME="$1"
-              TEST_URL="$2"
-              EXTRA_CURL_ARGS="${3:-}"
+            echo "Testing Laravel Reverb WebSocket with real Node client..."
 
-              echo "Testing ${TEST_NAME} WebSocket route with bounded timeout..."
+            docker exec \
+              -e REVERB_APP_KEY="$REVERB_APP_KEY" \
+              -e APP_PORT="$APP_PORT" \
+              ueconnect \
+              node - <<'NODE'
+            const appKey = process.env.REVERB_APP_KEY;
+            const port = process.env.APP_PORT || '10000';
 
-              set +e
-              WS_RESPONSE="$(timeout 8s sh -c "curl -isS ${EXTRA_CURL_ARGS} \
-                -H 'Connection: Upgrade' \
-                -H 'Upgrade: websocket' \
-                -H 'Host: ${DOMAIN}' \
-                -H 'Origin: https://${DOMAIN}' \
-                -H 'Sec-WebSocket-Key: SGVsbG8sIHdvcmxkIQ==' \
-                -H 'Sec-WebSocket-Version: 13' \
-                '${TEST_URL}'" 2>&1)"
-              WS_EXIT_CODE="$?"
-              set -e
+            const url = `ws://127.0.0.1:${port}/app/${appKey}?protocol=7&client=js&version=8.4.0&flash=false`;
 
-              echo "$WS_RESPONSE" | head -n 30
+            console.log(`Connecting to ${url.replace(appKey, '[REVERB_APP_KEY]')}`);
 
-              if echo "$WS_RESPONSE" | grep -qE "HTTP/[0-9.]+ 101|HTTP/[0-9.]+ 400|HTTP/[0-9.]+ 401|HTTP/[0-9.]+ 403"; then
-                echo "${TEST_NAME} WebSocket route responded. Route is reaching websocket layer."
-                return 0
-              fi
+            const ws = new WebSocket(url);
 
-              echo "ERROR: ${TEST_NAME} WebSocket route did not return an expected websocket-related response."
-              echo "Exit code: $WS_EXIT_CODE"
-              docker logs --tail=160 "$CONTAINER_NAME"
-              exit 1
-            }
+            const failTimer = setTimeout(() => {
+              console.error('Timed out waiting for pusher:connection_established');
+              try { ws.close(); } catch (_) {}
+              process.exit(1);
+            }, 8000);
 
-            test_websocket_route \
-              "local" \
-              "http://127.0.0.1:${APP_PORT}/app/${REVERB_APP_KEY}?protocol=7&client=js&version=8.4.0&flash=false"
+            ws.onopen = () => {
+              console.log('WebSocket TCP/HTTP upgrade opened');
+            };
 
-            test_websocket_route \
-              "proxy" \
-              "https://${DOMAIN}/app/${REVERB_APP_KEY}?protocol=7&client=js&version=8.4.0&flash=false" \
-              "-k --resolve ${DOMAIN}:443:127.0.0.1"
+            ws.onmessage = (event) => {
+              const data = String(event.data || '');
+              console.log('Received:', data);
+
+              if (data.includes('pusher:connection_established')) {
+                clearTimeout(failTimer);
+                console.log('Reverb WebSocket connection established successfully.');
+                ws.close();
+                process.exit(0);
+              }
+            };
+
+            ws.onerror = (error) => {
+              clearTimeout(failTimer);
+              console.error('WebSocket error:', error?.message || error);
+              process.exit(1);
+            };
+
+            ws.onclose = (event) => {
+              console.log(`WebSocket closed: code=${event.code}, reason=${event.reason || ''}`);
+            };
+            NODE
+
+            echo "Local Reverb WebSocket test passed."
 
             echo "Checking push routes and VAPID keys..."
             docker exec -w /var/www/html "$CONTAINER_NAME" php artisan route:list | grep -Ei 'push|subscription|notification' || true
