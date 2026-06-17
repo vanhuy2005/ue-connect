@@ -32,6 +32,18 @@
 </p>
 
 <p align="center">
+  <!-- DevOps & Deployment -->
+  <img src="https://img.shields.io/badge/Azure%20VM-Production%20VPS-0078D4?style=for-the-badge&logo=microsoftazure&logoColor=white" alt="Azure VM">
+  <img src="https://img.shields.io/badge/GitHub%20Actions-CI%2FCD-2088FF?style=for-the-badge&logo=githubactions&logoColor=white" alt="GitHub Actions">
+  <img src="https://img.shields.io/badge/SSH-Remote%20Deploy-4B5563?style=for-the-badge&logo=gnubash&logoColor=white" alt="SSH Remote Deploy">
+  <img src="https://img.shields.io/badge/Host%20Nginx-80%2F443%20Reverse%20Proxy-009639?style=for-the-badge&logo=nginx&logoColor=white" alt="Host Nginx Reverse Proxy">
+  <img src="https://img.shields.io/badge/Docker%20Build-On%20VM-2496ED?style=for-the-badge&logo=docker&logoColor=white" alt="Docker Build On VM">
+  <img src="https://img.shields.io/badge/Supervisord-Process%20Manager-111827?style=for-the-badge&logo=superuser&logoColor=white" alt="Supervisord">
+  <img src="https://img.shields.io/badge/HTTPS-Let's%20Encrypt-003A70?style=for-the-badge&logo=letsencrypt&logoColor=white" alt="HTTPS">
+  <img src="https://img.shields.io/badge/Smoke%20Checks-Assets%20%7C%20Reverb%20%7C%20VAPID-16A34A?style=for-the-badge&logo=checkmarx&logoColor=white" alt="Deploy Smoke Checks">
+</p>
+
+<p align="center">
   <!-- Services & AI -->
   <img src="https://img.shields.io/badge/Cloudinary-Media%20CDN-3448C5?style=for-the-badge&logo=cloudinary&logoColor=white" alt="Cloudinary">
   <img src="https://img.shields.io/badge/Cloudflare%20R2-Object%20Storage-F38020?style=for-the-badge&logo=cloudflare&logoColor=white" alt="Cloudflare R2">
@@ -60,36 +72,38 @@
 
 <p align="center"><strong>Nhóm thành viên tham gia, gồm 5 người:</strong></p>
 
-<table align="center">
-  <thead>
-    <tr>
-      <th>Thành viên</th>
-      <th>MSSV</th>
-    </tr>
-  </thead>
-  <tbody>
-    <tr>
-      <td>Phạm Gia Bảo</td>
-      <td>49.01.104.009</td>
-    </tr>
-    <tr>
-      <td>Nguyễn Văn Quang Huy</td>
-      <td>49.01.104.055</td>
-    </tr>
-    <tr>
-      <td>Trần Gia Huy</td>
-      <td>49.01.104.058</td>
-    </tr>
-    <tr>
-      <td>Nguyễn Tuấn Khôi</td>
-      <td>49.01.104.074</td>
-    </tr>
-    <tr>
-      <td>Võ Chí Lâm</td>
-      <td>49.01.104.081</td>
-    </tr>
-  </tbody>
-</table>
+<div align="center">
+  <table>
+    <thead>
+      <tr>
+        <th align="center" width="280">Thành viên</th>
+        <th align="center" width="180">MSSV</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td align="center">Phạm Gia Bảo</td>
+        <td align="center"><code>49.01.104.009</code></td>
+      </tr>
+      <tr>
+        <td align="center">Nguyễn Văn Quang Huy</td>
+        <td align="center"><code>49.01.104.055</code></td>
+      </tr>
+      <tr>
+        <td align="center">Trần Gia Huy</td>
+        <td align="center"><code>49.01.104.058</code></td>
+      </tr>
+      <tr>
+        <td align="center">Nguyễn Tuấn Khôi</td>
+        <td align="center"><code>49.01.104.074</code></td>
+      </tr>
+      <tr>
+        <td align="center">Võ Chí Lâm</td>
+        <td align="center"><code>49.01.104.081</code></td>
+      </tr>
+    </tbody>
+  </table>
+</div>
 
 ---
 
