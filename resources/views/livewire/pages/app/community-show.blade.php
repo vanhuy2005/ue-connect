@@ -1675,13 +1675,13 @@ new class extends Component
 };
 ?>
 
-<div class="flex flex-col lg:flex-row min-h-screen bg-white w-full">
+<div class="flex flex-col lg:flex-row min-h-screen bg-slate-50/60 w-full">
     
     {{-- 1. Persistent Left Sidebar (matching communities index for consistent UX) --}}
     <aside class="hidden lg:flex flex-col w-80 bg-white border-r border-slate-200 flex-shrink-0 p-4 sticky top-0 h-screen overflow-y-auto">
         <div class="flex items-center justify-between mb-4">
             <h1 class="text-xl font-extrabold text-slate-800 tracking-tight">Cộng đồng & CLB</h1>
-            <a href="{{ route('community.index') }}" class="text-xs font-semibold text-slate-400 hover:text-ue-brand transition">Thoát</a>
+            <a href="{{ route('community.index') }}" class="text-xs font-semibold text-slate-400 hover:text-blue-600 transition">Thoát</a>
         </div>
 
         <nav class="space-y-1 mb-6">
@@ -1714,16 +1714,16 @@ new class extends Component
                 @foreach ($this->joinedCommunities as $c)
                     @php $avatarUrl = $this->resolveAvatarUrl($c); @endphp
                     <a href="{{ route('community.show', $c->id) }}" wire:navigate
-                        class="flex items-center gap-3 p-2 rounded-xl transition group {{ $c->id === $community->id ? 'bg-ue-brand-soft text-ue-brand' : 'hover:bg-slate-100' }}">
-                        <div class="w-9 h-9 rounded-lg bg-gradient-to-br from-ue-brand/20 to-ue-brand/5 border border-slate-150 flex items-center justify-center text-ue-brand flex-shrink-0 overflow-hidden">
+                        class="flex items-center gap-3 p-2 rounded-xl transition group {{ $c->id === $community->id ? 'bg-blue-50 text-blue-600' : 'hover:bg-slate-100' }}">
+                        <div class="w-9 h-9 rounded-lg bg-gradient-to-br from-blue-600/20 to-blue-600/5 border border-slate-150 flex items-center justify-center text-blue-600 flex-shrink-0 overflow-hidden">
                             @if ($avatarUrl)
                                 <img src="{{ $avatarUrl }}" class="w-full h-full object-cover" alt="{{ $c->name }}">
                             @else
-                                <x-ui.icon name="users" size="sm" class="text-ue-brand" />
+                                <x-ui.icon name="users" size="sm" class="text-blue-600" />
                             @endif
                         </div>
                         <div class="min-w-0 flex-1">
-                            <p class="text-xs font-bold truncate {{ $c->id === $community->id ? 'text-ue-brand' : 'text-slate-800 group-hover:text-ue-brand' }}">{{ $c->name }}</p>
+                            <p class="text-xs font-bold truncate {{ $c->id === $community->id ? 'text-blue-600' : 'text-slate-800 group-hover:text-blue-600' }}">{{ $c->name }}</p>
                             <p class="text-[10px] text-slate-400 font-medium truncate mt-0.5">{{ number_format($c->members_count) }} thành viên</p>
                         </div>
                     </a>
@@ -1733,28 +1733,28 @@ new class extends Component
     </aside>
 
     {{-- 2. Detail Content Layout --}}
-    <main class="flex-1 overflow-y-auto">
+    <main class="flex-1 overflow-y-auto bg-slate-50/60 p-4 sm:p-6 lg:p-8 space-y-6">
         
         {{-- Detail Header Card --}}
-        <header class="bg-white border-b border-slate-200 shadow-2xs">
+        <header class="bg-white border border-slate-200 rounded-2xl shadow-xs max-w-5xl mx-auto overflow-hidden">
             {{-- Cover Photo Section --}}
-            <div class="relative h-44 sm:h-56 md:h-64 lg:h-72 bg-gradient-to-br from-[#0A3761] via-[#124874] to-[#4BB7E8] flex items-center justify-center overflow-hidden">
+            <div class="relative h-36 sm:h-44 md:h-48 lg:h-52 bg-gradient-to-br from-[#0A3761] via-[#124874] to-[#4BB7E8] flex items-center justify-center overflow-hidden">
                 @if ($this->coverUrl)
                     <img src="{{ $this->coverUrl }}" class="w-full h-full object-cover absolute inset-0" alt="{{ $community->name }}">
                 @else
                     <div class="w-full h-full flex items-center justify-center">
-                        <x-ui.icon name="users" class="w-24 h-24 text-white/10 select-none" />
+                        <x-ui.icon name="users" class="w-20 h-20 text-white/10 select-none" />
                     </div>
                 @endif
                 
                 @if ($this->canManage)
-                    <label class="absolute bottom-4 right-4 bg-white/80 backdrop-blur-xs text-slate-800 text-xs font-bold p-2 sm:px-3 sm:py-1.5 rounded-lg border border-slate-250 hover:bg-white transition flex items-center gap-1.5 shadow-sm cursor-pointer z-10">
+                    <label class="absolute bottom-3 right-3 bg-white/90 backdrop-blur-xs text-slate-800 text-[11px] font-bold px-2.5 py-1.5 rounded-lg border border-slate-200 hover:bg-white transition flex items-center gap-1.5 shadow-sm cursor-pointer z-10">
                         <x-ui.icon name="camera" size="xs" />
                         <span class="hidden sm:inline">Chỉnh sửa ảnh bìa</span>
                         <input type="file" wire:model="coverFile" class="hidden" accept="image/jpeg,image/png,image/webp">
                     </label>
                     @error('coverFile')
-                        <span class="absolute bottom-16 right-4 bg-red-500 text-white text-[10px] font-semibold px-2 py-1 rounded-md shadow-sm z-20">
+                        <span class="absolute bottom-12 right-3 bg-red-500 text-white text-[10px] font-semibold px-2 py-1 rounded-md shadow-sm z-20">
                             {{ $message }}
                         </span>
                     @enderror
@@ -1762,125 +1762,123 @@ new class extends Component
             </div>
 
             {{-- Info block --}}
-            <div class="max-w-5xl mx-auto px-4 sm:px-6 py-5 flex flex-col md:flex-row md:items-end justify-between gap-5">
-                {{-- Overlapping Avatar & details --}}
-                <div class="flex flex-col sm:flex-row items-center sm:items-start gap-4 -mt-16 sm:-mt-20 md:-mt-24 relative z-10">
-                    <div class="w-24 h-24 sm:w-32 sm:h-32 rounded-2xl bg-ue-brand text-white border-4 border-white flex items-center justify-center font-black text-3xl sm:text-4xl shadow-md select-none overflow-hidden relative group">
-                        @if ($this->avatarUrl)
-                            <img src="{{ $this->avatarUrl }}" class="w-full h-full object-cover" alt="{{ $community->name }}">
-                        @else
-                            <x-ui.icon name="users" class="w-12 h-12 sm:w-16 sm:h-16 text-white" />
-                        @endif
+            <div class="px-6 pb-5 pt-0">
+                <div class="flex flex-col md:flex-row md:items-end justify-between gap-5">
+                    {{-- Overlapping Avatar & details --}}
+                    <div class="flex flex-col sm:flex-row items-center sm:items-start gap-4 -mt-10 sm:-mt-14 relative z-10">
+                        <div class="w-20 h-20 sm:w-28 sm:h-28 rounded-2xl bg-blue-600 text-white border-4 border-white flex items-center justify-center font-black text-2xl sm:text-3xl shadow-md select-none overflow-hidden relative group flex-shrink-0">
+                            @if ($this->avatarUrl)
+                                <img src="{{ $this->avatarUrl }}" class="w-full h-full object-cover" alt="{{ $community->name }}">
+                            @else
+                                <x-ui.icon name="users" class="w-10 h-10 sm:w-14 sm:h-14 text-white" />
+                            @endif
 
-                        @if ($this->canManage)
-                            <label class="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition flex items-center justify-center cursor-pointer text-white text-xs font-bold">
-                                <x-ui.icon name="camera" size="sm" class="text-white" />
-                                <input type="file" wire:model="avatarFile" class="hidden" accept="image/jpeg,image/png,image/webp">
-                            </label>
-                        @endif
+                            @if ($this->canManage)
+                                <label class="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition flex items-center justify-center cursor-pointer text-white text-xs font-bold">
+                                    <x-ui.icon name="camera" size="sm" class="text-white" />
+                                    <input type="file" wire:model="avatarFile" class="hidden" accept="image/jpeg,image/png,image/webp">
+                                </label>
+                            @endif
 
-                        @error('avatarFile')
-                            <div class="absolute inset-0 bg-red-950/85 text-white text-[10px] font-semibold flex flex-col items-center justify-center p-2 text-center z-20">
-                                <x-ui.icon name="alert-triangle" size="xs" class="text-red-400 mb-1" />
-                                <span class="leading-tight">{{ $message }}</span>
-                            </div>
-                        @enderror
-                    </div>
-
-                    <div class="text-center sm:text-left pt-2 sm:pt-14 md:pt-20">
-                        <div class="flex items-center justify-center sm:justify-start gap-2">
-                            <h2 class="text-xl sm:text-2xl font-black text-slate-800 tracking-tight leading-tight">{{ $community->name }}</h2>
-                            <x-ui.icon name="check-circle" size="xs" class="text-ue-brand fill-ue-brand flex-shrink-0" title="Cộng đồng xác thực" />
+                            @error('avatarFile')
+                                <div class="absolute inset-0 bg-red-950/85 text-white text-[10px] font-semibold flex flex-col items-center justify-center p-2 text-center z-20">
+                                    <x-ui.icon name="alert-triangle" size="xs" class="text-red-400 mb-1" />
+                                    <span class="leading-tight">{{ $message }}</span>
+                                </div>
+                            @enderror
                         </div>
 
-                        <div class="flex flex-wrap items-center justify-center sm:justify-start gap-2 text-xs text-slate-600 font-semibold mt-1">
-                            <span class="flex items-center gap-1">
-                                <x-ui.icon name="{{ $community->visibility?->value === 'public' ? 'unlock' : 'lock' }}" size="2xs" />
-                                {{ $community->visibility?->label() }}
+                        <div class="text-center sm:text-left pt-2 sm:pt-16">
+                          <div class="flex items-center justify-center sm:justify-start gap-2">
+                              <h2 class="text-xl sm:text-2xl font-black text-slate-900 tracking-tight leading-tight">{{ $community->name }}</h2>
+                              <x-ui.icon name="check-circle" size="xs" class="text-blue-600 fill-blue-600 flex-shrink-0" title="Cộng đồng xác thực" />
+                          </div>
+
+                          <div class="flex flex-wrap items-center justify-center sm:justify-start gap-2 text-xs text-slate-500 font-semibold mt-1">
+                              <span class="flex items-center gap-1.5">
+                                  <x-ui.icon name="{{ $community->visibility?->value === 'public' ? 'unlock' : 'lock' }}" size="2xs" />
+                                  {{ $community->visibility?->label() }}
+                              </span>
+                              <span class="text-slate-300">·</span>
+                              <span>{{ number_format($community->members_count) }} thành viên</span>
+                              @if ($community->related_faculty)
+                                  <span class="text-slate-300">·</span>
+                                  <span class="bg-blue-50 text-blue-700 px-2 py-0.5 rounded-md text-[10px] font-extrabold">{{ $community->related_faculty }}</span>
+                              @endif
+                          </div>
+                      </div>
+                    </div>
+
+                    {{-- CTAs row --}}
+                    <div class="flex flex-wrap items-center justify-center gap-2 relative z-10 pt-2 md:pt-0">
+                        @if ($community->isOwnedBy(auth()->user()))
+                            <span class="px-3.5 py-2 bg-amber-50 text-amber-700 border border-amber-200 rounded-xl text-xs font-bold flex items-center gap-1 shadow-2xs">
+                                <x-ui.icon name="shield" size="xs" />
+                                <span>Chủ sở hữu</span>
                             </span>
-                            <span>·</span>
-                            <span>{{ number_format($community->members_count) }} thành viên</span>
-                            @if ($community->related_faculty)
-                                <span>·</span>
-                                <span class="bg-slate-100 text-slate-700 px-2 py-0.5 rounded-md text-[10px] font-bold">{{ $community->related_faculty }}</span>
-                            @endif
-                        </div>
-                    </div>
-                </div>
-
-                {{-- CTAs row --}}
-                <div class="flex flex-wrap items-center justify-center gap-2 relative z-10 pt-2 md:pt-0">
-                    
-                    @if ($community->isOwnedBy(auth()->user()))
-                        <span class="px-3.5 py-2 bg-amber-50 text-amber-700 border border-amber-200 rounded-xl text-xs font-bold flex items-center gap-1 shadow-2xs">
-                            <x-ui.icon name="shield" size="xs" />
-                            <span>Chủ sở hữu</span>
-                        </span>
-                    @elseif ($this->isActiveMember)
-                        <button wire:click="openLeaveModal"
-                            class="px-3.5 py-2 border border-slate-250 text-slate-700 hover:bg-slate-50 hover:text-red-700 rounded-xl text-xs font-bold transition">
-                            Đã tham gia
-                        </button>
-                    @elseif ($this->hasPendingRequest)
-                        <span class="px-3.5 py-2 bg-yellow-50 text-yellow-700 border border-yellow-250 rounded-xl text-xs font-bold shadow-2xs">
-                            Đang chờ duyệt
-                        </span>
-                    @elseif ($community->allowsJoin())
-                        <button wire:click="openJoinModal"
-                            class="px-4 py-2 bg-ue-brand hover:bg-opacity-95 text-white rounded-xl text-xs font-bold transition shadow-sm">
-                            {{ $community->requiresApproval() ? 'Gửi yêu cầu' : 'Tham gia' }}
-                        </button>
-                    @endif
-
-                    @if ($this->isActiveMember)
-                        <button wire:click="startInvite"
-                            class="px-3.5 py-2 bg-ue-brand hover:bg-opacity-95 text-white rounded-xl text-xs font-bold transition shadow-2xs flex items-center gap-1">
-                            <x-ui.icon name="user-plus" size="xs" />
-                            Mời bạn
-                        </button>
-                    @endif
-
-                    <button wire:click="startShareCommunity"
-                        class="px-3.5 py-2 border border-slate-250 bg-white hover:bg-slate-50 text-slate-700 rounded-xl text-xs font-bold transition flex items-center gap-1 shadow-2xs">
-                        <x-ui.icon name="send" size="xs" />
-                        Chia sẻ
-                    </button>
-
-                    {{-- More Menu Options dropdown --}}
-                    <div class="relative" x-data="{ openMenu: false }" @click.away="openMenu = false">
-                        <button @click="openMenu = !openMenu"
-                            class="p-2 border border-slate-250 bg-white hover:bg-slate-50 text-slate-700 rounded-xl transition shadow-2xs flex items-center justify-center">
-                            <x-ui.icon name="more-horizontal" size="xs" />
-                        </button>
-                        <div x-show="openMenu" x-transition class="absolute right-0 mt-1.5 w-48 bg-white border border-slate-200 rounded-xl shadow-lg py-1.5 z-40 text-xs font-bold text-slate-700" style="display:none;">
-                            <button type="button" @click="navigator.clipboard.writeText('{{ route('community.show', $community->id) }}'); alert('Đã sao chép liên kết vào bộ nhớ tạm!'); openMenu = false"
-                                class="w-full text-left px-4 py-2 hover:bg-slate-100 flex items-center gap-2 text-black"
-                                style="color: #000000 !important;">
-                                <x-ui.icon name="send" size="xs" class="text-slate-400" style="color: #000000 !important;" />
-                                <span style="color: #000000 !important;">Sao chép liên kết</span>
+                        @elseif ($this->isActiveMember)
+                            <button wire:click="openLeaveModal"
+                                class="px-3.5 py-2 border border-slate-250 text-slate-700 hover:bg-slate-50 hover:text-red-700 rounded-xl text-xs font-bold transition">
+                                Đã tham gia
                             </button>
-                            <button type="button" @click="alert('Đã bật thông báo từ nhóm này.'); openMenu = false"
-                                class="w-full text-left px-4 py-2 hover:bg-slate-100 flex items-center gap-2 text-black"
-                                style="color: #000000 !important;">
-                                <x-ui.icon name="bell" size="xs" class="text-slate-400" style="color: #000000 !important;" />
-                                <span style="color: #000000 !important;">Bật thông báo</span>
+                        @elseif ($this->hasPendingRequest)
+                            <span class="px-3.5 py-2 bg-yellow-50 text-yellow-750 border border-yellow-250 rounded-xl text-xs font-bold shadow-2xs">
+                                Đang chờ duyệt
+                            </span>
+                        @elseif ($community->allowsJoin())
+                            <button wire:click="openJoinModal"
+                                class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-bold transition shadow-sm">
+                                {{ $community->requiresApproval() ? 'Gửi yêu cầu' : 'Tham gia' }}
                             </button>
-                            @if ($this->isActiveMember && ! $community->isOwnedBy(auth()->user()))
-                                <button type="button" wire:click="openLeaveModal" @click="openMenu = false"
-                                    class="w-full text-left px-4 py-2 hover:bg-red-50 flex items-center gap-2 border-t border-slate-100 text-red-600"
-                                    style="color: #dc2626 !important;">
-                                    <x-ui.icon name="log-out" size="xs" class="text-red-500" style="color: #ef4444 !important;" />
-                                    <span style="color: #dc2626 !important;">Rời nhóm</span>
+                        @endif
+
+                        @if ($this->isActiveMember)
+                            <button wire:click="startInvite"
+                                class="px-3.5 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-bold transition shadow-2xs flex items-center gap-1">
+                                <x-ui.icon name="user-plus" size="xs" />
+                                Mời bạn
+                            </button>
+                        @endif
+
+                        <button wire:click="startShareCommunity"
+                            class="px-3.5 py-2 border border-slate-250 bg-white hover:bg-slate-50 text-slate-700 rounded-xl text-xs font-bold transition flex items-center gap-1 shadow-2xs">
+                            <x-ui.icon name="send" size="xs" />
+                            Chia sẻ
+                        </button>
+
+                        {{-- More Menu Options dropdown --}}
+                        <div class="relative" x-data="{ openMenu: false }" @click.away="openMenu = false">
+                            <button @click="openMenu = !openMenu"
+                                class="p-2 border border-slate-250 bg-white hover:bg-slate-50 text-slate-700 rounded-xl transition shadow-2xs flex items-center justify-center">
+                                <x-ui.icon name="more-horizontal" size="xs" />
+                            </button>
+                            <div x-show="openMenu" x-transition class="absolute right-0 mt-1.5 w-48 bg-white border border-slate-200 rounded-xl shadow-lg py-1.5 z-40 text-xs font-bold text-slate-700" style="display:none;">
+                                <button type="button" @click="navigator.clipboard.writeText('{{ route('community.show', $community->id) }}'); alert('Đã sao chép liên kết vào bộ nhớ tạm!'); openMenu = false"
+                                    class="w-full text-left px-4 py-2 hover:bg-slate-50 flex items-center gap-2 text-slate-750">
+                                    <x-ui.icon name="send" size="xs" class="text-slate-400" />
+                                    <span>Sao chép liên kết</span>
                                 </button>
-                            @endif
+                                <button type="button" @click="alert('Đã bật thông báo từ nhóm này.'); openMenu = false"
+                                    class="w-full text-left px-4 py-2 hover:bg-slate-50 flex items-center gap-2 text-slate-755">
+                                    <x-ui.icon name="bell" size="xs" class="text-slate-400" />
+                                    <span>Bật thông báo</span>
+                                </button>
+                                @if ($this->isActiveMember && ! $community->isOwnedBy(auth()->user()))
+                                    <button type="button" wire:click="openLeaveModal" @click="openMenu = false"
+                                        class="w-full text-left px-4 py-2 hover:bg-red-50 flex items-center gap-2 border-t border-slate-100 text-red-600">
+                                        <x-ui.icon name="log-out" size="xs" class="text-red-500" />
+                                        <span>Rời nhóm</span>
+                                    </button>
+                                @endif
+                            </div>
                         </div>
                     </div>
                 </div>
             </div>
 
             {{-- Horizontal Navigation Tabs --}}
-            <div class="border-t border-slate-200 sticky top-0 bg-white/95 backdrop-blur-xs z-30">
-                <div class="max-w-5xl mx-auto px-2 sm:px-6 flex gap-1.5 overflow-x-auto">
+            <div class="border-t border-slate-100 bg-white">
+                <div class="px-6 flex gap-1.5 overflow-x-auto">
                     @php
                         $tabs = [
                             ['key' => 'feed', 'label' => 'Bảng tin'],
@@ -1895,7 +1893,7 @@ new class extends Component
                     @endphp
                     @foreach ($tabs as $tab)
                         <button wire:click="setActiveTab('{{ $tab['key'] }}')"
-                            class="px-4 py-3.5 text-xs font-bold border-b-3 transition whitespace-nowrap {{ $activeTab === $tab['key'] ? 'border-ue-brand text-ue-brand' : 'border-transparent text-slate-600 hover:text-slate-900' }}">
+                            class="px-4 py-4 text-xs font-bold border-b-2 transition whitespace-nowrap {{ $activeTab === $tab['key'] ? 'border-blue-600 text-blue-600 font-extrabold' : 'border-transparent text-slate-500 hover:text-slate-800' }}">
                             {{ $tab['label'] }}
                         </button>
                     @endforeach
@@ -1904,447 +1902,484 @@ new class extends Component
         </header>
 
         {{-- Active View Rendering --}}
-        <div class="max-w-5xl mx-auto px-4 sm:px-6 py-6">
-            <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                
-                {{-- Main Left Block --}}
-                <div class="lg:col-span-2 space-y-4">
+        <div class="max-w-5xl mx-auto w-full">
+            @if ($activeTab === 'settings' && $this->canManage)
+                {{-- Administration Tab: Two-column settings dashboard --}}
+                <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
                     
-                    {{-- 2.1 Tab Bảng tin --}}
-                    @if ($activeTab === 'feed')
-                        {{-- Composer Box --}}
-                        @if ($this->isActiveMember && ($community->isActive() || $this->canManage))
-                            <div class="bg-white border border-slate-200 rounded-2xl p-4 shadow-2xs flex gap-3">
-                                <x-ui.avatar :user="auth()->user()" size="md" />
-                                <button wire:click="openPostComposer"
-                                    class="flex-1 text-left px-4 py-3 bg-slate-100 rounded-2xl text-slate-500 text-xs font-semibold hover:bg-slate-150 transition">
-                                    Chia sẻ điều gì đó với mọi người trong cộng đồng...
+                    {{-- Left Column: Settings Cards --}}
+                    <div class="lg:col-span-2 space-y-6">
+                        <form wire:submit.prevent="saveSettings" class="space-y-6">
+                            
+                            {{-- Card 1: Thiết lập chung --}}
+                            <div class="bg-white border border-slate-200 rounded-2xl p-6 shadow-xs space-y-4">
+                                <div>
+                                    <h3 class="font-bold text-slate-900 text-sm">Thiết lập chung</h3>
+                                    <p class="text-[11px] text-slate-400 mt-0.5">Cấu hình các thông tin cơ bản định danh cộng đồng.</p>
+                                </div>
+                                
+                                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    <div class="md:col-span-2">
+                                        <label class="block text-xs font-bold text-slate-700 mb-1.5 flex items-center gap-1">
+                                            <span>Tên cộng đồng</span>
+                                            <span class="text-red-500">*</span>
+                                        </label>
+                                        <input type="text" wire:model.blur="settingsName"
+                                            class="w-full px-3 py-2 text-xs border rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 border-slate-200">
+                                        @error('settingsName') <p class="text-red-500 text-[10px] mt-1 font-semibold">{{ $message }}</p> @enderror
+                                        <p class="text-[10px] text-slate-400 mt-1">Tên hiển thị chính thức của cộng đồng hoặc câu lạc bộ.</p>
+                                    </div>
+
+                                    <div>
+                                        <label class="block text-xs font-bold text-slate-700 mb-1.5">Phân loại <span class="text-red-500">*</span></label>
+                                        <select wire:model="settingsType" class="w-full px-3 py-2 text-xs border rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 border-slate-200 bg-white">
+                                            @foreach (CommunityType::cases() as $t)
+                                                <option value="{{ $t->value }}">{{ $t->label() }}</option>
+                                            @endforeach
+                                        </select>
+                                        <p class="text-[10px] text-slate-400 mt-1">Xác định mô hình sinh hoạt chính.</p>
+                                    </div>
+
+                                    <div>
+                                        <label class="block text-xs font-bold text-slate-700 mb-1.5">Khoa phụ trách</label>
+                                        <input type="text" wire:model.blur="settingsRelatedFaculty"
+                                            class="w-full px-3 py-2 text-xs border rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 border-slate-200">
+                                        <p class="text-[10px] text-slate-400 mt-1">Khoa chuyên môn bảo trợ trực tiếp.</p>
+                                    </div>
+
+                                    <div class="md:col-span-2">
+                                        <label class="block text-xs font-bold text-slate-700 mb-1.5">Mô tả ngắn</label>
+                                        <input type="text" wire:model.blur="settingsShortDescription"
+                                            class="w-full px-3 py-2 text-xs border rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 border-slate-200">
+                                        <p class="text-[10px] text-slate-400 mt-1">Hiển thị trên thẻ khám phá (Tối đa 255 ký tự).</p>
+                                    </div>
+
+                                    <div class="md:col-span-2">
+                                        <label class="block text-xs font-bold text-slate-700 mb-1.5">Mô tả chi tiết</label>
+                                        <textarea wire:model.blur="settingsDescription" rows="4"
+                                            class="w-full px-3 py-2 text-xs border rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 border-slate-200 resize-none"></textarea>
+                                        <p class="text-[10px] text-slate-400 mt-1">Giới thiệu mục tiêu, sứ mệnh và các hoạt động chính.</p>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {{-- Card 2: Bảo mật & Thành viên --}}
+                            <div class="bg-white border border-slate-200 rounded-2xl p-6 shadow-xs space-y-4">
+                                <div>
+                                    <h3 class="font-bold text-slate-900 text-sm">Quyền truy cập & Thành viên</h3>
+                                    <p class="text-[11px] text-slate-400 mt-0.5">Thiết lập chính sách bảo mật và cách thức gia nhập nhóm.</p>
+                                </div>
+
+                                <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                    <div>
+                                        <label class="block text-xs font-bold text-slate-700 mb-1.5">Chính sách tham gia <span class="text-red-500">*</span></label>
+                                        <select wire:model="settingsJoinPolicy" class="w-full px-3 py-2 text-xs border rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 border-slate-200 bg-white">
+                                            @foreach (CommunityJoinPolicy::cases() as $policy)
+                                                <option value="{{ $policy->value }}">{{ $policy->label() }}</option>
+                                            @endforeach
+                                        </select>
+                                    </div>
+
+                                    <div>
+                                        <label class="block text-xs font-bold text-slate-700 mb-1.5">Hiển thị <span class="text-red-500">*</span></label>
+                                        <select wire:model="settingsVisibility" class="w-full px-3 py-2 text-xs border rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 border-slate-200 bg-white">
+                                            @foreach (CommunityVisibility::cases() as $vis)
+                                                <option value="{{ $vis->value }}">{{ $vis->label() }}</option>
+                                            @endforeach
+                                        </select>
+                                    </div>
+
+                                    <div>
+                                        <label class="block text-xs font-bold text-slate-700 mb-1.5">Trạng thái vận hành <span class="text-red-500">*</span></label>
+                                        <select wire:model="settingsStatus" class="w-full px-3 py-2 text-xs border rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 border-slate-200 bg-white">
+                                            <option value="draft">Bản nháp</option>
+                                            <option value="active">Hoạt động</option>
+                                            <option value="inactive">Ngưng hoạt động</option>
+                                        </select>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {{-- Card 3: Nội quy hoạt động --}}
+                            <div class="bg-white border border-slate-200 rounded-2xl p-6 shadow-xs space-y-4">
+                                <div>
+                                    <h3 class="font-bold text-slate-900 text-sm">Nội quy hoạt động</h3>
+                                    <p class="text-[11px] text-slate-400 mt-0.5">Đặt ra các giới hạn và quy định bắt buộc cho thành viên.</p>
+                                </div>
+
+                                <div>
+                                    <label class="block text-xs font-bold text-slate-700 mb-1.5">Nội quy nhóm</label>
+                                    <textarea wire:model.blur="settingsRules" rows="4"
+                                        class="w-full px-3 py-2 text-xs border rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 border-slate-200 resize-none"></textarea>
+                                    <p class="text-[10px] text-slate-400 mt-1">Các quy định bắt buộc thành viên phải tuân thủ.</p>
+                                </div>
+                            </div>
+
+                            {{-- Save Form button --}}
+                            <div class="flex justify-end pt-3">
+                                <button type="submit" wire:loading.attr="disabled" wire:target="saveSettings" class="px-5 py-2 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold rounded-xl transition shadow-sm disabled:opacity-60 disabled:cursor-not-allowed">
+                                    <span wire:loading.remove wire:target="saveSettings">Lưu cài đặt</span>
+                                    <span wire:loading wire:target="saveSettings">Đang lưu...</span>
                                 </button>
+                            </div>
+                        </form>
+                    </div>
+
+                    {{-- Right Column: Preview & Requests --}}
+                    <div class="space-y-6">
+                        {{-- Card 4: Preview hành vi --}}
+                        <div class="bg-white border border-slate-200 rounded-2xl p-5 shadow-xs space-y-4">
+                            <div>
+                                <h3 class="font-bold text-slate-950 text-xs uppercase tracking-wider">Xem trước hành vi</h3>
+                                <p class="text-[10px] text-slate-400 mt-0.5">Hành vi thực tế dựa trên các thiết lập bảo mật hiện tại:</p>
+                            </div>
+                            <div class="space-y-3.5 pt-2">
+                                <div class="flex items-start gap-2.5">
+                                    <div class="p-1.5 rounded-lg bg-blue-50 text-blue-600 flex-shrink-0">
+                                        <x-ui.icon name="{{ $settingsVisibility === 'public' ? 'eye' : 'eye-off' }}" size="xs" />
+                                    </div>
+                                    <div>
+                                        <p class="text-xs font-bold text-slate-700">
+                                            {{ $settingsVisibility === 'public' ? 'Hiển thị công khai' : 'Ẩn danh sách' }}
+                                        </p>
+                                        <p class="text-[11px] text-slate-400 mt-0.5 leading-normal">
+                                            {{ $settingsVisibility === 'public' 
+                                                ? 'Cộng đồng sẽ xuất hiện trên trang khám phá và kết quả tìm kiếm của mọi sinh viên.' 
+                                                : 'Chỉ thành viên đã gia nhập mới có thể tìm thấy và truy cập vào nhóm.' }}
+                                        </p>
+                                    </div>
+                                </div>
+
+                                <div class="flex items-start gap-2.5">
+                                    <div class="p-1.5 rounded-lg bg-emerald-50 text-emerald-600 flex-shrink-0">
+                                        <x-ui.icon name="{{ $settingsJoinPolicy === 'open' ? 'unlock' : ($settingsJoinPolicy === 'approval_required' ? 'shield-alert' : 'mail') }}" size="xs" />
+                                    </div>
+                                    <div>
+                                        <p class="text-xs font-bold text-slate-700">
+                                            {{ $settingsJoinPolicy === 'open' ? 'Tham gia tự do' : ($settingsJoinPolicy === 'approval_required' ? 'Xét duyệt thủ công' : 'Chỉ mời tham gia') }}
+                                        </p>
+                                        <p class="text-[11px] text-slate-400 mt-0.5 leading-normal">
+                                            {{ $settingsJoinPolicy === 'open' 
+                                                ? 'Bất kỳ ai cũng có thể gia nhập nhóm ngay lập tức mà không cần phê duyệt.' 
+                                                : ($settingsJoinPolicy === 'approval_required'
+                                                    ? 'Người dùng gửi yêu cầu tham gia và phải được chủ sở hữu hoặc quản lý phê duyệt.'
+                                                    : 'Chỉ chủ sở hữu hoặc người quản lý mới có thể thêm thành viên qua email.') }}
+                                        </p>
+                                    </div>
+                                </div>
+
+                                <div class="flex items-start gap-2.5">
+                                    <div class="p-1.5 rounded-lg bg-purple-50 text-purple-600 flex-shrink-0">
+                                        <x-ui.icon name="activity" size="xs" />
+                                    </div>
+                                    <div>
+                                        <p class="text-xs font-bold text-slate-700">
+                                            Trạng thái: {{ $settingsStatus === 'active' ? 'Hoạt động' : ($settingsStatus === 'draft' ? 'Bản nháp' : 'Ngưng hoạt động') }}
+                                        </p>
+                                        <p class="text-[11px] text-slate-400 mt-0.5 leading-normal">
+                                            {{ $settingsStatus === 'active' 
+                                                ? 'Thành viên có thể đăng bài, bình luận, và tham gia các sự kiện bình thường.' 
+                                                : ($settingsStatus === 'draft'
+                                                    ? 'Nhóm đang ở chế độ nháp. Chỉ ban quản trị mới có thể xem và hoàn thiện cấu hình.'
+                                                    : 'Nhóm tạm ngưng hoạt động. Nội dung chuyển sang chế độ đọc duy nhất.') }}
+                                        </p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        {{-- Card 5: Yêu cầu tham gia chờ duyệt --}}
+                        @if ($community->requiresApproval())
+                            <div class="bg-white border border-slate-200 rounded-2xl p-5 shadow-xs space-y-4">
+                                <div>
+                                    <h3 class="font-bold text-slate-950 text-xs uppercase tracking-wider">Xét duyệt gia nhập</h3>
+                                    <p class="text-[10px] text-slate-400 mt-0.5">Sinh viên chờ duyệt tham gia nhóm ({{ $this->pendingJoinRequests->count() }}):</p>
+                                </div>
+                                
+                                <div class="divide-y divide-slate-100 max-h-[350px] overflow-y-auto pr-1">
+                                    @forelse ($this->pendingJoinRequests as $req)
+                                        <div class="py-3.5 first:pt-0 last:pb-0 flex flex-col gap-2">
+                                            <div class="flex items-center gap-2.5">
+                                                <x-ui.avatar :user="$req->user" size="xs" />
+                                                <div class="flex-1 min-w-0">
+                                                    <h4 class="font-bold text-xs text-slate-800 truncate">{{ $req->user?->name }}</h4>
+                                                    <span class="text-[9px] text-slate-400 font-semibold block mt-0.5">{{ $req->created_at->diffForHumans() }}</span>
+                                                </div>
+                                            </div>
+                                            @if ($req->join_reason)
+                                                <p class="text-[11px] bg-slate-50 border border-slate-150 p-2.5 rounded-xl text-slate-655 leading-normal italic">
+                                                    "{{ $req->join_reason }}"
+                                                </p>
+                                            @endif
+                                            <div class="flex gap-2 justify-end mt-1">
+                                                <button type="button" wire:click="approveJoinRequest({{ $req->id }})"
+                                                    wire:loading.attr="disabled"
+                                                    wire:target="approveJoinRequest({{ $req->id }})"
+                                                    class="px-2.5 py-1.5 bg-green-600 hover:bg-green-700 text-white rounded-lg text-[10px] font-bold transition disabled:opacity-60 flex items-center justify-center">
+                                                    <span wire:loading.remove wire:target="approveJoinRequest({{ $req->id }})">Duyệt</span>
+                                                    <span wire:loading wire:target="approveJoinRequest({{ $req->id }})">Đang duyệt...</span>
+                                                </button>
+                                                <button type="button" wire:click="startRejection({{ $req->id }})"
+                                                    class="px-2.5 py-1.5 border border-red-200 text-red-650 hover:bg-red-50 rounded-lg text-[10px] font-bold transition flex items-center justify-center">
+                                                    Từ chối
+                                                </button>
+                                            </div>
+                                        </div>
+                                    @empty
+                                        <p class="text-xs text-slate-400 italic py-4 text-center font-semibold">Không có yêu cầu nào.</p>
+                                    @endforelse
+                                </div>
+                            </div>
+                        @endif
+                    </div>
+                </div>
+            @else
+                {{-- Regular Tabs: Feed, Resources, Events, Members, About --}}
+                <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
+                    
+                    {{-- Main Column (lg:col-span-2) --}}
+                    <div class="lg:col-span-2 space-y-6">
+                        
+                        {{-- 2.1 Tab Bảng tin --}}
+                        @if ($activeTab === 'feed')
+                            {{-- Composer Box --}}
+                            @if ($this->isActiveMember && ($community->isActive() || $this->canManage))
+                                <div class="bg-white border border-slate-200 rounded-2xl p-4 shadow-xs flex gap-3">
+                                    <x-ui.avatar :user="auth()->user()" size="md" />
+                                    <button wire:click="openPostComposer"
+                                        class="flex-1 text-left px-4 py-3 bg-slate-50 rounded-2xl text-slate-500 text-xs font-semibold hover:bg-slate-100 transition focus:outline-none focus:ring-2 focus:ring-blue-500/20">
+                                        Chia sẻ điều gì đó với mọi người trong cộng đồng...
+                                    </button>
+                                </div>
+                            @endif
+
+                            {{-- Feed list --}}
+                            <div class="space-y-4">
+                                @forelse ($this->feedPosts as $post)
+                                    @if (in_array($post->id, $locallyHiddenPostIds))
+                                        <div class="bg-white border border-slate-200 rounded-2xl p-4 flex items-center justify-between gap-4 shadow-sm" wire:key="hidden-post-{{ $post->id }}">
+                                            <div class="flex items-center gap-3">
+                                                <div class="w-8 h-8 rounded-full bg-slate-100 border border-slate-200 flex items-center justify-center text-slate-400">
+                                                    <x-ui.icon name="eye-off" size="xs" />
+                                                </div>
+                                                <div class="text-left">
+                                                    <h4 class="text-xs font-bold text-slate-800">Đã ẩn bài viết</h4>
+                                                    <p class="text-[10px] text-slate-500">Bài viết đã được ẩn khỏi bảng tin của bạn.</p>
+                                                </div>
+                                            </div>
+                                            <button type="button" wire:click="undoHidePost({{ $post->id }})"
+                                                class="px-3 py-1.5 text-xs font-bold text-blue-600 bg-blue-50 rounded-xl hover:bg-blue-600 hover:text-white transition">
+                                                Hoàn tác
+                                            </button>
+                                        </div>
+                                    @else
+                                        <article class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden" wire:key="detail-post-{{ $post->id }}">
+                                            <x-ui.post-card
+                                                :post="$post"
+                                                :currentUser="auth()->user()"
+                                                :isSaved="(int) $post->saved_by_current_user_count > 0"
+                                                :isLiked="(int) $post->liked_by_current_user_count > 0"
+                                                :likeCount="(int) $post->likes_count"
+                                                :commentCount="(int) $post->published_comments_count"
+                                                :editingPostId="$editingPostId"
+                                                :editingBody="$editingBody"
+                                            />
+                                        </article>
+                                    @endif
+                                @empty
+                                    <div class="bg-white border border-slate-200 rounded-2xl p-12 text-center text-slate-400 italic text-sm">
+                                        Chưa có bài đăng nào trong nhóm. Hãy bắt đầu cuộc thảo luận đầu tiên!
+                                    </div>
+                                @endforelse
+
+                                @if ($this->feedPosts->isNotEmpty() && $this->feedPosts->hasPages())
+                                    <div class="pt-4">{{ $this->feedPosts->links() }}</div>
+                                @endif
                             </div>
                         @endif
 
-                        {{-- Feed list --}}
-                        <div class="space-y-4">
-                            @forelse ($this->feedPosts as $post)
-                                @if (in_array($post->id, $locallyHiddenPostIds))
-                                    <div class="bg-white border border-slate-200 rounded-2xl p-4 flex items-center justify-between gap-4 shadow-sm" wire:key="hidden-post-{{ $post->id }}">
-                                        <div class="flex items-center gap-3">
-                                            <div class="w-8 h-8 rounded-full bg-slate-105 border border-slate-200 flex items-center justify-center text-slate-400">
-                                                <x-ui.icon name="eye-off" size="xs" />
-                                            </div>
-                                            <div class="text-left">
-                                                <h4 class="text-xs font-bold text-slate-800">Đã ẩn bài viết</h4>
-                                                <p class="text-[10px] text-slate-500">Bài viết đã được ẩn khỏi bảng tin của bạn.</p>
-                                            </div>
-                                        </div>
-                                        <button type="button" wire:click="undoHidePost({{ $post->id }})"
-                                            class="px-3 py-1.5 text-xs font-bold text-ue-brand bg-ue-brand-soft rounded-xl hover:bg-ue-brand hover:text-white transition">
-                                            Hoàn tác
-                                        </button>
-                                    </div>
-                                @else
-                                    <article class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden" wire:key="detail-post-{{ $post->id }}">
-                                        <x-ui.post-card
-                                            :post="$post"
-                                            :currentUser="auth()->user()"
-                                            :isSaved="(int) $post->saved_by_current_user_count > 0"
-                                            :isLiked="(int) $post->liked_by_current_user_count > 0"
-                                            :likeCount="(int) $post->likes_count"
-                                            :commentCount="(int) $post->published_comments_count"
-                                            :editingPostId="$editingPostId"
-                                            :editingBody="$editingBody"
-                                        />
-                                    </article>
-                                @endif
-                            @empty
-                                <div class="bg-white border border-slate-200 rounded-2xl p-12 text-center text-slate-450 italic text-sm">
-                                    Chưa có bài đăng nào trong nhóm. Hãy bắt đầu cuộc thảo luận đầu tiên!
-                                </div>
-                            @endforelse
-
-                            @if ($this->feedPosts->isNotEmpty() && $this->feedPosts->hasPages())
-                                <div class="pt-4">{{ $this->feedPosts->links() }}</div>
-                            @endif
-                        </div>
-                    @endif
-
-                    {{-- 2.2 Tab Tài nguyên --}}
-                    @if ($activeTab === 'resources')
-                        <div class="space-y-4">
-                            <div class="flex items-center justify-between border-b border-slate-200 pb-3">
-                                <h3 class="text-sm font-extrabold text-slate-800">Kho tài liệu, liên kết & học liệu</h3>
-                                @if ($this->isActiveMember)
-                                    <button wire:click="openResourceModal"
-                                        class="px-4 py-2 bg-ue-brand hover:bg-opacity-95 text-white rounded-xl text-xs font-bold transition shadow-2xs">
-                                        + Đăng tài nguyên
-                                    </button>
-                                @endif
-                            </div>
-
-                            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                                @forelse ($this->publishedResources as $res)
-                                    <div class="bg-white border border-slate-200 rounded-2xl p-4 flex flex-col justify-between hover:shadow-2xs transition">
-                                        <div>
-                                            <div class="flex items-start justify-between gap-3">
-                                                <span class="px-2 py-0.5 bg-slate-100 text-slate-600 border border-slate-150 rounded-md text-[9px] font-bold uppercase tracking-wider select-none">
-                                                    {{ $res->resource_type?->label() }}
-                                                </span>
-                                                <span class="text-[10px] text-slate-400 font-semibold">{{ $res->created_at->format('d/m/Y') }}</span>
-                                            </div>
-
-                                            <h4 class="font-bold text-xs text-slate-800 mt-2.5 leading-normal line-clamp-1">{{ $res->title }}</h4>
-                                            
-                                            @if ($res->description)
-                                                <p class="text-[11px] text-slate-500 mt-1 line-clamp-2 leading-relaxed">{{ $res->description }}</p>
-                                            @else
-                                                <p class="text-[11px] text-slate-350 italic mt-1">Không có mô tả bổ sung.</p>
-                                            @endif
-                                        </div>
-
-                                        <div class="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between gap-3">
-                                            <span class="text-[10px] text-slate-500 font-bold truncate max-w-[120px]">
-                                                Đăng: {{ $res->submitter?->name }}
-                                            </span>
-
-                                            <div class="flex gap-1.5 flex-shrink-0">
-                                                @if ($res->mediaFile)
-                                                    <a href="{{ Storage::disk($res->mediaFile->disk)->url($res->mediaFile->path) }}" download="{{ $res->mediaFile->original_name }}"
-                                                        class="px-2.5 py-1.5 bg-ue-brand text-white rounded-lg text-[10px] font-bold hover:bg-opacity-95 transition flex items-center gap-1">
-                                                        <x-ui.icon name="download" size="2xs" />
-                                                        <span>Tải xuống</span>
-                                                    </a>
-                                                @endif
-                                                @if ($res->url)
-                                                    <a href="{{ $res->url }}" target="_blank" rel="noopener noreferrer"
-                                                        class="px-2.5 py-1.5 bg-slate-100 border border-slate-200 text-slate-700 rounded-lg text-[10px] font-bold hover:bg-slate-200 transition flex items-center gap-1">
-                                                        <x-ui.icon name="external-link" size="2xs" />
-                                                        <span>Mở</span>
-                                                    </a>
-                                                @endif
-                                            </div>
-                                        </div>
-                                    </div>
-                                @empty
-                                    <div class="col-span-full bg-white border border-slate-200 rounded-2xl p-12 text-center text-slate-500 italic text-sm shadow-2xs">
-                                        Kho tài nguyên chưa có dữ liệu chia sẻ.
-                                    </div>
-                                @endforelse
-                            </div>
-
-                            @if ($this->publishedResources->isNotEmpty() && $this->publishedResources->hasPages())
-                                <div class="pt-4">{{ $this->publishedResources->links() }}</div>
-                            @endif
-                        </div>
-                    @endif
-
-                    {{-- 2.3 Tab Sự kiện --}}
-                    @if ($activeTab === 'events')
-                        <div class="space-y-4">
-                            <div class="flex items-center justify-between border-b border-slate-200 pb-3">
-                                <h3 class="text-sm font-extrabold text-slate-800">Sự kiện sắp tới</h3>
-                                @if ($this->canCreateEvents)
-                                    <button wire:click="openEventModal"
-                                        class="px-4 py-2 bg-ue-brand hover:bg-opacity-95 text-white rounded-xl text-xs font-bold transition shadow-2xs">
-                                        + Tạo sự kiện
-                                    </button>
-                                @endif
-                            </div>
-
+                        {{-- 2.2 Tab Tài nguyên --}}
+                        @if ($activeTab === 'resources')
                             <div class="space-y-4">
-                                @forelse ($this->upcomingEvents as $evt)
-                                    @php $rsvpStatus = $evt->rsvps->first()?->status?->value; @endphp
-                                    <div class="bg-white border border-slate-200 rounded-2xl p-4 sm:p-5 flex flex-col md:flex-row gap-4 hover:shadow-2xs transition">
-                                        
-                                        {{-- Calendar Block --}}
-                                        <div class="w-16 h-16 rounded-xl bg-ue-brand-soft border border-ue-brand-border flex flex-col items-center justify-center flex-shrink-0">
-                                            <span class="text-2xl font-black text-ue-brand leading-none">{{ $evt->starts_at->format('d') }}</span>
-                                            <span class="text-[9px] font-bold text-ue-brand uppercase mt-0.5 tracking-wider">{{ $evt->starts_at->translatedFormat('M') }}</span>
-                                        </div>
+                                <div class="flex items-center justify-between border-b border-slate-200 pb-3">
+                                    <h3 class="text-sm font-extrabold text-slate-800">Kho tài liệu, liên kết & học liệu</h3>
+                                    @if ($this->isActiveMember)
+                                        <button wire:click="openResourceModal"
+                                            class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-bold transition shadow-sm">
+                                            + Đăng tài nguyên
+                                        </button>
+                                    @endif
+                                </div>
 
-                                        {{-- Text Column --}}
-                                        <div class="flex-1 min-w-0">
-                                            <div class="flex items-center gap-2 flex-wrap">
-                                                <h4 class="font-extrabold text-slate-800 text-sm leading-tight truncate">{{ $evt->title }}</h4>
-                                                <span class="px-2 py-0.5 bg-slate-100 text-slate-600 rounded-md text-[9px] font-bold uppercase select-none">
-                                                    {{ $evt->event_type === 'online' ? 'Online' : ($evt->event_type === 'hybrid' ? 'Kết hợp' : 'Trực tiếp') }}
-                                                </span>
-                                            </div>
-
-                                            <div class="flex flex-wrap items-center gap-x-3 gap-y-1 text-slate-500 text-xxs font-semibold mt-1">
-                                                <span class="flex items-center gap-1">
-                                                    <x-ui.icon name="clock" size="xs" />
-                                                    {{ $evt->starts_at->format('H:i') }} - {{ $evt->ends_at ? $evt->ends_at->format('H:i') : 'Trong ngày' }}
-                                                </span>
-                                                @if ($evt->location)
-                                                    <span>·</span>
-                                                    <span class="truncate max-w-[150px]">{{ $evt->location }}</span>
-                                                @endif
-                                            </div>
-
-                                            @if ($evt->description)
-                                                <p class="text-xs text-slate-500 mt-2 whitespace-pre-line leading-normal">{{ $evt->description }}</p>
-                                            @endif
-
-                                            <div class="mt-4 pt-3 border-t border-slate-100 flex flex-wrap items-center justify-between gap-3 text-xxs font-bold text-slate-400">
-                                                <div class="flex gap-3">
-                                                    <span>{{ $evt->going_count }} tham gia</span>
-                                                    <span>{{ $evt->interested_count }} quan tâm</span>
+                                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                    @forelse ($this->publishedResources as $res)
+                                        <div class="bg-white border border-slate-200 rounded-2xl p-4 flex flex-col justify-between hover:shadow-xs transition">
+                                            <div>
+                                                <div class="flex items-start justify-between gap-3">
+                                                    <span class="px-2 py-0.5 bg-slate-100 text-slate-600 border border-slate-150 rounded-md text-[9px] font-bold uppercase tracking-wider select-none">
+                                                        {{ $res->resource_type?->label() }}
+                                                    </span>
+                                                    <span class="text-[10px] text-slate-400 font-semibold">{{ $res->created_at->format('d/m/Y') }}</span>
                                                 </div>
 
-                                                {{-- RSVP Buttons --}}
-                                                @if ($this->isActiveMember && $evt->isPublished())
-                                                    <div class="flex gap-1.5 flex-shrink-0">
-                                                        <button wire:click="rsvpEvent({{ $evt->id }}, 'going')"
-                                                            class="px-2.5 py-1 text-[10px] font-bold rounded-lg border transition {{ $rsvpStatus === 'going' ? 'bg-green-600 text-white border-green-600' : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-50' }}">
-                                                            Sẽ tham gia
-                                                        </button>
-                                                        <button wire:click="rsvpEvent({{ $evt->id }}, 'interested')"
-                                                            class="px-2.5 py-1 text-[10px] font-bold rounded-lg border transition {{ $rsvpStatus === 'interested' ? 'bg-ue-brand text-white border-ue-brand' : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-50' }}">
-                                                            Quan tâm
-                                                        </button>
-                                                        <button wire:click="rsvpEvent({{ $evt->id }}, 'declined')"
-                                                            class="px-2.5 py-1 text-[10px] font-bold rounded-lg border transition {{ $rsvpStatus === 'declined' ? 'bg-red-50 border-red-200 text-red-700' : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-50' }}">
-                                                            Từ chối
-                                                        </button>
-                                                    </div>
+                                                <h4 class="font-bold text-xs text-slate-800 mt-2.5 leading-normal line-clamp-1">{{ $res->title }}</h4>
+                                                
+                                                @if ($res->description)
+                                                    <p class="text-[11px] text-slate-500 mt-1 line-clamp-2 leading-relaxed">{{ $res->description }}</p>
+                                                @else
+                                                    <p class="text-[11px] text-slate-350 italic mt-1">Không có mô tả bổ sung.</p>
                                                 @endif
                                             </div>
-                                        </div>
-                                    </div>
-                                @empty
-                                    <div class="bg-white border border-slate-200 rounded-2xl p-12 text-center text-slate-500 italic text-sm shadow-2xs">
-                                        Chưa có sự kiện nào được công bố.
-                                    </div>
-                                @endforelse
-                            </div>
-                        </div>
-                    @endif
 
-                    {{-- 2.4 Tab Thành viên --}}
-                    @if ($activeTab === 'members')
-                        <div class="space-y-4">
-                            <div class="flex items-center justify-between border-b border-slate-200 pb-3">
-                                <h3 class="text-sm font-extrabold text-slate-800">Danh sách thành viên ({{ number_format($community->members_count) }})</h3>
-                            </div>
+                                            <div class="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between gap-3">
+                                                <span class="text-[10px] text-slate-500 font-bold truncate max-w-[120px]">
+                                                    Đăng: {{ $res->submitter?->name }}
+                                                </span>
 
-                            {{-- Invite box for managers --}}
-                            @if ($this->canManage && $this->canManuallyAddMembers)
-                                <div class="bg-slate-50 border border-slate-200 rounded-2xl p-4 flex flex-col md:flex-row items-end gap-3 shadow-2xs">
-                                    <div class="flex-1 w-full">
-                                        <label class="block text-xs font-bold text-slate-600 mb-1">Thêm nhanh thành viên bằng email</label>
-                                        <input type="email" wire:model.blur="memberEmailToAdd" placeholder="email@hcmue.edu.vn"
-                                            class="w-full px-3 py-2 text-xs border rounded-xl focus:outline-none focus:ring-2 focus:ring-ue-brand border-slate-200 bg-white" />
-                                        @error('memberEmailToAdd') <p class="text-red-500 text-[10px] mt-1 font-semibold">{{ $message }}</p> @enderror
-                                    </div>
-                                    <button wire:click="addMemberByEmail"
-                                        class="px-4 py-2 bg-ue-brand text-white text-xs font-bold rounded-xl transition shadow-2xs whitespace-nowrap">
-                                        Thêm thành viên
-                                    </button>
-                                </div>
-                            @endif
-
-                            {{-- Members Row list --}}
-                            <div class="bg-white border border-slate-200 rounded-2xl divide-y divide-slate-100 overflow-hidden shadow-2xs">
-                                @forelse ($this->members as $m)
-                                    <div class="p-4 flex items-center justify-between gap-3">
-                                        <div class="flex items-center gap-3">
-                                            <x-ui.avatar :user="$m->user" size="sm" />
-                                            <div>
-                                                <h4 class="text-xs font-bold text-slate-800">{{ $m->user?->name }}</h4>
-                                                <p class="text-[10px] text-slate-400 mt-0.5">Đã gia nhập: {{ $m->joined_at ? $m->joined_at->diffForHumans() : 'gần đây' }}</p>
-                                            </div>
-                                        </div>
-
-                                        <div class="flex items-center gap-2">
-                                            <span class="px-2 py-0.5 rounded text-[9px] font-bold uppercase tracking-wider
-                                                {{ $m->role?->value === 'owner' ? 'bg-amber-100 text-amber-800 border border-amber-200' : '' }}
-                                                {{ $m->role?->value === 'manager' ? 'bg-indigo-100 text-indigo-800 border border-indigo-200' : '' }}
-                                                {{ $m->role?->value === 'moderator' ? 'bg-purple-100 text-purple-800 border border-purple-200' : '' }}
-                                                {{ $m->role?->value === 'member' ? 'bg-slate-100 text-slate-600 border border-slate-200' : '' }}">
-                                                {{ $m->role?->label() }}
-                                            </span>
-
-                                            @if (auth()->check() && auth()->user()->can('manageMemberRoles', $community) && $m->role?->value !== 'owner')
-                                                <button type="button" wire:click="openChangeRoleModal({{ $m->id }})"
-                                                    class="p-1 hover:bg-slate-150 rounded text-slate-400 hover:text-ue-brand transition flex items-center justify-center"
-                                                    title="Cấp quyền">
-                                                    <x-ui.icon name="settings" size="2xs" />
-                                                </button>
-                                            @endif
-                                        </div>
-                                    </div>
-                                @empty
-                                    <div class="p-6 text-center text-slate-450 italic text-xs">
-                                        Nhóm chưa có thành viên nào.
-                                    </div>
-                                @endforelse
-                            </div>
-
-                            @if ($this->members->isNotEmpty() && $this->members->hasPages())
-                                <div class="pt-4">{{ $this->members->links() }}</div>
-                            @endif
-                        </div>
-                    @endif
-
-                    {{-- 2.5 Tab Giới thiệu --}}
-                    @if ($activeTab === 'about')
-                        <div class="space-y-4">
-                            <div class="bg-white border border-slate-200 rounded-2xl p-5 shadow-2xs">
-                                <h3 class="font-extrabold text-slate-800 mb-2">Giới thiệu cộng đồng</h3>
-                                @if ($community->short_description)
-                                    <p class="text-xs font-semibold text-slate-600 mb-3">{{ $community->short_description }}</p>
-                                @endif
-                                <p class="text-xs text-slate-500 whitespace-pre-line leading-relaxed">
-                                    {{ $community->description ?: 'Không có thông tin mô tả chi tiết.' }}
-                                </p>
-                            </div>
-
-                            @if ($community->rules)
-                                <div class="bg-white border border-slate-200 rounded-2xl p-5 shadow-2xs">
-                                    <h3 class="font-extrabold text-slate-800 mb-2">Nội quy hoạt động</h3>
-                                    <p class="text-xs text-slate-500 whitespace-pre-line leading-relaxed">{{ $community->rules }}</p>
-                                </div>
-                            @endif
-                        </div>
-                    @endif
-
-                    {{-- 2.6 Tab Cài đặt --}}
-                    @if ($activeTab === 'settings' && $this->canManage)
-                        <div class="space-y-6">
-                            <div class="bg-white border border-slate-200 rounded-2xl p-5 shadow-2xs">
-                                <h3 class="font-extrabold text-slate-800 mb-4">Thiết lập chung</h3>
-                                
-                                <form wire:submit.prevent="saveSettings" class="space-y-4">
-                                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                        <div class="md:col-span-2">
-                                            <label class="block text-xs font-bold text-slate-600 mb-1">Tên cộng đồng <span class="text-red-500">*</span></label>
-                                            <input type="text" wire:model.blur="settingsName"
-                                                class="w-full px-3 py-2 text-xs border rounded-xl focus:outline-none focus:ring-2 focus:ring-ue-brand border-slate-200">
-                                            @error('settingsName') <p class="text-red-500 text-[10px] mt-1 font-semibold">{{ $message }}</p> @enderror
-                                        </div>
-
-                                        <div>
-                                            <label class="block text-xs font-bold text-slate-600 mb-1">Phân loại <span class="text-red-500">*</span></label>
-                                            <select wire:model="settingsType" class="w-full px-3 py-2 text-xs border rounded-xl focus:outline-none focus:ring-2 focus:ring-ue-brand border-slate-200">
-                                                @foreach (CommunityType::cases() as $t)
-                                                    <option value="{{ $t->value }}">{{ $t->label() }}</option>
-                                                @endforeach
-                                            </select>
-                                        </div>
-
-                                        <div>
-                                            <label class="block text-xs font-bold text-slate-600 mb-1">Chính sách tham gia <span class="text-red-500">*</span></label>
-                                            <select wire:model="settingsJoinPolicy" class="w-full px-3 py-2 text-xs border rounded-xl focus:outline-none focus:ring-2 focus:ring-ue-brand border-slate-200">
-                                                @foreach (CommunityJoinPolicy::cases() as $policy)
-                                                    <option value="{{ $policy->value }}">{{ $policy->label() }}</option>
-                                                @endforeach
-                                            </select>
-                                        </div>
-
-                                        <div>
-                                            <label class="block text-xs font-bold text-slate-600 mb-1">Hiển thị <span class="text-red-500">*</span></label>
-                                            <select wire:model="settingsVisibility" class="w-full px-3 py-2 text-xs border rounded-xl focus:outline-none focus:ring-2 focus:ring-ue-brand border-slate-200">
-                                                @foreach (CommunityVisibility::cases() as $vis)
-                                                    <option value="{{ $vis->value }}">{{ $vis->label() }}</option>
-                                                @endforeach
-                                            </select>
-                                        </div>
-
-                                        <div>
-                                            <label class="block text-xs font-bold text-slate-600 mb-1">Trạng thái vận hành <span class="text-red-500">*</span></label>
-                                            <select wire:model="settingsStatus" class="w-full px-3 py-2 text-xs border rounded-xl focus:outline-none focus:ring-2 focus:ring-ue-brand border-slate-200">
-                                                <option value="draft">Bản nháp</option>
-                                                <option value="active">Hoạt động</option>
-                                                <option value="inactive">Ngưng hoạt động</option>
-                                            </select>
-                                        </div>
-
-                                        <div class="md:col-span-2">
-                                            <label class="block text-xs font-bold text-slate-600 mb-1">Khoa phụ trách</label>
-                                            <input type="text" wire:model.blur="settingsRelatedFaculty"
-                                                class="w-full px-3 py-2 text-xs border rounded-xl focus:outline-none focus:ring-2 focus:ring-ue-brand border-slate-200">
-                                        </div>
-
-                                        <div class="md:col-span-2">
-                                            <label class="block text-xs font-bold text-slate-600 mb-1">Mô tả ngắn</label>
-                                            <input type="text" wire:model.blur="settingsShortDescription"
-                                                class="w-full px-3 py-2 text-xs border rounded-xl focus:outline-none focus:ring-2 focus:ring-ue-brand border-slate-200">
-                                        </div>
-
-                                        <div class="md:col-span-2">
-                                            <label class="block text-xs font-bold text-slate-600 mb-1">Mô tả chi tiết</label>
-                                            <textarea wire:model.blur="settingsDescription" rows="3"
-                                                class="w-full px-3 py-2 text-xs border rounded-xl focus:outline-none focus:ring-2 focus:ring-ue-brand border-slate-200 resize-none"></textarea>
-                                        </div>
-
-                                        <div class="md:col-span-2">
-                                            <label class="block text-xs font-bold text-slate-600 mb-1">Nội quy nhóm</label>
-                                            <textarea wire:model.blur="settingsRules" rows="3"
-                                                class="w-full px-3 py-2 text-xs border rounded-xl focus:outline-none focus:ring-2 focus:ring-ue-brand border-slate-200 resize-none"></textarea>
-                                        </div>
-                                    </div>
-
-                                    <div class="flex justify-end pt-3 border-t border-slate-100">
-                                        <button type="submit" wire:loading.attr="disabled" wire:target="saveSettings" class="px-5 py-2 bg-ue-brand hover:bg-opacity-95 text-white text-xs font-bold rounded-xl transition shadow-2xs disabled:opacity-60 disabled:cursor-not-allowed">
-                                            <span wire:loading.remove wire:target="saveSettings">Lưu cài đặt</span>
-                                            <span wire:loading wire:target="saveSettings">Đang lưu...</span>
-                                        </button>
-                                    </div>
-                                </form>
-                            </div>
-
-                            {{-- Settings Behavior Preview --}}
-                            <div class="bg-white border border-slate-200 rounded-2xl p-5 shadow-2xs">
-                                <h3 class="font-extrabold text-slate-800 mb-3">Preview hành vi sau khi lưu</h3>
-                                <div class="space-y-2 text-xs text-slate-600">
-                                    @if ($settingsVisibility === 'private')
-                                        <p class="flex items-center gap-2 text-amber-600 font-semibold">
-                                            <x-ui.icon name="eye-off" size="xs" />
-                                            <span>Không đưa cộng đồng ra trang khám phá</span>
-                                        </p>
-                                    @endif
-                                    @if ($settingsJoinPolicy === 'invite_only')
-                                        <p class="flex items-center gap-2 text-blue-600 font-semibold">
-                                            <x-ui.icon name="mail" size="xs" />
-                                            <span>Owner hoặc quản lý thêm thành viên bằng email</span>
-                                        </p>
-                                    @endif
-                                    @if ($settingsStatus === 'active')
-                                        <p class="flex items-center gap-2 text-green-600 font-semibold">
-                                            <x-ui.icon name="check-circle" size="xs" />
-                                            <span>Cộng đồng đang vận hành bình thường</span>
-                                        </p>
-                                    @endif
-                                </div>
-                            </div>
-
-                            {{-- Join Requests review --}}
-                            @if ($community->requiresApproval())
-                                <div class="bg-white border border-slate-200 rounded-2xl p-5 shadow-2xs">
-                                    <h3 class="font-extrabold text-slate-800 mb-3">Yêu cầu tham gia chờ duyệt ({{ $this->pendingJoinRequests->count() }})</h3>
-                                    
-                                    <div class="divide-y divide-slate-100">
-                                        @forelse ($this->pendingJoinRequests as $req)
-                                            <div class="py-3 flex flex-col sm:flex-row justify-between sm:items-center gap-3">
-                                                <div>
-                                                    <h4 class="font-bold text-xs text-slate-800">{{ $req->user?->name }}</h4>
-                                                    <span class="text-[10px] text-slate-400 mt-0.5 block">Yêu cầu gửi: {{ $req->created_at->diffForHumans() }}</span>
-                                                    @if ($req->join_reason)
-                                                        <p class="text-xs bg-slate-50 border border-slate-150 p-2 rounded-xl mt-1.5 text-slate-600 leading-normal italic">
-                                                            "{{ $req->join_reason }}"
-                                                        </p>
+                                                <div class="flex gap-1.5 flex-shrink-0">
+                                                    @if ($res->mediaFile)
+                                                        <a href="{{ Storage::disk($res->mediaFile->disk)->url($res->mediaFile->path) }}" download="{{ $res->mediaFile->original_name }}"
+                                                            class="px-2.5 py-1.5 bg-blue-600 text-white rounded-lg text-[10px] font-bold hover:bg-blue-750 transition flex items-center gap-1">
+                                                            <x-ui.icon name="download" size="2xs" />
+                                                            <span>Tải xuống</span>
+                                                        </a>
+                                                    @endif
+                                                    @if ($res->url)
+                                                        <a href="{{ $res->url }}" target="_blank" rel="noopener noreferrer"
+                                                            class="px-2.5 py-1.5 bg-slate-100 border border-slate-200 text-slate-700 rounded-lg text-[10px] font-bold hover:bg-slate-200 transition flex items-center gap-1">
+                                                            <x-ui.icon name="external-link" size="2xs" />
+                                                            <span>Mở</span>
+                                                        </a>
                                                     @endif
                                                 </div>
-                                                <div class="flex gap-1.5 flex-shrink-0 self-end sm:self-center">
-                                                    <button wire:click="approveJoinRequest({{ $req->id }})"
-                                                        wire:loading.attr="disabled"
-                                                        wire:target="approveJoinRequest({{ $req->id }})"
-                                                        class="px-3 py-1.5 bg-green-600 hover:bg-green-700 text-white rounded-lg text-[10px] font-bold transition disabled:opacity-60">
-                                                        <span wire:loading.remove wire:target="approveJoinRequest({{ $req->id }})">Duyệt</span>
-                                                        <span wire:loading wire:target="approveJoinRequest({{ $req->id }})">Đang duyệt...</span>
-                                                    </button>
-                                                    <button wire:click="startRejection({{ $req->id }})"
-                                                        class="px-3 py-1.5 border border-red-200 text-red-600 hover:bg-red-50 rounded-lg text-[10px] font-bold transition">
+                                            </div>
+                                        </div>
+                                    @empty
+                                        <div class="col-span-full bg-white border border-slate-200 rounded-2xl p-12 text-center text-slate-500 italic text-sm">
+                                            Kho tài nguyên chưa có dữ liệu chia sẻ.
+                                        </div>
+                                    @endforelse
+                                </div>
+
+                                @if ($this->publishedResources->isNotEmpty() && $this->publishedResources->hasPages())
+                                    <div class="pt-4">{{ $this->publishedResources->links() }}</div>
+                                @endif
+                            </div>
+                        @endif
+
+                        {{-- 2.3 Tab Sự kiện --}}
+                        @if ($activeTab === 'events')
+                            <div class="space-y-4">
+                                <div class="flex items-center justify-between border-b border-slate-200 pb-3">
+                                    <h3 class="text-sm font-extrabold text-slate-800">Sự kiện sắp tới</h3>
+                                    @if ($this->canCreateEvents)
+                                        <button wire:click="openEventModal"
+                                            class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-bold transition shadow-sm">
+                                            + Tạo sự kiện
+                                        </button>
+                                    @endif
+                                </div>
+
+                                <div class="space-y-4">
+                                    @forelse ($this->upcomingEvents as $evt)
+                                        @php $rsvpStatus = $evt->rsvps->first()?->status?->value; @endphp
+                                        <div class="bg-white border border-slate-200 rounded-2xl p-4 sm:p-5 flex flex-col md:flex-row gap-4 hover:shadow-xs transition">
+                                            
+                                            {{-- Calendar Block --}}
+                                            <div class="w-16 h-16 rounded-xl bg-blue-50 border border-blue-100 flex flex-col items-center justify-center flex-shrink-0">
+                                                <span class="text-2xl font-black text-blue-600 leading-none">{{ $evt->starts_at->format('d') }}</span>
+                                                <span class="text-[9px] font-bold text-blue-600 uppercase mt-0.5 tracking-wider">{{ $evt->starts_at->translatedFormat('M') }}</span>
+                                            </div>
+
+                                            {{-- Text Column --}}
+                                            <div class="flex-1 min-w-0">
+                                                <div class="flex items-center gap-2 flex-wrap">
+                                                    <h4 class="font-extrabold text-slate-800 text-sm leading-tight truncate">{{ $evt->title }}</h4>
+                                                    <span class="px-2 py-0.5 bg-slate-100 text-slate-600 rounded-md text-[9px] font-bold uppercase select-none">
+                                                        {{ $evt->event_type === 'online' ? 'Online' : ($evt->event_type === 'hybrid' ? 'Kết hợp' : 'Trực tiếp') }}
+                                                    </span>
+                                                </div>
+
+                                                <div class="flex flex-wrap items-center gap-x-3 gap-y-1 text-slate-500 text-xxs font-semibold mt-1">
+                                                    <span class="flex items-center gap-1">
+                                                        <x-ui.icon name="clock" size="xs" />
+                                                        {{ $evt->starts_at->format('H:i') }} - {{ $evt->ends_at ? $evt->ends_at->format('H:i') : 'Trong ngày' }}
+                                                    </span>
+                                                    @if ($evt->location)
+                                                        <span>·</span>
+                                                        <span class="truncate max-w-[150px]">{{ $evt->location }}</span>
+                                                    @endif
+                                                </div>
+
+                                                @if ($evt->description)
+                                                    <p class="text-xs text-slate-500 mt-2 whitespace-pre-line leading-normal">{{ $evt->description }}</p>
+                                                @endif
+
+                                                <div class="mt-4 pt-3 border-t border-slate-100 flex flex-wrap items-center justify-between gap-3 text-xxs font-bold text-slate-450">
+                                                    <div class="flex gap-3">
+                                                        <span>{{ $evt->going_count }} tham gia</span>
+                                                        <span>{{ $evt->interested_count }} quan tâm</span>
+                                                    </div>
+
+                                                    {{-- RSVP Buttons --}}
+                                                    @if ($this->isActiveMember && $evt->isPublished())
+                                                        <div class="flex gap-1.5 flex-shrink-0">
+                                                            <button wire:click="rsvpEvent({{ $evt->id }}, 'going')"
+                                                                class="px-2.5 py-1 text-[10px] font-bold rounded-lg border transition {{ $rsvpStatus === 'going' ? 'bg-green-600 text-white border-green-600' : 'bg-white border-slate-200 text-slate-650 hover:bg-slate-50' }}">
+                                                                Sẽ tham gia
+                                                            </button>
+                                                            <button wire:click="rsvpEvent({{ $evt->id }}, 'interested')"
+                                                                class="px-2.5 py-1 text-[10px] font-bold rounded-lg border transition {{ $rsvpStatus === 'interested' ? 'bg-blue-650 text-white border-blue-650' : 'bg-white border-slate-200 text-slate-655 hover:bg-slate-50' }}">
+                                                                Quan tâm
+                                                            </button>
+                                                            <button wire:click="rsvpEvent({{ $evt->id }}, 'declined')"
+                                                                class="px-2.5 py-1 text-[10px] font-bold rounded-lg border transition {{ $rsvpStatus === 'declined' ? 'bg-red-50 border-red-200 text-red-700' : 'bg-white border-slate-200 text-slate-650 hover:bg-slate-50' }}">
+                                                                Từ chối
+                                                            </button>
+                                                        </div>
+                                                    @endif
+                                                </div>
+                                            </div>
+                                        </div>
+                                    @empty
+                                        <div class="bg-white border border-slate-200 rounded-2xl p-12 text-center text-slate-500 italic text-sm">
+                                            Chưa có sự kiện nào được công bố.
+                                        </div>
+                                    @endforelse
+                                </div>
+                            </div>
+                        @endif
+
+                        {{-- 2.4 Tab Thành viên --}}
+                        @if ($activeTab === 'members')
+                            <div class="space-y-4">
+                                <div class="flex items-center justify-between border-b border-slate-200 pb-3">
+                                    <h3 class="text-sm font-extrabold text-slate-800">Danh sách thành viên ({{ number_format($community->members_count) }})</h3>
+                                </div>
+
+                                {{-- Invite box for managers --}}
+                                @if ($this->canManage && $this->canManuallyAddMembers)
+                                    <div class="bg-slate-50 border border-slate-200 rounded-2xl p-4 flex flex-col md:flex-row items-end gap-3 shadow-2xs">
+                                        <div class="flex-1 w-full">
+                                            <label class="block text-xs font-bold text-slate-600 mb-1">Thêm nhanh thành viên bằng email</label>
+                                            <input type="email" wire:model.blur="memberEmailToAdd" placeholder="email@hcmue.edu.vn"
+                                                class="w-full px-3 py-2 text-xs border rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 border-slate-200 bg-white" />
+                                            @error('memberEmailToAdd') <p class="text-red-500 text-[10px] mt-1 font-semibold">{{ $message }}</p> @enderror
+                                        </div>
+                                        <button wire:click="addMemberByEmail"
+                                            class="px-4 py-2 bg-blue-650 text-white text-xs font-bold rounded-xl transition shadow-2xs whitespace-nowrap">
+                                            Thêm thành viên
+                                        </button>
+                                    </div>
+                                @endif
+
+                                {{-- Members Row list --}}
+                                <div class="bg-white border border-slate-200 rounded-2xl divide-y divide-slate-100 overflow-hidden shadow-2xs">
+                                    @forelse ($this->members as $m)
+                                        <div class="p-4 flex items-center justify-between gap-3">
+                                            <div class="flex items-center gap-3">
+                                                <x-ui.avatar :user="$m->user" size="sm" />
+                                                <div>
                                                         Từ chối
                                                     </button>
                                                 </div>

@@ -43,7 +43,7 @@
                 $baseRouteName = count($routeParts) >= 2 ? $routeParts[0] . '.' . $routeParts[1] : $item['route'];
                 $isActive = request()->routeIs($item['route']) || request()->routeIs($baseRouteName . '.*');
             @endphp
-            <a href="{{ route($item['route']) }}" wire:navigate.hover class="ue-sidebar-subnav-link {{ $isActive ? 'active' : '' }}">
+            <a href="{{ route($item['route']) }}" wire:navigate.hover class="ue-sidebar-subnav-link {{ $isActive ? 'active' : '' }}" @if($isActive) aria-current="page" @endif>
                 <span class="flex-1 text-left truncate">{{ $item['label'] }}</span>
                 @if(isset($item['badge']) && $item['badge'] > 0)
                     <span class="inline-flex items-center justify-center px-2 py-0.5 ml-2 text-[10px] font-bold rounded-full {{ $isActive ? 'bg-ue-brand text-white' : 'bg-red-500 text-white shadow-xs' }}">
