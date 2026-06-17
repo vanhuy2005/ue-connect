@@ -68,8 +68,6 @@
   Thank you for visiting <strong>UEConnect</strong>. We are team <strong>I.102</strong>, the developers directly building <strong>UEConnect</strong>. This is an academic project that applies the theoretical knowledge we learned from lecturer <strong>Nguyễn Quốc Trung</strong> to the real-world development of a compact social networking platform for students of Ho Chi Minh City University of Education (HCMUE).
 </p>
 
-<p align="center"><strong>The project team has 5 members.</strong></p>
-
 ---
 
 ## 1. Project Overview
