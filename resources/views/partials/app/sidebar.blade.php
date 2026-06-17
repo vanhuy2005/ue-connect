@@ -96,9 +96,10 @@ $secondaryNav = [
     :class="collapsed ? 'ue-shell__sidebar--collapsed' : 'ue-shell__sidebar--expanded'"
     aria-label="Điều hướng quản trị"
     role="navigation"
-    x-data="{ moreOpen: false, collapsed: true }"
-    @mouseenter="collapsed = false"
-    @mouseleave="collapsed = true"
+    x-data="{ moreOpen: false, collapsed: true, hovering: false }"
+    x-init="$watch('moreOpen', value => { if (!value && !hovering) { collapsed = true; } })"
+    @mouseenter="hovering = true; collapsed = false"
+    @mouseleave="hovering = false; if (!moreOpen) { collapsed = true; }"
 >
     <div class="flex flex-col gap-6 flex-1 min-h-0 overflow-y-auto pr-1">
         {{-- Logo --}}
@@ -108,6 +109,7 @@ $secondaryNav = [
                 <span x-show="!collapsed" x-transition:enter="transition ease-out duration-200 delay-75" x-transition:enter-start="opacity-0 translate-x-[-8px]" x-transition:enter-end="opacity-100 translate-x-0" x-transition:leave="transition ease-in duration-100" x-transition:leave-start="opacity-100" x-transition:leave-end="opacity-0" class="font-bold text-lg text-ue-brand tracking-tight whitespace-nowrap">UEConnect</span>
                 <span x-show="!collapsed" x-transition:enter="transition ease-out duration-200 delay-100" x-transition:enter-start="opacity-0 scale-95" x-transition:enter-end="opacity-100 scale-100" class="ml-1 px-1.5 py-0.5 rounded text-[8px] font-bold tracking-wider uppercase bg-gradient-to-r from-ue-brand to-cyan-500 text-white shadow-sm">Admin</span>
             </a>
+            <span class="sr-only">Admin console</span>
         </div>
 
         {{-- Category Admin Navigation --}}
@@ -223,8 +225,10 @@ $secondaryNav = [
     x-data="{
         moreOpen: false,
         collapsed: true,
-        notificationsOpen: false
+        notificationsOpen: false,
+        hovering: false
     }"
+    x-init="$watch('moreOpen', value => { if (!value && !hovering && !notificationsOpen) { collapsed = true; } })"
     @click.outside="notificationsOpen = false"
     @keydown.escape.window="notificationsOpen = false"
 >
@@ -233,8 +237,8 @@ $secondaryNav = [
         :class="collapsed ? 'ue-shell__sidebar--collapsed' : 'ue-shell__sidebar--expanded'"
         aria-label="Điều hướng chính"
         role="navigation"
-        @mouseenter="if (!notificationsOpen) { collapsed = false; }"
-        @mouseleave="if (!notificationsOpen) { collapsed = true; }"
+        @mouseenter="hovering = true; if (!notificationsOpen) { collapsed = false; }"
+        @mouseleave="hovering = false; if (!notificationsOpen && !moreOpen) { collapsed = true; }"
     >
     <div class="flex flex-col gap-7 flex-1 min-h-0 overflow-y-auto pr-1">
         {{-- Logo --}}

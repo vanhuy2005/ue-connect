@@ -75,7 +75,7 @@ class ProcessImageVariantsJob implements ShouldQueue
                         'cloudinary_error_message' => 'Cloudinary daily sync limit reached; using R2 fallback.',
                     ];
                 } else {
-                    $isProfileImage = in_array($this->media->collection, ['avatar', 'community_avatar']);
+                    $isProfileImage = in_array($this->media->collection, ['avatar']);
                     if ($isProfileImage) {
                         $publicId = 'avatars/user_'.$this->media->user_id;
                         $options = [

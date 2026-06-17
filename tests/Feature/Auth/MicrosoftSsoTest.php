@@ -26,6 +26,9 @@ class MicrosoftSsoTest extends TestCase
         config(['services.microsoft.enabled' => true]);
         config(['services.microsoft.tenant' => 'b1a9fdc0-1d56-4c3d-a481-809fff8a26db']);
         config(['services.microsoft.allowed_domains' => ['student.hcmue.edu.vn', 'teacher.hcmue.edu.vn']]);
+        config(['services.microsoft.client_id' => 'mock-client-id']);
+        config(['services.microsoft.client_secret' => 'mock-client-secret']);
+        config(['services.microsoft.redirect' => 'http://ue-connect.test/login/microsoft/callback']);
     }
 
     /**

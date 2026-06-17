@@ -34,6 +34,15 @@ server {
         proxy_send_timeout 60s;
     }
 
+    # Serve Vite build assets directly — must be BEFORE location /
+    # ^~ ensures this block wins over regex locations
+    location ^~ /build/ {
+        try_files $uri =404;
+        access_log off;
+        expires 1y;
+        add_header Cache-Control "public, immutable";
+    }
+
     # Cấu hình proxy cho Laravel PHP
     location / {
         try_files $uri $uri/ /index.php?$query_string;

@@ -152,10 +152,10 @@ class CommunityDetailTest extends TestCase
         Volt::actingAs($owner)
             ->test('pages.app.community-show', ['community' => $community])
             ->set('activeTab', 'settings')
-            ->assertSee('Preview hành vi sau khi lưu')
-            ->assertSee('Không đưa cộng đồng ra trang khám phá')
-            ->assertSee('Owner hoặc quản lý thêm thành viên bằng email')
-            ->assertSee('Cộng đồng đang vận hành bình thường');
+            ->assertSee('Xem trước hành vi')
+            ->assertSee('Chỉ thành viên đã gia nhập mới có thể tìm thấy và truy cập vào nhóm.')
+            ->assertSee('Chỉ chủ sở hữu hoặc người quản lý mới có thể thêm thành viên qua email.')
+            ->assertSee('Thành viên có thể đăng bài, bình luận, và tham gia các sự kiện bình thường.');
     }
 
     public function test_owner_can_add_member_by_email_to_private_invite_only_community(): void
@@ -222,7 +222,7 @@ class CommunityDetailTest extends TestCase
         Volt::actingAs($owner)
             ->test('pages.app.community-show', ['community' => $community])
             ->set('activeTab', 'settings')
-            ->assertSee('Yêu cầu tham gia chờ duyệt')
+            ->assertSee('Xét duyệt gia nhập')
             ->assertSee('Muốn tham gia học tập.')
             ->call('approveJoinRequest', $joinRequest->id)
             ->assertHasNoErrors();
@@ -293,6 +293,48 @@ class CommunityDetailTest extends TestCase
 
         $this->assertNotNull($community->cover()->first());
         $this->assertNotNull($community->avatar()->first());
+    }
+
+    public function test_owner_can_save_cropped_avatar(): void
+    {
+        Storage::fake('local');
+        Storage::fake('r2_public');
+
+        $owner = $this->createActiveUser();
+        $community = Community::factory()->active()->forOwner($owner)->create();
+
+        $avatarFile = UploadedFile::fake()->image('avatar_cropped.jpg', 400, 400);
+
+        Volt::actingAs($owner)
+            ->test('pages.app.community-show', ['community' => $community])
+            ->set('croppedAvatarFile', $avatarFile)
+            ->call('saveCommunityAvatarCropped')
+            ->assertHasNoErrors()
+            ->assertDispatched('notify', type: 'success');
+
+        $community->refresh();
+        $this->assertNotNull($community->avatar()->first());
+    }
+
+    public function test_owner_can_save_cropped_cover(): void
+    {
+        Storage::fake('local');
+        Storage::fake('r2_public');
+
+        $owner = $this->createActiveUser();
+        $community = Community::factory()->active()->forOwner($owner)->create();
+
+        $coverFile = UploadedFile::fake()->image('cover_cropped.jpg', 1200, 400);
+
+        Volt::actingAs($owner)
+            ->test('pages.app.community-show', ['community' => $community])
+            ->set('croppedCoverFile', $coverFile)
+            ->call('saveCommunityCoverCropped')
+            ->assertHasNoErrors()
+            ->assertDispatched('notify', type: 'success');
+
+        $community->refresh();
+        $this->assertNotNull($community->cover()->first());
     }
 
     public function test_member_can_invite_multiple_friends_simultaneously(): void

@@ -4,9 +4,9 @@ namespace Tests\Feature\CareerPathway;
 
 use App\Enums\CareerPositionStatus;
 use App\Enums\CareerPositionVisibility;
-use App\Enums\CareerProgramStatus;
 use App\Enums\CareerUserPathwayStatus;
 use App\Enums\CareerUserPathwayVisibility;
+use App\Enums\ProgramStatus;
 use App\Models\CareerCourse;
 use App\Models\CareerPosition;
 use App\Models\CareerProgram;
@@ -21,36 +21,36 @@ class CareerPathwaySearchTest extends TestCase
 
     public function test_can_search_course_by_code_and_name()
     {
-        $program = CareerProgram::create(['code' => 'IT1', 'name' => 'IT', 'type' => 'major', 'status' => CareerProgramStatus::READY->value]);
-        $course = CareerCourse::create(['code' => 'COMP101', 'name_vi' => 'Toán Rời Rạc', 'credits' => 3]);
-        $program->courses()->attach($course->id, ['semester' => 1, 'type' => 'mandatory']);
+        $program = CareerProgram::factory()->create(['name' => 'IT', 'status' => ProgramStatus::READY->value]);
+        $course = CareerCourse::create(['code' => 'COMP101', 'name' => 'Toán Rời Rạc']);
+        $program->courses()->attach($course->id);
 
-        $response = $this->getJson(route('career-pathways.search').'?q=COMP101');
+        $response = $this->getJson(route('career-pathway.career-pathways.search').'?q=COMP101');
         $response->assertStatus(200);
         $this->assertCount(1, $response->json('data'));
         $this->assertEquals('course', $response->json('data.0.type'));
 
-        $response2 = $this->getJson(route('career-pathways.search').'?q=Toán');
+        $response2 = $this->getJson(route('career-pathway.career-pathways.search').'?q=Toán');
         $response2->assertStatus(200);
         $this->assertCount(1, $response2->json('data'));
     }
 
     public function test_hidden_program_not_returned()
     {
-        CareerProgram::create(['code' => 'IT2', 'name' => 'Hidden IT', 'type' => 'major', 'status' => CareerProgramStatus::DRAFT->value]);
+        CareerProgram::factory()->create(['name' => 'Hidden IT', 'status' => ProgramStatus::EMPTY_EXTRACTION->value]);
 
-        $response = $this->getJson(route('career-pathways.search').'?q=Hidden');
+        $response = $this->getJson(route('career-pathway.career-pathways.search').'?q=Hidden');
         $response->assertStatus(200);
         $this->assertCount(0, $response->json('data'));
     }
 
     public function test_course_in_hidden_program_not_returned()
     {
-        $program = CareerProgram::create(['code' => 'IT3', 'name' => 'Hidden IT', 'type' => 'major', 'status' => CareerProgramStatus::DRAFT->value]);
-        $course = CareerCourse::create(['code' => 'COMP102', 'name_vi' => 'Secret Course', 'credits' => 3]);
-        $program->courses()->attach($course->id, ['semester' => 1, 'type' => 'mandatory']);
+        $program = CareerProgram::factory()->create(['name' => 'Hidden IT', 'status' => ProgramStatus::EMPTY_EXTRACTION->value]);
+        $course = CareerCourse::create(['code' => 'COMP102', 'name' => 'Secret Course']);
+        $program->courses()->attach($course->id);
 
-        $response = $this->getJson(route('career-pathways.search').'?q=COMP102');
+        $response = $this->getJson(route('career-pathway.career-pathways.search').'?q=COMP102');
         $response->assertStatus(200);
         $this->assertCount(0, $response->json('data'));
     }
@@ -63,7 +63,7 @@ class CareerPathwaySearchTest extends TestCase
         CareerPosition::create([
             'title' => 'Frontend Dev',
             'slug' => 'frontend-dev',
-            'user_id' => $author->id,
+            'created_by' => $author->id,
             'status' => CareerPositionStatus::PUBLISHED->value,
             'visibility' => CareerPositionVisibility::PUBLIC->value,
         ]);
@@ -72,12 +72,12 @@ class CareerPathwaySearchTest extends TestCase
         CareerPosition::create([
             'title' => 'Secret Dev',
             'slug' => 'secret-dev',
-            'user_id' => $author->id,
+            'created_by' => $author->id,
             'status' => CareerPositionStatus::PUBLISHED->value,
             'visibility' => CareerPositionVisibility::PRIVATE->value,
         ]);
 
-        $response = $this->getJson(route('career-pathways.search').'?q=Dev');
+        $response = $this->getJson(route('career-pathway.career-pathways.search').'?q=Dev');
         $response->assertStatus(200);
 
         // Should only return Frontend Dev
@@ -108,7 +108,7 @@ class CareerPathwaySearchTest extends TestCase
             'visibility' => CareerUserPathwayVisibility::PRIVATE->value,
         ]);
 
-        $response = $this->getJson(route('career-pathways.search').'?q=Journey');
+        $response = $this->getJson(route('career-pathway.career-pathways.search').'?q=Journey');
         $response->assertStatus(200);
 
         $data = $response->json('data');

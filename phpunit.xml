@@ -32,5 +32,11 @@
         <env name="PULSE_ENABLED" value="false"/>
         <env name="TELESCOPE_ENABLED" value="false"/>
         <env name="NIGHTWATCH_ENABLED" value="false"/>
+        <env name="FILESYSTEM_DISK" value="public"/>
+        <env name="MEDIA_DISK" value="public"/>
+        <env name="PRIVATE_MEDIA_DISK" value="private"/>
+        <env name="MEDIA_STORAGE_STRATEGY" value="local_only"/>
+        <env name="MEDIA_R2_ENABLED" value="false"/>
+        <env name="MEDIA_CLOUDINARY_ENABLED" value="false"/>
     </php>
 </phpunit>

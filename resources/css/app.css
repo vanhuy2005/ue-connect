@@ -1909,7 +1909,6 @@
     padding-right: 14px !important;
     transition: width 350ms cubic-bezier(0.4, 0, 0.2, 1) !important;
     will-change: width;
-    overflow-x: hidden !important; /* Clip content cleanly during transition */
 }
 
 /* Hide scrollbar inside sidebar for a clean, premium visual */

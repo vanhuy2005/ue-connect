@@ -69,7 +69,9 @@ class AdminNavigationTest extends TestCase
         ]);
         $admin->assignRole('admin');
 
-        $response = $this->actingAs($admin)->get(route('admin.console', ['group' => 'people-access']));
+        $response = $this->actingAs($admin)
+            ->followingRedirects()
+            ->get(route('admin.console', ['group' => 'people-access']));
 
         $response->assertStatus(200);
 
@@ -104,9 +106,9 @@ class AdminNavigationTest extends TestCase
 
         $response->assertStatus(200);
         $response->assertSee('Quản lý Mentor');
-        $response->assertSee(route('admin.console', ['group' => 'people-access']));
+        $response->assertSee(route('admin.verifications.queue'));
 
-        $this->assertSame(2, substr_count($response->getContent(), 'aria-current="page"'));
+        $this->assertSame(3, substr_count($response->getContent(), 'aria-current="page"'));
     }
 
     public function test_admin_console_defaults_to_first_visible_category(): void
@@ -116,7 +118,9 @@ class AdminNavigationTest extends TestCase
         ]);
         $admin->assignRole('admin');
 
-        $response = $this->actingAs($admin)->get(route('admin.console'));
+        $response = $this->actingAs($admin)
+            ->followingRedirects()
+            ->get(route('admin.console'));
 
         $response->assertStatus(200);
         $response->assertSee('Sức khỏe hệ thống, analytics và các chỉ báo vận hành.');
