@@ -992,7 +992,7 @@ new class extends Component
                     ->get();
             } elseif ($this->activeTab === 'communities' && ($isOwn || ($targetPrivacy ? (bool) $targetPrivacy->show_communities : true))) {
                 $profileCommunities = $this->user->activeCommunityMemberships()
-                    ->with(['community.owner'])
+                    ->with(['community.owner', 'community.media'])
                     ->whereHas('community', function ($query): void {
                         $query->where('status', CommunityStatus::Active->value);
                     })
@@ -1044,6 +1044,21 @@ new class extends Component
             'profileCommunities' => $profileCommunities,
             'profileReposts' => $profileReposts,
         ];
+    }
+
+    public function resolveAvatarUrl(\App\Models\Community $c): ?string
+    {
+        $avatarMedia = $c->relationLoaded('media')
+            ? $c->media->firstWhere('collection', 'community_avatar')
+            : $c->avatar()->first();
+        $avatarUrl = $avatarMedia ? \App\Support\Media\MediaUrlResolver::publicUrl($avatarMedia, 'display') : null;
+        if (!$avatarUrl) {
+            $coverMedia = $c->relationLoaded('media')
+                ? $c->media->firstWhere('collection', 'community_cover')
+                : $c->cover()->first();
+            $avatarUrl = $coverMedia ? \App\Support\Media\MediaUrlResolver::publicUrl($coverMedia, 'thumb') : null;
+        }
+        return $avatarUrl;
     }
 }; ?>
 
@@ -1791,10 +1806,15 @@ new class extends Component
                     @if ($profileCommunities->isNotEmpty())
                         <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
                             @foreach ($profileCommunities as $community)
+                                @php $avatarUrl = $this->resolveAvatarUrl($community); @endphp
                                 <a href="{{ route('community.show', $community->id) }}" wire:navigate
                                    class="group flex items-center gap-3 rounded-2xl border border-slate-150 bg-white p-3 shadow-2xs hover:border-ue-brand/30 hover:bg-ue-brand-soft/20 transition">
-                                    <div class="w-11 h-11 rounded-xl bg-gradient-to-br from-ue-brand/20 to-ue-brand/5 border border-slate-150 flex items-center justify-center text-ue-brand flex-shrink-0 group-hover:scale-105 transition-transform">
-                                        <x-ui.icon name="users" size="sm" class="text-ue-brand" />
+                                    <div class="w-11 h-11 rounded-xl bg-gradient-to-br from-ue-brand/20 to-ue-brand/5 border border-slate-150 flex items-center justify-center text-ue-brand flex-shrink-0 group-hover:scale-105 transition-transform overflow-hidden">
+                                        @if ($avatarUrl)
+                                            <img src="{{ $avatarUrl }}" class="w-full h-full object-cover" alt="{{ $community->name }}">
+                                        @else
+                                            <x-ui.icon name="users" size="sm" class="text-ue-brand" />
+                                        @endif
                                     </div>
                                     <div class="min-w-0 flex-1">
                                         <h3 class="text-xs font-bold text-slate-800 truncate group-hover:text-ue-brand transition-colors">{{ $community->name }}</h3>
