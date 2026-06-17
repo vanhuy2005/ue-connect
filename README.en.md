@@ -4,20 +4,6 @@
 
 > **Last Updated / Cập nhật lần cuối:** 2026-06-18 00:00:00 (GMT+7)
 
-## Hello From The UEConnect Team
-
-Thank you for visiting **UEConnect**. We are team I.102, the developers directly building **UEConnect**. This is an academic project that applies the theoretical knowledge we learned from lecturer **Nguyễn Quốc Trung** to the real-world development of a compact social networking platform for students of Ho Chi Minh City University of Education (HCMUE).
-
-The project team has 5 members:
-
-| Member | Student ID / MSSV |
-|---|---|
-| Phạm Gia Bảo | 49.01.104.009 |
-| Nguyễn Văn Quang Huy | 49.01.104.055 |
-| Trần Gia Huy | 49.01.104.058 |
-| Nguyễn Tuấn Khôi | 49.01.104.074 |
-| Võ Chí Lâm | 49.01.104.081 |
-
 <p align="center">
   <img src="public/images/brand/primary-logo-nobg.png" alt="UEConnect Logo" width="760">
 </p>
@@ -63,6 +49,47 @@ The project team has 5 members:
   <img src="https://img.shields.io/badge/Pint-Code%20Style-111827?style=for-the-badge&logo=laravel&logoColor=white" alt="Laravel Pint">
   <img src="https://img.shields.io/badge/Webpush-Notifications-008080?style=for-the-badge&logo=webpush&logoColor=white" alt="Webpush">
 </p>
+
+---
+
+<h2 align="center">Hello From The UEConnect Team</h2>
+
+<p align="center">
+  Thank you for visiting <strong>UEConnect</strong>. We are team <strong>I.102</strong>, the developers directly building <strong>UEConnect</strong>. This is an academic project that applies the theoretical knowledge we learned from lecturer <strong>Nguyễn Quốc Trung</strong> to the real-world development of a compact social networking platform for students of Ho Chi Minh City University of Education (HCMUE).
+</p>
+
+<p align="center"><strong>The project team has 5 members:</strong></p>
+
+<table align="center">
+  <thead>
+    <tr>
+      <th>Member</th>
+      <th>Student ID / MSSV</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>Phạm Gia Bảo</td>
+      <td>49.01.104.009</td>
+    </tr>
+    <tr>
+      <td>Nguyễn Văn Quang Huy</td>
+      <td>49.01.104.055</td>
+    </tr>
+    <tr>
+      <td>Trần Gia Huy</td>
+      <td>49.01.104.058</td>
+    </tr>
+    <tr>
+      <td>Nguyễn Tuấn Khôi</td>
+      <td>49.01.104.074</td>
+    </tr>
+    <tr>
+      <td>Võ Chí Lâm</td>
+      <td>49.01.104.081</td>
+    </tr>
+  </tbody>
+</table>
 
 ---
 

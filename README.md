@@ -4,20 +4,6 @@
 
 > **Cập nhật lần cuối:** 2026-06-18 00:00:00 (GMT+7)
 
-## Lời chào từ đội ngũ UEConnect
-
-Cảm ơn các bạn đã ghé thăm **UEConnect**. Tụi mình là nhóm I.102, là những lập trình viên trực tiếp xây dựng **UEConnect**. Đây là một dự án học thuật nhằm ứng dụng các kiến thức lý thuyết đã được học từ thầy **Nguyễn Quốc Trung** vào thực tế phát triển một trang mạng xã hội thu nhỏ cho cộng đồng sinh viên của Trường Đại học Sư Phạm T.PHCM (HCMUE).
-
-Nhóm thành viên tham gia, gồm 5 người:
-
-| Thành viên | MSSV |
-|---|---|
-| Phạm Gia Bảo | 49.01.104.009 |
-| Nguyễn Văn Quang Huy | 49.01.104.055 |
-| Trần Gia Huy | 49.01.104.058 |
-| Nguyễn Tuấn Khôi | 49.01.104.074 |
-| Võ Chí Lâm | 49.01.104.081 |
-
 <p align="center">
   <img src="public/images/brand/primary-logo-nobg.png" alt="UEConnect Logo" width="760">
 </p>
@@ -27,14 +13,83 @@ Nhóm thành viên tham gia, gồm 5 người:
 </p>
 
 <p align="center">
+  <!-- Backend -->
   <img src="https://img.shields.io/badge/PHP-8.3%2B-777BB4?style=for-the-badge&logo=php&logoColor=white" alt="PHP 8.3+">
   <img src="https://img.shields.io/badge/Laravel-13.x-FF2D20?style=for-the-badge&logo=laravel&logoColor=white" alt="Laravel 13">
   <img src="https://img.shields.io/badge/Livewire-4.x-FB70A9?style=for-the-badge&logo=livewire&logoColor=white" alt="Livewire 4">
+  <img src="https://img.shields.io/badge/AlpineJS-3.x-77C1D2?style=for-the-badge&logo=alpine.js&logoColor=white" alt="Alpine.js 3">
   <img src="https://img.shields.io/badge/TailwindCSS-3.x-38B2AC?style=for-the-badge&logo=tailwindcss&logoColor=white" alt="TailwindCSS 3">
-  <img src="https://img.shields.io/badge/Azure%20VM-Production%20VPS-0078D4?style=for-the-badge&logo=microsoftazure&logoColor=white" alt="Azure VM">
-  <img src="https://img.shields.io/badge/Docker-Container-2496ED?style=for-the-badge&logo=docker&logoColor=white" alt="Docker">
-  <img src="https://img.shields.io/badge/Reverb-Realtime%20WS-7C3AED?style=for-the-badge&logo=laravel&logoColor=white" alt="Laravel Reverb">
+  <img src="https://img.shields.io/badge/Vite-Build%20Tool-646CFF?style=for-the-badge&logo=vite&logoColor=white" alt="Vite">
 </p>
+
+<p align="center">
+  <!-- Data & Infra -->
+  <img src="https://img.shields.io/badge/SQL%20Server-Database-CC2927?style=for-the-badge&logo=microsoftsqlserver&logoColor=white" alt="SQL Server">
+  <img src="https://img.shields.io/badge/Redis-Cache%20%26%20Queue-DC382D?style=for-the-badge&logo=redis&logoColor=white" alt="Redis">
+  <img src="https://img.shields.io/badge/Reverb-Realtime%20WS-7C3AED?style=for-the-badge&logo=laravel&logoColor=white" alt="Laravel Reverb">
+  <img src="https://img.shields.io/badge/Nginx-Reverse%20Proxy-009639?style=for-the-badge&logo=nginx&logoColor=white" alt="Nginx">
+  <img src="https://img.shields.io/badge/Docker-Container-2496ED?style=for-the-badge&logo=docker&logoColor=white" alt="Docker">
+</p>
+
+<p align="center">
+  <!-- Services & AI -->
+  <img src="https://img.shields.io/badge/Cloudinary-Media%20CDN-3448C5?style=for-the-badge&logo=cloudinary&logoColor=white" alt="Cloudinary">
+  <img src="https://img.shields.io/badge/Cloudflare%20R2-Object%20Storage-F38020?style=for-the-badge&logo=cloudflare&logoColor=white" alt="Cloudflare R2">
+  <img src="https://img.shields.io/badge/Gemini-AI%20Provider-4285F4?style=for-the-badge&logo=googlegemini&logoColor=white" alt="Google Gemini">
+  <img src="https://img.shields.io/badge/Ollama-Local%20LLM-000000?style=for-the-badge&logo=ollama&logoColor=white" alt="Ollama">
+  <img src="https://img.shields.io/badge/Qdrant-Vector%20DB-DC244C?style=for-the-badge&logo=qdrant&logoColor=white" alt="Qdrant">
+</p>
+
+<p align="center">
+  <!-- Auth & Tooling -->
+  <img src="https://img.shields.io/badge/Microsoft%20SSO-Azure%20Entra%20ID-0078D4?style=for-the-badge&logo=microsoftazure&logoColor=white" alt="Microsoft SSO">
+  <img src="https://img.shields.io/badge/Sanctum-API%20Auth-FF2D20?style=for-the-badge&logo=laravel&logoColor=white" alt="Laravel Sanctum">
+  <img src="https://img.shields.io/badge/Spatie-Permissions-EF4444?style=for-the-badge&logo=laravel&logoColor=white" alt="Spatie Permissions">
+  <img src="https://img.shields.io/badge/PHPUnit-Testing-6E329D?style=for-the-badge&logo=phpunit&logoColor=white" alt="PHPUnit">
+  <img src="https://img.shields.io/badge/Pint-Code%20Style-111827?style=for-the-badge&logo=laravel&logoColor=white" alt="Laravel Pint">
+  <img src="https://img.shields.io/badge/Webpush-Notifications-008080?style=for-the-badge&logo=webpush&logoColor=white" alt="Webpush">
+</p>
+
+---
+
+<h2 align="center">Lời chào từ đội ngũ UEConnect</h2>
+
+<p align="center">
+  Cảm ơn các bạn đã ghé thăm <strong>UEConnect</strong>. Tụi mình là nhóm <strong>I.102</strong>, là những lập trình viên trực tiếp xây dựng <strong>UEConnect</strong>. Đây là một dự án học thuật nhằm ứng dụng các kiến thức lý thuyết đã được học từ thầy <strong>Nguyễn Quốc Trung</strong> vào thực tế phát triển một trang mạng xã hội thu nhỏ cho cộng đồng sinh viên của Trường Đại học Sư phạm TP.HCM (HCMUE).
+</p>
+
+<p align="center"><strong>Nhóm thành viên tham gia, gồm 5 người:</strong></p>
+
+<table align="center">
+  <thead>
+    <tr>
+      <th>Thành viên</th>
+      <th>MSSV</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>Phạm Gia Bảo</td>
+      <td>49.01.104.009</td>
+    </tr>
+    <tr>
+      <td>Nguyễn Văn Quang Huy</td>
+      <td>49.01.104.055</td>
+    </tr>
+    <tr>
+      <td>Trần Gia Huy</td>
+      <td>49.01.104.058</td>
+    </tr>
+    <tr>
+      <td>Nguyễn Tuấn Khôi</td>
+      <td>49.01.104.074</td>
+    </tr>
+    <tr>
+      <td>Võ Chí Lâm</td>
+      <td>49.01.104.081</td>
+    </tr>
+  </tbody>
+</table>
 
 ---
 
