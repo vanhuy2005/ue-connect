@@ -92,7 +92,7 @@ jobs:
             docker exec -w /var/www/html "$CONTAINER_NAME" sh -lc 'find public/build/assets -type f -name "*.css" | grep -q .'
             docker exec -w /var/www/html "$CONTAINER_NAME" sh -lc 'find public/build/assets -type f -name "*.js" | grep -q .'
 
-            CSS_FILE="$(docker exec -w /var/www/html "$CONTAINER_NAME" php -r '$m=json_decode(file_get_contents("public/build/manifest.json"), true); echo $m["resources/css/app.css"]["file"] ?? "";')"
+            CSS_FILE="$(docker exec -w /var/www/html "$CONTAINER_NAME" php -r 'echo json_decode(file_get_contents("public/build/manifest.json"), true)["resources/css/app.css"]["file"] ?? "";')"
 
             if [ -z "$CSS_FILE" ]; then
               echo "ERROR: CSS entry not found in Vite manifest."
@@ -174,13 +174,7 @@ jobs:
 
             echo "Checking push routes and VAPID keys..."
             docker exec -w /var/www/html "$CONTAINER_NAME" php artisan route:list | grep -Ei 'push|subscription|notification' || true
-            docker exec -w /var/www/html "$CONTAINER_NAME" php -r '
-              if (empty(config("webpush.vapid.public_key")) || empty(config("webpush.vapid.private_key"))) {
-                  echo "Missing VAPID keys!\n";
-                  exit(1);
-              }
-              echo "VAPID Keys configuration OK\n";
-            '
+            docker exec -w /var/www/html "$CONTAINER_NAME" php artisan tinker --execute='if (empty(config("webpush.vapid.public_key")) || empty(config("webpush.vapid.private_key"))) { echo "Missing VAPID keys!\n"; exit(1); } echo "VAPID Keys configuration OK\n";'
 
             docker image prune -f
 
