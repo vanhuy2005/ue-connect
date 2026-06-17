@@ -40,24 +40,30 @@ class AuditCommandTest extends TestCase
         $path = $this->fixturePath.'/valid-8-semesters';
 
         $cohort = CareerCohort::create(['name' => 'Khoa48', 'slug' => 'khoa-48', 'year' => 2023]);
-        $faculty = CareerFaculty::create(['name' => 'CNTT']);
-        $major = CareerMajor::create(['name' => 'CNTT', 'faculty_id' => $faculty->id]);
+        $faculty = CareerFaculty::create(['name' => 'CNTT', 'slug' => 'cntt-'.uniqid()]);
+        $major = CareerMajor::create(['name' => 'CNTT', 'slug' => 'cntt-'.uniqid(), 'faculty_id' => $faculty->id]);
 
         $program = CareerProgram::create([
             'cohort_id' => $cohort->id,
             'faculty_id' => $faculty->id,
             'major_id' => $major->id,
             'status' => ProgramStatus::READY,
+            'name' => 'CNTT',
+            'slug' => 'cntt-'.uniqid(),
         ]);
 
-        $s1 = CareerSemester::create(['program_id' => $program->id, 'semester_number' => 1, 'name' => 'Học kỳ 1']);
-        $s2 = CareerSemester::create(['program_id' => $program->id, 'semester_number' => 2, 'name' => 'Học kỳ 2']);
-
-        $c1 = CareerCourse::create(['code' => 'COMP101', 'name' => 'Nhập môn lập trình', 'credits' => 3]);
-        $c2 = CareerCourse::create(['code' => 'COMP102', 'name' => 'Cấu trúc dữ liệu', 'credits' => 4]);
-
-        CareerProgramCourse::create(['program_id' => $program->id, 'semester_id' => $s1->id, 'course_id' => $c1->id, 'knowledge_block' => 'Khối kiến thức chung', 'is_mandatory' => true]);
-        CareerProgramCourse::create(['program_id' => $program->id, 'semester_id' => $s2->id, 'course_id' => $c2->id, 'knowledge_block' => 'Khối kiến thức chung', 'is_mandatory' => true]);
+        for ($i = 1; $i <= 8; $i++) {
+            $s = CareerSemester::create(['program_id' => $program->id, 'semester_number' => $i, 'name' => 'Học kỳ '.$i]);
+            $c = CareerCourse::create(['code' => 'COMP100'.$i, 'name' => 'Môn học '.$i]);
+            CareerProgramCourse::create([
+                'program_id' => $program->id,
+                'semester_id' => $s->id,
+                'course_id' => $c->id,
+                'knowledge_block' => 'Khối kiến thức chung',
+                'is_mandatory' => true,
+                'credits' => 3,
+            ]);
+        }
 
         $this->artisan('career-pathway:audit-import', ['sourcePath' => $path, '--fail-on-mismatch' => true])
             ->assertSuccessful()
@@ -69,14 +75,16 @@ class AuditCommandTest extends TestCase
         $path = $this->fixturePath.'/valid-8-semesters';
 
         $cohort = CareerCohort::create(['name' => 'Khoa48', 'slug' => 'khoa-48-s', 'year' => 2023]);
-        $faculty = CareerFaculty::create(['name' => 'CNTT']);
-        $major = CareerMajor::create(['name' => 'CNTT', 'faculty_id' => $faculty->id]);
+        $faculty = CareerFaculty::create(['name' => 'CNTT', 'slug' => 'cntt-'.uniqid()]);
+        $major = CareerMajor::create(['name' => 'CNTT', 'slug' => 'cntt-'.uniqid(), 'faculty_id' => $faculty->id]);
 
         $program = CareerProgram::create([
             'cohort_id' => $cohort->id,
             'faculty_id' => $faculty->id,
             'major_id' => $major->id,
             'status' => ProgramStatus::READY,
+            'name' => 'CNTT',
+            'slug' => 'cntt-'.uniqid(),
         ]);
 
         // Only insert 1 semester, but markdown has 2
@@ -92,14 +100,16 @@ class AuditCommandTest extends TestCase
         $path = $this->fixturePath.'/valid-8-semesters';
 
         $cohort = CareerCohort::create(['name' => 'Khoa48', 'slug' => 'khoa-48-c', 'year' => 2023]);
-        $faculty = CareerFaculty::create(['name' => 'CNTT']);
-        $major = CareerMajor::create(['name' => 'CNTT', 'faculty_id' => $faculty->id]);
+        $faculty = CareerFaculty::create(['name' => 'CNTT', 'slug' => 'cntt-'.uniqid()]);
+        $major = CareerMajor::create(['name' => 'CNTT', 'slug' => 'cntt-'.uniqid(), 'faculty_id' => $faculty->id]);
 
         $program = CareerProgram::create([
             'cohort_id' => $cohort->id,
             'faculty_id' => $faculty->id,
             'major_id' => $major->id,
             'status' => ProgramStatus::READY,
+            'name' => 'CNTT',
+            'slug' => 'cntt-'.uniqid(),
         ]);
 
         $s1 = CareerSemester::create(['program_id' => $program->id, 'semester_number' => 1, 'name' => 'Học kỳ 1']);

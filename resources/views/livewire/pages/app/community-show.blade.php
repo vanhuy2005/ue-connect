@@ -2481,19 +2481,41 @@ new class extends Component
                                             <div class="flex items-center gap-3">
                                                 <x-ui.avatar :user="$m->user" size="sm" />
                                                 <div>
-                                                        Từ chối
-                                                    </button>
+                                                    <div class="flex items-center gap-2">
+                                                        <span class="text-xs font-bold text-slate-800">{{ $m->user?->name }}</span>
+                                                        <span class="px-2 py-0.5 text-[10px] font-semibold rounded-md 
+                                                            {{ $m->role === \App\Enums\CommunityMemberRole::Owner ? 'bg-amber-50 text-amber-700 border border-amber-100' : '' }}
+                                                            {{ $m->role === \App\Enums\CommunityMemberRole::Manager ? 'bg-blue-50 text-blue-700 border border-blue-100' : '' }}
+                                                            {{ $m->role === \App\Enums\CommunityMemberRole::Moderator ? 'bg-emerald-50 text-emerald-700 border border-emerald-100' : '' }}
+                                                            {{ $m->role === \App\Enums\CommunityMemberRole::Member ? 'bg-slate-100 text-slate-600' : '' }}
+                                                        ">
+                                                            {{ $m->role?->label() }}
+                                                        </span>
+                                                    </div>
+                                                    @if ($m->user?->profile?->faculty)
+                                                        <p class="text-[10px] text-slate-400 font-semibold mt-0.5">{{ $m->user->profile->faculty }}</p>
+                                                    @endif
                                                 </div>
                                             </div>
-                                        @empty
-                                            <p class="text-xs text-slate-500 italic py-4">Không có yêu cầu nào đang chờ xét duyệt.</p>
-                                        @endforelse
-                                    </div>
+
+                                            @if ($this->community->owner_id === auth()->id() || auth()->user()?->can('manageMemberRoles', $this->community))
+                                                @if ($m->role !== \App\Enums\CommunityMemberRole::Owner)
+                                                    <button type="button" wire:click="openChangeRoleModal({{ $m->id }})" 
+                                                        title="Cấp quyền"
+                                                        class="w-8 h-8 rounded-xl bg-slate-50 hover:bg-slate-100 text-slate-500 hover:text-slate-700 transition flex items-center justify-center border border-slate-150 shadow-3xs"
+                                                    >
+                                                        <x-ui.icon name="shield" size="xs" />
+                                                    </button>
+                                                @endif
+                                            @endif
+                                        </div>
+                                    @empty
+                                        <p class="text-xs text-slate-500 italic py-4 text-center">Không có thành viên nào.</p>
+                                    @endforelse
                                 </div>
                             @endif
                         </div>
                     @endif
-                </div>
 
                 {{-- Sidebar Right Block --}}
                 <div class="space-y-4">

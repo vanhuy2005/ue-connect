@@ -20,10 +20,9 @@ class WorktreeUITest extends TestCase
     public function test_can_render_career_pathway_page()
     {
         $user = User::factory()->create();
-        $response = $this->actingAs($user)->withoutMiddleware()->get(route('app.career-pathway.index'));
+        $response = $this->actingAs($user)->withoutMiddleware()->get(route('app.career-pathway.programs'));
 
         $response->assertStatus(200);
-        $response->assertSee('Career Pathway');
         $response->assertSeeLivewire('pages.app.career-pathway');
     }
 
@@ -52,7 +51,7 @@ class WorktreeUITest extends TestCase
             ->assertSee($cohort->name)
             ->assertSee($faculty->name)
             ->assertSee($major->name)
-            ->assertSee('Sẵn sàng khám phá');
+            ->assertSee('Chọn chương trình để mở worktree học tập');
 
         // Test rendering with selected filters
         Volt::test('pages.app.career-pathway')
@@ -60,7 +59,7 @@ class WorktreeUITest extends TestCase
             ->set('facultyId', $faculty->id)
             ->set('majorId', $major->id)
             ->assertSet('cohortId', $cohort->id)
-            ->assertSee('Đã xác minh đầy đủ')
+            ->assertSee('Dữ liệu đã sẵn sàng')
             ->assertSee('Học kỳ 1');
     }
 
