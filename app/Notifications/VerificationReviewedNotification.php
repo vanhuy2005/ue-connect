@@ -4,6 +4,7 @@ namespace App\Notifications;
 
 use App\Channels\Messages\WebPushMessage;
 use App\Channels\WebPushChannel;
+use BackedEnum;
 use Illuminate\Bus\Queueable;
 use Illuminate\Notifications\Messages\MailMessage;
 use Illuminate\Notifications\Notification;
@@ -26,7 +27,7 @@ class VerificationReviewedNotification extends Notification
 
     public function toMail($notifiable)
     {
-        $status = $this->requestModel->status ?? 'updated';
+        $status = $this->statusValue() ?? 'updated';
 
         return (new MailMessage)
             ->subject('Verification status updated')
@@ -40,21 +41,32 @@ class VerificationReviewedNotification extends Notification
         return [
             'type' => 'verification_reviewed',
             'verification_id' => $this->requestModel->id ?? null,
-            'status' => $this->requestModel->status ?? null,
+            'status' => $this->statusValue(),
         ];
     }
 
     public function toWebPush($notifiable): WebPushMessage
     {
-        $status = $this->requestModel->status ?? 'updated';
+        $status = $this->statusValue() ?? 'updated';
         $statusText = $status === 'approved' ? 'đã được chấp nhận' : ($status === 'rejected' ? 'đã bị từ chối' : 'đã cập nhật');
 
         return (new WebPushMessage)
             ->title('Xác thực danh tính')
             ->body('Yêu cầu xác thực danh tính của bạn '.$statusText.'.')
             ->url(url('/app/profile'))
-            ->icon('/images/icons/icon-192.png')
+            ->icon('/icons/icon-192x192.png')
             ->tag('verification_reviewed_'.($this->requestModel->id ?? uniqid()))
             ->category('push_verification_enabled');
+    }
+
+    private function statusValue(): ?string
+    {
+        $status = $this->requestModel->status ?? null;
+
+        if ($status instanceof BackedEnum) {
+            return (string) $status->value;
+        }
+
+        return $status !== null ? (string) $status : null;
     }
 }

@@ -8,9 +8,9 @@ class WebPushMessage
 
     protected string $body = '';
 
-    protected ?string $icon = '/images/icons/icon-192.png';
+    protected ?string $icon = '/icons/icon-192x192.png';
 
-    protected ?string $badge = '/images/icons/badge-72.png';
+    protected ?string $badge = '/icons/icon-72x72.png';
 
     protected ?string $url = null;
 

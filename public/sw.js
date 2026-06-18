@@ -1,4 +1,4 @@
-const CACHE_NAME = 'ue-connect-pwa-v1';
+const CACHE_NAME = 'ue-connect-pwa-v2';
 const OFFLINE_URL = '/offline.html';
 
 // Assets that should be cached immediately on install
@@ -45,6 +45,7 @@ self.addEventListener('fetch', (event) => {
         url.pathname.startsWith('/api/') ||
         url.pathname.startsWith('/admin') ||
         url.pathname.startsWith('/livewire/') ||
+        /^\/livewire-[^/]+\//.test(url.pathname) ||
         event.request.method !== 'GET'
     ) {
         return;

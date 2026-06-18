@@ -1,5 +1,6 @@
 <?php
 
+use App\Enums\AccountStatus;
 use App\Models\User;
 use Livewire\Volt\Component;
 use Livewire\WithPagination;
@@ -92,10 +93,14 @@ new class extends Component {
                 <x-ui.label for="account_status" class="text-xs">Trạng thái tài khoản</x-ui.label>
                 <x-ui.select wire:model.live="account_status" id="account_status" class="mt-1 h-9 text-xs py-1">
                     <option value="">-- Tất cả --</option>
-                    <option value="active">Hoạt động</option>
-                    <option value="suspended">Bị tạm khóa</option>
-                    <option value="banned">Bị cấm</option>
-                    <option value="registered">Đăng ký (Chưa xác thực)</option>
+                    <option value="{{ AccountStatus::ACTIVE->value }}">Hoạt động</option>
+                    <option value="{{ AccountStatus::REGISTERED->value }}">Đăng ký (Chưa xác thực)</option>
+                    <option value="{{ AccountStatus::PENDING_VERIFICATION->value }}">Chờ xác thực</option>
+                    <option value="{{ AccountStatus::PROFILE_INCOMPLETE->value }}">Hồ sơ chưa hoàn tất</option>
+                    <option value="{{ AccountStatus::RESTRICTED->value }}">Bị hạn chế</option>
+                    <option value="{{ AccountStatus::SUSPENDED->value }}">Bị tạm khóa</option>
+                    <option value="{{ AccountStatus::BANNED->value }}">Bị cấm</option>
+                    <option value="{{ AccountStatus::DELETED->value }}">Đã xóa</option>
                 </x-ui.select>
             </div>
         </div>
@@ -119,19 +124,30 @@ new class extends Component {
                     @forelse ($this->users as $user)
                         @php
                             $primaryRole = $user->roles->first()?->name ?? 'none';
-                            $statusColor = match($user->account_status ?? 'active') {
-                                'active' => 'success',
-                                'suspended' => 'warning',
-                                'banned' => 'danger',
-                                'registered' => 'info',
+                            $statusValue = $user->account_status instanceof AccountStatus
+                                ? $user->account_status->value
+                                : ($user->account_status ?: AccountStatus::ACTIVE->value);
+                            $statusColor = match($statusValue) {
+                                AccountStatus::ACTIVE->value => 'success',
+                                AccountStatus::REGISTERED->value => 'info',
+                                AccountStatus::PENDING_VERIFICATION->value,
+                                AccountStatus::PROFILE_INCOMPLETE->value,
+                                AccountStatus::RESTRICTED->value,
+                                AccountStatus::SUSPENDED->value => 'warning',
+                                AccountStatus::BANNED->value,
+                                AccountStatus::DELETED->value => 'danger',
                                 default => 'neutral',
                             };
-                            $statusLabel = match($user->account_status ?? 'active') {
-                                'active' => 'Hoạt động',
-                                'suspended' => 'Bị tạm khóa',
-                                'banned' => 'Bị cấm',
-                                'registered' => 'Đăng ký',
-                                default => $user->account_status,
+                            $statusLabel = match($statusValue) {
+                                AccountStatus::ACTIVE->value => 'Hoạt động',
+                                AccountStatus::REGISTERED->value => 'Đăng ký',
+                                AccountStatus::PENDING_VERIFICATION->value => 'Chờ xác thực',
+                                AccountStatus::PROFILE_INCOMPLETE->value => 'Hồ sơ chưa hoàn tất',
+                                AccountStatus::RESTRICTED->value => 'Bị hạn chế',
+                                AccountStatus::SUSPENDED->value => 'Bị tạm khóa',
+                                AccountStatus::BANNED->value => 'Bị cấm',
+                                AccountStatus::DELETED->value => 'Đã xóa',
+                                default => $statusValue,
                             };
                         @endphp
                         <tr class="hover:bg-ue-surface-hover transition-colors">
