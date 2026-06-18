@@ -42,4 +42,13 @@ class LandingPageTest extends TestCase
         $response->assertSee('overflow-x: clip', false);
         $response->assertSee('overflow-y: visible', false);
     }
+
+    public function test_landing_page_renders_the_hero_label_divider_between_label_and_headline(): void
+    {
+        $response = $this->get(route('landing'));
+
+        $response->assertStatus(200);
+        $response->assertSee('welcome-hero-headline', false);
+        $response->assertSee('border-left: 2px solid rgba(203, 213, 225, 0.85)', false);
+    }
 }
