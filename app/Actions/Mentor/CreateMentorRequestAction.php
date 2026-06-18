@@ -101,6 +101,9 @@ class CreateMentorRequestAction
             'status' => MentorRequestStatus::Submitted,
         ]);
 
+        // Sync mentor availability (may switch to Full)
+        $mentorProfile->syncAvailabilityFromPendingCount();
+
         // Notify mentor
         $mentor->notify(new MentorRequestSubmittedNotification($mentorRequest));
 
