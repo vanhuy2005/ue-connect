@@ -831,7 +831,7 @@ new #[Layout('layouts.app')] class extends Component
                     </div>
 
                     {{-- Right column --}}
-                    <div class="space-y-6">
+                    <div class="space-y-6 mt-6 lg:mt-0">
                         {{-- Birthdays widget --}}
                         <div class="bg-gradient-to-br from-rose-50 to-pink-50 rounded-2xl border border-rose-100 p-5 shadow-2xs">
                             <div class="flex items-center gap-2 mb-3">

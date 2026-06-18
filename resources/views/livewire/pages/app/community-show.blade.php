@@ -1681,7 +1681,7 @@ new class extends Component
     <aside class="hidden lg:flex flex-col w-80 bg-white border-r border-slate-200 flex-shrink-0 p-4 sticky top-0 h-screen overflow-y-auto">
         <div class="flex items-center justify-between mb-4">
             <h1 class="text-xl font-extrabold text-slate-800 tracking-tight">Cộng đồng & CLB</h1>
-            <a href="{{ route('community.index') }}" class="text-xs font-semibold text-slate-400 hover:text-blue-600 transition">Thoát</a>
+            <a href="{{ route('community.index') }}" class="text-xs font-semibold text-slate-400 hover:text-ue-brand transition">Thoát</a>
         </div>
 
         <nav class="space-y-1 mb-6">
@@ -1714,16 +1714,16 @@ new class extends Component
                 @foreach ($this->joinedCommunities as $c)
                     @php $avatarUrl = $this->resolveAvatarUrl($c); @endphp
                     <a href="{{ route('community.show', $c->id) }}" wire:navigate
-                        class="flex items-center gap-3 p-2 rounded-xl transition group {{ $c->id === $community->id ? 'bg-blue-50 text-blue-600' : 'hover:bg-slate-100' }}">
-                        <div class="w-9 h-9 rounded-lg bg-gradient-to-br from-blue-600/20 to-blue-600/5 border border-slate-150 flex items-center justify-center text-blue-600 flex-shrink-0 overflow-hidden">
+                        class="flex items-center gap-3 p-2 rounded-xl transition group {{ $c->id === $community->id ? 'bg-ue-brand-soft text-ue-brand' : 'hover:bg-slate-100' }}">
+                        <div class="w-9 h-9 rounded-lg bg-gradient-to-br from-ue-brand/20 to-ue-brand/5 border border-slate-150 flex items-center justify-center text-ue-brand flex-shrink-0 overflow-hidden">
                             @if ($avatarUrl)
                                 <img src="{{ $avatarUrl }}" class="w-full h-full object-cover" alt="{{ $c->name }}">
                             @else
-                                <x-ui.icon name="users" size="sm" class="text-blue-600" />
+                                <x-ui.icon name="users" size="sm" class="text-ue-brand" />
                             @endif
                         </div>
                         <div class="min-w-0 flex-1">
-                            <p class="text-xs font-bold truncate {{ $c->id === $community->id ? 'text-blue-600' : 'text-slate-800 group-hover:text-blue-600' }}">{{ $c->name }}</p>
+                            <p class="text-xs font-bold truncate {{ $c->id === $community->id ? 'text-ue-brand' : 'text-slate-800 group-hover:text-ue-brand' }}">{{ $c->name }}</p>
                             <p class="text-[10px] text-slate-400 font-medium truncate mt-0.5">{{ number_format($c->members_count) }} thành viên</p>
                         </div>
                     </a>
@@ -1736,9 +1736,9 @@ new class extends Component
     <main class="flex-1 overflow-y-auto bg-slate-50/60 p-4 sm:p-6 lg:p-8 space-y-6">
         
         {{-- Detail Header Card --}}
-        <header class="bg-white border border-slate-200 rounded-2xl shadow-xs max-w-5xl mx-auto overflow-hidden">
+        <header class="bg-white border border-slate-200 rounded-2xl shadow-xs max-w-5xl mx-auto relative">
             {{-- Cover Photo Section --}}
-            <div class="relative h-36 sm:h-44 md:h-48 lg:h-52 bg-gradient-to-br from-[#0A3761] via-[#124874] to-[#4BB7E8] flex items-center justify-center overflow-hidden">
+            <div class="relative h-36 sm:h-44 md:h-48 lg:h-52 bg-gradient-to-br from-ue-brand-active to-ue-brand flex items-center justify-center overflow-hidden rounded-t-2xl">
                 @if ($this->coverUrl)
                     <img src="{{ $this->coverUrl }}" class="w-full h-full object-cover absolute inset-0" alt="{{ $community->name }}">
                 @else
@@ -1766,7 +1766,7 @@ new class extends Component
                 <div class="flex flex-col md:flex-row md:items-end justify-between gap-5">
                     {{-- Overlapping Avatar & details --}}
                     <div class="flex flex-col sm:flex-row items-center sm:items-start gap-4 -mt-10 sm:-mt-14 relative z-10">
-                        <div class="w-20 h-20 sm:w-28 sm:h-28 rounded-2xl bg-blue-600 text-white border-4 border-white flex items-center justify-center font-black text-2xl sm:text-3xl shadow-md select-none overflow-hidden relative group flex-shrink-0">
+                        <div class="w-20 h-20 sm:w-28 sm:h-28 rounded-2xl bg-ue-brand text-white border-4 border-white flex items-center justify-center font-black text-2xl sm:text-3xl shadow-md select-none overflow-hidden relative group flex-shrink-0">
                             @if ($this->avatarUrl)
                                 <img src="{{ $this->avatarUrl }}" class="w-full h-full object-cover" alt="{{ $community->name }}">
                             @else
@@ -1791,7 +1791,7 @@ new class extends Component
                         <div class="text-center sm:text-left pt-2 sm:pt-16">
                           <div class="flex items-center justify-center sm:justify-start gap-2">
                               <h2 class="text-xl sm:text-2xl font-black text-slate-900 tracking-tight leading-tight">{{ $community->name }}</h2>
-                              <x-ui.icon name="check-circle" size="xs" class="text-blue-600 fill-blue-600 flex-shrink-0" title="Cộng đồng xác thực" />
+                              <x-ui.icon name="check-circle" size="xs" class="text-ue-brand fill-ue-brand flex-shrink-0" title="Cộng đồng xác thực" />
                           </div>
 
                           <div class="flex flex-wrap items-center justify-center sm:justify-start gap-2 text-xs text-slate-500 font-semibold mt-1">
@@ -1803,7 +1803,7 @@ new class extends Component
                               <span>{{ number_format($community->members_count) }} thành viên</span>
                               @if ($community->related_faculty)
                                   <span class="text-slate-300">·</span>
-                                  <span class="bg-blue-50 text-blue-700 px-2 py-0.5 rounded-md text-[10px] font-extrabold">{{ $community->related_faculty }}</span>
+                                  <span class="bg-ue-brand-soft text-ue-brand px-2 py-0.5 rounded-md text-[10px] font-extrabold">{{ $community->related_faculty }}</span>
                               @endif
                           </div>
                       </div>
@@ -1827,14 +1827,14 @@ new class extends Component
                             </span>
                         @elseif ($community->allowsJoin())
                             <button wire:click="openJoinModal"
-                                class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-bold transition shadow-sm">
+                                class="px-4 py-2 bg-ue-brand hover:bg-ue-brand-hover text-white rounded-xl text-xs font-bold transition shadow-sm">
                                 {{ $community->requiresApproval() ? 'Gửi yêu cầu' : 'Tham gia' }}
                             </button>
                         @endif
 
                         @if ($this->isActiveMember)
                             <button wire:click="startInvite"
-                                class="px-3.5 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-bold transition shadow-2xs flex items-center gap-1">
+                                class="px-3.5 py-2 bg-ue-brand hover:bg-ue-brand-hover text-white rounded-xl text-xs font-bold transition shadow-2xs flex items-center gap-1">
                                 <x-ui.icon name="user-plus" size="xs" />
                                 Mời bạn
                             </button>
@@ -1877,7 +1877,7 @@ new class extends Component
             </div>
 
             {{-- Horizontal Navigation Tabs --}}
-            <div class="border-t border-slate-100 bg-white">
+            <div class="border-t border-slate-100 bg-white rounded-b-2xl">
                 <div class="px-6 flex gap-1.5 overflow-x-auto">
                     @php
                         $tabs = [
@@ -1893,7 +1893,7 @@ new class extends Component
                     @endphp
                     @foreach ($tabs as $tab)
                         <button wire:click="setActiveTab('{{ $tab['key'] }}')"
-                            class="px-4 py-4 text-xs font-bold border-b-2 transition whitespace-nowrap {{ $activeTab === $tab['key'] ? 'border-blue-600 text-blue-600 font-extrabold' : 'border-transparent text-slate-500 hover:text-slate-800' }}">
+                            class="px-4 py-4 text-xs font-bold border-b-2 transition whitespace-nowrap {{ $activeTab === $tab['key'] ? 'border-ue-brand text-ue-brand font-extrabold' : 'border-transparent text-slate-500 hover:text-slate-800' }}">
                             {{ $tab['label'] }}
                         </button>
                     @endforeach
@@ -1925,14 +1925,14 @@ new class extends Component
                                             <span class="text-red-500">*</span>
                                         </label>
                                         <input type="text" wire:model.blur="settingsName"
-                                            class="w-full px-3 py-2 text-xs border rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 border-slate-200">
+                                            class="w-full px-3 py-2 text-xs border rounded-xl focus:outline-none focus:ring-2 focus:ring-ue-brand/20 focus:border-ue-brand border-slate-200">
                                         @error('settingsName') <p class="text-red-500 text-[10px] mt-1 font-semibold">{{ $message }}</p> @enderror
                                         <p class="text-[10px] text-slate-400 mt-1">Tên hiển thị chính thức của cộng đồng hoặc câu lạc bộ.</p>
                                     </div>
 
                                     <div>
                                         <label class="block text-xs font-bold text-slate-700 mb-1.5">Phân loại <span class="text-red-500">*</span></label>
-                                        <select wire:model="settingsType" class="w-full px-3 py-2 text-xs border rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 border-slate-200 bg-white">
+                                        <select wire:model="settingsType" class="w-full px-3 py-2 text-xs border rounded-xl focus:outline-none focus:ring-2 focus:ring-ue-brand/20 focus:border-ue-brand border-slate-200 bg-white">
                                             @foreach (CommunityType::cases() as $t)
                                                 <option value="{{ $t->value }}">{{ $t->label() }}</option>
                                             @endforeach
@@ -1943,21 +1943,21 @@ new class extends Component
                                     <div>
                                         <label class="block text-xs font-bold text-slate-700 mb-1.5">Khoa phụ trách</label>
                                         <input type="text" wire:model.blur="settingsRelatedFaculty"
-                                            class="w-full px-3 py-2 text-xs border rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 border-slate-200">
+                                            class="w-full px-3 py-2 text-xs border rounded-xl focus:outline-none focus:ring-2 focus:ring-ue-brand/20 focus:border-ue-brand border-slate-200">
                                         <p class="text-[10px] text-slate-400 mt-1">Khoa chuyên môn bảo trợ trực tiếp.</p>
                                     </div>
 
                                     <div class="md:col-span-2">
                                         <label class="block text-xs font-bold text-slate-700 mb-1.5">Mô tả ngắn</label>
                                         <input type="text" wire:model.blur="settingsShortDescription"
-                                            class="w-full px-3 py-2 text-xs border rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 border-slate-200">
+                                            class="w-full px-3 py-2 text-xs border rounded-xl focus:outline-none focus:ring-2 focus:ring-ue-brand/20 focus:border-ue-brand border-slate-200">
                                         <p class="text-[10px] text-slate-400 mt-1">Hiển thị trên thẻ khám phá (Tối đa 255 ký tự).</p>
                                     </div>
 
                                     <div class="md:col-span-2">
                                         <label class="block text-xs font-bold text-slate-700 mb-1.5">Mô tả chi tiết</label>
                                         <textarea wire:model.blur="settingsDescription" rows="4"
-                                            class="w-full px-3 py-2 text-xs border rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 border-slate-200 resize-none"></textarea>
+                                            class="w-full px-3 py-2 text-xs border rounded-xl focus:outline-none focus:ring-2 focus:ring-ue-brand/20 focus:border-ue-brand border-slate-200 resize-none"></textarea>
                                         <p class="text-[10px] text-slate-400 mt-1">Giới thiệu mục tiêu, sứ mệnh và các hoạt động chính.</p>
                                     </div>
                                 </div>
@@ -1973,7 +1973,7 @@ new class extends Component
                                 <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
                                     <div>
                                         <label class="block text-xs font-bold text-slate-700 mb-1.5">Chính sách tham gia <span class="text-red-500">*</span></label>
-                                        <select wire:model="settingsJoinPolicy" class="w-full px-3 py-2 text-xs border rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 border-slate-200 bg-white">
+                                        <select wire:model="settingsJoinPolicy" class="w-full px-3 py-2 text-xs border rounded-xl focus:outline-none focus:ring-2 focus:ring-ue-brand/20 focus:border-ue-brand border-slate-200 bg-white">
                                             @foreach (CommunityJoinPolicy::cases() as $policy)
                                                 <option value="{{ $policy->value }}">{{ $policy->label() }}</option>
                                             @endforeach
@@ -1982,7 +1982,7 @@ new class extends Component
 
                                     <div>
                                         <label class="block text-xs font-bold text-slate-700 mb-1.5">Hiển thị <span class="text-red-500">*</span></label>
-                                        <select wire:model="settingsVisibility" class="w-full px-3 py-2 text-xs border rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 border-slate-200 bg-white">
+                                        <select wire:model="settingsVisibility" class="w-full px-3 py-2 text-xs border rounded-xl focus:outline-none focus:ring-2 focus:ring-ue-brand/20 focus:border-ue-brand border-slate-200 bg-white">
                                             @foreach (CommunityVisibility::cases() as $vis)
                                                 <option value="{{ $vis->value }}">{{ $vis->label() }}</option>
                                             @endforeach
@@ -1991,7 +1991,7 @@ new class extends Component
 
                                     <div>
                                         <label class="block text-xs font-bold text-slate-700 mb-1.5">Trạng thái vận hành <span class="text-red-500">*</span></label>
-                                        <select wire:model="settingsStatus" class="w-full px-3 py-2 text-xs border rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 border-slate-200 bg-white">
+                                        <select wire:model="settingsStatus" class="w-full px-3 py-2 text-xs border rounded-xl focus:outline-none focus:ring-2 focus:ring-ue-brand/20 focus:border-ue-brand border-slate-200 bg-white">
                                             <option value="draft">Bản nháp</option>
                                             <option value="active">Hoạt động</option>
                                             <option value="inactive">Ngưng hoạt động</option>
@@ -2010,14 +2010,14 @@ new class extends Component
                                 <div>
                                     <label class="block text-xs font-bold text-slate-700 mb-1.5">Nội quy nhóm</label>
                                     <textarea wire:model.blur="settingsRules" rows="4"
-                                        class="w-full px-3 py-2 text-xs border rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 border-slate-200 resize-none"></textarea>
+                                        class="w-full px-3 py-2 text-xs border rounded-xl focus:outline-none focus:ring-2 focus:ring-ue-brand/20 focus:border-ue-brand border-slate-200 resize-none"></textarea>
                                     <p class="text-[10px] text-slate-400 mt-1">Các quy định bắt buộc thành viên phải tuân thủ.</p>
                                 </div>
                             </div>
 
                             {{-- Save Form button --}}
                             <div class="flex justify-end pt-3">
-                                <button type="submit" wire:loading.attr="disabled" wire:target="saveSettings" class="px-5 py-2 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold rounded-xl transition shadow-sm disabled:opacity-60 disabled:cursor-not-allowed">
+                                <button type="submit" wire:loading.attr="disabled" wire:target="saveSettings" class="px-5 py-2 bg-ue-brand hover:bg-ue-brand-hover text-white text-xs font-bold rounded-xl transition shadow-sm disabled:opacity-60 disabled:cursor-not-allowed">
                                     <span wire:loading.remove wire:target="saveSettings">Lưu cài đặt</span>
                                     <span wire:loading wire:target="saveSettings">Đang lưu...</span>
                                 </button>
@@ -2026,7 +2026,7 @@ new class extends Component
                     </div>
 
                     {{-- Right Column: Preview & Requests --}}
-                    <div class="space-y-6">
+                    <div class="space-y-6 mt-6 lg:mt-0">
                         {{-- Card 4: Preview hành vi --}}
                         <div class="bg-white border border-slate-200 rounded-2xl p-5 shadow-xs space-y-4">
                             <div>
@@ -2035,7 +2035,7 @@ new class extends Component
                             </div>
                             <div class="space-y-3.5 pt-2">
                                 <div class="flex items-start gap-2.5">
-                                    <div class="p-1.5 rounded-lg bg-blue-50 text-blue-600 flex-shrink-0">
+                                    <div class="p-1.5 rounded-lg bg-ue-brand-soft text-ue-brand flex-shrink-0">
                                         <x-ui.icon name="{{ $settingsVisibility === 'public' ? 'eye' : 'eye-off' }}" size="xs" />
                                     </div>
                                     <div>
@@ -2147,7 +2147,7 @@ new class extends Component
                                 <div class="bg-white border border-slate-200 rounded-2xl p-4 shadow-xs flex gap-3">
                                     <x-ui.avatar :user="auth()->user()" size="md" />
                                     <button wire:click="openPostComposer"
-                                        class="flex-1 text-left px-4 py-3 bg-slate-50 rounded-2xl text-slate-500 text-xs font-semibold hover:bg-slate-100 transition focus:outline-none focus:ring-2 focus:ring-blue-500/20">
+                                        class="flex-1 text-left px-4 py-3 bg-slate-50 rounded-2xl text-slate-500 text-xs font-semibold hover:bg-slate-100 transition focus:outline-none focus:ring-2 focus:ring-ue-brand/20">
                                         Chia sẻ điều gì đó với mọi người trong cộng đồng...
                                     </button>
                                 </div>
@@ -2168,7 +2168,7 @@ new class extends Component
                                                 </div>
                                             </div>
                                             <button type="button" wire:click="undoHidePost({{ $post->id }})"
-                                                class="px-3 py-1.5 text-xs font-bold text-blue-600 bg-blue-50 rounded-xl hover:bg-blue-600 hover:text-white transition">
+                                                class="px-3 py-1.5 text-xs font-bold text-ue-brand bg-ue-brand-soft rounded-xl hover:bg-ue-brand hover:text-white transition">
                                                 Hoàn tác
                                             </button>
                                         </div>
@@ -2205,7 +2205,7 @@ new class extends Component
                                     <h3 class="text-sm font-extrabold text-slate-800">Kho tài liệu, liên kết & học liệu</h3>
                                     @if ($this->isActiveMember)
                                         <button wire:click="openResourceModal"
-                                            class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-bold transition shadow-sm">
+                                            class="px-4 py-2 bg-ue-brand hover:bg-ue-brand-hover text-white rounded-xl text-xs font-bold transition shadow-sm">
                                             + Đăng tài nguyên
                                         </button>
                                     @endif
@@ -2239,7 +2239,7 @@ new class extends Component
                                                 <div class="flex gap-1.5 flex-shrink-0">
                                                     @if ($res->mediaFile)
                                                         <a href="{{ Storage::disk($res->mediaFile->disk)->url($res->mediaFile->path) }}" download="{{ $res->mediaFile->original_name }}"
-                                                            class="px-2.5 py-1.5 bg-blue-600 text-white rounded-lg text-[10px] font-bold hover:bg-blue-750 transition flex items-center gap-1">
+                                                            class="px-2.5 py-1.5 bg-ue-brand text-white rounded-lg text-[10px] font-bold hover:bg-ue-brand-active transition flex items-center gap-1">
                                                             <x-ui.icon name="download" size="2xs" />
                                                             <span>Tải xuống</span>
                                                         </a>
@@ -2274,7 +2274,7 @@ new class extends Component
                                     <h3 class="text-sm font-extrabold text-slate-800">Sự kiện sắp tới</h3>
                                     @if ($this->canCreateEvents)
                                         <button wire:click="openEventModal"
-                                            class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-bold transition shadow-sm">
+                                            class="px-4 py-2 bg-ue-brand hover:bg-ue-brand-hover text-white rounded-xl text-xs font-bold transition shadow-sm">
                                             + Tạo sự kiện
                                         </button>
                                     @endif
@@ -2286,9 +2286,9 @@ new class extends Component
                                         <div class="bg-white border border-slate-200 rounded-2xl p-4 sm:p-5 flex flex-col md:flex-row gap-4 hover:shadow-xs transition">
                                             
                                             {{-- Calendar Block --}}
-                                            <div class="w-16 h-16 rounded-xl bg-blue-50 border border-blue-100 flex flex-col items-center justify-center flex-shrink-0">
-                                                <span class="text-2xl font-black text-blue-600 leading-none">{{ $evt->starts_at->format('d') }}</span>
-                                                <span class="text-[9px] font-bold text-blue-600 uppercase mt-0.5 tracking-wider">{{ $evt->starts_at->translatedFormat('M') }}</span>
+                                            <div class="w-16 h-16 rounded-xl bg-ue-brand-soft border border-ue-brand-border flex flex-col items-center justify-center flex-shrink-0">
+                                                <span class="text-2xl font-black text-ue-brand leading-none">{{ $evt->starts_at->format('d') }}</span>
+                                                <span class="text-[9px] font-bold text-ue-brand uppercase mt-0.5 tracking-wider">{{ $evt->starts_at->translatedFormat('M') }}</span>
                                             </div>
 
                                             {{-- Text Column --}}
@@ -2329,7 +2329,7 @@ new class extends Component
                                                                 Sẽ tham gia
                                                             </button>
                                                             <button wire:click="rsvpEvent({{ $evt->id }}, 'interested')"
-                                                                class="px-2.5 py-1 text-[10px] font-bold rounded-lg border transition {{ $rsvpStatus === 'interested' ? 'bg-blue-650 text-white border-blue-650' : 'bg-white border-slate-200 text-slate-655 hover:bg-slate-50' }}">
+                                                                class="px-2.5 py-1 text-[10px] font-bold rounded-lg border transition {{ $rsvpStatus === 'interested' ? 'bg-ue-brand text-white border-ue-brand' : 'bg-white border-slate-200 text-slate-655 hover:bg-slate-50' }}">
                                                                 Quan tâm
                                                             </button>
                                                             <button wire:click="rsvpEvent({{ $evt->id }}, 'declined')"
@@ -2363,11 +2363,11 @@ new class extends Component
                                         <div class="flex-1 w-full">
                                             <label class="block text-xs font-bold text-slate-600 mb-1">Thêm nhanh thành viên bằng email</label>
                                             <input type="email" wire:model.blur="memberEmailToAdd" placeholder="email@hcmue.edu.vn"
-                                                class="w-full px-3 py-2 text-xs border rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 border-slate-200 bg-white" />
+                                                class="w-full px-3 py-2 text-xs border rounded-xl focus:outline-none focus:ring-2 focus:ring-ue-brand border-slate-200 bg-white" />
                                             @error('memberEmailToAdd') <p class="text-red-500 text-[10px] mt-1 font-semibold">{{ $message }}</p> @enderror
                                         </div>
                                         <button wire:click="addMemberByEmail"
-                                            class="px-4 py-2 bg-blue-650 text-white text-xs font-bold rounded-xl transition shadow-2xs whitespace-nowrap">
+                                            class="px-4 py-2 bg-ue-brand text-white text-xs font-bold rounded-xl transition shadow-2xs whitespace-nowrap">
                                             Thêm thành viên
                                         </button>
                                     </div>
@@ -2380,22 +2380,44 @@ new class extends Component
                                             <div class="flex items-center gap-3">
                                                 <x-ui.avatar :user="$m->user" size="sm" />
                                                 <div>
-                                                        Từ chối
-                                                    </button>
+                                                    <h4 class="text-xs font-bold text-slate-800">{{ $m->user?->name }}</h4>
+                                                    <p class="text-[10px] text-slate-400 mt-0.5">Đã gia nhập: {{ $m->joined_at ? $m->joined_at->diffForHumans() : 'gần đây' }}</p>
                                                 </div>
                                             </div>
-                                        @empty
-                                            <p class="text-xs text-slate-500 italic py-4">Không có yêu cầu nào đang chờ xét duyệt.</p>
-                                        @endforelse
-                                    </div>
+
+                                            <div class="flex items-center gap-2">
+                                                <span class="px-2 py-0.5 rounded text-[9px] font-bold uppercase tracking-wider
+                                                    {{ $m->role?->value === 'owner' ? 'bg-amber-100 text-amber-800 border border-amber-200' : '' }}
+                                                    {{ $m->role?->value === 'manager' ? 'bg-indigo-100 text-indigo-800 border border-indigo-200' : '' }}
+                                                    {{ $m->role?->value === 'moderator' ? 'bg-purple-100 text-purple-800 border border-purple-200' : '' }}
+                                                    {{ $m->role?->value === 'member' ? 'bg-slate-100 text-slate-600 border border-slate-200' : '' }}">
+                                                    {{ $m->role?->label() }}
+                                                </span>
+
+                                                @if (auth()->check() && auth()->user()->can('manageMemberRoles', $community) && $m->role?->value !== 'owner')
+                                                    <button type="button" wire:click="openChangeRoleModal({{ $m->id }})"
+                                                        class="p-1 hover:bg-slate-150 rounded text-slate-400 hover:text-ue-brand transition flex items-center justify-center"
+                                                        title="Cấp quyền">
+                                                        <x-ui.icon name="settings" size="2xs" />
+                                                    </button>
+                                                @endif
+                                            </div>
+                                        </div>
+                                    @empty
+                                        <p class="text-xs text-slate-500 italic py-4 text-center">Không có thành viên nào.</p>
+                                    @endforelse
                                 </div>
+
+                                @if ($this->members->isNotEmpty() && $this->members->hasPages())
+                                    <div class="pt-4">{{ $this->members->links() }}</div>
+                                @endif
                             @endif
                         </div>
                     @endif
                 </div>
 
                 {{-- Sidebar Right Block --}}
-                <div class="space-y-4">
+                <div class="space-y-4 mt-6 lg:mt-0">
                     <div class="bg-white border border-slate-200 rounded-2xl p-4 sm:p-5 shadow-2xs">
                         <h3 class="font-extrabold text-slate-800 mb-3">Giới thiệu nhóm</h3>
                         
