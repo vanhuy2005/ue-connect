@@ -211,7 +211,7 @@ new class extends Component {
                         <dt class="text-xs font-bold uppercase tracking-[0.06em] text-ue-text-muted">Vai trò</dt>
                         <dd class="mt-1 flex flex-wrap gap-1">
                             @forelse($this->user->roles as $role)
-                                <x-ui.badge variant="{{ $role->name === 'admin' ? 'admin' : ($role->name === 'student' ? 'student' : 'neutral') }}" no-icon="true">
+                                <x-ui.badge variant="{{ $role->name === 'admin' ? 'admin' : ($role->name === 'student' ? 'student' : 'neutral') }}" :noIcon="true">
                                     {{ ucfirst($role->name) }}
                                 </x-ui.badge>
                             @empty

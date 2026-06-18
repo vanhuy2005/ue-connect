@@ -484,7 +484,7 @@ new class extends Component {
                                 <div class="mt-0.5 text-xs">{{ $user->email_verified_at ? 'Đã xác minh email' : 'Chưa xác minh email' }}</div>
                             </td>
                             <td class="px-4 py-3 align-top">
-                                <x-ui.badge variant="{{ $primaryRole === 'admin' ? 'admin' : ($primaryRole === 'student' ? 'student' : 'neutral') }}" no-icon="true">
+                                <x-ui.badge variant="{{ $primaryRole === 'admin' ? 'admin' : ($primaryRole === 'student' ? 'student' : 'neutral') }}" :noIcon="true">
                                     {{ ucfirst($primaryRole) }}
                                 </x-ui.badge>
                             </td>
