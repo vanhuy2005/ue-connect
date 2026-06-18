@@ -13,7 +13,6 @@ class LandingPageTest extends TestCase
     public function test_landing_page_renders_successfully_for_guest(): void
     {
         $response = $this->get(route('landing'));
-
         $response->assertStatus(200);
         $response->assertSee('UEConnect');
         $response->assertSee('id="main-content"', false);
@@ -26,9 +25,7 @@ class LandingPageTest extends TestCase
     public function test_landing_page_renders_successfully_for_authenticated_user(): void
     {
         $user = User::factory()->create();
-
         $response = $this->actingAs($user)->get(route('landing'));
-
         $response->assertStatus(200);
         $response->assertSee(route('dashboard'));
         $response->assertDontSee(route('login'));
@@ -37,7 +34,6 @@ class LandingPageTest extends TestCase
     public function test_landing_page_keeps_scroll_on_the_document_viewport(): void
     {
         $response = $this->get(route('landing'));
-
         $response->assertStatus(200);
         $response->assertSee('overflow-x: clip', false);
         $response->assertSee('overflow-y: visible', false);
@@ -46,9 +42,8 @@ class LandingPageTest extends TestCase
     public function test_landing_page_renders_the_hero_label_divider_between_label_and_headline(): void
     {
         $response = $this->get(route('landing'));
-
         $response->assertStatus(200);
         $response->assertSee('welcome-hero-headline', false);
-        $response->assertSee('border-left: 2px solid rgba(203, 213, 225, 0.85)', false);
+        $response->assertSee('data-testid="hero-label-divider"', false);
     }
 }
