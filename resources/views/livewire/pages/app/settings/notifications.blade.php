@@ -9,6 +9,7 @@ new class extends Component
     public ?string $feedbackMessage = null;
     public ?string $errorMessage = null;
 
+    public bool $browser_push_enabled = false;
     public bool $push_mentions = true;
     public bool $push_comments = true;
     public bool $push_connections = true;
@@ -27,10 +28,11 @@ new class extends Component
         $user = Auth::user();
         $pref = $user->notificationPreference;
         if ($pref) {
+            $this->browser_push_enabled = (bool) ($pref->browser_push_enabled ?? false);
             $this->push_mentions = (bool) ($pref->push_mentions ?? true);
             $this->push_comments = (bool) ($pref->push_comments ?? true);
-            $this->push_connections = (bool) ($pref->push_connections ?? true);
-            $this->push_messages = (bool) ($pref->push_messages ?? true);
+            $this->push_connections = (bool) ($pref->push_greetings_enabled ?? $pref->push_connections ?? true);
+            $this->push_messages = (bool) ($pref->push_messages_enabled ?? $pref->push_messages ?? true);
             $this->push_system = (bool) ($pref->push_system ?? true);
 
             $this->email_mentions = (bool) ($pref->email_mentions ?? true);
@@ -53,11 +55,16 @@ new class extends Component
             NotificationPreference::updateOrCreate(
                 ['user_id' => $user->id],
                 [
+                    'browser_push_enabled' => $this->browser_push_enabled,
                     'push_mentions' => $this->push_mentions,
                     'push_comments' => $this->push_comments,
                     'push_connections' => $this->push_connections,
                     'push_messages' => $this->push_messages,
                     'push_system' => $this->push_system,
+                    'push_messages_enabled' => $this->push_messages,
+                    'push_greetings_enabled' => $this->push_connections,
+                    'push_verification_enabled' => $this->push_system,
+                    'push_admin_announcements_enabled' => $this->push_system,
 
                     'email_mentions' => $this->email_mentions,
                     'email_comments' => $this->email_comments,
@@ -124,7 +131,39 @@ new class extends Component
         <p class="text-xxs text-slate-400 font-medium mt-0.5">Lựa chọn loại thông báo bạn muốn nhận qua ứng dụng và email.</p>
     </div>
 
-    <form wire:submit.prevent="saveNotifications" x-on:submit="if (window.Alpine && window.Alpine.store('pwa')) window.Alpine.store('pwa').subscribeToPushNotifications()" class="space-y-6">
+    <form
+        x-data="{
+            async submit() {
+                const wantsBrowserPush = $wire.browser_push_enabled;
+
+                if (wantsBrowserPush && (! window.Alpine || ! window.Alpine.store('pwa'))) {
+                    await $wire.set('browser_push_enabled', false);
+                    await $wire.set('errorMessage', 'Không thể khởi tạo thông báo đẩy trên trình duyệt. Vui lòng tải lại trang và thử lại.');
+
+                    return;
+                }
+
+                if (wantsBrowserPush) {
+                    const result = await window.Alpine.store('pwa').subscribeToPushNotifications();
+
+                    if (! result || ! result.success) {
+                        await $wire.set('browser_push_enabled', false);
+                        await $wire.set('errorMessage', result?.message || 'Không thể đăng ký thông báo đẩy trên trình duyệt. Vui lòng thử lại.');
+
+                        return;
+                    }
+                }
+
+                if (! wantsBrowserPush && window.Alpine && window.Alpine.store('pwa')) {
+                    await window.Alpine.store('pwa').unsubscribeFromPushNotifications();
+                }
+
+                await $wire.saveNotifications();
+            }
+        }"
+        x-on:submit.prevent="submit()"
+        class="space-y-6"
+    >
         <div class="bg-white border border-slate-150 rounded-2xl p-5 shadow-2xs space-y-6">
             {{-- Push --}}
             <div class="space-y-4">
@@ -132,6 +171,13 @@ new class extends Component
                     <x-ui.icon name="bell" size="xs" class="text-ue-brand" /> Push Notifications
                 </h3>
                 <div class="space-y-4 pt-2">
+                    <div class="flex items-center justify-between gap-4 rounded-xl border border-blue-100 bg-blue-50/70 p-3">
+                        <div class="flex-1 space-y-0.5">
+                            <label for="browser-push-enabled" class="text-xxs font-bold text-slate-800 block">Thông báo đẩy trên trình duyệt</label>
+                            <span class="text-[10px] text-slate-500 block">Cho phép UEConnect gửi thông báo qua trình duyệt này.</span>
+                        </div>
+                        <input type="checkbox" id="browser-push-enabled" wire:model="browser_push_enabled" class="h-4 w-4 rounded border-slate-200 text-ue-brand focus:ring-ue-brand" />
+                    </div>
                     <div class="flex items-center justify-between gap-4">
                         <div class="flex-1 space-y-0.5">
                             <label for="push-mentions" class="text-xxs font-bold text-slate-800 block">Lượt nhắc & Gắn thẻ</label>

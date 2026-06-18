@@ -37,7 +37,7 @@ class SystemAnnouncementNotification extends Notification
             ->title($this->announcement->title)
             ->body(str($this->announcement->body)->limit(50)->toString())
             ->url(route('dashboard'))
-            ->icon('/images/icons/icon-192.png')
+            ->icon('/icons/icon-192x192.png')
             ->tag('announcement_'.$this->announcement->id)
             ->category('push_admin_announcements_enabled');
     }
