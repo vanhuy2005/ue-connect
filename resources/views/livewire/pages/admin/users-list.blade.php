@@ -1,5 +1,6 @@
 <?php
 
+use App\Enums\AccountStatus;
 use App\Models\User;
 use Livewire\Volt\Component;
 use Livewire\WithPagination;
@@ -59,7 +60,7 @@ new class extends Component {
     }
 }; ?>
 
-<div class="max-w-7xl mx-auto py-8 px-4 sm:px-6 lg:px-8">
+<div class="w-full max-w-full py-6 px-4 sm:px-5 lg:px-6">
     {{-- Header --}}
     <div class="mb-6">
         <h1 class="text-2xl font-bold text-ue-text">Quản lý tài khoản người dùng</h1>
@@ -92,10 +93,14 @@ new class extends Component {
                 <x-ui.label for="account_status" class="text-xs">Trạng thái tài khoản</x-ui.label>
                 <x-ui.select wire:model.live="account_status" id="account_status" class="mt-1 h-9 text-xs py-1">
                     <option value="">-- Tất cả --</option>
-                    <option value="active">Hoạt động</option>
-                    <option value="suspended">Bị tạm khóa</option>
-                    <option value="banned">Bị cấm</option>
-                    <option value="registered">Đăng ký (Chưa xác thực)</option>
+                    <option value="{{ AccountStatus::ACTIVE->value }}">Hoạt động</option>
+                    <option value="{{ AccountStatus::REGISTERED->value }}">Đăng ký (Chưa xác thực)</option>
+                    <option value="{{ AccountStatus::PENDING_VERIFICATION->value }}">Chờ xác thực</option>
+                    <option value="{{ AccountStatus::PROFILE_INCOMPLETE->value }}">Hồ sơ chưa hoàn tất</option>
+                    <option value="{{ AccountStatus::RESTRICTED->value }}">Bị hạn chế</option>
+                    <option value="{{ AccountStatus::SUSPENDED->value }}">Bị tạm khóa</option>
+                    <option value="{{ AccountStatus::BANNED->value }}">Bị cấm</option>
+                    <option value="{{ AccountStatus::DELETED->value }}">Đã xóa</option>
                 </x-ui.select>
             </div>
         </div>
@@ -104,54 +109,67 @@ new class extends Component {
     {{-- Users Table --}}
     <x-ui.card padding="none" class="overflow-hidden">
         <div class="overflow-x-auto">
-            <table class="min-w-full divide-y divide-ue-border text-left">
+            <table class="w-full min-w-[860px] table-fixed divide-y divide-ue-border text-left">
                 <thead class="bg-ue-surface-subtle text-xs font-bold text-ue-text-muted uppercase tracking-wider">
                     <tr>
-                        <th scope="col" class="px-6 py-4">Người dùng</th>
-                        <th scope="col" class="px-6 py-4">Email</th>
-                        <th scope="col" class="px-6 py-4">Vai trò</th>
-                        <th scope="col" class="px-6 py-4">Trạng thái</th>
-                        <th scope="col" class="px-6 py-4">Đăng nhập cuối</th>
-                        <th scope="col" class="px-6 py-4 text-right">Thao tác</th>
+                        <th scope="col" class="w-[22%] px-4 py-3">Người dùng</th>
+                        <th scope="col" class="w-[28%] px-4 py-3">Email</th>
+                        <th scope="col" class="w-[13%] px-4 py-3">Vai trò</th>
+                        <th scope="col" class="w-[17%] px-4 py-3">Trạng thái</th>
+                        <th scope="col" class="w-[12%] px-4 py-3">Đăng nhập cuối</th>
+                        <th scope="col" class="w-[8%] px-4 py-3 text-right">Thao tác</th>
                     </tr>
                 </thead>
                 <tbody class="bg-ue-surface divide-y divide-ue-border text-sm">
                     @forelse ($this->users as $user)
                         @php
                             $primaryRole = $user->roles->first()?->name ?? 'none';
-                            $statusColor = match($user->account_status ?? 'active') {
-                                'active' => 'success',
-                                'suspended' => 'warning',
-                                'banned' => 'danger',
-                                'registered' => 'info',
+                            $statusValue = $user->account_status instanceof AccountStatus
+                                ? $user->account_status->value
+                                : ($user->account_status ?: AccountStatus::ACTIVE->value);
+                            $statusColor = match($statusValue) {
+                                AccountStatus::ACTIVE->value => 'success',
+                                AccountStatus::REGISTERED->value => 'info',
+                                AccountStatus::PENDING_VERIFICATION->value,
+                                AccountStatus::PROFILE_INCOMPLETE->value,
+                                AccountStatus::RESTRICTED->value,
+                                AccountStatus::SUSPENDED->value => 'warning',
+                                AccountStatus::BANNED->value,
+                                AccountStatus::DELETED->value => 'danger',
                                 default => 'neutral',
                             };
-                            $statusLabel = match($user->account_status ?? 'active') {
-                                'active' => 'Hoạt động',
-                                'suspended' => 'Bị tạm khóa',
-                                'banned' => 'Bị cấm',
-                                'registered' => 'Đăng ký',
-                                default => $user->account_status,
+                            $statusLabel = match($statusValue) {
+                                AccountStatus::ACTIVE->value => 'Hoạt động',
+                                AccountStatus::REGISTERED->value => 'Đăng ký',
+                                AccountStatus::PENDING_VERIFICATION->value => 'Chờ xác thực',
+                                AccountStatus::PROFILE_INCOMPLETE->value => 'Hồ sơ chưa hoàn tất',
+                                AccountStatus::RESTRICTED->value => 'Bị hạn chế',
+                                AccountStatus::SUSPENDED->value => 'Bị tạm khóa',
+                                AccountStatus::BANNED->value => 'Bị cấm',
+                                AccountStatus::DELETED->value => 'Đã xóa',
+                                default => $statusValue,
                             };
                         @endphp
                         <tr class="hover:bg-ue-surface-hover transition-colors">
-                            <td class="px-6 py-4 whitespace-nowrap">
-                                <div class="font-semibold text-ue-text">{{ $user->name }}</div>
+                            <td class="px-4 py-3">
+                                <div class="truncate font-semibold text-ue-text" title="{{ $user->name }}">{{ $user->name }}</div>
                                 <div class="text-xs text-ue-text-muted mt-0.5">ID: {{ $user->id }}</div>
                             </td>
-                            <td class="px-6 py-4 text-ue-text-muted">{{ $user->email }}</td>
-                            <td class="px-6 py-4">
+                            <td class="px-4 py-3 text-ue-text-muted">
+                                <div class="truncate" title="{{ $user->email }}">{{ $user->email }}</div>
+                            </td>
+                            <td class="px-4 py-3">
                                 <x-ui.badge variant="{{ $primaryRole === 'admin' ? 'danger' : ($primaryRole === 'student' ? 'info' : 'neutral') }}">
                                     {{ ucfirst($primaryRole) }}
                                 </x-ui.badge>
                             </td>
-                            <td class="px-6 py-4">
+                            <td class="px-4 py-3">
                                 <x-ui.badge :variant="$statusColor">{{ $statusLabel }}</x-ui.badge>
                             </td>
-                            <td class="px-6 py-4 text-xs text-ue-text-muted">
+                            <td class="px-4 py-3 text-xs text-ue-text-muted">
                                 {{ $user->last_login_at?->format('H:i d/m/Y') ?? 'Chưa đăng nhập' }}
                             </td>
-                            <td class="px-6 py-4 whitespace-nowrap text-right">
+                            <td class="px-4 py-3 whitespace-nowrap text-right">
                                 <x-ui.button href="{{ route('admin.users.show', ['user' => $user->id]) }}" variant="secondary" size="sm" icon="eye">
                                     Chi tiết
                                 </x-ui.button>

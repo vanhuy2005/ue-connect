@@ -132,6 +132,13 @@ $sizeClass = match($size) {
             <line x1="16" y1="11" x2="22" y2="11"></line>
             @break
 
+        @case('user-x')
+            <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"></path>
+            <circle cx="9" cy="7" r="4"></circle>
+            <line x1="17" y1="8" x2="22" y2="13"></line>
+            <line x1="22" y1="8" x2="17" y2="13"></line>
+            @break
+
         {{-- 👥 users --}}
         @case('users')
             <path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"></path>
@@ -658,6 +665,19 @@ $sizeClass = match($size) {
             <path d="M10 9H8"></path>
             <path d="M16 13H8"></path>
             <path d="M16 17H8"></path>
+            @break
+
+        @case('folder')
+            <path d="M3 7a2 2 0 0 1 2-2h5l2 2h7a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2Z"></path>
+            @break
+
+        @case('list')
+            <line x1="8" y1="6" x2="21" y2="6"></line>
+            <line x1="8" y1="12" x2="21" y2="12"></line>
+            <line x1="8" y1="18" x2="21" y2="18"></line>
+            <line x1="3" y1="6" x2="3.01" y2="6"></line>
+            <line x1="3" y1="12" x2="3.01" y2="12"></line>
+            <line x1="3" y1="18" x2="3.01" y2="18"></line>
             @break
 
         {{-- ✨ sparkles --}}

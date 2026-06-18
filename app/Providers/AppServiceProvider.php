@@ -155,7 +155,10 @@ class AppServiceProvider extends ServiceProvider
         });
 
         // Clear admin dashboard cache when relevant models are modified
-        $clearAdminDashboardCache = fn () => Cache::forget('admin_dashboard_data');
+        $clearAdminDashboardCache = function (): void {
+            Cache::forget('admin_dashboard_data');
+            Cache::forget('admin_dashboard_data_v2');
+        };
 
         VerificationRequest::saved($clearAdminDashboardCache);
         VerificationRequest::deleted($clearAdminDashboardCache);

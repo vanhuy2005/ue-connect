@@ -23,7 +23,7 @@ new #[Layout('layouts.guest')] class extends Component
      */
     public function mount(): void
     {
-        $this->email = request()->string('email');
+        $this->email = Str::lower(trim((string) request()->string('email')));
     }
 
     /**
@@ -36,6 +36,7 @@ new #[Layout('layouts.guest')] class extends Component
             'otp' => ['required', 'string', 'size:6'],
         ]);
 
+        $this->email = Str::lower(trim($this->email));
         $cachedOtp = Cache::get('password_reset_otp_' . $this->email);
 
         if (!$cachedOtp || $cachedOtp !== $this->otp) {
@@ -60,6 +61,7 @@ new #[Layout('layouts.guest')] class extends Component
             'password' => ['required', 'string', 'confirmed', Rules\Password::defaults()],
         ]);
 
+        $this->email = Str::lower(trim($this->email));
         $user = User::where('email', $this->email)->first();
 
         if ($user) {

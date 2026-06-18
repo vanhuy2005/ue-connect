@@ -14,9 +14,8 @@ class WebPushChannel
      * Send the given notification.
      *
      * @param  mixed  $notifiable
-     * @return void
      */
-    public function send($notifiable, Notification $notification)
+    public function send($notifiable, Notification $notification): void
     {
         if (! method_exists($notification, 'toWebPush')) {
             return;
@@ -25,6 +24,11 @@ class WebPushChannel
         // Check if user has global browser push enabled
         $preferences = $notifiable->notificationPreference ?? null;
         if ($preferences && ! $preferences->browser_push_enabled) {
+            Log::debug('WebPush skipped because browser push is disabled.', [
+                'user_id' => $notifiable->getKey(),
+                'notification' => $notification::class,
+            ]);
+
             return;
         }
 
@@ -39,9 +43,24 @@ class WebPushChannel
         }
 
         $category = $message->getCategory();
-        if ($category && isset($notifiable->notificationPreference)) {
+        if ($category && $preferences) {
             $preferences = $notifiable->notificationPreference;
-            if (! $preferences->{$category}) {
+            $hasCategoryPreference = array_key_exists($category, $preferences->getAttributes())
+                || array_key_exists($category, $preferences->getCasts());
+
+            if (! $hasCategoryPreference) {
+                Log::warning('WebPush category preference is missing.', [
+                    'user_id' => $notifiable->getKey(),
+                    'category' => $category,
+                    'notification' => $notification::class,
+                ]);
+            } elseif (! (bool) $preferences->getAttribute($category)) {
+                Log::debug('WebPush skipped because category push is disabled.', [
+                    'user_id' => $notifiable->getKey(),
+                    'category' => $category,
+                    'notification' => $notification::class,
+                ]);
+
                 return;
             }
         }
@@ -86,7 +105,10 @@ class WebPushChannel
             if ($report->isSuccess()) {
                 $sub->markUsed();
             } else {
-                Log::warning("WebPush failed to send for endpoint {$endpoint}: {$report->getReason()}");
+                Log::warning('WebPush failed to send.', [
+                    'endpoint' => $this->maskEndpoint($endpoint),
+                    'reason' => $report->getReason(),
+                ]);
 
                 if ($report->isSubscriptionExpired()) {
                     $sub->revoke();
@@ -95,5 +117,14 @@ class WebPushChannel
                 }
             }
         }
+    }
+
+    private function maskEndpoint(string $endpoint): string
+    {
+        if (strlen($endpoint) <= 24) {
+            return '***';
+        }
+
+        return substr($endpoint, 0, 16).'...'.substr($endpoint, -8);
     }
 }
