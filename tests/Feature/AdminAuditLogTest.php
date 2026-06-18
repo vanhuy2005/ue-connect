@@ -39,6 +39,7 @@ class AdminAuditLogTest extends TestCase
         $response = $this->actingAs($user)->get(route('admin.audit-logs.index'));
 
         $response->assertStatus(200);
-        $response->assertSeeText('test_action');
+        $response->assertSeeText('Test action');
+        $response->assertDontSeeText('audit.title');
     }
 }

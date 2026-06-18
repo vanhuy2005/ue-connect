@@ -2,6 +2,60 @@
 @tailwind components;
 @tailwind utilities;
 
+@layer components {
+    .ue-shell--admin .text-amber-500,
+    .ue-shell--admin .text-amber-600,
+    .ue-shell--admin .text-amber-700,
+    .ue-shell--admin .text-amber-800,
+    .ue-shell--admin .text-yellow-600,
+    .ue-shell--admin .text-yellow-700,
+    .ue-shell--admin .text-yellow-800,
+    .ue-shell--admin .text-orange-500,
+    .ue-shell--admin .text-orange-600,
+    .ue-shell--admin .text-orange-700,
+    .ue-shell--admin .text-indigo-500,
+    .ue-shell--admin .text-indigo-600,
+    .ue-shell--admin .text-indigo-700,
+    .ue-shell--admin .text-purple-600,
+    .ue-shell--admin .text-purple-700 {
+        color: var(--ue-brand) !important;
+    }
+
+    .ue-shell--admin .bg-amber-50,
+    .ue-shell--admin .bg-amber-100,
+    .ue-shell--admin .bg-yellow-50,
+    .ue-shell--admin .bg-yellow-100,
+    .ue-shell--admin .bg-orange-50,
+    .ue-shell--admin .bg-orange-100,
+    .ue-shell--admin .bg-indigo-50,
+    .ue-shell--admin .bg-indigo-100,
+    .ue-shell--admin .bg-purple-50,
+    .ue-shell--admin .bg-purple-100 {
+        background-color: var(--ue-brand-soft) !important;
+    }
+
+    .ue-shell--admin .bg-amber-400,
+    .ue-shell--admin .bg-amber-500,
+    .ue-shell--admin .bg-yellow-500,
+    .ue-shell--admin .bg-orange-500,
+    .ue-shell--admin .bg-indigo-500,
+    .ue-shell--admin .bg-indigo-600,
+    .ue-shell--admin .bg-purple-500,
+    .ue-shell--admin .bg-purple-600 {
+        background-color: var(--ue-brand) !important;
+    }
+
+    .ue-shell--admin .border-amber-100,
+    .ue-shell--admin .border-amber-200,
+    .ue-shell--admin .border-yellow-100,
+    .ue-shell--admin .border-yellow-200,
+    .ue-shell--admin .border-orange-200,
+    .ue-shell--admin .border-indigo-200,
+    .ue-shell--admin .border-purple-200 {
+        border-color: var(--ue-brand-border) !important;
+    }
+}
+
 /* =============================================================================
    UEConnect Design System — CSS Custom Properties (Design Tokens)
    Source: docs/04-design/03-color-system.md, 05-typography-system.md,
@@ -2347,4 +2401,3 @@
     border-radius: 2px;
     display: inline;
 }
-

@@ -123,8 +123,8 @@ class AdminNavigationTest extends TestCase
             ->get(route('admin.console'));
 
         $response->assertStatus(200);
-        $response->assertSee('Sức khỏe hệ thống, analytics và các chỉ báo vận hành.');
+        $response->assertSee('Sức khỏe hệ thống và các chỉ báo vận hành.');
         $response->assertSee('Tổng quan quản trị');
-        $response->assertSee('Phân tích');
+        $response->assertDontSee('Phân tích');
     }
 }
