@@ -117,7 +117,7 @@ class CommunityPolicy
         }
 
         return $community->isOwnedBy($user)
-            || $this->hasScopedPermission($user, $community, 'manage_community')
+            || $this->hasScopedPermission($user, $community, ['manage_community', 'manage_communities'])
             || $user->can('manage_communities');
     }
 
@@ -169,8 +169,7 @@ class CommunityPolicy
             return true;
         }
 
-        return $this->hasScopedPermission($user, $community, 'manage_community_members')
-            || $this->hasScopedPermission($user, $community, 'manage_community');
+        return $this->hasScopedPermission($user, $community, ['manage_community_members', 'manage_community', 'manage_communities']);
     }
 
     /**
@@ -212,8 +211,7 @@ class CommunityPolicy
             return true;
         }
 
-        return $this->hasScopedPermission($user, $community, 'moderate_community_posts')
-            || $this->hasScopedPermission($user, $community, 'manage_community');
+        return $this->hasScopedPermission($user, $community, ['moderate_community_posts', 'manage_community', 'manage_communities']);
     }
 
     /**
@@ -234,7 +232,8 @@ class CommunityPolicy
         return $this->isEligibleUser($user)
             && ($community->isOwnedBy($user)
             || $user->can('manage_communities')
-            || $user->can('manage_permissions'));
+            || $user->can('manage_permissions')
+            || $this->hasScopedPermission($user, $community, ['manage_community', 'manage_communities']));
     }
 
     /**
@@ -307,14 +306,17 @@ class CommunityPolicy
 
     /**
      * Check for a scoped PermissionGrant on this community.
+     *
+     * @param  string|list<string>  $permissionKey
      */
-    private function hasScopedPermission(User $user, Community $community, string $permissionKey): bool
+    private function hasScopedPermission(User $user, Community $community, string|array $permissionKey): bool
     {
         return PermissionGrant::where('user_id', $user->id)
-            ->where('permission_key', $permissionKey)
+            ->whereIn('permission_key', (array) $permissionKey)
             ->where('scope_type', 'community')
             ->where('scope_id', $community->id)
             ->where('status', 'active')
+            ->where(fn ($q) => $q->whereNull('starts_at')->orWhere('starts_at', '<=', now()))
             ->where(fn ($q) => $q->whereNull('expires_at')->orWhere('expires_at', '>', now()))
             ->exists();
     }

@@ -21,6 +21,7 @@ use App\Models\MentorFeedback;
 use App\Models\MentorProfile;
 use App\Models\MentorRequest;
 use App\Models\Message;
+use App\Models\PermissionGrant;
 use App\Models\Post;
 use App\Models\Profile;
 use App\Models\Report;
@@ -96,7 +97,28 @@ class AppServiceProvider extends ServiceProvider
             'mentor_profile' => MentorProfile::class,
         ]);
 
+        // Non-scoped PermissionGrant records extend the Gate so that
+        // permissions granted via the admin panel take effect alongside
+        // the standard Spatie role-based checks.
+        Gate::before(function (User $user, string $ability): ?bool {
+            $hasGrant = PermissionGrant::where('user_id', $user->id)
+                ->where('permission_key', $ability)
+                ->whereNull('scope_type')
+                ->whereNull('scope_id')
+                ->where('status', 'active')
+                ->where(function ($q): void {
+                    $q->whereNull('starts_at')->orWhere('starts_at', '<=', now());
+                })
+                ->where(function ($q): void {
+                    $q->whereNull('expires_at')->orWhere('expires_at', '>', now());
+                })
+                ->exists();
+
+            return $hasGrant ? true : null;
+        });
+
         Gate::policy(Connection::class, ConnectionPolicy::class);
+
         Gate::policy(BlockedUser::class, UserBlockPolicy::class);
         Gate::policy(Conversation::class, ConversationPolicy::class);
         Gate::policy(Message::class, MessagePolicy::class);

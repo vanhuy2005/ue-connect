@@ -264,7 +264,9 @@ class Community extends Model
             ->where('scope_type', 'community')
             ->where('scope_id', $this->id)
             ->where('status', 'active')
-            ->whereIn('permission_key', ['manage_community_members', 'manage_community'])
+            ->whereIn('permission_key', ['manage_community_members', 'manage_community', 'manage_communities'])
+            ->where(fn ($q) => $q->whereNull('starts_at')->orWhere('starts_at', '<=', now()))
+            ->where(fn ($q) => $q->whereNull('expires_at')->orWhere('expires_at', '>', now()))
             ->exists();
     }
 }
