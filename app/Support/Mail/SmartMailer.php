@@ -3,9 +3,11 @@
 namespace App\Support\Mail;
 
 use Illuminate\Mail\Mailable;
+use Illuminate\Support\Facades\Config;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Str;
+use RuntimeException;
 
 /**
  * Smart mailer router that selects the appropriate mail transport
@@ -40,14 +42,21 @@ class SmartMailer
     public static function to(string $recipientEmail, Mailable $mailable): void
     {
         $mailer = static::resolveMailer($recipientEmail);
+        $configurationStatus = MailDeliveryConfiguration::status($mailer);
+
+        if (! $configurationStatus['configured']) {
+            throw new RuntimeException('Mail delivery is not configured for mailer ['.$mailer.'].');
+        }
 
         // When sending via Outlook SMTP, the "from" must match the authenticated
         // SMTP username; otherwise Office365 rejects with a 554 sender mismatch.
         if ($mailer === 'outlook_smtp') {
-            $outlookFrom = env('OUTLOOK_SMTP_FROM_ADDRESS', env('OUTLOOK_SMTP_USERNAME'));
-            $outlookName = env('OUTLOOK_SMTP_FROM_NAME', config('mail.from.name', 'UEConnect'));
+            $outlookFrom = Config::get('mail.mailers.outlook_smtp.from_address');
+            $outlookName = Config::get('mail.mailers.outlook_smtp.from_name', config('mail.from.name', 'UEConnect'));
 
-            if ($outlookFrom && method_exists($mailable, 'from')) {
+            if ($outlookFrom && method_exists($mailable, 'withFromAddress')) {
+                $mailable->withFromAddress($outlookFrom, $outlookName);
+            } elseif ($outlookFrom && method_exists($mailable, 'from')) {
                 $mailable->from($outlookFrom, $outlookName);
             }
         }
