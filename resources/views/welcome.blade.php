@@ -294,7 +294,7 @@ $slides = [
                         </div>
 
                         {{-- Headline --}}
-                        <h1 class="welcome-hero-headline flex flex-col justify-center gap-y-0 sm:gap-y-1">
+                        <h1 class="welcome-hero-headline flex flex-col justify-center gap-y-0 sm:gap-y-1" data-testid="hero-label-divider">
                             <span class="block text-[12vw] sm:text-[4rem] lg:text-[4.5rem] xl:text-[5.5rem] font-black uppercase tracking-tighter leading-[0.9] whitespace-nowrap drop-shadow-sm">
                                 <span class="text-ue-brand">SINH</span> <span class="text-[#A61D37]">VIÊN</span>
                             </span>
