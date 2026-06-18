@@ -718,6 +718,7 @@ Route::prefix('admin')
                 : array_key_first($groups);
 
             $firstItemRoute = $groups[$selectedGroupKey]['items'][0]['route'] ?? 'admin.dashboard';
+
             return redirect()->route($firstItemRoute);
         })->name('console');
 
@@ -938,7 +939,10 @@ Route::get('/run-artisan', function () {
         return 'Lệnh không được hỗ trợ để chạy qua Web.';
     }
 
-    $params = ['--force' => true];
+    $params = [];
+    if (in_array($command, ['migrate', 'db:seed'])) {
+        $params['--force'] = true;
+    }
     if ($command === 'db:seed' && request()->has('class')) {
         $class = request('class');
         $class = str_replace('/', '\\', $class);
