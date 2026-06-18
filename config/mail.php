@@ -72,6 +72,8 @@ return [
             'encryption' => env('OUTLOOK_SMTP_ENCRYPTION', 'tls'),
             'username' => env('OUTLOOK_SMTP_USERNAME', env('MAIL_USERNAME')),
             'password' => env('OUTLOOK_SMTP_PASSWORD', env('MAIL_PASSWORD')),
+            'from_address' => env('OUTLOOK_SMTP_FROM_ADDRESS', env('OUTLOOK_SMTP_USERNAME', env('MAIL_USERNAME'))),
+            'from_name' => env('OUTLOOK_SMTP_FROM_NAME', env('MAIL_FROM_NAME', env('APP_NAME', 'UEConnect'))),
             'timeout' => null,
         ],
 

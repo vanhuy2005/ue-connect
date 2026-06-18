@@ -25,6 +25,14 @@ class ResetPasswordOtpMail extends Mailable
         public ?string $fromName = null,
     ) {}
 
+    public function withFromAddress(string $address, ?string $name = null): self
+    {
+        $this->fromAddress = $address;
+        $this->fromName = $name;
+
+        return $this;
+    }
+
     /**
      * Get the message envelope.
      */

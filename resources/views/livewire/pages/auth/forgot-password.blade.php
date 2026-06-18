@@ -2,9 +2,11 @@
 
 use App\Mail\Auth\ResetPasswordOtpMail;
 use App\Models\User;
+use App\Support\Mail\MailDeliveryConfiguration;
 use App\Support\Mail\SmartMailer;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Str;
 use Livewire\Attributes\Layout;
 use Livewire\Volt\Component;
 
@@ -23,25 +25,61 @@ new #[Layout('layouts.guest')] class extends Component
      */
     public function sendPasswordResetLink(): void
     {
+        $this->email = Str::lower(trim($this->email));
+
         $this->validate([
             'email' => ['required', 'string', 'email'],
         ]);
 
+        $requestId = (string) Str::uuid();
         $user = User::where('email', $this->email)->first();
+        $mailer = SmartMailer::resolveMailer($this->email);
+
+        Log::info('Password reset OTP requested', [
+            'request_id' => $requestId,
+            'email_domain' => Str::after($this->email, '@'),
+            'mailer' => $mailer,
+            'user_exists' => (bool) $user,
+        ]);
 
         if ($user) {
+            $configurationStatus = MailDeliveryConfiguration::status($mailer);
+
+            if (! $configurationStatus['configured']) {
+                Log::warning('Password reset OTP mailer is not configured', [
+                    'request_id' => $requestId,
+                    'email_domain' => Str::after($this->email, '@'),
+                    'mailer' => $mailer,
+                    'reason' => $configurationStatus['reason'],
+                    'context' => $configurationStatus['context'],
+                ]);
+
+                $this->addError('email', 'Hệ thống gửi OTP đang chưa được cấu hình đầy đủ. Vui lòng thử lại sau hoặc liên hệ quản trị viên.');
+
+                return;
+            }
+
             $otp = (string) random_int(100000, 999999);
 
             Cache::put('password_reset_otp_' . $this->email, $otp, now()->addMinutes(15));
 
             try {
                 SmartMailer::to($this->email, new ResetPasswordOtpMail($otp));
+
+                Log::info('Password reset OTP dispatched', [
+                    'request_id' => $requestId,
+                    'email_domain' => Str::after($this->email, '@'),
+                    'mailer' => $mailer,
+                    'user_id' => $user->id,
+                ]);
             } catch (\Throwable $e) {
                 Cache::forget('password_reset_otp_' . $this->email);
 
                 Log::error('Password reset OTP send failed', [
+                    'request_id' => $requestId,
                     'email' => $this->email,
-                    'mailer' => SmartMailer::resolveMailer($this->email),
+                    'email_domain' => Str::after($this->email, '@'),
+                    'mailer' => $mailer,
                     'error' => $e->getMessage(),
                 ]);
 
@@ -49,6 +87,12 @@ new #[Layout('layouts.guest')] class extends Component
 
                 return;
             }
+        } else {
+            Log::info('Password reset OTP skipped for unknown email', [
+                'request_id' => $requestId,
+                'email_domain' => Str::after($this->email, '@'),
+                'mailer' => $mailer,
+            ]);
         }
 
         // Always redirect to avoid email enumeration
