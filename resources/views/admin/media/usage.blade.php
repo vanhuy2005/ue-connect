@@ -1,7 +1,7 @@
 <x-app-layout shell="admin">
     <x-slot name="title">Hạn mức & Dung lượng Media</x-slot>
 
-    <div class="max-w-5xl mx-auto py-8 px-4 sm:px-6 lg:px-8">
+    <div class="w-full max-w-5xl mx-auto py-6 px-4 sm:px-5 lg:px-6">
         {{-- Back Link --}}
         <div class="mb-6">
             <a href="{{ route('admin.media.index') }}" class="inline-flex items-center gap-2 text-sm font-semibold text-ue-brand hover:underline">
@@ -61,7 +61,7 @@
 
             <x-ui.card class="p-6">
                 <div class="flex items-center gap-4">
-                    <div class="p-3 bg-indigo-50 text-indigo-600 rounded-xl">
+                    <div class="p-3 bg-ue-brand-soft text-ue-brand rounded-xl">
                         <x-ui.icon name="refresh-cw" size="md" />
                     </div>
                     <div>
@@ -96,10 +96,10 @@
                 <div class="mb-4">
                     <div class="flex justify-between text-sm mb-1.5 font-semibold">
                         <span class="text-ue-text">Số tệp đồng bộ hôm nay</span>
-                        <span class="text-indigo-600">{{ $syncCount }} / {{ $limitSync }}</span>
+                        <span class="text-ue-brand">{{ $syncCount }} / {{ $limitSync }}</span>
                     </div>
                     <div class="w-full bg-ue-border rounded-full h-3 overflow-hidden">
-                        <div class="h-full rounded-full transition-all duration-300 {{ $syncPercent > 80 ? 'bg-red-500' : 'bg-indigo-600' }}" style="width: {{ $syncPercent }}%"></div>
+                        <div class="h-full rounded-full transition-all duration-300 {{ $syncPercent > 80 ? 'bg-red-500' : 'bg-ue-brand' }}" style="width: {{ $syncPercent }}%"></div>
                     </div>
                     <div class="flex justify-between text-2xs text-ue-text-muted mt-1.5 font-medium">
                         <span>Đã đồng bộ {{ $syncPercent }}%</span>
