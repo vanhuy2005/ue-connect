@@ -102,6 +102,17 @@
     
     <style>
         html { scroll-behavior: smooth; }
+
+        body {
+            overflow-x: clip;
+            overflow-y: visible;
+        }
+
+        @supports not (overflow-x: clip) {
+            body {
+                overflow-x: hidden;
+            }
+        }
         
         .reveal-right {
             opacity: 0;
