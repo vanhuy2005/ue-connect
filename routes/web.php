@@ -790,6 +790,14 @@ Route::prefix('admin')
         })->name('notifications.index');
 
         // Users management
+        Route::get('users/create', function () {
+            if (! Gate::allows('manage_users')) {
+                abort(403);
+            }
+
+            return view('admin.users-create');
+        })->name('users.create');
+
         Route::get('users', function () {
             if (! Gate::any(['manage_users', 'manage_permissions', 'review_verification'])) {
                 abort(403);
@@ -797,6 +805,14 @@ Route::prefix('admin')
 
             return view('admin.users-list');
         })->name('users.index');
+
+        Route::get('users/{user}/edit', function (User $user) {
+            if (! Gate::allows('manage_users')) {
+                abort(403);
+            }
+
+            return view('admin.users-edit', ['user' => $user]);
+        })->name('users.edit');
 
         Route::get('users/{user}', function (User $user) {
             if (! Gate::any(['manage_users', 'manage_permissions', 'review_verification'])) {
