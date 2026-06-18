@@ -65,6 +65,16 @@ return [
             'transport' => 'resend',
         ],
 
+        'outlook_smtp' => [
+            'transport' => 'smtp',
+            'host' => env('OUTLOOK_SMTP_HOST', 'smtp.office365.com'),
+            'port' => env('OUTLOOK_SMTP_PORT', 587),
+            'encryption' => env('OUTLOOK_SMTP_ENCRYPTION', 'tls'),
+            'username' => env('OUTLOOK_SMTP_USERNAME', env('MAIL_USERNAME')),
+            'password' => env('OUTLOOK_SMTP_PASSWORD', env('MAIL_PASSWORD')),
+            'timeout' => null,
+        ],
+
         'sendmail' => [
             'transport' => 'sendmail',
             'path' => env('MAIL_SENDMAIL_PATH', '/usr/sbin/sendmail -bs -i'),

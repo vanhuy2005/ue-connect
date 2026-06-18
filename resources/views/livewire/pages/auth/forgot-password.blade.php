@@ -2,8 +2,9 @@
 
 use App\Mail\Auth\ResetPasswordOtpMail;
 use App\Models\User;
+use App\Support\Mail\SmartMailer;
 use Illuminate\Support\Facades\Cache;
-use Illuminate\Support\Facades\Mail;
+use Illuminate\Support\Facades\Log;
 use Livewire\Attributes\Layout;
 use Livewire\Volt\Component;
 
@@ -13,6 +14,12 @@ new #[Layout('layouts.guest')] class extends Component
 
     /**
      * Send a password reset OTP to the provided email address.
+     *
+     * Routing:
+     * - @hcmue.edu.vn / @student.hcmue.edu.vn / @teacher.hcmue.edu.vn
+     *   → sent via Outlook SMTP to avoid Microsoft spam filters.
+     * - All other domains (gmail, outlook personal, etc.)
+     *   → sent via Resend (DKIM-signed).
      */
     public function sendPasswordResetLink(): void
     {
@@ -27,7 +34,21 @@ new #[Layout('layouts.guest')] class extends Component
 
             Cache::put('password_reset_otp_' . $this->email, $otp, now()->addMinutes(15));
 
-            Mail::to($this->email)->send(new ResetPasswordOtpMail($otp));
+            try {
+                SmartMailer::to($this->email, new ResetPasswordOtpMail($otp));
+            } catch (\Throwable $e) {
+                Cache::forget('password_reset_otp_' . $this->email);
+
+                Log::error('Password reset OTP send failed', [
+                    'email' => $this->email,
+                    'mailer' => SmartMailer::resolveMailer($this->email),
+                    'error' => $e->getMessage(),
+                ]);
+
+                $this->addError('email', 'Không thể gửi mã OTP đến email này. Vui lòng thử lại sau hoặc liên hệ quản trị viên.');
+
+                return;
+            }
         }
 
         // Always redirect to avoid email enumeration
