@@ -1,7 +1,7 @@
 <x-app-layout shell="admin">
     <x-slot name="title">Quản lý Media</x-slot>
 
-    <div class="max-w-7xl mx-auto py-8 px-4 sm:px-6 lg:px-8">
+    <div class="w-full max-w-full py-6 px-4 sm:px-5 lg:px-6">
         {{-- Header Section --}}
         <div class="mb-8 flex flex-col md:flex-row md:items-end md:justify-between gap-4">
             <div>
@@ -35,13 +35,13 @@
         @endif
 
         {{-- Quick Operations Card --}}
-        <x-ui.card class="mb-8 p-6">
+        <x-ui.card class="mb-6 p-5">
             <h2 class="text-sm font-bold uppercase tracking-wider text-ue-text-muted mb-4">Thao tác hệ thống</h2>
-            <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-5 gap-3">
+            <div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-5 gap-3">
                 <form action="{{ route('admin.media.health') }}" method="POST">
                     @csrf
                     <x-ui.button type="submit" variant="secondary" size="sm" class="w-full">
-                        <x-ui.icon name="heart" size="sm" class="text-red-500 mr-2" />
+                        <x-ui.icon name="heart" size="sm" class="text-ue-brand mr-2" />
                         <span>Kiểm tra lưu trữ</span>
                     </x-ui.button>
                 </form>
@@ -57,7 +57,7 @@
                 <form action="{{ route('admin.media.cloudinary-sync') }}" method="POST">
                     @csrf
                     <x-ui.button type="submit" variant="secondary" size="sm" class="w-full">
-                        <x-ui.icon name="refresh-cw" size="sm" class="text-indigo-500 mr-2" />
+                        <x-ui.icon name="refresh-cw" size="sm" class="text-ue-brand mr-2" />
                         <span>Đồng bộ Cloudinary</span>
                     </x-ui.button>
                 </form>
@@ -65,7 +65,7 @@
                 <form action="{{ route('admin.media.cleanup-temporary') }}" method="POST">
                     @csrf
                     <x-ui.button type="submit" variant="secondary" size="sm" class="w-full">
-                        <x-ui.icon name="trash" size="sm" class="text-orange-500 mr-2" />
+                        <x-ui.icon name="trash" size="sm" class="text-ue-brand mr-2" />
                         <span>Dọn tệp tạm</span>
                     </x-ui.button>
                 </form>
@@ -73,7 +73,7 @@
                 <form action="{{ route('admin.media.cleanup-orphaned') }}" method="POST">
                     @csrf
                     <x-ui.button type="submit" variant="secondary" size="sm" class="w-full">
-                        <x-ui.icon name="shield-alert" size="sm" class="text-yellow-600 mr-2" />
+                        <x-ui.icon name="shield-alert" size="sm" class="text-ue-brand mr-2" />
                         <span>Dọn tệp mồ côi</span>
                     </x-ui.button>
                 </form>
@@ -125,53 +125,53 @@
         {{-- Table Card --}}
         <x-ui.card padding="none" class="overflow-hidden">
             <div class="overflow-x-auto">
-                <table class="min-w-full divide-y divide-ue-border text-sm text-left">
+                <table class="w-full min-w-[980px] table-fixed divide-y divide-ue-border text-sm text-left">
                     <thead class="bg-ue-surface-subtle text-xs font-bold text-ue-text-muted uppercase tracking-wider">
                         <tr>
-                            <th scope="col" class="px-6 py-4">Tên tệp tin</th>
-                            <th scope="col" class="px-6 py-4">Người tải</th>
-                            <th scope="col" class="px-6 py-4">Kích thước / Định dạng</th>
-                            <th scope="col" class="px-6 py-4">Danh mục</th>
-                            <th scope="col" class="px-6 py-4">Trạng thái</th>
-                            <th scope="col" class="px-6 py-4">Ngày tải</th>
-                            <th scope="col" class="px-6 py-4 text-right">Thao tác</th>
+                            <th scope="col" class="w-[24%] px-4 py-3">Tên tệp tin</th>
+                            <th scope="col" class="w-[14%] px-4 py-3">Người tải</th>
+                            <th scope="col" class="w-[14%] px-4 py-3">Kích thước / Định dạng</th>
+                            <th scope="col" class="w-[15%] px-4 py-3">Danh mục</th>
+                            <th scope="col" class="w-[10%] px-4 py-3">Trạng thái</th>
+                            <th scope="col" class="w-[9%] px-4 py-3">Ngày tải</th>
+                            <th scope="col" class="w-[14%] px-4 py-3 text-right">Thao tác</th>
                         </tr>
                     </thead>
                     <tbody class="bg-ue-surface divide-y divide-ue-border">
                         @forelse ($media as $item)
                             <tr class="hover:bg-ue-surface-hover transition-colors">
-                                <td class="px-6 py-4 max-w-xs">
+                                <td class="px-4 py-3">
                                     <div class="font-semibold text-ue-text truncate" title="{{ $item->original_filename }}">{{ $item->original_filename }}</div>
                                     <div class="text-2xs font-mono text-ue-text-muted mt-0.5 truncate">{{ $item->uuid }}</div>
                                 </td>
-                                <td class="px-6 py-4 whitespace-nowrap">
+                                <td class="px-4 py-3">
                                     @if ($item->user)
-                                        <div class="font-medium text-ue-text">{{ $item->user->name }}</div>
+                                        <div class="truncate font-medium text-ue-text" title="{{ $item->user->name }}">{{ $item->user->name }}</div>
                                         <div class="text-xs text-ue-text-muted">ID: {{ $item->user_id }}</div>
                                     @else
                                         <span class="text-xs text-ue-text-disabled">Unknown</span>
                                     @endif
                                 </td>
-                                <td class="px-6 py-4 whitespace-nowrap">
+                                <td class="px-4 py-3">
                                     <div class="text-ue-text">{{ round($item->size_bytes / 1024 / 1024, 2) }} MB</div>
-                                    <div class="text-xs text-ue-text-muted uppercase">{{ $item->extension }} ({{ $item->mime_type }})</div>
+                                    <div class="truncate text-xs text-ue-text-muted uppercase" title="{{ $item->mime_type }}">{{ $item->extension }} ({{ $item->mime_type }})</div>
                                 </td>
-                                <td class="px-6 py-4 whitespace-nowrap">
-                                    <div class="text-ue-text capitalize">{{ str_replace('_', ' ', $item->collection) }}</div>
-                                    <x-ui.badge variant="{{ $item->visibility === 'public' ? 'success' : 'warning' }}" class="text-[10px] mt-1 py-0.5">
+                                <td class="px-4 py-3">
+                                    <div class="truncate text-ue-text capitalize" title="{{ str_replace('_', ' ', $item->collection) }}">{{ str_replace('_', ' ', $item->collection) }}</div>
+                                    <x-ui.badge variant="{{ $item->visibility === 'public' ? 'success' : 'info' }}" class="text-[10px] mt-1 py-0.5">
                                         {{ $item->visibility === 'public' ? 'Công khai' : 'Riêng tư' }}
                                     </x-ui.badge>
                                 </td>
-                                <td class="px-6 py-4 whitespace-nowrap">
+                                <td class="px-4 py-3">
                                     <x-ui.badge variant="{{ $item->status === 'ready' ? 'success' : ($item->status === 'quarantined' ? 'danger' : 'neutral') }}">
                                         {{ $item->status === 'ready' ? 'Sẵn sàng' : ($item->status === 'quarantined' ? 'Đã cách ly' : $item->status) }}
                                     </x-ui.badge>
                                 </td>
-                                <td class="px-6 py-4 whitespace-nowrap text-xs text-ue-text-muted">
+                                <td class="px-4 py-3 text-xs text-ue-text-muted">
                                     {{ $item->created_at->format('H:i d/m/Y') }}
                                 </td>
-                                <td class="px-6 py-4 whitespace-nowrap text-right text-xs font-semibold">
-                                    <div class="flex justify-end gap-2">
+                                <td class="px-4 py-3 whitespace-nowrap text-right text-xs font-semibold">
+                                    <div class="flex justify-end gap-1.5">
                                         <x-ui.button href="{{ route('admin.media.show', $item) }}" variant="secondary" size="xs">
                                             Chi tiết
                                         </x-ui.button>

@@ -60,7 +60,7 @@ new class extends Component {
     }
 }; ?>
 
-<div class="max-w-7xl mx-auto py-8 px-4 sm:px-6 lg:px-8">
+<div class="w-full max-w-full py-6 px-4 sm:px-5 lg:px-6">
     {{-- Header --}}
     <div class="mb-6">
         <h1 class="text-2xl font-bold text-ue-text">Quản lý tài khoản người dùng</h1>
@@ -109,15 +109,15 @@ new class extends Component {
     {{-- Users Table --}}
     <x-ui.card padding="none" class="overflow-hidden">
         <div class="overflow-x-auto">
-            <table class="min-w-full divide-y divide-ue-border text-left">
+            <table class="w-full min-w-[860px] table-fixed divide-y divide-ue-border text-left">
                 <thead class="bg-ue-surface-subtle text-xs font-bold text-ue-text-muted uppercase tracking-wider">
                     <tr>
-                        <th scope="col" class="px-6 py-4">Người dùng</th>
-                        <th scope="col" class="px-6 py-4">Email</th>
-                        <th scope="col" class="px-6 py-4">Vai trò</th>
-                        <th scope="col" class="px-6 py-4">Trạng thái</th>
-                        <th scope="col" class="px-6 py-4">Đăng nhập cuối</th>
-                        <th scope="col" class="px-6 py-4 text-right">Thao tác</th>
+                        <th scope="col" class="w-[22%] px-4 py-3">Người dùng</th>
+                        <th scope="col" class="w-[28%] px-4 py-3">Email</th>
+                        <th scope="col" class="w-[13%] px-4 py-3">Vai trò</th>
+                        <th scope="col" class="w-[17%] px-4 py-3">Trạng thái</th>
+                        <th scope="col" class="w-[12%] px-4 py-3">Đăng nhập cuối</th>
+                        <th scope="col" class="w-[8%] px-4 py-3 text-right">Thao tác</th>
                     </tr>
                 </thead>
                 <tbody class="bg-ue-surface divide-y divide-ue-border text-sm">
@@ -151,23 +151,25 @@ new class extends Component {
                             };
                         @endphp
                         <tr class="hover:bg-ue-surface-hover transition-colors">
-                            <td class="px-6 py-4 whitespace-nowrap">
-                                <div class="font-semibold text-ue-text">{{ $user->name }}</div>
+                            <td class="px-4 py-3">
+                                <div class="truncate font-semibold text-ue-text" title="{{ $user->name }}">{{ $user->name }}</div>
                                 <div class="text-xs text-ue-text-muted mt-0.5">ID: {{ $user->id }}</div>
                             </td>
-                            <td class="px-6 py-4 text-ue-text-muted">{{ $user->email }}</td>
-                            <td class="px-6 py-4">
+                            <td class="px-4 py-3 text-ue-text-muted">
+                                <div class="truncate" title="{{ $user->email }}">{{ $user->email }}</div>
+                            </td>
+                            <td class="px-4 py-3">
                                 <x-ui.badge variant="{{ $primaryRole === 'admin' ? 'danger' : ($primaryRole === 'student' ? 'info' : 'neutral') }}">
                                     {{ ucfirst($primaryRole) }}
                                 </x-ui.badge>
                             </td>
-                            <td class="px-6 py-4">
+                            <td class="px-4 py-3">
                                 <x-ui.badge :variant="$statusColor">{{ $statusLabel }}</x-ui.badge>
                             </td>
-                            <td class="px-6 py-4 text-xs text-ue-text-muted">
+                            <td class="px-4 py-3 text-xs text-ue-text-muted">
                                 {{ $user->last_login_at?->format('H:i d/m/Y') ?? 'Chưa đăng nhập' }}
                             </td>
-                            <td class="px-6 py-4 whitespace-nowrap text-right">
+                            <td class="px-4 py-3 whitespace-nowrap text-right">
                                 <x-ui.button href="{{ route('admin.users.show', ['user' => $user->id]) }}" variant="secondary" size="sm" icon="eye">
                                     Chi tiết
                                 </x-ui.button>

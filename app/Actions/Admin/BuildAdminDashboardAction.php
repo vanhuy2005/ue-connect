@@ -21,7 +21,7 @@ class BuildAdminDashboardAction
 {
     public function execute(): array
     {
-        return Cache::remember('admin_dashboard_data', 600, function () {
+        return Cache::remember('admin_dashboard_data_v2', 600, function () {
             $today = now()->toDateString();
             $sevenDaysAgo = now()->subDays(7)->toDateTimeString();
 
@@ -244,6 +244,22 @@ class BuildAdminDashboardAction
                     ->count(),
             ];
 
+            $trendSeries = collect(range(6, 0))->map(function (int $daysAgo) {
+                $date = now()->subDays($daysAgo)->toDateString();
+
+                return [
+                    'label' => now()->subDays($daysAgo)->format('d/m'),
+                    'date' => $date,
+                    'new_users' => User::whereDate('created_at', $date)->count(),
+                    'posts' => Post::whereDate('created_at', $date)->count(),
+                    'comments' => Comment::whereDate('created_at', $date)->count(),
+                    'reports' => Report::whereDate('created_at', $date)->count(),
+                    'verifications_approved' => VerificationRequest::where('status', VerificationStatus::APPROVED)
+                        ->whereDate('updated_at', $date)
+                        ->count(),
+                ];
+            })->values()->all();
+
             return [
                 'snapshot' => $snapshot,
                 'priority_queue' => $priorityItems,
@@ -263,6 +279,7 @@ class BuildAdminDashboardAction
                     ])
                     ->toArray(),
                 'trends' => $trends,
+                'trend_series' => $trendSeries,
             ];
         });
     }
