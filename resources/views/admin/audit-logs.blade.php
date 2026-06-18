@@ -116,7 +116,7 @@
                                         }
                                     @endphp
                                     <x-ui.badge :variant="$variant" size="sm" class="font-mono text-[10px] tracking-tight uppercase">
-                                        {{ $action }}
+                                        {{ str_replace('_', ' ', ucfirst($action)) }}
                                     </x-ui.badge>
                                 </td>
                                 <td class="px-6 py-4 align-middle text-sm whitespace-nowrap">
