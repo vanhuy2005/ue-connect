@@ -67,8 +67,13 @@ RUN if [ -f package-lock.json ]; then npm ci; else npm install; fi
 COPY . .
 
 RUN composer dump-autoload --optimize \
+    && rm -rf public/build \
     && npm run build \
+    && test -f public/build/manifest.json \
+    && find public/build/assets -type f -name "*.css" | grep -q . \
+    && find public/build/assets -type f -name "*.js" | grep -q . \
     && mkdir -p storage/framework/cache storage/framework/sessions storage/framework/views storage/logs bootstrap/cache \
+    && chown -R www-data:www-data storage bootstrap/cache public/build \
     && chmod -R 775 storage bootstrap/cache
 
 # Tune PHP-FPM pool configuration for higher concurrency

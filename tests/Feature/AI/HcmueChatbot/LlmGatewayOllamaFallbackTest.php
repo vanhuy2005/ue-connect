@@ -71,6 +71,7 @@ class LlmGatewayOllamaFallbackTest extends TestCase
         config(['ai.ollama.fallback_provider' => 'gemini']);
         config(['ai.ollama.chat_model' => 'gemma4:e2b']);
         config(['ai.ollama.base_url' => 'http://127.0.0.1:11434']);
+        config(['ai.gemini.api_key' => 'dummy-gemini-key-for-testing']);
 
         // Ollama /api/chat fails
         Http::fake([

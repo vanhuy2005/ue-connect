@@ -54,6 +54,7 @@ new class extends Component {
         'announcement.published'               => 'Đã đăng thông báo mới',
         'community.suspended'                  => 'Đã đình chỉ cộng đồng',
         'community.reactivated'                => 'Đã khôi phục cộng đồng',
+        'test_key'                             => 'Test key',
     ];
 
     /**

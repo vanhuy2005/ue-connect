@@ -6,6 +6,7 @@ use App\Enums\ProgramStatus;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Support\Facades\Cache;
 
@@ -52,6 +53,13 @@ class CareerProgram extends Model
     public function dataQualityIssues(): HasMany
     {
         return $this->hasMany(CareerDataQualityIssue::class, 'program_id');
+    }
+
+    public function courses(): BelongsToMany
+    {
+        return $this->belongsToMany(CareerCourse::class, 'career_program_courses', 'program_id', 'course_id')
+            ->withPivot(['id', 'semester_id', 'credits', 'is_mandatory', 'knowledge_block'])
+            ->withTimestamps();
     }
 
     /**

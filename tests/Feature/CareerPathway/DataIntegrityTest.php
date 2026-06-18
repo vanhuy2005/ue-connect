@@ -19,15 +19,17 @@ class DataIntegrityTest extends TestCase
 
     public function test_every_imported_program_has_cohort_faculty_major()
     {
-        $cohort = CareerCohort::create(['name' => 'Khoa48', 'year' => 2023]);
-        $faculty = CareerFaculty::create(['name' => 'CNTT']);
-        $major = CareerMajor::create(['name' => 'CNTT', 'faculty_id' => $faculty->id]);
+        $cohort = CareerCohort::create(['name' => 'Khoa48', 'slug' => 'khoa-48', 'year' => 2023]);
+        $faculty = CareerFaculty::create(['name' => 'CNTT', 'slug' => 'cntt-'.uniqid()]);
+        $major = CareerMajor::create(['name' => 'CNTT', 'slug' => 'cntt-'.uniqid(), 'faculty_id' => $faculty->id]);
 
         $program = CareerProgram::create([
             'cohort_id' => $cohort->id,
             'faculty_id' => $faculty->id,
             'major_id' => $major->id,
             'status' => ProgramStatus::READY,
+            'name' => 'CNTT',
+            'slug' => 'cntt-'.uniqid(),
         ]);
 
         $this->assertNotNull($program->cohort_id);
@@ -38,20 +40,22 @@ class DataIntegrityTest extends TestCase
     public function test_ready_programs_must_have_semesters_and_courses_to_be_considered_valid()
     {
         // This is a logical integrity check
-        $cohort = CareerCohort::create(['name' => 'Khoa48', 'year' => 2023]);
-        $faculty = CareerFaculty::create(['name' => 'CNTT']);
-        $major = CareerMajor::create(['name' => 'CNTT', 'faculty_id' => $faculty->id]);
+        $cohort = CareerCohort::create(['name' => 'Khoa48', 'slug' => 'khoa-48', 'year' => 2023]);
+        $faculty = CareerFaculty::create(['name' => 'CNTT', 'slug' => 'cntt-'.uniqid()]);
+        $major = CareerMajor::create(['name' => 'CNTT', 'slug' => 'cntt-'.uniqid(), 'faculty_id' => $faculty->id]);
 
         $program = CareerProgram::create([
             'cohort_id' => $cohort->id,
             'faculty_id' => $faculty->id,
             'major_id' => $major->id,
             'status' => ProgramStatus::READY,
+            'name' => 'CNTT',
+            'slug' => 'cntt-'.uniqid(),
         ]);
 
         $s1 = CareerSemester::create(['program_id' => $program->id, 'semester_number' => 1, 'name' => 'Học kỳ 1']);
-        $c1 = CareerCourse::create(['code' => 'COMP101', 'name' => 'Nhập môn lập trình', 'credits' => 3]);
-        CareerProgramCourse::create(['program_id' => $program->id, 'semester_id' => $s1->id, 'course_id' => $c1->id, 'knowledge_block' => 'Khối kiến thức chung', 'is_mandatory' => true]);
+        $c1 = CareerCourse::create(['code' => 'COMP101', 'name' => 'Nhập môn lập trình']);
+        CareerProgramCourse::create(['program_id' => $program->id, 'semester_id' => $s1->id, 'course_id' => $c1->id, 'knowledge_block' => 'Khối kiến thức chung', 'is_mandatory' => true, 'credits' => 3]);
 
         // Just assert that we can query the relationship and it is not empty
         $this->assertTrue($program->semesters()->count() > 0);
@@ -60,9 +64,9 @@ class DataIntegrityTest extends TestCase
 
     public function test_bad_status_programs_are_not_exposed_to_public_api()
     {
-        $cohort = CareerCohort::create(['name' => 'Khoa48', 'year' => 2023]);
-        $faculty = CareerFaculty::create(['name' => 'CNTT']);
-        $major = CareerMajor::create(['name' => 'CNTT', 'faculty_id' => $faculty->id]);
+        $cohort = CareerCohort::create(['name' => 'Khoa48', 'slug' => 'khoa-48', 'year' => 2023]);
+        $faculty = CareerFaculty::create(['name' => 'CNTT', 'slug' => 'cntt-'.uniqid()]);
+        $major = CareerMajor::create(['name' => 'CNTT', 'slug' => 'cntt-'.uniqid(), 'faculty_id' => $faculty->id]);
 
         // Bad programs
         $badStatuses = [
@@ -77,6 +81,8 @@ class DataIntegrityTest extends TestCase
                 'faculty_id' => $faculty->id,
                 'major_id' => $major->id,
                 'status' => $status,
+                'name' => 'CNTT - '.$status->value,
+                'slug' => 'cntt-'.$status->value.'-'.uniqid(),
             ]);
         }
 
@@ -86,9 +92,11 @@ class DataIntegrityTest extends TestCase
             'faculty_id' => $faculty->id,
             'major_id' => $major->id,
             'status' => ProgramStatus::READY,
+            'name' => 'CNTT',
+            'slug' => 'cntt-'.uniqid(),
         ]);
 
-        $response = $this->getJson('/api/v1/career-pathway/programs?cohort_id='.$cohort->id);
+        $response = $this->getJson(route('career-pathway.programs', ['cohort_id' => $cohort->id]));
 
         $response->assertStatus(200);
 
