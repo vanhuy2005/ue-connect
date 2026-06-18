@@ -2,6 +2,8 @@
 
 namespace App\Support\Navigation;
 
+use App\Models\MentorAccessRequest;
+use App\Models\VerificationRequest;
 use Illuminate\Support\Facades\Gate;
 
 class AdminNavigation
@@ -13,7 +15,7 @@ class AdminNavigation
                 'label' => 'Overview',
                 'vn_label' => 'Tổng quan',
                 'icon' => 'shield',
-                'description' => 'Sức khỏe hệ thống, analytics và các chỉ báo vận hành.',
+                'description' => 'Sức khỏe hệ thống và các chỉ báo vận hành.',
                 'items' => [
                     [
                         'key' => 'dashboard',
@@ -22,14 +24,6 @@ class AdminNavigation
                         'icon' => 'shield',
                         'permission' => null,
                         'description' => 'Trang tổng quan hoạt động hệ thống',
-                    ],
-                    [
-                        'key' => 'analytics',
-                        'label' => 'Phân tích',
-                        'route' => 'admin.analytics.index',
-                        'icon' => 'bar-chart-3',
-                        'permission' => null,
-                        'description' => 'Xem thống kê và phân tích số liệu',
                     ],
                 ],
             ],
@@ -206,15 +200,17 @@ class AdminNavigation
                 // Determine badges for items
                 foreach ($filteredItems as &$fItem) {
                     $badge = 0;
-                    if ($fItem['key'] === 'verification' && class_exists(\App\Models\VerificationRequest::class)) {
+                    if ($fItem['key'] === 'verification' && class_exists(VerificationRequest::class)) {
                         try {
-                            $badge = \App\Models\VerificationRequest::where('status', 'pending')->count();
-                        } catch (\Exception $e) {}
+                            $badge = VerificationRequest::where('status', 'pending')->count();
+                        } catch (\Exception $e) {
+                        }
                     }
-                    if ($fItem['key'] === 'mentors' && class_exists(\App\Models\MentorAccessRequest::class)) {
+                    if ($fItem['key'] === 'mentors' && class_exists(MentorAccessRequest::class)) {
                         try {
-                            $badge = \App\Models\MentorAccessRequest::where('status', 'pending')->count();
-                        } catch (\Exception $e) {}
+                            $badge = MentorAccessRequest::where('status', 'pending')->count();
+                        } catch (\Exception $e) {
+                        }
                     }
                     $fItem['badge'] = $badge;
                 }
