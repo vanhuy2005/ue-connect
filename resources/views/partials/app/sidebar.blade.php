@@ -261,9 +261,9 @@ $secondaryNav = [
                                 @click="notificationsOpen = false"
                             @endif
                         >
-                            <div class="ue-nav-icon-container relative flex items-center justify-center">
+                            <div class="ue-nav-icon-container relative flex items-center justify-center" style="position: relative;">
                                 <x-ui.icon :name="$item['icon']" size="md" aria-hidden="true" class="flex-shrink-0" />
-                                <span x-show="collapsed" class="absolute -top-1 -right-1 h-2 w-2 rounded-full bg-red-500 ring-2 ring-white {{ !empty($item['badge']) && $item['badge'] > 0 ? '' : 'hidden' }} js-badge-dot-{{ $item['icon'] }}"></span>
+                                <span x-show="collapsed" style="position: absolute; top: 10px; right: 10px;" class="h-2.5 w-2.5 rounded-full bg-red-500 ring-2 ring-white {{ !empty($item['badge']) && $item['badge'] > 0 ? '' : 'hidden' }} js-badge-dot-{{ $item['icon'] }}"></span>
                             </div>
                             <span x-show="!collapsed" x-transition:enter="transition ease-out duration-200 delay-75" x-transition:enter-start="opacity-0 translate-x-[-8px]" x-transition:enter-end="opacity-100 translate-x-0" x-transition:leave="transition ease-in duration-100" x-transition:leave-start="opacity-100" x-transition:leave-end="opacity-0" class="whitespace-nowrap">{{ $item['label'] }}</span>
                             <span x-show="!collapsed" x-transition:enter="transition ease-out duration-200 delay-75" x-transition:enter-start="opacity-0" x-transition:enter-end="opacity-100" x-transition:leave="transition ease-in duration-100" x-transition:leave-start="opacity-100" x-transition:leave-end="opacity-0" class="ml-auto px-2 py-0.5 rounded-full bg-red-500 text-white text-[10px] font-bold {{ !empty($item['badge']) && $item['badge'] > 0 ? '' : 'hidden' }} js-badge-count-{{ $item['icon'] }}">

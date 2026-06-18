@@ -449,6 +449,25 @@
                         });
                     }
 
+                    function setSidebarBadgeCount(iconName, count) {
+                        let dotEls = document.querySelectorAll(`.js-badge-dot-${iconName}`);
+                        let countEls = document.querySelectorAll(`.js-badge-count-${iconName}`);
+                        
+                        if (count > 0) {
+                            dotEls.forEach(el => el.classList.remove('hidden'));
+                            countEls.forEach(el => {
+                                el.textContent = count;
+                                el.classList.remove('hidden');
+                            });
+                        } else {
+                            dotEls.forEach(el => el.classList.add('hidden'));
+                            countEls.forEach(el => {
+                                el.textContent = 0;
+                                el.classList.add('hidden');
+                            });
+                        }
+                    }
+
                     if (window.Echo) {
                         window.Echo.private('user.{{ Auth::id() }}')
                             .listen('.UserNotificationCreated', (e) => {
@@ -468,6 +487,7 @@
                     window.addEventListener('ue-notifications-updated', (e) => {
                         if (e.detail && typeof e.detail.count !== 'undefined') {
                             window.ueNotificationBadge?.setCount(e.detail.count);
+                            setSidebarBadgeCount('heart', e.detail.count);
                         }
                     });
 

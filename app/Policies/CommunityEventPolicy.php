@@ -39,10 +39,12 @@ class CommunityEventPolicy
         }
 
         return PermissionGrant::where('user_id', $user->id)
-            ->whereIn('permission_key', ['manage_community', 'manage_community_events'])
+            ->whereIn('permission_key', ['manage_community', 'manage_community_events', 'manage_communities'])
             ->where('scope_type', 'community')
             ->where('scope_id', $community->id)
             ->where('status', 'active')
+            ->where(fn ($q) => $q->whereNull('starts_at')->orWhere('starts_at', '<=', now()))
+            ->where(fn ($q) => $q->whereNull('expires_at')->orWhere('expires_at', '>', now()))
             ->exists();
     }
 
@@ -66,10 +68,12 @@ class CommunityEventPolicy
         }
 
         return $community && PermissionGrant::where('user_id', $user->id)
-            ->whereIn('permission_key', ['manage_community', 'manage_community_events'])
+            ->whereIn('permission_key', ['manage_community', 'manage_community_events', 'manage_communities'])
             ->where('scope_type', 'community')
             ->where('scope_id', $community->id)
             ->where('status', 'active')
+            ->where(fn ($q) => $q->whereNull('starts_at')->orWhere('starts_at', '<=', now()))
+            ->where(fn ($q) => $q->whereNull('expires_at')->orWhere('expires_at', '>', now()))
             ->exists();
     }
 }

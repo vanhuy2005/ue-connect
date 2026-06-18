@@ -29,10 +29,11 @@ class CommunityJoinRequestPolicy
         }
 
         return PermissionGrant::where('user_id', $user->id)
-            ->whereIn('permission_key', ['manage_community_members', 'manage_community'])
+            ->whereIn('permission_key', ['manage_community_members', 'manage_community', 'manage_communities'])
             ->where('scope_type', 'community')
             ->where('scope_id', $community->id)
             ->where('status', 'active')
+            ->where(fn ($q) => $q->whereNull('starts_at')->orWhere('starts_at', '<=', now()))
             ->where(fn ($q) => $q->whereNull('expires_at')->orWhere('expires_at', '>', now()))
             ->exists();
     }
