@@ -354,6 +354,8 @@ x-data="{
 
         @endforeach
 
+        @include('partials.landing.cta-final')
+
     </main>
 
     {{-- ============================================================ --}}
@@ -368,7 +370,7 @@ x-data="{
             <div class="flex gap-x-6 gap-y-3 flex-wrap justify-center">
                 <a href="{{ route('pwa.install') }}" class="hover:text-ue-brand transition-colors font-semibold sm:hidden">Cài đặt App</a>
                 <a href="{{ route('terms') }}" wire:navigate class="hover:text-slate-900 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-ue-brand rounded">Điều khoản</a>
-                <a href="{{ route('privacy') }}" wire:navigate class="hover:text-slate-900 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-ue-brand rounded">Bảo mật</a>
+                <a href="{{ route('privacy') }}" wire:navigate class="hover:text-slate-900 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-ue-brand rounded">Bảo mật & Quyền riêng tư</a>
                 <a href="{{ route('community-standards') }}" wire:navigate class="hover:text-slate-900 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-ue-brand rounded">Tiêu chuẩn cộng đồng</a>
             </div>
         </div>

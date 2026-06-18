@@ -61,7 +61,7 @@ new class extends Component {
         $hasTrustedAvatar = (bool) ($profile?->avatar()->where('status', 'ready')->exists() || $profile?->avatar_media_file_id);
 
         return [
-            'profile' => \App\Models\MentorProfile::where('user_id', $user->id)->first(),
+            'profile' => $user->can('mentor_access') ? \App\Models\MentorProfile::where('user_id', $user->id)->first() : null,
             'latestRequest' => MentorAccessRequest::query()
                 ->where('user_id', $user->id)
                 ->latest()

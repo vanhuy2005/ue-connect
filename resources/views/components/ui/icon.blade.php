@@ -732,6 +732,11 @@ $sizeClass = match($size) {
             <path d="M9 3.236v15" />
             @break
 
+        {{-- activity / pulse --}}
+        @case('activity')
+            <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"></polyline>
+            @break
+
         {{-- Default fallback circle with warnings in local --}}
         @default
             @if(app()->environment('local', 'testing'))

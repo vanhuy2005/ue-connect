@@ -12,18 +12,18 @@ class SystemSettingsService
 
     public function getAll(): array
     {
-        if (! Storage::exists($this->path)) {
+        if (! Storage::disk('local')->exists($this->path)) {
             return [];
         }
 
-        $json = Storage::get($this->path);
+        $json = Storage::disk('local')->get($this->path);
 
         return json_decode($json, true) ?? [];
     }
 
     public function setAll(array $data): void
     {
-        Storage::put($this->path, json_encode($data, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE));
+        Storage::disk('local')->put($this->path, json_encode($data, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE));
     }
 
     public function saveSnapshot(?string $name = null): string
@@ -31,21 +31,21 @@ class SystemSettingsService
         $name = $name ? preg_replace('/[^A-Za-z0-9_\-]/', '_', $name) : null;
         $fileName = ($name ?? 'snapshot_'.date('Ymd_His')).'.json';
 
-        $content = Storage::exists($this->path) ? Storage::get($this->path) : json_encode([]);
+        $content = Storage::disk('local')->exists($this->path) ? Storage::disk('local')->get($this->path) : json_encode([]);
 
         $full = $this->snapshotsDir.'/'.$fileName;
-        Storage::put($full, $content);
+        Storage::disk('local')->put($full, $content);
 
         return $fileName;
     }
 
     public function listSnapshots(): array
     {
-        if (! Storage::exists($this->snapshotsDir)) {
+        if (! Storage::disk('local')->exists($this->snapshotsDir)) {
             return [];
         }
 
-        $files = Storage::files($this->snapshotsDir);
+        $files = Storage::disk('local')->files($this->snapshotsDir);
         // Return names sorted desc
         rsort($files);
 
@@ -57,11 +57,11 @@ class SystemSettingsService
     public function getSnapshotContent(string $file): ?string
     {
         $path = $this->snapshotsDir.'/'.$file;
-        if (! Storage::exists($path)) {
+        if (! Storage::disk('local')->exists($path)) {
             return null;
         }
 
-        return Storage::get($path);
+        return Storage::disk('local')->get($path);
     }
 
     public function restoreSnapshot(string $file): bool
@@ -71,7 +71,7 @@ class SystemSettingsService
             return false;
         }
 
-        Storage::put($this->path, $content);
+        Storage::disk('local')->put($this->path, $content);
 
         return true;
     }
