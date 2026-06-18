@@ -30,7 +30,7 @@
 @endphp
 
 @if($activeGroup)
-<aside class="hidden lg:flex flex-col w-80 bg-white border-r border-slate-200 flex-shrink-0 p-4 sticky top-0 h-full overflow-y-auto">
+<aside class="hidden lg:flex flex-col w-72 bg-white border-r border-slate-200 flex-shrink-0 p-4 sticky top-0 h-full overflow-y-auto">
     <div class="mb-4">
         <h2 class="text-xl font-extrabold text-slate-800 tracking-tight">{{ $activeGroup['vn_label'] }}</h2>
         <p class="text-[11px] text-slate-500 font-bold mt-1 leading-relaxed">{{ $activeGroup['description'] }}</p>

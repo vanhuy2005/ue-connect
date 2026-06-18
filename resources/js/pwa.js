@@ -45,6 +45,65 @@ function urlBase64ToUint8Array(base64String) {
     return outputArray;
 }
 
+function buffersMatch(left, right) {
+    if (!left || !right || left.byteLength !== right.byteLength) {
+        return false;
+    }
+
+    const leftView = new Uint8Array(left);
+    const rightView = new Uint8Array(right);
+
+    return leftView.every((value, index) => value === rightView[index]);
+}
+
+async function sendPushSubscription(subscription) {
+    const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
+    if (!csrfToken) {
+        return {
+            success: false,
+            message: 'Không tìm thấy CSRF token để đăng ký thông báo đẩy.'
+        };
+    }
+
+    const response = await fetch('/app/notifications/push-subscriptions', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRF-TOKEN': csrfToken,
+            'Accept': 'application/json'
+        },
+        body: JSON.stringify(subscription)
+    });
+
+    if (!response.ok) {
+        return {
+            success: false,
+            message: 'Máy chủ chưa lưu được đăng ký thông báo đẩy.'
+        };
+    }
+
+    return { success: true };
+}
+
+async function revokePushSubscription(subscription) {
+    const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
+    if (!csrfToken || !subscription?.endpoint) {
+        return { success: false };
+    }
+
+    const response = await fetch('/app/notifications/push-subscriptions', {
+        method: 'DELETE',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRF-TOKEN': csrfToken,
+            'Accept': 'application/json'
+        },
+        body: JSON.stringify({ endpoint: subscription.endpoint })
+    });
+
+    return { success: response.ok };
+}
+
 // Register Service Worker
 if ('serviceWorker' in navigator) {
     window.addEventListener('load', () => {
@@ -172,14 +231,20 @@ document.addEventListener('alpine:init', () => {
         async subscribeToPushNotifications() {
             if (!('serviceWorker' in navigator) || !('PushManager' in window)) {
                 console.warn('Push messaging is not supported.');
-                return;
+                return {
+                    success: false,
+                    message: 'Trình duyệt này không hỗ trợ thông báo đẩy.'
+                };
             }
 
             try {
                 const permission = await Notification.requestPermission();
                 if (permission !== 'granted') {
                     console.warn('Notification permission denied.');
-                    return;
+                    return {
+                        success: false,
+                        message: 'Trình duyệt chưa cấp quyền gửi thông báo.'
+                    };
                 }
 
                 const registration = await navigator.serviceWorker.ready;
@@ -187,33 +252,90 @@ document.addEventListener('alpine:init', () => {
                 const vapidPublicKeyMeta = document.querySelector('meta[name="vapid-public-key"]');
                 if (!vapidPublicKeyMeta) {
                     console.error('VAPID public key meta tag not found.');
-                    return;
+                    return {
+                        success: false,
+                        message: 'Thiếu cấu hình VAPID public key.'
+                    };
                 }
                 
                 const vapidPublicKey = vapidPublicKeyMeta.getAttribute('content');
                 const convertedVapidKey = urlBase64ToUint8Array(vapidPublicKey);
 
-                const subscription = await registration.pushManager.subscribe({
-                    userVisibleOnly: true,
-                    applicationServerKey: convertedVapidKey
-                });
+                let subscription = await registration.pushManager.getSubscription();
+                const currentApplicationServerKey = subscription?.options?.applicationServerKey;
 
-                const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
-                if (!csrfToken) return;
+                if (subscription && currentApplicationServerKey && !buffersMatch(currentApplicationServerKey, convertedVapidKey)) {
+                    await subscription.unsubscribe();
+                    subscription = null;
+                }
 
-                await fetch('/app/notifications/push-subscriptions', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'X-CSRF-TOKEN': csrfToken,
-                        'Accept': 'application/json'
-                    },
-                    body: JSON.stringify(subscription)
-                });
+                if (!subscription) {
+                    try {
+                        subscription = await registration.pushManager.subscribe({
+                            userVisibleOnly: true,
+                            applicationServerKey: convertedVapidKey
+                        });
+                    } catch (error) {
+                        if (error.name === 'InvalidStateError') {
+                            const staleSubscription = await registration.pushManager.getSubscription();
+
+                            if (staleSubscription) {
+                                await staleSubscription.unsubscribe();
+                            }
+
+                            subscription = await registration.pushManager.subscribe({
+                                userVisibleOnly: true,
+                                applicationServerKey: convertedVapidKey
+                            });
+                        } else {
+                            throw error;
+                        }
+                    }
+                }
+
+                const result = await sendPushSubscription(subscription);
+                if (!result.success) {
+                    return result;
+                }
                 
                 window.trackPwaEvent('pwa_push_subscribed');
+
+                return { success: true };
             } catch (error) {
                 console.error('Error subscribing to push notifications', error);
+
+                return {
+                    success: false,
+                    message: 'Không thể đăng ký thông báo đẩy. Vui lòng thử lại.'
+                };
+            }
+        },
+
+        async unsubscribeFromPushNotifications() {
+            if (!('serviceWorker' in navigator) || !('PushManager' in window)) {
+                return { success: true };
+            }
+
+            try {
+                const registration = await navigator.serviceWorker.ready;
+                const subscription = await registration.pushManager.getSubscription();
+
+                if (!subscription) {
+                    return { success: true };
+                }
+
+                await revokePushSubscription(subscription);
+                await subscription.unsubscribe();
+                window.trackPwaEvent('pwa_push_unsubscribed');
+
+                return { success: true };
+            } catch (error) {
+                console.error('Error unsubscribing from push notifications', error);
+
+                return {
+                    success: false,
+                    message: 'Không thể tắt thông báo đẩy trên trình duyệt.'
+                };
             }
         }
     });

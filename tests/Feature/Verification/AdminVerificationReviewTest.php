@@ -317,6 +317,7 @@ class AdminVerificationReviewTest extends TestCase
 
         // Clear cache so dashboard gets fresh data
         Cache::forget('admin_dashboard_data');
+        Cache::forget('admin_dashboard_data_v2');
 
         $dashboardData = app(BuildAdminDashboardAction::class)->execute();
 

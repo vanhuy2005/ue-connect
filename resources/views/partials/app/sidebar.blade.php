@@ -92,22 +92,17 @@ $secondaryNav = [
 
 @if(isset($shell) && $shell === 'admin')
 <nav
-    class="ue-shell__sidebar hidden lg:flex flex-col py-5 px-3.5 justify-between h-100dvh sticky top-0 border-r border-slate-100 bg-white"
-    :class="collapsed ? 'ue-shell__sidebar--collapsed' : 'ue-shell__sidebar--expanded'"
+    class="ue-shell__sidebar ue-shell__sidebar--collapsed hidden lg:flex flex-col py-5 px-3.5 justify-between h-100dvh sticky top-0 border-r border-slate-100 bg-white"
     aria-label="Điều hướng quản trị"
     role="navigation"
-    x-data="{ moreOpen: false, collapsed: true, hovering: false }"
-    x-init="$watch('moreOpen', value => { if (!value && !hovering) { collapsed = true; } })"
-    @mouseenter="hovering = true; collapsed = false"
-    @mouseleave="hovering = false; if (!moreOpen) { collapsed = true; }"
+    x-data="{ moreOpen: false, collapsed: true }"
 >
     <div class="flex flex-col gap-6 flex-1 min-h-0 overflow-y-auto pr-1">
         {{-- Logo --}}
         <div class="ue-sidebar-logo-wrapper pl-1.5">
             <a href="{{ route('admin.dashboard') }}" wire:navigate.hover class="inline-flex items-center gap-2.5 ue-focus-ring rounded-lg" aria-label="UEConnect - Trang chủ">
                 <x-brand.logo variant="mark" size="lg" class="h-9 w-9 flex-shrink-0" />
-                <span x-show="!collapsed" x-transition:enter="transition ease-out duration-200 delay-75" x-transition:enter-start="opacity-0 translate-x-[-8px]" x-transition:enter-end="opacity-100 translate-x-0" x-transition:leave="transition ease-in duration-100" x-transition:leave-start="opacity-100" x-transition:leave-end="opacity-0" class="font-bold text-lg text-ue-brand tracking-tight whitespace-nowrap">UEConnect</span>
-                <span x-show="!collapsed" x-transition:enter="transition ease-out duration-200 delay-100" x-transition:enter-start="opacity-0 scale-95" x-transition:enter-end="opacity-100 scale-100" class="ml-1 px-1.5 py-0.5 rounded text-[8px] font-bold tracking-wider uppercase bg-gradient-to-r from-ue-brand to-cyan-500 text-white shadow-sm">Admin</span>
+                <span class="sr-only">UEConnect Admin</span>
             </a>
             <span class="sr-only">Admin console</span>
         </div>
@@ -140,12 +135,12 @@ $secondaryNav = [
                             wire:navigate.hover
                             class="ue-nav-link {{ $active ? 'active' : '' }}"
                             @if($active) aria-current="page" @endif
-                            :title="collapsed ? '{{ $group['vn_label'] }}' : ''"
+                            title="{{ $group['vn_label'] }}"
                         >
                             <div class="ue-nav-icon-container relative flex items-center justify-center">
                                 <x-ui.icon :name="$group['icon']" size="md" aria-hidden="true" class="flex-shrink-0" />
                             </div>
-                            <span x-show="!collapsed" x-transition:enter="transition ease-out duration-200 delay-75" x-transition:enter-start="opacity-0 translate-x-[-8px]" x-transition:enter-end="opacity-100 translate-x-0" x-transition:leave="transition ease-in duration-100" x-transition:leave-start="opacity-100" x-transition:leave-end="opacity-0" class="truncate text-sm font-semibold whitespace-nowrap">{{ $group['vn_label'] }}</span>
+                            <span class="sr-only">{{ $group['vn_label'] }}</span>
 
 
                         </a>
@@ -166,13 +161,12 @@ $secondaryNav = [
             aria-haspopup="true"
             :aria-expanded="moreOpen"
             aria-label="Xem thêm menu"
-            :title="collapsed ? '{{ $currentUser?->name }}' : ''"
+            title="{{ $currentUser?->name }}"
         >
             <div class="ue-nav-icon-container relative flex items-center justify-center">
                 <x-ui.avatar :user="$currentUser" size="xs" class="flex-shrink-0" />
             </div>
-            <span x-show="!collapsed" x-transition:enter="transition ease-out duration-200 delay-75" x-transition:enter-start="opacity-0 translate-x-[-8px]" x-transition:enter-end="opacity-100 translate-x-0" x-transition:leave="transition ease-in duration-100" x-transition:leave-start="opacity-100" x-transition:leave-end="opacity-0" class="truncate text-sm font-semibold text-slate-800 group-hover/profile:text-slate-950 whitespace-nowrap">{{ $currentUser?->name }}</span>
-            <x-ui.icon name="chevron-up" size="xs" x-show="!collapsed" x-transition:enter="transition ease-out duration-200 delay-75" x-transition:enter-start="opacity-0" x-transition:enter-end="opacity-100" x-transition:leave="transition ease-in duration-100" x-transition:leave-start="opacity-100" x-transition:leave-end="opacity-0" class="ml-auto text-slate-400 group-hover/profile:text-slate-600 transition-transform duration-150" x-bind:class="moreOpen ? 'rotate-180' : ''" />
+            <span class="sr-only">{{ $currentUser?->name }}</span>
         </button>
 
         {{-- More popover menu --}}

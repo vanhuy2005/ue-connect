@@ -19,6 +19,7 @@ new class extends Component {
     $systemHealth  = $data['system_health'];
     $recentActivity = $data['recent_activity'];
     $trends        = $data['trends'];
+    $trendSeries   = $data['trend_series'] ?? [];
 
     // ── Overall system health status ──────────────────────────────────────
     $hasDown     = collect($systemHealth)->contains('status', 'down');
@@ -105,8 +106,8 @@ new class extends Component {
                     Có sự cố
                 </span>
             @elseif($overallStatus === 'degraded')
-                <span class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full font-bold text-amber-700 bg-amber-50 border border-amber-200">
-                    <span class="w-1.5 h-1.5 rounded-full bg-amber-500 inline-block"></span>
+                <span class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full font-bold text-ue-brand bg-ue-brand-soft border border-ue-brand-border">
+                    <span class="w-1.5 h-1.5 rounded-full bg-ue-brand inline-block"></span>
                     Cần chú ý
                 </span>
             @else
@@ -119,7 +120,7 @@ new class extends Component {
     </div>
 
     {{-- ─── 2. PRIORITY METRICS STRIP ─────────────────────────────────────────── --}}
-    <div class="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-6 gap-3
+    <div class="grid grid-cols-2 sm:grid-cols-3 2xl:grid-cols-6 gap-3
                 motion-safe:animate-in motion-safe:fade-in motion-safe:slide-in-from-bottom-2 motion-safe:duration-200 motion-safe:delay-75">
 
         {{-- Metric: Chờ duyệt xác thực --}}
@@ -222,7 +223,7 @@ new class extends Component {
             </span>
             @if(\Illuminate\Support\Facades\Schema::hasTable('media'))
                 <div class="w-full bg-slate-100 h-1 rounded-full overflow-hidden mt-1">
-                    <div class="{{ $snapshot['media_usage_warning_level'] === 'critical' ? 'bg-red-500' : ($snapshot['media_usage_warning_level'] === 'warning' ? 'bg-amber-500' : 'bg-ue-brand') }} h-full rounded-full transition-all duration-300"
+                    <div class="{{ $snapshot['media_usage_warning_level'] === 'critical' ? 'bg-red-500' : 'bg-ue-brand' }} h-full rounded-full transition-all duration-300"
                          style="width: {{ $snapshot['media_usage_percent'] ?? 0 }}%"></div>
                 </div>
                 <span class="text-[11px] text-slate-400 mt-1">{{ number_format($snapshot['media_total_files']) }} tệp · {{ $snapshot['media_usage_percent'] }}% đã dùng</span>
@@ -255,17 +256,17 @@ new class extends Component {
                         @php
                             $severityBorder = match($item['severity']) {
                                 'critical' => 'border-l-red-500',
-                                'warning'  => 'border-l-amber-500',
+                                'warning'  => 'border-l-ue-brand',
                                 default    => 'border-l-blue-400',
                             };
                             $dotColor = match($item['severity']) {
                                 'critical' => 'bg-red-500',
-                                'warning'  => 'bg-amber-500',
+                                'warning'  => 'bg-ue-brand',
                                 default    => 'bg-blue-400',
                             };
                             $typeBg = match($item['type_key'] ?? 'other') {
                                 'verification' => 'bg-blue-50 text-blue-700 border-blue-200',
-                                'report'       => 'bg-amber-50 text-amber-700 border-amber-200',
+                                'report'       => 'bg-ue-brand-soft text-ue-brand border-ue-brand-border',
                                 'system'       => 'bg-slate-50 text-slate-600 border-slate-200',
                                 default        => 'bg-slate-50 text-slate-600 border-slate-200',
                             };
@@ -340,27 +341,65 @@ new class extends Component {
                         </div>
                     @endif
 
-                    <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4">
-                        @php
-                            $trendItems = [
-                                ['label' => 'Thành viên mới',   'value' => $trends['new_users'],               'color' => 'bg-blue-500'],
-                                ['label' => 'Bài viết mới',      'value' => $trends['posts'],                  'color' => 'bg-slate-400'],
-                                ['label' => 'Bình luận mới',     'value' => $trends['comments'],               'color' => 'bg-slate-400'],
-                                ['label' => 'Báo cáo vi phạm',   'value' => $trends['reports'],                'color' => $trends['reports'] >= 5 ? 'bg-red-500' : 'bg-amber-400'],
-                                ['label' => 'Đã duyệt xác thực', 'value' => $trends['verifications_approved'], 'color' => 'bg-emerald-500'],
-                            ];
-                            $maxVal = max(max(array_column($trendItems, 'value') ?: [0]), 1);
-                        @endphp
-                        @foreach($trendItems as $ti)
-                            <div class="flex flex-col gap-1.5">
-                                <span class="text-xs font-medium text-slate-500 leading-tight">{{ $ti['label'] }}</span>
-                                <span class="text-2xl font-bold text-slate-900 leading-none">{{ number_format($ti['value']) }}</span>
-                                <div class="w-full bg-slate-100 h-1 rounded-full overflow-hidden mt-0.5">
-                                    <div class="{{ $ti['color'] }} h-full rounded-full transition-all duration-500"
-                                         style="width: {{ $ti['value'] > 0 ? min(100, max(8, ($ti['value'] / $maxVal) * 100)) : 0 }}%"></div>
+                    @php
+                        $trendItems = [
+                            ['key' => 'new_users', 'label' => 'Thành viên', 'value' => $trends['new_users'], 'color' => '#124874'],
+                            ['key' => 'posts', 'label' => 'Bài viết', 'value' => $trends['posts'], 'color' => '#4DA3FF'],
+                            ['key' => 'comments', 'label' => 'Bình luận', 'value' => $trends['comments'], 'color' => '#94A3B8'],
+                            ['key' => 'reports', 'label' => 'Báo cáo', 'value' => $trends['reports'], 'color' => $trends['reports'] >= 5 ? '#E11D48' : '#2178D4'],
+                            ['key' => 'verifications_approved', 'label' => 'Đã duyệt', 'value' => $trends['verifications_approved'], 'color' => '#16A34A'],
+                        ];
+                        $chartWidth = 720;
+                        $chartHeight = 220;
+                        $paddingX = 34;
+                        $paddingY = 24;
+                        $plotWidth = $chartWidth - ($paddingX * 2);
+                        $plotHeight = $chartHeight - ($paddingY * 2);
+                        $maxValue = max(1, collect($trendSeries)->flatMap(fn ($day) => collect($trendItems)->map(fn ($item) => $day[$item['key']] ?? 0))->max() ?? 1);
+                        $pointCount = max(count($trendSeries) - 1, 1);
+                    @endphp
+
+                    <div class="grid grid-cols-2 md:grid-cols-5 gap-3 mb-4">
+                        @foreach($trendItems as $item)
+                            <div class="rounded-lg border border-slate-100 bg-slate-50/60 px-3 py-2">
+                                <div class="flex items-center gap-2 text-[11px] font-semibold text-slate-500">
+                                    <span class="h-2 w-2 rounded-full" style="background-color: {{ $item['color'] }}"></span>
+                                    <span>{{ $item['label'] }}</span>
                                 </div>
+                                <div class="mt-1 text-xl font-bold leading-none text-slate-900">{{ number_format($item['value']) }}</div>
                             </div>
                         @endforeach
+                    </div>
+
+                    <div class="overflow-hidden rounded-lg border border-slate-100 bg-white">
+                        <svg viewBox="0 0 {{ $chartWidth }} {{ $chartHeight }}" role="img" aria-label="Biểu đồ đường insight 7 ngày gần đây" class="h-56 w-full">
+                            <rect x="0" y="0" width="{{ $chartWidth }}" height="{{ $chartHeight }}" fill="#ffffff" />
+                            @foreach([0, 1, 2, 3] as $gridIndex)
+                                @php
+                                    $gridY = $paddingY + (($plotHeight / 3) * $gridIndex);
+                                @endphp
+                                <line x1="{{ $paddingX }}" y1="{{ $gridY }}" x2="{{ $chartWidth - $paddingX }}" y2="{{ $gridY }}" stroke="#E4E6EB" stroke-width="1" />
+                            @endforeach
+
+                            @foreach($trendItems as $item)
+                                @php
+                                    $points = collect($trendSeries)->values()->map(function ($day, $index) use ($item, $paddingX, $paddingY, $plotWidth, $plotHeight, $maxValue, $pointCount) {
+                                        $x = $paddingX + (($plotWidth / $pointCount) * $index);
+                                        $y = $paddingY + $plotHeight - (((int) ($day[$item['key']] ?? 0) / $maxValue) * $plotHeight);
+
+                                        return round($x, 2).','.round($y, 2);
+                                    })->implode(' ');
+                                @endphp
+                                <polyline points="{{ $points }}" fill="none" stroke="{{ $item['color'] }}" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" />
+                            @endforeach
+
+                            @foreach($trendSeries as $index => $day)
+                                @php
+                                    $x = $paddingX + (($plotWidth / $pointCount) * $index);
+                                @endphp
+                                <text x="{{ $x }}" y="{{ $chartHeight - 6 }}" text-anchor="middle" fill="#64748B" font-size="11" font-weight="600">{{ $day['label'] }}</text>
+                            @endforeach
+                        </svg>
                     </div>
                 </div>
             </div>
@@ -423,9 +462,9 @@ new class extends Component {
                                 </div>
                                 {{-- Raw action in tooltip for unknown keys --}}
                                 @if($isUnknown && !empty($rawKey))
-                                    <span class="text-[10px] text-slate-300 font-mono mt-0.5 inline-block"
-                                          title="Raw action key: {{ $rawKey }}">
-                                        debug: {{ $rawKey }}
+                                    <span class="text-[10px] text-slate-400 font-medium mt-0.5 inline-block"
+                                          title="Mã hệ thống: {{ $rawKey }}">
+                                        Mã hệ thống chưa đặt tên
                                     </span>
                                 @endif
                             </div>
@@ -451,13 +490,13 @@ new class extends Component {
                         @php
                             $dotClass = match($service['status']) {
                                 'healthy'  => 'bg-emerald-500',
-                                'degraded' => 'bg-amber-500',
+                                'degraded' => 'bg-ue-brand',
                                 'down'     => 'bg-red-500 animate-pulse',
                                 default    => 'bg-slate-300',
                             };
                             $badgeClass = match($service['status']) {
                                 'healthy'  => 'bg-emerald-50 text-emerald-700 border-emerald-200',
-                                'degraded' => 'bg-amber-50 text-amber-700 border-amber-200',
+                                'degraded' => 'bg-ue-brand-soft text-ue-brand border-ue-brand-border',
                                 'down'     => 'bg-red-50 text-red-700 border-red-200',
                                 default    => 'bg-slate-50 text-slate-500 border-slate-200',
                             };
@@ -490,7 +529,7 @@ new class extends Component {
                     @php
                         $quickActions = [
                             ['label' => 'Duyệt xác thực', 'icon' => 'shield-check', 'url' => route('admin.verifications.queue'), 'badge' => $snapshot['pending_verification'] > 0 ? $snapshot['pending_verification'] : null, 'badgeColor' => 'bg-blue-100 text-blue-700'],
-                            ['label' => 'Xử lý báo cáo', 'icon' => 'flag', 'url' => route('admin.reports.index'), 'badge' => $snapshot['open_reports'] > 0 ? $snapshot['open_reports'] : null, 'badgeColor' => 'bg-amber-100 text-amber-700'],
+                            ['label' => 'Xử lý báo cáo', 'icon' => 'flag', 'url' => route('admin.reports.index'), 'badge' => $snapshot['open_reports'] > 0 ? $snapshot['open_reports'] : null, 'badgeColor' => 'bg-ue-brand-soft text-ue-brand'],
                             ['label' => 'Tài khoản hạn chế', 'icon' => 'user-x', 'url' => route('admin.users.index'), 'badge' => $snapshot['restricted_users'] > 0 ? $snapshot['restricted_users'] : null, 'badgeColor' => 'bg-red-100 text-red-700'],
                             ['label' => 'Kiểm duyệt nội dung', 'icon' => 'eye', 'url' => route('admin.moderation.index'), 'badge' => $snapshot['pending_moderation'] > 0 ? $snapshot['pending_moderation'] : null, 'badgeColor' => 'bg-slate-100 text-slate-600'],
                             ['label' => 'Quản lý Media', 'icon' => 'folder', 'url' => route('admin.media.index'), 'badge' => null, 'badgeColor' => ''],
@@ -534,7 +573,7 @@ new class extends Component {
                         @if($snapshot['needs_info_verification'] > 0)
                             <div class="flex items-center justify-between text-xs">
                                 <div class="flex items-center gap-2">
-                                    <span class="w-2 h-2 rounded-full bg-amber-400 flex-shrink-0"></span>
+                                    <span class="w-2 h-2 rounded-full bg-ue-brand flex-shrink-0"></span>
                                     <span class="font-medium text-slate-600">Cần bổ sung</span>
                                 </div>
                                 <span class="font-bold text-slate-900">{{ $snapshot['needs_info_verification'] }}</span>
