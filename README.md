@@ -1,4 +1,4 @@
-<p align="right">
+<p align="right"> 
   <strong>Tiếng Việt</strong> · <a href="README.en.md">English</a>
 </p>
 
@@ -490,6 +490,7 @@ Dự án **không được phát hành theo MIT, Apache, GPL hoặc bất kỳ g
 UEConnect được xây dựng cho mục đích học tập, nghiên cứu, demo học thuật và portfolio kỹ thuật. Các tên gọi liên quan đến HCMUE, dữ liệu học thuật HCMUE hoặc bối cảnh nhà trường được sử dụng nhằm mô phỏng và phục vụ mục tiêu học thuật; việc triển khai chính thức trong phạm vi tổ chức cần có phê duyệt riêng từ các bên có thẩm quyền.
 
 ---
+Nhóm I.102
 
 <p align="center">
   <strong>Phạm Gia Bảo</strong> · <strong>Nguyễn Văn Quang Huy</strong> · <strong>Trần Gia Huy</strong> · <strong>Nguyễn Tuấn Khôi</strong> · <strong>Võ Chí Lâm</strong>
