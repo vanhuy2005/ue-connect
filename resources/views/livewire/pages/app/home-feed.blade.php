@@ -911,8 +911,13 @@ new #[Layout('layouts.app')] class extends Component
             if ($this->activeTypeFilter === 'experience') {
                 $query->whereIn('post_type', ['experience', 'career_insight']);
             } elseif ($this->activeTypeFilter === 'pedagogy') {
-                $query->where('post_type', 'opportunity')
-                    ->whereHas('opportunity', fn ($q) => $q->where('category', 'pedagogy'));
+                $query->where(function ($q) {
+                    $q->whereJsonContains('tags', 'pedagogy')
+                        ->orWhere(function ($sub) {
+                            $sub->where('post_type', 'opportunity')
+                                ->whereHas('opportunity', fn ($o) => $o->where('category', 'pedagogy'));
+                        });
+                });
             } else {
                 $query->where('post_type', $this->activeTypeFilter);
             }
@@ -990,8 +995,13 @@ new #[Layout('layouts.app')] class extends Component
                     if ($this->activeTypeFilter === 'experience') {
                         $query->whereIn('post_type', ['experience', 'career_insight']);
                     } elseif ($this->activeTypeFilter === 'pedagogy') {
-                        $query->where('post_type', 'opportunity')
-                            ->whereHas('opportunity', fn ($q) => $q->where('category', 'pedagogy'));
+                        $query->where(function ($q) {
+                            $q->whereJsonContains('tags', 'pedagogy')
+                                ->orWhere(function ($sub) {
+                                    $sub->where('post_type', 'opportunity')
+                                        ->whereHas('opportunity', fn ($o) => $o->where('category', 'pedagogy'));
+                                });
+                        });
                     } else {
                         $query->where('post_type', $this->activeTypeFilter);
                     }
@@ -1003,8 +1013,13 @@ new #[Layout('layouts.app')] class extends Component
                 if ($this->activeTypeFilter === 'experience') {
                     $query->whereIn('post_type', ['experience', 'career_insight']);
                 } elseif ($this->activeTypeFilter === 'pedagogy') {
-                    $query->where('post_type', 'opportunity')
-                        ->whereHas('opportunity', fn ($q) => $q->where('category', 'pedagogy'));
+                    $query->where(function ($q) {
+                        $q->whereJsonContains('tags', 'pedagogy')
+                            ->orWhere(function ($sub) {
+                                $sub->where('post_type', 'opportunity')
+                                    ->whereHas('opportunity', fn ($o) => $o->where('category', 'pedagogy'));
+                            });
+                    });
                 } else {
                     $query->where('post_type', $this->activeTypeFilter);
                 }

@@ -9,6 +9,7 @@ use App\Actions\Settings\EnsureUserSettingsExistAction;
 use App\Enums\AccountStatus;
 use App\Enums\ConnectionStatus;
 use App\Enums\MessageType;
+use App\Enums\ModerationStatus;
 use App\Enums\PostStatus;
 use App\Enums\PostType;
 use App\Enums\PostVisibility;
@@ -903,6 +904,66 @@ class PostInteractionTest extends TestCase
             ->assertSet('activeTypeFilter', 'all')
             ->assertSee('Experience post to filter.')
             ->assertSee('Career Insight post to filter.');
+    }
+
+    public function test_home_feed_can_filter_posts_by_pedagogy(): void
+    {
+        $alumni = User::factory()->create([
+            'account_status' => AccountStatus::ACTIVE,
+        ]);
+        $alumni->assignRole('alumni');
+        $alumni->profile()->create([
+            'display_name' => 'Alumni User',
+            'role_type' => 'alumni',
+            'profile_status' => 'complete',
+        ]);
+
+        // Post 1: Experience post tagged with 'pedagogy'
+        Post::factory()->create([
+            'user_id' => $alumni->id,
+            'body' => 'Pedagogy experience post.',
+            'post_type' => PostType::EXPERIENCE->value,
+            'status' => PostStatus::PUBLISHED,
+            'published_at' => now(),
+            'tags' => ['experience', 'pedagogy'],
+        ]);
+
+        // Post 2: Opportunity post under category 'pedagogy' (with empty tags)
+        $oppPost = Post::factory()->create([
+            'user_id' => $alumni->id,
+            'body' => 'Pedagogy opportunity post.',
+            'post_type' => PostType::OPPORTUNITY->value,
+            'status' => PostStatus::PUBLISHED,
+            'moderation_status' => ModerationStatus::APPROVED->value,
+            'published_at' => now()->subMinute(),
+            'tags' => ['opportunity'],
+        ]);
+        $oppPost->opportunity()->create([
+            'is_expired' => false,
+            'category' => 'pedagogy',
+        ]);
+
+        // Post 3: Regular post not related to pedagogy
+        Post::factory()->create([
+            'user_id' => $alumni->id,
+            'body' => 'Regular standard post.',
+            'post_type' => PostType::STANDARD->value,
+            'status' => PostStatus::PUBLISHED,
+            'published_at' => now()->subMinutes(2),
+            'tags' => [],
+        ]);
+
+        $this->actingAs($this->user);
+
+        Volt::test('pages.app.home-feed')
+            ->assertSee('Pedagogy experience post.')
+            ->assertSee('Pedagogy opportunity post.')
+            ->assertSee('Regular standard post.')
+            ->call('setTypeFilter', 'pedagogy')
+            ->assertSet('activeTypeFilter', 'pedagogy')
+            ->assertSee('Pedagogy experience post.')
+            ->assertSee('Pedagogy opportunity post.')
+            ->assertDontSee('Regular standard post.');
     }
 
     public function test_home_feed_tabs_and_filters_are_mutually_exclusive(): void
