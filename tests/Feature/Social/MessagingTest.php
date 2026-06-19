@@ -500,15 +500,15 @@ class MessagingTest extends TestCase
             'feedback_text' => 'Mentor is very helpful!',
         ]);
 
-        // 3. Mentor views completed consultation UX and student feedback
+        // 3. Mentor views completed consultation UX - feedback is NOT shown in chat (anonymous, only visible on dashboard)
         $this->actingAs($mentor);
 
         Volt::test('pages.app.messages', ['activeConversation' => $conversation])
             ->assertSet('selectedConversationId', $conversation->id)
             ->assertSee('Phiên tư vấn đã hoàn thành')
             ->assertSee('Đã đánh dấu hoàn thành phiên tư vấn này.')
-            ->assertSee('Đánh giá từ sinh viên')
-            ->assertSee('Hữu ích')
-            ->assertSee('Mentor is very helpful!');
+            ->assertDontSee('Đánh giá từ sinh viên')
+            ->assertDontSee('Hữu ích')
+            ->assertDontSee('Mentor is very helpful!');
     }
 }

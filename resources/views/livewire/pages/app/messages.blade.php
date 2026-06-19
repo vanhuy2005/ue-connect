@@ -1758,31 +1758,6 @@ new #[Layout('layouts.app')] class extends Component
                             @endif
                         </div>
 
-                        {{-- Student Feedback to Mentor --}}
-                        @if ($isMentor && $mentorRequest->feedback()->exists())
-                            @php
-                                $feedback = $mentorRequest->feedback;
-                                $helpfulnessLabel = $feedback->helpfulness_level?->label() ?? 'Chưa rõ';
-                            @endphp
-                            <div class="mt-4 p-4 rounded-xl border border-slate-150 bg-slate-50/50 max-w-sm w-full text-left space-y-2">
-                                <h4 class="text-xxs font-bold text-slate-400 uppercase tracking-wider">Đánh giá từ sinh viên</h4>
-                                <div class="flex items-center gap-1.5">
-                                    <span class="inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-md 
-                                        @if($feedback->helpfulness_level?->value === 'helpful') bg-emerald-50 text-emerald-700 border border-emerald-200
-                                        @elseif($feedback->helpfulness_level?->value === 'somewhat_helpful') bg-amber-50 text-amber-700 border border-amber-200
-                                        @else bg-red-50 text-red-700 border border-red-200
-                                        @endif">
-                                        {{ $helpfulnessLabel }}
-                                    </span>
-                                    <span class="text-[10px] text-slate-450 font-semibold">{{ $feedback->created_at->format('d/m/Y') }}</span>
-                                </div>
-                                @if ($feedback->feedback_text)
-                                    <p class="text-xxs text-slate-650 font-medium leading-relaxed italic">
-                                        "{{ $feedback->feedback_text }}"
-                                    </p>
-                                @endif
-                            </div>
-                        @endif
 
                         {{-- Action Buttons --}}
                         <div class="flex items-center gap-2 pt-2">
