@@ -1724,13 +1724,13 @@ new #[Layout('layouts.app')] class extends Component
                 </div>
 
                 <div wire:loading.remove wire:target="selectConversation">
-                    @if ($activeConvo->mentorRequest && $activeConvo->mentorRequest->status === \App\Enums\MentorRequestStatus::Completed && !$isFriendWithRecipient)
-                    {{-- Completed Consultation Session UX --}}
                     @php
-                        $mentorRequest = $activeConvo->mentorRequest;
-                        $isStudent = (int) $mentorRequest->student_id === (int) Auth::id();
-                        $isMentor = (int) $mentorRequest->mentor_id === (int) Auth::id();
+                        $mentorRequest = $activeConvo->mentorRequest ?? null;
+                        $isStudent = $mentorRequest && (int) $mentorRequest->student_id === (int) Auth::id();
+                        $isMentor  = $mentorRequest && (int) $mentorRequest->mentor_id  === (int) Auth::id();
                     @endphp
+                    @if ($mentorRequest && $mentorRequest->status === \App\Enums\MentorRequestStatus::Completed && !$isFriendWithRecipient && ($isStudent || $isMentor))
+                    {{-- Completed Consultation Session UX --}}
                     <div class="py-6 px-4 flex flex-col items-center text-center space-y-4">
                         {{-- Confetti and Green Check icon --}}
                         <div class="relative">
