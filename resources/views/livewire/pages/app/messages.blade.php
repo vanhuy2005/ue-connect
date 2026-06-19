@@ -1231,10 +1231,11 @@ new #[Layout('layouts.app')] class extends Component
         "
     >
         @if ($selectedConversationId && $activeConvo)
-            @php
-                $recipient = $activeConvo->getRecipientFor(Auth::user());
-            @endphp
-            {{-- Header --}}
+            <div wire:key="convo-active-{{ $activeConvo->id }}" class="flex-1 flex flex-col min-w-0 h-full relative overflow-hidden bg-slate-50">
+                @php
+                    $recipient = $activeConvo->getRecipientFor(Auth::user());
+                @endphp
+                {{-- Header --}}
             <div class="h-[62px] px-4 bg-white border-b border-slate-150 flex items-center justify-between flex-shrink-0 z-10">
                 <div class="flex items-center gap-3 min-w-0 flex-1">
                     {{-- Back button for mobile --}}
@@ -1731,7 +1732,7 @@ new #[Layout('layouts.app')] class extends Component
                     @endphp
                     @if ($mentorRequest && $mentorRequest->status === \App\Enums\MentorRequestStatus::Completed && !$isFriendWithRecipient && ($isStudent || $isMentor))
                     {{-- Completed Consultation Session UX --}}
-                    <div class="py-6 px-4 flex flex-col items-center text-center space-y-4">
+                    <div wire:key="completed-consultation-ux-{{ $activeConvo->id }}" class="py-6 px-4 flex flex-col items-center text-center space-y-4">
                         {{-- Confetti and Green Check icon --}}
                         <div class="relative">
                             <!-- Confetti decorations around checkmark -->
@@ -1791,7 +1792,7 @@ new #[Layout('layouts.app')] class extends Component
 
                     </div>
                     @elseif ($isRestricted)
-                    <div class="bg-slate-50 border border-slate-150 rounded-xl p-3.5 flex items-center gap-3 text-xxs font-semibold text-slate-500">
+                    <div wire:key="restricted-banner-{{ $activeConvo->id }}" class="bg-slate-50 border border-slate-150 rounded-xl p-3.5 flex items-center gap-3 text-xxs font-semibold text-slate-500">
                         <x-ui.icon name="shield-alert" size="sm" class="text-slate-400 flex-shrink-0" />
                         <span class="leading-normal">
                             @if ($isBlocked)
@@ -1802,8 +1803,9 @@ new #[Layout('layouts.app')] class extends Component
                         </span>
                     </div>
                 @else
-                    {{-- Active Reply Preview Bar --}}
-                    @if ($replyingToMessageId)
+                    <div wire:key="active-composer-{{ $activeConvo->id }}" class="w-full">
+                        {{-- Active Reply Preview Bar --}}
+                        @if ($replyingToMessageId)
                         @php
                             $replyMsg = \App\Models\Message::with('sender')->find($replyingToMessageId);
                         @endphp
@@ -1891,11 +1893,13 @@ new #[Layout('layouts.app')] class extends Component
                             </span>
                         </button>
                     </form>
+                    </div>
                 @endif
                 </div>
             </div>
+            </div>
         @else
-            <div class="flex-1 flex flex-col items-center justify-center text-center p-8">
+            <div wire:key="convo-empty-state" class="flex-1 flex flex-col items-center justify-center text-center p-8">
                 <x-ui.icon name="message-square" size="lg" class="text-slate-200" />
                 <h3 class="text-sm font-bold text-slate-700 mt-3">Chào mừng bạn đến với Hộp thư</h3>
                 <p class="text-xxs text-slate-400 max-w-sm mt-1">Chọn một cuộc trò chuyện từ danh sách bên trái hoặc truy cập danh sách bạn bè để bắt đầu trò chuyện riêng tư, bảo mật.</p>
