@@ -78,13 +78,25 @@ jobs:
               "$IMAGE_TAG"
 
             echo "Waiting for app to become ready..."
-            for i in $(seq 1 30); do
-              if curl -fsSI "http://127.0.0.1:${APP_PORT}" >/dev/null 2>&1; then
+
+            APP_READY=0
+
+            for i in $(seq 1 60); do
+              if curl -fsS "http://127.0.0.1:${APP_PORT}" >/dev/null 2>&1; then
                 echo "App responded after $((i * 2))s"
+                APP_READY=1
                 break
               fi
-              sleep 2
+
+              echo "App not ready yet... retry $i"
+              sleep 5
             done
+
+            if [ "$APP_READY" -ne 1 ]; then
+              echo "ERROR: App failed to become ready"
+              docker logs "$CONTAINER_NAME" --tail=200
+              exit 1
+            fi
 
             docker ps --filter "name=${CONTAINER_NAME}" --filter "status=running" | grep "$CONTAINER_NAME"
 
