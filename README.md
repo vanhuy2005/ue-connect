@@ -2,7 +2,7 @@
   <strong>Tiếng Việt</strong> · <a href="README.en.md">English</a>
 </p>
 
-> **Cập nhật lần cuối:** 2026-06-18 09:15:00 (GMT+7)
+> **Cập nhật lần cuối:** 2026-06-18 16:03:00 (GMT+7)
 
 <p align="center">
   <img src="public/images/brand/primary-logo-nobg.png" alt="UEConnect Logo" width="760">
